@@ -7,6 +7,7 @@ G.buildgfx = (() => {
   const H = G.util.hash2;
   const cache = {};
   let glowList = null;   // окна текущего здания (для ночного свечения)
+  let eaves = null;      // V9: линии карнизов текущего здания — под ними ляжет мягкая тень
 
   function px(c, x, y, col, w = 1, h = 1) { c.fillStyle = col; c.fillRect(x, y, w, h); }
   function shade(hex, k) { // k < 0 — темнее, k > 0 — светлее
@@ -81,6 +82,12 @@ G.buildgfx = (() => {
     px(c, x, y + h - 4, P.ink, w, 4); px(c, x + 1, y + h - 4, dk, w - 2, 2);
     // загнутые края
     px(c, x - 1, y + h - 6, P.ink, 2, 3); px(c, x + w - 1, y + h - 6, P.ink, 2, 3);
+    roofLight(c, x, y, w, h);
+  }
+  // V9: свет на скате — у конька светлее, к карнизу плавно темнее, правый край чуть в тени
+  function roofLight(c, x, y, w, h, k = 1) {
+    G.shade.tint(c, x + 1, y + 1, w - 2, h - 2, (u, v) => k * (0.26 - 0.7 * v * v - 0.12 * (u - 0.5)));
+    if (eaves && c.canvas.hi && c.canvas === eaves.cv) eaves.list.push([x, y + h, w]);
   }
 
   function roofFlat(c, x, y, w, h, col, seed, tank = true) {
@@ -105,6 +112,9 @@ G.buildgfx = (() => {
       else if (k < 0.2 && w >= 40) { px(c, x + 6, y + 5, '#5a4a3a', 1, 8); px(c, x + w - 7, y + 5, '#5a4a3a', 1, 8); px(c, x + 6, y + 5, '#d8d0c0', w - 12, 1); for (let i = 0; i < 4; i++) px(c, x + 9 + i * Math.floor((w - 20) / 4), y + 6, ['#e8f0f8', '#d84a3a', '#4a7ad0', '#f0c040'][i], 4, 5); }
     }
     if (H(seed, 2, 6) > 0.5 && w >= 64) { const ax = x + w - 12; px(c, ax, y + 3, '#5a5a6a', 1, 8); px(c, ax - 3, y + 5, '#5a5a6a', 7, 1); }
+    // V9: плоская крыша — мягкий свет слева-сверху, фасадная полоса в тени
+    G.shade.tint(c, x + 1, y + 1, w - 2, h - 2, (u, v) => (v > 1 - 5 / h ? -0.18 : 0.16 - 0.3 * v - 0.14 * u));
+    if (eaves && c.canvas === eaves.cv) eaves.list.push([x, y + h, w]);
   }
 
   // Вальмовая крыша: скаты с торцов темнее, черепица рядами
@@ -122,6 +132,7 @@ G.buildgfx = (() => {
     }
     px(c, x + Math.round(rid * 1.3), y, lt, Math.max(2, w - Math.round(rid * 2.6)), 1);
     px(c, x, y + h - 4, P.ink, w, 4); px(c, x + 1, y + h - 4, dk, w - 2, 2);
+    roofLight(c, x, y, w, h);
   }
 
   // ---------- Силуэты крыш (разнообразие домов) ----------
@@ -311,8 +322,11 @@ G.buildgfx = (() => {
       px(c, x + 1, y, beam, 2, h - 4); px(c, x + w - 3, y, beam, 2, h - 4);
       for (let bx = x + 48; bx < x + w - 24; bx += 48) px(c, bx, y, beam, 2, h - 4);
     }
-    // тень под карнизом
-    c.globalAlpha = 0.25; px(c, x + 1, y, '#000', w - 2, 3); c.globalAlpha = 1;
+    // V9: свет слева, затемнение у цоколя (тень от карниза кладёт make() поверх всего)
+    G.shade.tint(c, x + 1, y, w - 2, h - 1, (u, v) => {
+      const py = v * (h - 1);
+      return 0.07 - 0.17 * u - (py > h - 9 ? 0.14 * (py - h + 9) / 9 : 0);
+    });
   }
 
   function windowAt(c, x, y, lit) {
@@ -379,8 +393,13 @@ G.buildgfx = (() => {
     if (style) OV += EXTRA_OV[style] || 0;
     const c = G.gfx.canvas(W, HF + OV).getContext('2d');
     const draw = SPECIAL[id] || GENERIC[tpl.cat] || GENERIC.house;
-    glowList = [];
+    glowList = []; eaves = { cv: c.canvas, list: [] };
+    G.shade.defer(c);   // V9: свет и тени копятся и ложатся за одно чтение пикселей
     draw(c, { id, tpl, W, HF, OV, seed, col: tpl.color, style });
+    // V9: мягкая тень под карнизами — ложится на стену, окна и двери, сходит на нет за 9 px
+    for (const [ex, ey, ew] of eaves.list) G.shade.tint(c, ex + 1, ey, ew - 2, 9, (u, v) => -0.6 * (1 - v) ** 1.6);
+    G.shade.flush(c);
+    eaves = null;
     G.gfx.smooth(c.canvas);
     const res = { img: c.canvas, ox: 0, oy: -OV, w: W, h: HF + OV };
     if (glowList.length) {

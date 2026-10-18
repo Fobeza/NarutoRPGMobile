@@ -20,9 +20,9 @@ JS_FILES = [
     # ── движок: экран, ввод, звук, сцены, сохранения ──
     "engine/core.js", "engine/screen.js", "engine/input.js", "engine/audio.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
-    "gfx/palette.js", "gfx/font.js", "gfx/sprites.js", "gfx/assets.js",
+    "gfx/palette.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js",
     "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",
-    "gfx/tiles.js",
+    "gfx/tiles.js", "gfx/icons.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
@@ -43,7 +43,7 @@ JS_FILES = [
     "scenes/title.js", "scenes/nameinput.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
-    "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle.js", "scenes/train.js",
+    "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js",
     "scenes/gallery.js",
     # ── точка входа ──

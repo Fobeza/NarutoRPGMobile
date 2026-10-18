@@ -21,36 +21,47 @@ G.fx = (() => {
   }
   const TREES = { tree: [8, 3], pine: [7, 3], sakura: [9, 3], maple: [8, 3], ginkgo: [8, 3], bamboo: [5, 2], watertower: [7, 3] };
 
+  // V9: статичные мягкие тени. Свет всегда сверху-слева, поэтому тени ложатся вправо-вниз.
+  // Днём тень плотнее, ночью остаётся только контактная (мягче). Форма тени здания запекается один раз.
+  const SH_L = 0.62;   // длина тени здания относительно высоты стены
+  function buildingShadow(o) {
+    if (o._shadow) return o._shadow;
+    const W = o.tw * T, FH = o.th * T, wh = G.buildgfx.wallH(o.tplDef, o.tplId);
+    const L = Math.max(6, Math.min(18, Math.round(wh * SH_L))), D = 7, pad = 3;
+    const side = Math.round(FH * 0.55);
+    const B = G.shade.box;
+    const img = G.shade.soft(W + L + pad * 2, side + D + pad * 2, (x, y) => {
+      x -= pad; y -= pad;
+      // контактная полоса у фасада + косая тень справа; к дальнему краю — светлее
+      const front = B(x, y, 1, side - 2, W + L * 0.6, side + D, 4) * (1 - 0.35 * Math.max(0, (y - side) / D));
+      const sk = (side + D - y) * 0.45;   // скос: верх тени справа короче
+      const right = B(x, y, W - 3, 2, W + L - sk * 0.4, side + D, 4) * (1 - 0.6 * Math.max(0, (x - W) / L));
+      return Math.max(front, right);
+    }, 0.4);
+    return (o._shadow = { img, dx: -pad, dy: FH - side - pad });
+  }
+
   // Тени на земле: рисуем до объектов, чтобы здания и деревья ложились поверх
   function shadows(ctx, vis, map, min) {
-    if (!enabled() || !map.outdoor) return;
-    // контактная тень у основания зданий: стена не «висит» над землёй
-    ctx.fillStyle = 'rgba(14,16,40,0.26)';
-    for (const o of vis) {
-      if (!o.isBuilding || o.sortY < 0 || o.tplId === 'gate') continue;
-      const y1 = o.y + o.th * T;
-      ctx.fillRect(o.x + 1, y1, o.tw * T - 2, 2);
-      ctx.globalAlpha = 0.5; ctx.fillRect(o.x + 3, y1 + 2, o.tw * T - 6, 2); ctx.globalAlpha = 1;
-    }
-    const { a, sun: s } = sun(min);
-    if (s <= 0.05) return;
-    ctx.fillStyle = `rgba(20,24,50,${(0.24 * s).toFixed(3)})`;
+    if (!enabled()) return;
+    const { sun: s } = sun(min);
+    const k = map.outdoor ? 0.55 + 0.45 * s : 0.8;
+    ctx.globalAlpha = k;
     for (const o of vis) {
       if (o.isBuilding) {
-        if (o.sortY < 0 || o.tplId === 'gate') continue;
-        const wh = G.buildgfx.wallH(o.tplDef, o.tplId), len = Math.min(26, wh * 0.8 + 6);
-        const sx = Math.round(a * len * 0.75), sy = Math.round(5 + (1 - Math.abs(a)) * 3);
-        const x0 = o.x, y1 = o.y + o.th * T;
-        // тень на земле перед и сбоку от здания: сдвинутый прямоугольник основания
-        ctx.fillRect(x0 + sx + (sx > 0 ? 2 : -0), y1 - 6 + 0, o.tw * T, sy + 6);
-        if (sx) ctx.fillRect(sx > 0 ? x0 + o.tw * T : x0 + sx, y1 - Math.round(o.th * T * 0.5), Math.abs(sx), Math.round(o.th * T * 0.5) + sy);
+        if (!map.outdoor || o.sortY < 0 || o.tplId === 'gate' || !o.tw) continue;
+        const sh = buildingShadow(o);
+        ctx.drawImage(sh.img, o.x + sh.dx, o.y + sh.dy);
       } else if (TREES[o.kind]) {
         const [rx, ry] = TREES[o.kind];
-        ellipse(ctx, o.x + a * 5, o.y - 1, rx, ry);
+        G.shade.shadow(ctx, o.x + 3, o.y, rx + 2, ry + 1, 0.32);
       } else if (o.kind === 'lamp' || o.kind === 'stonelamp') {
-        ctx.fillRect(Math.round(o.x - 1 + a * 3), o.y - 1, 6, 1);
+        G.shade.shadow(ctx, o.x + 3, o.y, 4, 2, 0.3);
+      } else if (o.img && o.layer !== 'floor' && o.box && o.w <= 48) {
+        G.shade.shadow(ctx, o.x + o.ox + o.w / 2 + 2, o.y - 1, o.w * 0.46, Math.max(2, Math.min(4, o.w * 0.15)), 0.3);
       }
     }
+    ctx.globalAlpha = 1;
   }
 
   // Окна светятся тёплым светом ночью (карта окон хранится в спрайте здания: spr.glow)

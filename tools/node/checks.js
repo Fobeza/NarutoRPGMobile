@@ -455,33 +455,6 @@ check(G.storage.load().vars.day === 40, 'восстановление из ре�
 const fixed = G.game.fix({ started: true, hero: { name: 'Старое' }, flags: {}, vars: { day: 5, min: 600 }, inv: {}, quests: {}, log: [] });
 check(fixed.vars.money != null && fixed.fog != null && fixed.daily != null, 'G.game.fix() дополняет старое сохранение');
 
-// ─────────── ассеты V8 ───────────
-section('Ассеты V8 (манифест → бандл)');
-{
-  const man = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'assets', 'manifest.json'), 'utf8'));
-  const list = man.assets.filter((a) => a.status === 'импортирован');
-  check(list.length >= 10, `импортированных ассетов в манифесте: ${list.length}`);
-  let bad = 0;
-  for (const a of list) {
-    const uri = G.assets.data[a.use_as || a.id];
-    if (!uri || !uri.startsWith('data:image/png;base64,')) { bad++; continue; }
-    const b = Buffer.from(uri.slice('data:image/png;base64,'.length), 'base64');
-    if (b.readUInt32BE(16) !== a.target[0] || b.readUInt32BE(20) !== a.target[1]) bad++;
-  }
-  check(bad === 0, `все импортированные ассеты в бандле, размеры по манифесту (${list.length})`);
-  check(G.assets.has('arena_yard') && G.assets.ready('arena_yard'), 'ассеты загружены в Node (Image-заглушка харнеса)');
-  check(!G.assets.has('nope') && G.assets.img('nope') === null && G.assets.canvas('nope', 8, 8) === null, 'неизвестный id → null/false, без исключения');
-  const actx = h.recordingCtx();
-  const on = G.assets.draw(actx, 'arena_yard', 0, 33, 294, 247);
-  const wasOn = G.assets.enabled;
-  G.assets.enabled = false;
-  const off = G.assets.draw(actx, 'arena_yard', 0, 33, 294, 247);
-  G.assets.enabled = wasOn;
-  check(on === true && off === false, 'draw() при выключенных ассетах возвращает false → фолбэк кодом');
-  const weight = Object.values(G.assets.data).reduce((s, v) => s + v.length, 0);
-  check(weight < (man.budget_kb || 200) * 1024, `вес ассетов в бандле ${(weight / 1024).toFixed(1)} КБ < бюджет ${man.budget_kb} КБ`);
-}
-
 // ─────────── итог ───────────
 say('');
 say(`ИТОГ: ✔ ${oks}  ✘ ${fails}`);

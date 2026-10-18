@@ -44,13 +44,38 @@
     let x0 = w, x1 = -1, y0 = h, y1 = -1;
     for (let j = 0; j < h; j++) { const y = (j + 0.5) / k; for (let i = 0; i < w; i++) if (pred((i + 0.5) / k, y)) { m[j * w + i] = 1; if (i < x0) x0 = i; if (i > x1) x1 = i; if (j < y0) y0 = j; if (j > y1) y1 = j; } }
     if (x1 < 0) return;
-    const bc = rgb(color), lit = pack(lt(bc, o.lit ?? 0.34)), dark = pack(dk(bc, o.dark ?? 0.34)), bp = pack(bc), seam = pack(mix(bc, INK, 0.5));
+    const bc = rgb(color), bp = pack(bc), seam = pack(mix(bc, INK, 0.5));
+    const LT = o.lit ?? 0.34, DK = o.dark ?? 0.38;
+    // V9: пять ступеней оттенка (−2…+2): тени холоднее, света теплее
+    const tones = [pack(dk(bc, DK)), pack(dk(bc, DK * 0.5)), bp, pack(lt(bc, LT * 0.5)), pack(lt(bc, LT))];
     const r = Math.max(1, Math.round((o.rim ?? 1.25) * k));
     const out = (i, j) => i < 0 || j < 0 || i >= w || j >= h || !m[j * w + i];
+    // расстояния до края формы по четырём направлениям → объём (свет сверху-слева)
+    let dU, dD, dL, dR;
+    if (!o.flat) {
+      const bw = x1 - x0 + 1, bh = y1 - y0 + 1, N = bw * bh;
+      dU = new Uint16Array(N); dD = new Uint16Array(N); dL = new Uint16Array(N); dR = new Uint16Array(N);
+      for (let j = 0; j < bh; j++) for (let i = 0; i < bw; i++) {
+        const q = j * bw + i, on = m[(j + y0) * w + i + x0];
+        dU[q] = on ? (j ? dU[q - bw] : 0) + 1 : 0; dL[q] = on ? (i ? dL[q - 1] : 0) + 1 : 0;
+      }
+      for (let j = bh - 1; j >= 0; j--) for (let i = bw - 1; i >= 0; i--) {
+        const q = j * bw + i, on = m[(j + y0) * w + i + x0];
+        dD[q] = on ? (j < bh - 1 ? dD[q + bw] : 0) + 1 : 0; dR[q] = on ? (i < bw - 1 ? dR[q + 1] : 0) + 1 : 0;
+      }
+    }
     for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
       if (!m[j * w + i]) continue;
       let col = bp;
-      if (!o.flat) { if (out(i, j + r) || out(i + r, j)) col = dark; else if (out(i - r, j) || out(i, j - r)) col = lit; }
+      if (!o.flat) {
+        const q = (j - y0) * (x1 - x0 + 1) + (i - x0);
+        const vy = (dD[q] - dU[q]) / (dD[q] + dU[q]), vx = (dR[q] - dL[q]) / (dR[q] + dL[q]);
+        let v = vy * 0.95 + vx * 0.7;                               // −1.65…+1.65
+        if (out(i, j + r) || out(i + r, j)) v = Math.min(v, -1.2);  // кромка к тени — всегда тёмная
+        else if (out(i - r, j) || out(i, j - r)) v = Math.max(v, 1); // кромка к свету — блик
+        const lv = Math.max(-2, Math.min(2, Math.floor(v * 1.25 + 0.5 + (G.shade.bayer(i, j) - 0.5) * 0.45)));   // дизер — только на стыке ступеней
+        col = tones[lv + 2];
+      }
       if (o.seam) {
         for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const ii = i + a * k, jj = j + b * k;
@@ -565,27 +590,28 @@
   // портрет 32×32 (голова и плечи): рендер на удвоенной сетке и обрезка
   function portrait(id) {
     if (PORTRAITS[id]) return PORTRAITS[id];
-    const got = G.assets.canvas('portrait_' + id, 32, 32);   // V8: сгенерированный портрет (64×64 физ. в холст 32×32 лог.); нет — процедурный
-    if (got) return (PORTRAITS[id] = got);
     const def = G.chars.DEFS[id], k = 3;
     const B = renderFrame(def, id, 'down', 0, k);
     const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d');
     const full = document.createElement('canvas'); full.width = B.w; full.height = B.h;
     const fctx = full.getContext('2d'), img = fctx.createImageData(B.w, B.h);
     new Uint32Array(img.data.buffer).set(B.c); fctx.putImageData(img, 0, 0);
+    // V9: фон — тёплый дизерный градиент со светом слева сверху
+    G.shade.grad(c, 0, 0, 32, 32, ['#fbf2dc', '#eadcbc', '#cdb890', '#b09a74'], { dir: 'r', cx: 9, cy: 7, r: 36, steps: 3 });
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#e8dcc0'; ctx.fillRect(0, 0, c.width, c.height);
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     // область: x 2..30, y 0.5..28.5 (голова + плечи), масштаб в 64 физ. пикселя
     const sx = 2 * k, sy = ((G.chars.STY[id] || {}).dog ? 15 : 0.5) * k, sw = 28 * k, sh = 28 * k;
+    // мягкая тень фигуры на фоне — вправо-вниз
+    const sil = G.gfx.silhouette(full, '#3a2c3a');
+    ctx.globalAlpha = 0.22; ctx.drawImage(sil, sx, sy, sw, sh, 5, 5, c.width - 4, c.height - 4);
+    ctx.globalAlpha = 0.14; ctx.drawImage(sil, sx, sy, sw, sh, 7, 7, c.width - 4, c.height - 4);
+    ctx.globalAlpha = 1;
     ctx.drawImage(full, sx, sy, sw, sh, 2, 2, c.width - 4, c.height - 4);
     ctx.restore();
     PORTRAITS[id] = c;
     return c;
   }
-
-  // V8: ассеты могли догрузиться после того, как портрет закэшировался процедурным — сбросить такие
-  G.assets.onReady(() => { for (const k in PORTRAITS) if (!PORTRAITS[k]._asset) delete PORTRAITS[k]; });
 
   Object.assign(G.chars, { sheet, draw, portrait, renderFrame, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
 })();

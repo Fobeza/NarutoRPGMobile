@@ -32,41 +32,6 @@ G.tiles = (() => {
 
   let atlas = null;
 
-  // V8, волна 5: бесшовные текстуры поверхностей 64×64 из ассетов. Текстура семплится
-  // кусками 16×16 по клеткам ((tx%4, ty%4)) — период 64 px, швов нет по построению.
-  // Нет текстуры или ассеты выключены (?assets=0) — работаем процедурным атласом, как раньше.
-  // Текстурами закрыты структурные поверхности (полы, стены, камень, мощение):
-  // у них зеркальная бесшовность не читается. Трава/цветы/мох, дорога, тропа и земля
-  // остаются процедурными: там зеркальность видна «бабочкой», а дорога с листа
-  // вышла перспективной вместо плоской.
-  const TEXID = {
-    FLOOR: 'tex_floor', PLANKS: 'tex_planks', TATAMI: 'tex_tatami', MAT: 'tex_mat',
-    TILEFLOOR: 'tex_tilefloor', DUSTFLOOR: 'tex_dustfloor',
-    SAND: 'tex_sand', STONE: 'tex_stone', DARKSTONE: 'tex_darkstone',
-    COBBLE: 'tex_cobble', BRICK: 'tex_brick', GRAVEL: 'tex_gravel',
-    IWALL: 'tex_iwall', VWALL: 'tex_vwall',
-  };
-  const TEXBYID = {};
-  for (const k of Object.keys(TEXID)) TEXBYID[ID[k]] = TEXID[k];
-  let texc = null;
-  function texCanvas(id) {
-    const aid = TEXBYID[id];
-    if (!aid || !G.assets || !G.assets.ready(aid)) return null;
-    if (!texc) texc = {};
-    if (!texc[id]) {
-      const cv = G.gfx.canvas(64, 64, true);   // lo: 1× — семплирование texBlit идёт в логических px
-      cv.getContext('2d').drawImage(G.assets.img(aid), 0, 0, 64, 64);
-      texc[id] = cv;
-    }
-    return texc[id];
-  }
-  function texBlit(ctx, id, x, y, gx, gy) {
-    const tc = texCanvas(id);
-    if (!tc) return false;
-    ctx.drawImage(tc, ((gx % 4) + 4) % 4 * T, ((gy % 4) + 4) % 4 * T, T, T, x, y, T, T);
-    return true;
-  }
-
   function px(c, x, y, col, w = 1, h = 1) { c.fillStyle = col; c.fillRect(x, y, w, h); }
   function dots(c, ox, oy, n, seed, cols) {
     for (let i = 0; i < n; i++) {
@@ -324,9 +289,6 @@ G.tiles = (() => {
   // Простой тайл без учёта соседей
   function drawTile(ctx, id, x, y, tx, ty) {
     if (!atlas) build();
-    const gx = tx === undefined ? Math.floor(x / T) : tx;
-    const gy = ty === undefined ? Math.floor(y / T) : ty;
-    if (texBlit(ctx, id, x, y, gx, gy)) return;
     ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
   }
 
@@ -346,12 +308,11 @@ G.tiles = (() => {
 
   function blendEdges(ctx, map, tx, ty, x, y, id) {
     const r = RANK[id]; if (!r) return;
-    if (texCanvas(id)) return;   // текстуры не смешиваем с процедурными кромками
     const nbs = [[0, -1, 0], [0, 1, 1], [-1, 0, 2], [1, 0, 3]];
     const got = [0, 0, 0, 0];
     for (const [dx, dy, side] of nbs) {
       const nb = map.get(tx + dx, ty + dy), rn = RANK[nb];
-      if (!rn || rn <= r || nb === id || texCanvas(nb)) continue;
+      if (!rn || rn <= r || nb === id) continue;
       got[side] = nb;
       for (let i = 0; i < 16; i++) {
         const g = (side < 2 ? tx : ty) * 16 + i, line = side < 2 ? ty + dy : tx + dx;
@@ -395,10 +356,8 @@ G.tiles = (() => {
     const id = map.get(tx, ty);
     if (id < 0) return;
     const vs = map.outdoor ? VAR[id] : null, hv = vs ? H(tx, ty, 555) : 1;
-    if (!texBlit(ctx, id, x, y, tx, ty)) {
-      if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
-      else ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
-    }
+    if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
+    else ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
     const up = map.get(tx, ty - 1), dn = map.get(tx, ty + 1), lf = map.get(tx - 1, ty), rt = map.get(tx + 1, ty);
     const hh = (i, s) => H(tx * 16 + i, ty, s);
 
@@ -470,6 +429,7 @@ G.tiles = (() => {
     const c = G.gfx.canvas(w, h);
     drawFn(c.getContext('2d'));
     G.gfx.smooth(c);
+    if (layer !== 'floor' && !/tree|pine|sakura|maple|ginkgo|bush/.test(name)) G.shade.light(c, { r: Math.min(4, Math.max(2, Math.min(w, h) / 6)), vert: h > 20 ? 0.5 : 0.25 });   // V9: объём
     OBJ[name] = { img: c, ox, oy, box, layer: layer || null, w, h };
   }
   const blob = (c, x, y, r, col) => {
@@ -481,19 +441,28 @@ G.tiles = (() => {
 
   function buildObjects() {
     // ---------- Природа ----------
-    obj('tree', 32, 40, (c) => {
-      px(c, 13, 26, P.trunkDark, 6, 12); px(c, 14, 26, P.trunk, 3, 12);
-      px(c, 10, 37, P.trunkDark, 12, 2);
-      blob(c, 16, 16, 13, P.leafDark);
-      blob(c, 16, 14, 12, P.leaf);
-      blob(c, 11, 10, 6, '#3e8a42'); blob(c, 21, 12, 5, '#3e8a42');
-      blob(c, 10, 8, 2, '#5aaa5a'); blob(c, 20, 9, 2, '#5aaa5a'); blob(c, 15, 18, 2, '#5aaa5a');
-      for (let i = 0; i < 18; i++) px(c, 5 + Math.floor(H(i, 1, 11) * 22), 4 + Math.floor(H(1, i, 12) * 22), P.leafDark);
-    }, -16, -38, { x: -5, y: -6, w: 10, h: 6 });
+    // V9: крона — гроздья листвы, каждая со сферическим светом (свет сверху-слева) и шумом листьев
+    const crown = (c, cols, seed) => {
+      const S = G.shade, dark = S.toneHex(cols[0], -0.45);
+      S.ball(c, 16, 16, 14, 13, [dark, dark]);                                   // кайма-контур
+      S.ball(c, 16, 16, 13, 12, [dark, cols[0], cols[0], cols[1]], { noise: 0.25, seed });
+      const CL = [[9, 19, 6.5], [23, 19, 6.5], [16, 21, 6], [10, 11, 7], [22, 11, 6.5], [16, 7, 7], [15, 14, 7.5]];
+      CL.forEach(([x, y, r], i) => S.ball(c, x + (H(i, seed, 3) - 0.5) * 2, y + (H(seed, i, 4) - 0.5) * 2, r, r * 0.92,
+        [cols[0], cols[1], cols[1], cols[2], cols[3]], { noise: 0.5, grain: 1.5, seed: seed * 10 + i }));
+      for (let i = 0; i < 10; i++) px(c, 6 + Math.floor(H(i, seed, 11) * 20), 5 + Math.floor(H(seed, i, 12) * 18), cols[3]);
+    };
+    // ствол — цилиндр: светлая полоса слева, тень справа, корни
+    const trunk = (c) => {
+      px(c, 12, 26, P.trunkDark, 8, 12); px(c, 13, 26, P.trunk, 5, 12); px(c, 13, 26, '#9a6a42', 2, 12);
+      px(c, 17, 26, '#5a321a', 2, 12); px(c, 10, 36, P.trunkDark, 12, 2); px(c, 11, 35, P.trunk, 3, 1);
+      c.globalAlpha = 0.45; px(c, 12, 26, '#1e1430', 8, 3); c.globalAlpha = 1;               // тень кроны на стволе
+    };
+    obj('tree', 32, 40, (c) => { trunk(c); crown(c, [P.leafDark, P.leaf, '#3e8a42', '#6ab85a'], 1); }, -16, -38, { x: -5, y: -6, w: 10, h: 6 });
 
     // Хвойное дерево (для леса Нара)
     obj('pine', 24, 40, (c) => {
       px(c, 10, 30, P.trunkDark, 4, 9); px(c, 11, 30, P.trunk, 2, 9);
+      // V9: ярусы-конусы: свет слева, тень справа и под каждым ярусом
       for (let i = 0; i < 4; i++) {
         const y = 2 + i * 7, w = 8 + i * 4;
         for (let r = 0; r < 9; r++) {
@@ -501,14 +470,16 @@ G.tiles = (() => {
           px(c, 12 - ww, y + r, P.leafDark, ww * 2, 1);
           if (r < 7) px(c, 12 - ww + 1, y + r, i % 2 ? P.leaf : '#2e7a3a', ww * 2 - 3, 1);
         }
+        G.shade.tint(c, 12 - w, y, w * 2, 9, (u, v) => 0.34 * (0.5 - u) * 1.6 + 0.12 - 0.42 * v * v);
       }
-      px(c, 11, 2, '#5aaa5a', 1, 3);
+      px(c, 11, 2, '#6ab85a', 1, 3);
     }, -12, -38, { x: -4, y: -5, w: 8, h: 5 });
 
     obj('bush', 16, 14, (c) => {
-      c.fillStyle = P.leafDark; c.fillRect(1, 4, 14, 10); c.fillRect(3, 2, 10, 12);
-      c.fillStyle = P.leaf; c.fillRect(2, 4, 12, 8); c.fillRect(4, 2, 8, 9);
-      px(c, 5, 4, '#5aaa5a', 2, 1); px(c, 10, 6, '#5aaa5a', 2, 1);
+      const S = G.shade, cols = [P.leafDark, P.leaf, '#3e8a42', '#6ab85a'];
+      S.ball(c, 8, 8.5, 7.5, 5.8, [S.toneHex(P.leafDark, -0.4), P.leafDark]);
+      S.ball(c, 5, 8.5, 4.2, 4, cols, { noise: 0.4, grain: 1.5, seed: 2 }); S.ball(c, 11, 8.5, 4.2, 4, cols, { noise: 0.4, grain: 1.5, seed: 3 });
+      S.ball(c, 8, 6, 4.6, 4, cols, { noise: 0.4, grain: 1.5, seed: 4 });
     }, -8, -13, { x: -7, y: -6, w: 14, h: 6 });
 
     obj('rock', 16, 12, (c) => {
@@ -766,13 +737,6 @@ G.tiles = (() => {
     }, -7, -15, null, 'floor');
 
     // ---------- Разнообразие улиц (плотная застройка) ----------
-    const crown = (c, cols, seed) => { // крона лиственного дерева в заданных цветах
-      blob(c, 16, 16, 13, cols[0]); blob(c, 16, 14, 12, cols[1]);
-      blob(c, 11, 10, 6, cols[2]); blob(c, 21, 12, 5, cols[2]);
-      blob(c, 10, 8, 2, cols[3]); blob(c, 20, 9, 2, cols[3]); blob(c, 15, 18, 2, cols[3]);
-      for (let i = 0; i < 18; i++) px(c, 5 + Math.floor(H(i, seed, 11) * 22), 4 + Math.floor(H(seed, i, 12) * 22), cols[0]);
-    };
-    const trunk = (c) => { px(c, 13, 26, P.trunkDark, 6, 12); px(c, 14, 26, P.trunk, 3, 12); px(c, 10, 37, P.trunkDark, 12, 2); };
     const TREEBOX = { x: -5, y: -6, w: 10, h: 6 };
     obj('sakura', 32, 40, (c) => { trunk(c); crown(c, ['#b85a7a', '#e88aa8', '#f4b0c8', '#ffe0ea'], 3); }, -16, -38, TREEBOX);
     obj('maple', 32, 40, (c) => { trunk(c); crown(c, ['#8a2a1a', '#d8502a', '#f08a3a', '#f8c060'], 5); }, -16, -38, TREEBOX);

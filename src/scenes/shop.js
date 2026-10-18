@@ -146,7 +146,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
           ctx.fillRect(cx, cy, l.cardW - 4, 1); ctx.fillRect(cx, cy + l.cardH - 5, l.cardW - 4, 1);
           ctx.fillRect(cx, cy, 1, l.cardH - 4); ctx.fillRect(cx + l.cardW - 5, cy, 1, l.cardH - 4);
         }
-        G.assets.draw(ctx, 'icon_' + it.id, cx + Math.floor((l.cardW - 4 - 64) / 2), cy + 2, 64, 64);
+        G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 4 - 64) / 2), cy + 2, 64, 64);
         if (lk) { ctx.globalAlpha = .55; ctx.fillStyle = '#000'; ctx.fillRect(cx + 1, cy + 1, l.cardW - 6, l.cardH - 6); ctx.globalAlpha = 1; }
         F.draw(ctx, lk ? '—' : it.price + 'р', cx + l.cardW - 7, cy + l.cardH - 13,
           { align: 'right', color: lk ? G.UI.faint : !G.game.canPay(it.price) ? G.UI.err : pal.yellow, outline: '#000' });

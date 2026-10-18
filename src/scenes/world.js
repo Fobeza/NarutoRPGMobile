@@ -794,10 +794,7 @@ G.scenes.register('world', (pos) => {
     },
 
     drawActor(ctx, a) {
-      ctx.globalAlpha = 0.25; ctx.fillStyle = '#000';
-      ctx.fillRect(Math.round(a.x - 5), Math.round(a.y - 1), 10, 2);
-      ctx.fillRect(Math.round(a.x - 4), Math.round(a.y - 2), 8, 4);
-      ctx.globalAlpha = 1;
+      G.shade.shadow(ctx, a.x + 1, a.y - 1, 6, 2, 0.34);   // V9: мягкая тень под ногами
       const frame = a.moving ? G.chars.WALK[Math.floor(a.anim) % 4] : 0;
       G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y);
     },

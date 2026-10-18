@@ -131,10 +131,29 @@ G.WorldMap = class {
     for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
       G.tiles.renderTile(ctx, this, cx * CH + x, cy * CH + y, x * T, y * T);
     }
+    if (!this.outdoor) this.roomLight(c, cx * CH, cy * CH, tw, th);
     G.gfx.smooth(c);
     this.chunks.set(k, c);
     if (this.chunks.size > 12) this.chunks.delete(this.chunks.keys().next().value);
     return c;
+  }
+
+  // V9: свет в комнате — пол у стены в мягкой тени (стена заслоняет свет), к дальним углам чуть темнее
+  roomLight(c, gx, gy, tw, th) {
+    const T = G.CONFIG.TILE, ID = G.tiles.ID, S = G.shade;
+    const wallish = (tx, ty) => { const v = this.get(tx, ty); return v < 0 || v === ID.IWALL || v === ID.VOID || v === ID.VWALL; };
+    S.defer(c);
+    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) {
+      const tx = gx + x, ty = gy + y;
+      if (wallish(tx, ty)) continue;
+      if (wallish(tx, ty - 1)) S.tint(c, x * T, y * T, T, 8, (u, v) => -0.42 * (1 - v) ** 1.5);          // тень под стеной
+      if (wallish(tx - 1, ty)) S.tint(c, x * T, y * T, 5, T, (u) => -0.28 * (1 - u) ** 1.5);          // у левой стены
+      if (wallish(tx + 1, ty)) S.tint(c, x * T + 11, y * T, 5, T, (u) => -0.2 * u ** 1.5);             // у правой стены
+      // общий свет комнаты: от окон сверху-слева к дальнему углу
+      const fx = (tx + 0.5) / this.w, fy = (ty + 0.5) / this.h;
+      S.tint(c, x * T, y * T, T, T, (u, v) => 0.06 - 0.22 * Math.max(0, ((fx + u / this.w) - 0.25) * 0.8 + ((fy + v / this.h) - 0.3)));
+    }
+    S.flush(c);
   }
 
   drawGround(ctx, camX, camY, vw, vh, time) {

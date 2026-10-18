@@ -808,11 +808,11 @@ G.scenes.register('battle', (opts, onEnd) => {
     ctx.drawImage(sheet, fr * FW, row * FH, FW, FH, Math.round(x - FW), Math.round(y - FH * 2 + 2), FW * 2, FH * 2);
   }
   function drawObj(ctx, kind, x, gy, t) {
-    if (kind === 'tree') { ctx.fillStyle = PAL.trunkDark; ctx.fillRect(x - 4, gy - 46, 8, 46); ctx.fillStyle = A.dark ? '#1e3a26' : PAL.leaf; ctx.beginPath(); ctx.arc(x, gy - 50, 15, 0, 7); ctx.fill(); ctx.fillStyle = A.dark ? '#24462e' : PAL.grass; ctx.beginPath(); ctx.arc(x - 5, gy - 54, 8, 0, 7); ctx.fill(); }
-    if (kind === 'bush') { ctx.fillStyle = A.dark ? '#1e3a26' : PAL.leaf; ctx.beginPath(); ctx.arc(x - 6, gy - 5, 7, 0, 7); ctx.arc(x + 5, gy - 6, 8, 0, 7); ctx.fill(); ctx.fillStyle = A.dark ? '#2a4a30' : PAL.grassLight; ctx.fillRect(x - 3, gy - 11, 3, 2); }
-    if (kind === 'rock') { ctx.fillStyle = PAL.stoneDark; ctx.fillRect(x - 11, gy - 12, 22, 12); ctx.fillStyle = PAL.stone; ctx.fillRect(x - 9, gy - 14, 16, 8); }
-    if (kind === 'logs') { ctx.fillStyle = PAL.wood; for (let i = 0; i < 3; i++) ctx.fillRect(x - 12 + i * 3, gy - 6 - i * 5, 22 - i * 6, 5); ctx.fillStyle = PAL.woodDark; ctx.fillRect(x - 12, gy - 2, 22, 2); }
-    if (kind === 'water') { ctx.fillStyle = PAL.water; ctx.fillRect(x - 18, gy - 3, 36, 8); ctx.fillStyle = PAL.waterLight; ctx.fillRect(x - 14 + Math.round(Math.sin(t * 3) * 3), gy - 1, 8, 1); ctx.fillRect(x + 4, gy + 2, 6, 1); }
+    const o = G.battleBg.obj(kind, A.dark);   // V9: предметы со светотенью и мягкой тенью
+    if (!o) return;
+    G.shade.shadow(ctx, x + 3, gy, Math.round(o.img.lw * 0.42), 3, 0.28);
+    ctx.drawImage(o.img, Math.round(x + o.ox), Math.round(gy + o.oy));
+    if (kind === 'water') { ctx.fillStyle = PAL.waterLight; ctx.fillRect(x - 14 + Math.round(Math.sin(t * 3) * 3), gy - 1, 8, 1); ctx.fillRect(x + 4, gy + 2, 6, 1); }
   }
 
   // ── погода и атмосфера арены ──
@@ -869,25 +869,6 @@ G.scenes.register('battle', (opts, onEnd) => {
       ctx.restore();
     }
   }
-  // дальний план: кроны деревьев (природа) или силуэты крыш (улица/арена), два слоя с дымкой
-  function drawFar(ctx, L, W) {
-    const nat = !(A.ring || A === G.ARENAS.street), base = L.groundY - 4;
-    const haze = (c, k) => { const h = c.replace('#', ''); const n = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)); const sk = A.sky[1].replace('#', ''); const m = [0, 2, 4].map((i) => parseInt(sk.substr(i, 2), 16)); return 'rgb(' + n.map((v, i) => Math.round(v + (m[i] - v) * k)).join(',') + ')'; };
-    for (const [layer, k, step, hh] of [[0, 0.55, 30, 34], [1, 0, 22, 18]]) {
-      ctx.fillStyle = haze(A.far, k);
-      for (let i = -1; i * step < W + step; i++) {
-        const x = i * step + (layer ? 0 : 11), h = hh + ((i * 7 + layer * 3) % 11) + Math.max(0, Math.round((L.arH - 120) * (layer ? 0.12 : 0.22) * (((i + layer) * 5) % 3) / 2));
-        if (nat) {
-          ctx.fillRect(x + step / 2 - 2, base - h * 0.5, 4, h * 0.5);
-          ctx.beginPath(); ctx.ellipse(x + step / 2, base - h * 0.6, step * 0.62, h * 0.55, 0, 0, 7); ctx.fill();
-          ctx.beginPath(); ctx.ellipse(x + step / 2 + step * 0.3, base - h * 0.45, step * 0.45, h * 0.4, 0, 0, 7); ctx.fill();
-        } else {
-          ctx.fillRect(x, base - h, step - 2, h);
-          ctx.beginPath(); ctx.moveTo(x - 3, base - h); ctx.lineTo(x + step / 2 - 1, base - h - 8); ctx.lineTo(x + step + 1, base - h); ctx.fill();
-        }
-      }
-    }
-  }
   function drawAll(ctx) {
     relayout();
     const L = layout, t = S.time || 0;
@@ -899,16 +880,11 @@ G.scenes.register('battle', (opts, onEnd) => {
     ctx.save(); ctx.beginPath(); ctx.rect(0, L.ar, W, L.arH); ctx.clip();
     // базовое приближение арены: на широких экранах бойцы крупнее (позиции 0–4 остаются в кадре)
     const bz = clamp((W - 16) / (4 * SP + 70), 1, 1.6), bzy = L.groundY + 6;
+    // V9: фон арены запекается один раз (scenes/battle_bg.js), облака с объёмом плывут поверх; фон не приближается
+    ctx.drawImage(G.battleBg.get(opts.terrain || 'field', W, L.arH), 0, L.ar);
+    G.battleBg.clouds(ctx, opts.terrain || 'field', 0, L.ar, W, L.arH, t);
     ctx.save(); if (bz > 1.01) { ctx.translate(W / 2, bzy); ctx.scale(bz, bz); ctx.translate(-W / 2, -bzy); }
-    // V8: фон арены — сгенерированный ассет (tools/assets/manifest.json). Нет картинки,
-    // она не готова или ассеты выключены (?assets=0) — прежняя процедурная отрисовка.
-    if (!G.assets.draw(ctx, 'arena_' + (opts.terrain || 'field'), 0, L.ar, W, L.arH)) {
-      const bands = 6; for (let i = 0; i < bands; i++) { ctx.fillStyle = i < bands / 2 ? A.sky[0] : A.sky[1]; ctx.fillRect(0, L.ar + i * (L.arH / bands) * 0.7, W, L.arH); }
-      ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let i = 0; i < 4; i++) { const cx = ((i * 83 + t * (3 + i)) % (W + 60)) - 30, cy = L.ar + 10 + ((i * 29) % Math.max(20, L.arH - 90)); ctx.fillRect(cx, cy, 26, 5); ctx.fillRect(cx + 5, cy - 3, 14, 3); }
-      drawFar(ctx, L, W);
-      ctx.fillStyle = A.ground; ctx.fillRect(0, L.groundY - 4, W, L.arH);
-    }
-    ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let i = 0; i < 5; i++) ctx.fillRect(X(i) - 14, L.groundY + 2, 28, 3);
+    for (let i = 0; i < 5; i++) G.shade.shadow(ctx, X(i), L.groundY + 3, 13, 2, 0.14);
     if (A.ring) { const r0 = Math.max(4, X(0) - 20), r1 = Math.min(W - 4, X(4) + 20); ctx.fillStyle = '#a8683a'; ctx.fillRect(r0, L.groundY + 6, r1 - r0, 2); ctx.fillStyle = '#c8401c'; ctx.fillRect(r0, L.groundY - 4, 2, 12); ctx.fillRect(r1 - 2, L.groundY - 4, 2, 12); }
     for (const [pos, kind] of Object.entries(A.obj)) drawObj(ctx, kind, X(+pos), L.groundY, t);
     for (const tr of traps) if (tr.owner === 'p' || tr.seen) { ctx.fillStyle = tr.kind === 'tag' ? '#e8dcc0' : '#b8b0cc'; ctx.fillRect(X(tr.pos) - 4, L.groundY - 2, 8, 3); ctx.fillStyle = tr.owner === 'p' ? '#8ae070' : '#ff6a3a'; ctx.fillRect(X(tr.pos) - 1, L.groundY - 2, 2, 3); }

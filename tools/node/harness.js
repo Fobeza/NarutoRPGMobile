@@ -210,7 +210,4 @@ function frames(scene, n = 1, ctx = null) {
   return c;
 }
 
-// V8: ASSETS_OFF=1 — выключить сгенерированные ассеты (сравнение «до/после», golden без ассетов)
-if (G.assets && process.env.ASSETS_OFF) G.assets.enabled = false;
-
 module.exports = { G, ROOT, BUILD: g.BUILD, warns, loaded, seed, rng, rngOff, frames, recordingCtx, recordingCanvas, document, localStorage, store, elements, makeEl };

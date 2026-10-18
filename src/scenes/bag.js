@@ -76,7 +76,7 @@ G.scenes.register('bag', () => {
           ctx.fillRect(cx, cy, gr.cardW - 4, 1); ctx.fillRect(cx, cy + gr.cardH - 5, gr.cardW - 4, 1);
           ctx.fillRect(cx, cy, 1, gr.cardH - 4); ctx.fillRect(cx + gr.cardW - 5, cy, 1, gr.cardH - 4);
         }
-        G.assets.draw(ctx, 'icon_' + it.id, cx + Math.floor((gr.cardW - 4 - 64) / 2), cy + 2, 64, 64);
+        G.icons.draw(ctx, it.id, cx + Math.floor((gr.cardW - 4 - 64) / 2), cy + 2, 64, 64);
         F.draw(ctx, '×' + it.n, cx + gr.cardW - 7, cy + 3, { align: 'right', color: G.UI.text, outline: '#000' });
       }
       // описание: имя вещи + текст

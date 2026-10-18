@@ -5,53 +5,89 @@ G.scenes.register('title', () => {
   let items = [];
   let bg = null;
 
+  // V9: ночная Коноха со светотенью — небо с дизерным градиентом, луна, Скала Хокаге с объёмом, огни деревни
   function buildBg() {
-    const W = G.screen.W, H = G.screen.H;
-    const img = G.assets.canvas('title', W, H);   // V8: сгенерированный фон; нет — рисуем процедурно, как раньше
-    if (img) return img;
-    const c = G.gfx.canvas(W, H);
-    const x = c.getContext('2d');
-    // небо: градиент полосами
-    const sky = ['#1a1430', '#221a3c', '#2c2048', '#3a2850', '#4a3050', '#6a3a4a', '#8a4a40'];
-    const band = Math.ceil(H * 0.62 / sky.length);
-    sky.forEach((col, i) => { x.fillStyle = col; x.fillRect(0, i * band, W, band); });
-    // звёзды
-    for (let i = 0; i < 40; i++) {
-      x.fillStyle = i % 5 ? '#c8c0e8' : '#fff';
-      x.fillRect(Math.floor(G.util.hash2(i, 1) * W), Math.floor(G.util.hash2(1, i) * H * 0.4), 1, 1);
+    const W = G.screen.W, H = G.screen.H, S = G.shade, BG = G.battleBg, Hh = G.util.hash2;
+    const c = G.gfx.canvas(W, H), x = c.getContext('2d');
+    x.fillStyle = '#100c1a'; x.fillRect(0, 0, W, H);
+    const rockY = Math.floor(H * 0.42), roofY = Math.floor(H * 0.6);
+    S.grad(c, 0, 0, W, roofY + 20, ['#07061a', '#120e30', '#241a48', '#3e2656', '#7a3450', '#c05a3e'], { dir: 'v', steps: 3 });
+    for (let i = 0; i < 90; i++) {
+      const sx = Math.floor(Hh(i, 1, 21) * W), sy = Math.floor(Hh(1, i, 22) * H * 0.38), b = Hh(i, i, 23);
+      x.fillStyle = b > 0.85 ? '#ffffff' : b > 0.5 ? '#c8c0e8' : '#6a6498'; x.fillRect(sx, sy, 1, 1);
+      if (b > 0.95) { x.globalAlpha = 0.45; x.fillRect(sx - 1, sy, 3, 1); x.fillRect(sx, sy - 1, 1, 3); x.globalAlpha = 1; }
     }
-    // луна
-    x.fillStyle = '#f8f0d0';
-    for (let yy = -9; yy <= 9; yy++) for (let xx = -9; xx <= 9; xx++)
-      if (xx * xx + yy * yy <= 85) x.fillRect(160 + xx, 84 + yy, 1, 1);
-    x.fillStyle = '#e8dcb0'; x.fillRect(156, 81, 3, 2); x.fillRect(163, 87, 2, 2);
-    // Скала Хокаге
-    const rockY = Math.floor(H * 0.42);
-    x.fillStyle = '#4a3a3a';
-    for (let i = 0; i < W; i++) {
-      const hgt = 26 + Math.floor(Math.sin(i * 0.07) * 4 + G.util.hash2(i, 3) * 3);
-      x.fillRect(i, rockY - hgt + 26, 1, H);
+    // луна слева сверху — источник света сцены
+    const mx = Math.round(W * 0.24), my = Math.round(H * 0.15);
+    BG.glow(c, mx, my, 80, '#9a98d8', 0.3); BG.glow(c, mx, my, 34, '#e8e0ff', 0.25);
+    S.ball(c, mx, my, 15, 15, ['#c8bea0', '#e0d8b8', '#f4ecd0', '#fffaf0']);
+    x.fillStyle = '#c8bc9c'; x.fillRect(mx - 5, my - 3, 4, 3); x.fillRect(mx + 4, my + 4, 3, 3); x.fillRect(mx - 1, my + 7, 2, 2);
+    for (let i = 0; i < 3; i++) { const cl = BG.cloudImg(i, false, true); x.globalAlpha = 0.85; x.drawImage(cl, Math.round(W * (0.45 + i * 0.22) - 20), Math.round(H * (0.08 + i * 0.06))); x.globalAlpha = 1; }
+    // Скала Хокаге: каменная гряда, склоны к луне светлее
+    const rockTop = Math.floor(H * 0.21);
+    BG.cols(c, (px) => rockTop + 10 - BG.noise1(px / 40, 7) * 22, roofY + 10, ['#7a6058', '#66504a', '#523e3e', '#3e2e34'], { lit: 0.6, litCol: '#c8c0e8' });
+    // слои породы: пологие полосы светлее/темнее
+    S.tint(c, 0, rockTop, W, roofY - rockTop, (u, v) => (BG.noise1(u * 3 + v * 9, 41) - 0.5) * 0.35 - u * 0.12);
+    // трещины и уступы скалы
+    for (let i = 0; i < 26; i++) {
+      const cx0 = Hh(i, 2, 31) * W, cy0 = rockTop + 20 + Hh(2, i, 32) * (roofY - rockTop - 20);
+      x.fillStyle = '#2e2228'; x.fillRect(Math.round(cx0), Math.round(cy0), 1 + Math.floor(Hh(i, 5, 33) * 8), 1);
+      x.fillStyle = '#8a7268'; x.fillRect(Math.round(cx0), Math.round(cy0) - 1, 1 + Math.floor(Hh(i, 5, 33) * 6), 1);
     }
-    // четыре лица (силуэты)
+    // четыре высеченных лица: формы с объёмом, свет луны слева сверху
+    const { E, R, RR, PO, LN, OR, AND, SUB } = G.icons.shapes, I = G.icons;
+    const FW = Math.min(96, Math.floor(W * 0.3)), FH = Math.round(FW * 100 / 72);
+    const st = '#86685c', hairC = '#6e564e';
+    const HAIR = [
+      // Первый: длинные прямые волосы на пробор
+      () => OR(E(36, 30, 27, 24), RR(7, 26, 19, 92, 5), RR(53, 26, 65, 92, 5)),
+      // Второй: короткие торчащие пряди
+      () => OR(E(36, 30, 26, 22), ...[0, 1, 2, 3, 4, 5].map((k) => PO([[12 + k * 9, 24], [16 + k * 9 + (k - 2.5) * 2, 2 + Math.abs(k - 2.5) * 3], [22 + k * 9, 24]]))),
+      // Третий: зачёсанные назад волосы и бородка
+      () => OR(E(36, 28, 26, 21), RR(8, 24, 16, 52, 4), RR(56, 24, 64, 52, 4), PO([[28, 86], [44, 86], [36, 97]])),
+      // Четвёртый: длинная растрёпанная чёлка
+      () => OR(E(36, 30, 27, 23), ...[0, 1, 2, 3, 4, 5, 6].map((k) => PO([[8 + k * 9, 26], [10 + k * 9, 4 + (k % 2) * 6], [17 + k * 9, 24]])), PO([[9, 30], [4, 62], [16, 44]]), PO([[63, 30], [68, 62], [56, 44]])),
+    ];
     for (let k = 0; k < 4; k++) {
-      const fx = 22 + k * 42, fy = rockY + 2;
-      x.fillStyle = '#5a4848'; x.fillRect(fx, fy, 22, 22);
-      x.fillStyle = '#3a2c2c'; x.fillRect(fx + 5, fy + 8, 4, 2); x.fillRect(fx + 13, fy + 8, 4, 2);
-      x.fillRect(fx + 9, fy + 15, 4, 2);
-      x.fillStyle = '#6a5656'; x.fillRect(fx, fy, 22, 3);
+      const face = I.raster(72, 100, (B) => {
+        I.fill(B, PO([[14, 66], [58, 66], [70, 100], [2, 100]]), '#5e4844', { lit: 0.3, dark: 0.5 });   // шея-уступ: лицо вырастает из скалы
+        I.fill(B, HAIR[k](), hairC, { seam: true, lit: 0.42 });
+        const head = OR(E(36, 46, 22, 27), PO([[15, 52], [57, 52], [50, 80], [36, 90], [22, 80]]));
+        I.fill(B, head, st, { lit: 0.42, dark: 0.5, vx: 1.1 });
+        if (k === 0 || k === 3) I.fill(B, AND(head, R(0, 0, 72, 34)), hairC, { seam: true });     // чёлка
+        I.flat(B, OR(RR(19, 40, 32, 44, 2), RR(40, 40, 53, 44, 2)), '#4e3c3a');                  // надбровные дуги
+        I.flat(B, OR(E(26, 49, 5.5, 3), E(46, 49, 5.5, 3)), '#2a1e24');                        // глазницы
+        I.flat(B, OR(R(21, 51, 31, 52), R(41, 51, 51, 52)), '#b09a8e');                         // освещённое веко
+        I.fill(B, PO([[36, 48], [40, 66], [33, 66]]), '#9a8074', { lit: 0.5 });                 // нос
+        I.flat(B, PO([[38, 55], [42, 67], [36, 67]]), '#4e3c3a');                              // тень носа
+        I.flat(B, OR(R(28, 74, 44, 76), R(30, 76, 42, 77)), '#3a2c30');                          // рот
+        I.flat(B, AND(head, PO([[50, 40], [60, 40], [56, 84], [44, 88]])), '#5e4a46');          // тень щеки
+        I.outline(B, 0.6);
+      });
+      const fx = Math.round(W * (0.13 + k * 0.248) - FW / 2), fy = rockTop + 6 + (k % 2) * 8;
+      x.drawImage(face, fx, fy, FW, FH);
     }
-    // крыши деревни
-    const roofY = Math.floor(H * 0.66);
-    for (let i = 0; i < 14; i++) {
-      const rx = i * 15 - 6 + Math.floor(G.util.hash2(i, 7) * 6);
-      const rw = 18 + Math.floor(G.util.hash2(7, i) * 10);
-      const ry = roofY + Math.floor(G.util.hash2(i, 9) * 14);
-      x.fillStyle = '#2a1e2a'; x.fillRect(rx, ry, rw, H);
-      x.fillStyle = '#3a2430'; x.fillRect(rx - 2, ry, rw + 4, 3);
-      if (G.util.hash2(i, 11) > 0.35) { x.fillStyle = '#ffd27a'; x.fillRect(rx + 5, ry + 8, 3, 3); }
-      if (G.util.hash2(i, 12) > 0.5) { x.fillStyle = '#ffb04a'; x.fillRect(rx + rw - 8, ry + 14, 3, 3); }
+    S.tint(c, 0, rockTop - 14, W, roofY - rockTop + 24, (u, v) => 0.14 - 0.42 * u - 0.12 * v, { keepInk: false });   // лунный свет слева, правый край в тени
+    BG.haze(c, rockY, roofY + 10, '#3a2a50', 0.0, 0.45);
+    // лес под скалой и крыши деревни с тёплыми окнами
+    x.fillStyle = '#1a1422'; x.fillRect(0, roofY + 4, W, H);
+    BG.treeline(c, roofY + 2, W, 71, ['#0a0a14', '#12121e', '#1a1a2a', '#26263a', '#4a4a6a'], { step: 13, size: 8 });
+    for (let row = 0; row < 5; row++) {
+      for (let i = -1; i < 18; i++) {
+        const rx = i * 20 - 6 + Math.floor(Hh(i, 7 + row, 3) * 10) + row * 9, rw = 18 + Math.floor(Hh(7 + row, i, 4) * 12);
+        const ry = roofY + 8 + row * 22 + Math.floor(Hh(i, 9 + row, 5) * 8), dk = row * 0.12;
+        x.fillStyle = S.toneHex('#2e2232', -dk); x.fillRect(rx, ry, rw, H);
+        S.tint(c, rx, ry, rw, 24, (u, v) => 0.12 - u * 0.25 - v * 0.2);
+        x.fillStyle = S.toneHex('#3e2a3a', -dk); x.beginPath(); x.moveTo(rx - 5, ry + 2); x.lineTo(rx + rw / 2, ry - 7); x.lineTo(rx + rw + 5, ry + 2); x.fill();
+        x.fillStyle = '#7a6a9a'; x.fillRect(rx - 4, ry + 1, Math.round(rw / 2) + 2, 1);           // лунный блик на скате
+        for (let w = 0; w < 2; w++) if (Hh(i, w + row * 3, 11) > 0.4) {
+          const wx = rx + 4 + w * Math.max(6, rw - 12), wy = ry + 6 + Math.floor(Hh(w, i, 12) * 6);
+          BG.glow(c, wx + 1.5, wy + 1.5, 7, '#ffb050', 0.3);
+          x.fillStyle = '#ffc870'; x.fillRect(wx, wy, 3, 3); x.fillStyle = '#fff0b8'; x.fillRect(wx, wy, 1, 1);
+        }
+      }
     }
-    x.fillStyle = '#1a1220'; x.fillRect(0, H - 30, W, 30);
+    BG.haze(c, roofY + 40, H, '#100c1a', 0.2, 0.85);
     return c;
   }
 
@@ -59,8 +95,6 @@ G.scenes.register('title', () => {
     name: 'title',
     enter() {
       bg = buildBg();
-      // V8: картинка могла догрузиться, пока показывали процедурный фон — пересобрать один раз
-      G.assets.onReady(() => { if (!bg || !bg._asset) bg = buildBg(); });
       items = G.storage.hasSave() ? ['Продолжить', 'Новая игра'] : ['Новая игра'];
       idx = 0;
       this._resize = G.events.on('resize', () => { bg = buildBg(); });
@@ -99,8 +133,8 @@ G.scenes.register('title', () => {
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H;
       ctx.drawImage(bg, 0, 0);
-      G.assets.draw(ctx, 'icon_leaf', Math.round(W / 2 - 16), 2, 32, 32);   // V8: эмблема деревни над плашкой
       // логотип
+      G.icons.draw(ctx, 'emblem', Math.round(W / 2 - 16), 0, 32, 32);   // V9: знак Листа над плашкой
       const ly = 26 + Math.round(Math.sin(t * 1.5) * 2);
       ctx.fillStyle = 'rgba(20,10,20,.55)';
       ctx.fillRect(16, ly - 6, W - 32, 44);
