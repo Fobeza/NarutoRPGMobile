@@ -10,13 +10,33 @@ G.scenes.register('bag', () => {
 
   return {
     name: 'bag',
+    // сетка карточек: колонки по ширине экрана, карточка под иконку 64×64
+    cols() { return Math.max(2, Math.floor((G.screen.W - 8) / 70)); },
     update(dt) {
       const I = G.input, L = list();
       if (I.pressed('b') || I.pressed('menu') || (I.tapNow && I.tapNow.y > G.screen.H - 20)) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (!L.length) return;
-      if (I.repeat('up', dt)) { idx = (idx + L.length - 1) % L.length; G.audio.sfx.select(); }
-      if (I.repeat('down', dt)) { idx = (idx + 1) % L.length; G.audio.sfx.select(); }
+      const cols = this.cols(), rows = this.rows(), per = rows * cols;
+      if (I.repeat('up', dt)) { idx = (idx - cols + L.length) % L.length; G.audio.sfx.select(); }
+      if (I.repeat('down', dt)) { idx = (idx + cols) % L.length; G.audio.sfx.select(); }
+      if (I.repeat('left', dt)) { idx = (idx + L.length - 1) % L.length; G.audio.sfx.select(); }
+      if (I.repeat('right', dt)) { idx = (idx + 1) % L.length; G.audio.sfx.select(); }
       idx = Math.min(idx, L.length - 1);
+      if (I.tapNow) {
+        const g = this.grid();
+        const t = I.tapNow;
+        if (t.x > g.x && t.x < g.x + g.w && t.y > g.y && t.y < g.y + g.h) {
+          const k = Math.floor((t.y - g.y - 4) / g.cardH) * cols + Math.floor((t.x - g.x - 4) / g.cardW);
+          const i = Math.floor(idx / per) * per + k;
+          if (i >= 0 && i < L.length) { idx = i; G.audio.sfx.select(); }
+        }
+      }
+    },
+    rows() { return Math.max(1, Math.floor((G.screen.H - 20 - 46 - 80 - 10) / 70)); },
+    grid() {
+      const cols = this.cols(), rows = this.rows();
+      const cardW = Math.floor((G.screen.W - 8) / cols);
+      return { x: 2, y: 80, w: G.screen.W - 4, h: rows * 70 + 8, cols, rows, cardW, cardH: 70, per: rows * cols };
     },
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL, v = G.state.vars, g = G.game;
@@ -37,32 +57,35 @@ G.scenes.register('bag', () => {
         ctx.fillStyle = col; ctx.fillRect(x + 45, y + 3, Math.round(38 * val / 100), 3);
       });
 
-      // вещи
+      // вещи — сетка карточек с иконками 64×64
       const L = list();
-      const ly = 80, rows = Math.max(3, Math.floor((H - 20 - 46 - ly - 8) / 12));
-      G.gfx.window(ctx, 2, ly, W - 4, rows * 12 + 8, 'paper');
-      F.draw(ctx, `${g.pouchUsed()}/${g.pouchMax()}`, W - 8, ly + 5, { align: 'right', color: P.gray });
-      if (!L.length) F.draw(ctx, 'Пусто. Загляни в лавки!', 8, ly + 5, { color: P.gray });
-      if (idx < top) top = idx;
-      if (idx >= top + rows - 1) top = idx - rows + 2;
-      let lastCat = null, r = 0;
-      for (let i = top; i < L.length && r < rows; i++) {
-        const it = L[i], cat = CAT[it.cat] || 'Вещи';
-        if (cat !== lastCat && r < rows) {
-          if (r > 0 || i === top) { F.draw(ctx, cat, 8, ly + 5 + r * 12, { color: P.orange }); r++; }
-          lastCat = cat;
-          if (r >= rows) break;
+      const gr = this.grid();
+      G.gfx.window(ctx, gr.x, gr.y, gr.w, gr.h, 'paper');
+      F.draw(ctx, `${g.pouchUsed()}/${g.pouchMax()}`, W - 8, gr.y + 5, { align: 'right', color: P.gray });
+      if (!L.length) F.draw(ctx, 'Пусто. Загляни в лавки!', 8, gr.y + 5, { color: P.gray });
+      idx = Math.min(idx, Math.max(0, L.length - 1));
+      const page = Math.floor(idx / gr.per) * gr.per;
+      for (let k = 0; k < gr.per; k++) {
+        const i = page + k;
+        if (i >= L.length) break;
+        const it = L[i];
+        const cx = gr.x + 4 + (k % gr.cols) * gr.cardW, cy = gr.y + 4 + Math.floor(k / gr.cols) * gr.cardH;
+        if (i === idx) {
+          ctx.fillStyle = G.UI.sel; ctx.fillRect(cx, cy, gr.cardW - 4, gr.cardH - 4);
+          ctx.fillStyle = G.UI.edge;
+          ctx.fillRect(cx, cy, gr.cardW - 4, 1); ctx.fillRect(cx, cy + gr.cardH - 5, gr.cardW - 4, 1);
+          ctx.fillRect(cx, cy, 1, gr.cardH - 4); ctx.fillRect(cx + gr.cardW - 5, cy, 1, gr.cardH - 4);
         }
-        const y = ly + 5 + r * 12, sel = i === idx;
-        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(6, y - 2, W - 12, 12); F.draw(ctx, '▶', 8, y, { color: P.orange }); }
-        F.draw(ctx, it.name, 17, y, { color: sel ? G.UI.selText : G.UI.dim });
-        F.draw(ctx, '×' + it.n, W - 8, y, { align: 'right', color: G.UI.text });
-        r++;
+        G.assets.draw(ctx, 'icon_' + it.id, cx + Math.floor((gr.cardW - 4 - 64) / 2), cy + 2, 64, 64);
+        F.draw(ctx, '×' + it.n, cx + gr.cardW - 7, cy + 3, { align: 'right', color: G.UI.text, outline: '#000' });
       }
-      // описание
+      // описание: имя вещи + текст
       const dy = H - 20 - 44;
       G.gfx.window(ctx, 2, dy, W - 4, 42, 'paper');
-      if (L[idx]) F.wrap(L[idx].desc || '', W - 16).slice(0, 3).forEach((ln, i) => F.draw(ctx, ln, 8, dy + 5 + i * 11, { color: G.UI.text }));
+      if (L[idx]) {
+        F.draw(ctx, L[idx].name, 8, dy + 4, { color: G.UI.selText });
+        F.wrap(L[idx].desc || '', W - 16).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, 8, dy + 16 + i * 11, { color: G.UI.text }));
+      }
       G.gfx.window(ctx, 2, H - 19, W - 4, 17, 'dark');
       F.draw(ctx, '(B) Назад', W / 2, H - 14, { align: 'center', color: P.light });
     },

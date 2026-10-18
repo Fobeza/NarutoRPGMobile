@@ -196,23 +196,23 @@
   {
    "id": "icon_leaf",
    "kind": "icon",
-   "file": "assets/src/icons/leaf.png",
+   "file": "assets/src/emblem.png",
    "target": [
-    32,
-    32
+    64,
+    64
    ],
    "crop_x": 0.5,
    "crop_y": 0.5,
    "chroma": "#ff00ff",
    "status": "импортирован",
    "insert": "scenes/title.js: эмблема над логотипом",
-   "prompt": "Retro pixel art game icon in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of 6 colors, flat colors with two-tone shading and ink hatching on the shadow side, no anti-aliasing, no text, no letters, no watermark, no frame. Single centered object on a solid flat pure magenta background (#ff00ff) for chroma key: a stylized green leaf emblem with a spiral swirl cut into it, the symbol of a hidden leaf ninja village, thick dark ink-green outline (#1e4a26), leaf body in muted green (#5aa046) with lighter highlight (#7cc05a) and ink-hatched shade, small stem at the top; object fills about 80 percent of the frame, perfectly centered, clean pixel edges, nothing else in the image.",
-   "png_bytes": 1162,
-   "b64_bytes": 1552,
-   "colors": 13,
-   "maxdist": 1281,
-   "alpha_pct": 41,
-   "sha1": "2a785b185b",
+   "prompt": "Retro pixel art game emblem icon in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shape readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. ONE single centered emblem filling about 80 percent of the image on a solid flat magenta background (#ff00ff): Konoha hidden leaf village sign — flat round metal plaque (#c8ccd8 plate, #6a6a7a rim) with the leaf spiral symbol cut through it (#2e6a32 leaf).",
+   "png_bytes": 1698,
+   "b64_bytes": 2264,
+   "colors": 12,
+   "maxdist": 818,
+   "alpha_pct": 34,
+   "sha1": "124a12c681",
    "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
@@ -454,7 +454,8 @@
    "colors": 34,
    "maxdist": 1138,
    "alpha_pct": 0,
-   "sha1": "4603579809"
+   "sha1": "4603579809",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_ino",
@@ -475,7 +476,8 @@
    "colors": 25,
    "maxdist": 1180,
    "alpha_pct": 0,
-   "sha1": "c708586ac7"
+   "sha1": "c708586ac7",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_shino",
@@ -496,7 +498,8 @@
    "colors": 25,
    "maxdist": 1069,
    "alpha_pct": 0,
-   "sha1": "6c0fc05adf"
+   "sha1": "6c0fc05adf",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_guy",
@@ -517,7 +520,8 @@
    "colors": 36,
    "maxdist": 1058,
    "alpha_pct": 0,
-   "sha1": "57d340a6e8"
+   "sha1": "57d340a6e8",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_anko",
@@ -538,7 +542,8 @@
    "colors": 28,
    "maxdist": 1064,
    "alpha_pct": 0,
-   "sha1": "38581b9c26"
+   "sha1": "38581b9c26",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_asuma",
@@ -559,7 +564,8 @@
    "colors": 29,
    "maxdist": 1230,
    "alpha_pct": 0,
-   "sha1": "de08d60cf8"
+   "sha1": "de08d60cf8",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_konohamaru",
@@ -580,7 +586,8 @@
    "colors": 34,
    "maxdist": 1196,
    "alpha_pct": 0,
-   "sha1": "a22604b7dd"
+   "sha1": "a22604b7dd",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_neji",
@@ -601,7 +608,8 @@
    "colors": 25,
    "maxdist": 1162,
    "alpha_pct": 0,
-   "sha1": "250a594e4f"
+   "sha1": "250a594e4f",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_hokage",
@@ -622,7 +630,8 @@
    "colors": 30,
    "maxdist": 1209,
    "alpha_pct": 0,
-   "sha1": "cf3503b213"
+   "sha1": "cf3503b213",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
   },
   {
    "id": "portrait_teuchi",
@@ -643,7 +652,1204 @@
    "colors": 23,
    "maxdist": 1155,
    "alpha_pct": 0,
-   "sha1": "05fa7aa178"
+   "sha1": "05fa7aa178",
+   "source": "прежняя сборка (негатив утерян, взят из бандла)"
+  },
+  {
+   "id": "icon_ramen_miso",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 0,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1501,
+   "b64_bytes": 2004,
+   "colors": 49,
+   "maxdist": 1888,
+   "alpha_pct": 63,
+   "sha1": "727cfb2c7e"
+  },
+  {
+   "id": "icon_ramen_pork",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 1,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1662,
+   "b64_bytes": 2216,
+   "colors": 41,
+   "maxdist": 1944,
+   "alpha_pct": 58,
+   "sha1": "fcbb90d4ff"
+  },
+  {
+   "id": "icon_ramen_big",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 2,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1887,
+   "b64_bytes": 2516,
+   "colors": 42,
+   "maxdist": 2279,
+   "alpha_pct": 55,
+   "sha1": "28fdb5a608"
+  },
+  {
+   "id": "icon_yakiniku_one",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 3,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1427,
+   "b64_bytes": 1904,
+   "colors": 26,
+   "maxdist": 2222,
+   "alpha_pct": 45,
+   "sha1": "ea71c12447"
+  },
+  {
+   "id": "icon_dango",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 4,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 829,
+   "b64_bytes": 1108,
+   "colors": 29,
+   "maxdist": 2047,
+   "alpha_pct": 80,
+   "sha1": "2f1c3995a5"
+  },
+  {
+   "id": "icon_sweet_tea",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 5,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1122,
+   "b64_bytes": 1496,
+   "colors": 25,
+   "maxdist": 2356,
+   "alpha_pct": 72,
+   "sha1": "7712af156f"
+  },
+  {
+   "id": "icon_green_tea",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 6,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1040,
+   "b64_bytes": 1388,
+   "colors": 23,
+   "maxdist": 1896,
+   "alpha_pct": 61,
+   "sha1": "91e7f42edf"
+  },
+  {
+   "id": "icon_mochi",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 7,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 880,
+   "b64_bytes": 1176,
+   "colors": 20,
+   "maxdist": 1847,
+   "alpha_pct": 74,
+   "sha1": "578d63280e"
+  },
+  {
+   "id": "icon_berries",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 8,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1202,
+   "b64_bytes": 1604,
+   "colors": 18,
+   "maxdist": 2103,
+   "alpha_pct": 63,
+   "sha1": "c8e69c627a"
+  },
+  {
+   "id": "icon_candy",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 9,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1142,
+   "b64_bytes": 1524,
+   "colors": 33,
+   "maxdist": 2237,
+   "alpha_pct": 73,
+   "sha1": "1cabb69980"
+  },
+  {
+   "id": "icon_bandage",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 10,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1060,
+   "b64_bytes": 1416,
+   "colors": 12,
+   "maxdist": 2243,
+   "alpha_pct": 72,
+   "sha1": "35a8d6bcd5"
+  },
+  {
+   "id": "icon_ointment",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 11,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 947,
+   "b64_bytes": 1264,
+   "colors": 21,
+   "maxdist": 1850,
+   "alpha_pct": 64,
+   "sha1": "8fb0eb5b7e"
+  },
+  {
+   "id": "icon_chakra_pill",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 12,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1021,
+   "b64_bytes": 1364,
+   "colors": 26,
+   "maxdist": 2039,
+   "alpha_pct": 63,
+   "sha1": "761bfffcc2"
+  },
+  {
+   "id": "icon_antidote",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 13,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 985,
+   "b64_bytes": 1316,
+   "colors": 29,
+   "maxdist": 2109,
+   "alpha_pct": 75,
+   "sha1": "9c8e5f1a5a"
+  },
+  {
+   "id": "icon_onsen_bath",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 14,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 1293,
+   "b64_bytes": 1724,
+   "colors": 26,
+   "maxdist": 2261,
+   "alpha_pct": 59,
+   "sha1": "9d3bd6f5c7"
+  },
+  {
+   "id": "icon_herb",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s1.png",
+   "cell": 15,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) steaming bowl of miso ramen with egg and naruto-swirl fish cake; 2) bowl of pork chashu ramen with chopsticks across; 3) huge overflowing ramen bowl with extra toppings; 4) sizzling yakiniku meat platter with grill marks; 5) skewer of three dango balls, pink white and green; 6) cup of sweet milk tea with steam; 7) handleless cup of cloudy green tea; 8) two soft mochi rice cakes on a green leaf; 9) handful of wild red berries in a leaf wrap; 10) wrapped hard candy with twisted paper ends; 11) rolled white cloth bandage; 12) small clay jar of healing ointment; 13) round green chakra pill in paper wrap; 14) small glass vial of antidote with cork stopper; 15) steaming onsen bath token with wooden bucket; 16) green medicinal herb sprig.",
+   "png_bytes": 994,
+   "b64_bytes": 1328,
+   "colors": 13,
+   "maxdist": 1821,
+   "alpha_pct": 68,
+   "sha1": "3777d36c31"
+  },
+  {
+   "id": "icon_kunai",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 0,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 668,
+   "b64_bytes": 892,
+   "colors": 13,
+   "maxdist": 2295,
+   "alpha_pct": 84,
+   "sha1": "fcb344b60b"
+  },
+  {
+   "id": "icon_shuriken",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 1,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 779,
+   "b64_bytes": 1040,
+   "colors": 18,
+   "maxdist": 2332,
+   "alpha_pct": 79,
+   "sha1": "49ee2a6b76"
+  },
+  {
+   "id": "icon_wire",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 2,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 691,
+   "b64_bytes": 924,
+   "colors": 19,
+   "maxdist": 2243,
+   "alpha_pct": 77,
+   "sha1": "ec8f0071d3"
+  },
+  {
+   "id": "icon_smoke_bomb",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 3,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 972,
+   "b64_bytes": 1296,
+   "colors": 38,
+   "maxdist": 2320,
+   "alpha_pct": 79,
+   "sha1": "0e437bdee4"
+  },
+  {
+   "id": "icon_flash_bomb",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 4,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 556,
+   "b64_bytes": 744,
+   "colors": 20,
+   "maxdist": 2268,
+   "alpha_pct": 85,
+   "sha1": "be5aa30ade"
+  },
+  {
+   "id": "icon_tag_explosive",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 5,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 680,
+   "b64_bytes": 908,
+   "colors": 20,
+   "maxdist": 2292,
+   "alpha_pct": 79,
+   "sha1": "c6416ac259"
+  },
+  {
+   "id": "icon_fishing_rod",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 6,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 675,
+   "b64_bytes": 900,
+   "colors": 25,
+   "maxdist": 2080,
+   "alpha_pct": 75,
+   "sha1": "2a92caa434"
+  },
+  {
+   "id": "icon_book_history",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 7,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 762,
+   "b64_bytes": 1016,
+   "colors": 36,
+   "maxdist": 2323,
+   "alpha_pct": 81,
+   "sha1": "9c612770e2"
+  },
+  {
+   "id": "icon_book_traps",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 8,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 761,
+   "b64_bytes": 1016,
+   "colors": 28,
+   "maxdist": 2300,
+   "alpha_pct": 82,
+   "sha1": "1b8c1c3d15"
+  },
+  {
+   "id": "icon_map_secrets",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 9,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 745,
+   "b64_bytes": 996,
+   "colors": 26,
+   "maxdist": 2276,
+   "alpha_pct": 78,
+   "sha1": "100dbd13e6"
+  },
+  {
+   "id": "icon_herb_tea",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 10,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 828,
+   "b64_bytes": 1104,
+   "colors": 27,
+   "maxdist": 2049,
+   "alpha_pct": 72,
+   "sha1": "e6f92887f1"
+  },
+  {
+   "id": "icon_rice",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 11,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 701,
+   "b64_bytes": 936,
+   "colors": 25,
+   "maxdist": 1948,
+   "alpha_pct": 80,
+   "sha1": "1665a0cefc"
+  },
+  {
+   "id": "icon_fish",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 12,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 896,
+   "b64_bytes": 1196,
+   "colors": 27,
+   "maxdist": 2328,
+   "alpha_pct": 76,
+   "sha1": "24cfe46e4b"
+  },
+  {
+   "id": "icon_vegetables",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 13,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 934,
+   "b64_bytes": 1248,
+   "colors": 30,
+   "maxdist": 2132,
+   "alpha_pct": 82,
+   "sha1": "de29f9c17e"
+  },
+  {
+   "id": "icon_eggs",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 14,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 1241,
+   "b64_bytes": 1656,
+   "colors": 37,
+   "maxdist": 2311,
+   "alpha_pct": 70,
+   "sha1": "5e77e82563"
+  },
+  {
+   "id": "icon_milk",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s2.png",
+   "cell": 15,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) black steel kunai knife with ring pommel; 2) four-pointed steel throwing star; 3) coil of thin ninja wire; 4) round smoke bomb with short fuse; 5) flash bomb capsule with paper seal; 6) explosive tag scroll with red seal mark; 7) bamboo fishing rod with line and hook; 8) thick history book with leaf emblem on cover; 9) manual of traps with rope diagram on cover; 10) rolled secret map with red marks; 11) cup of herbal tea with floating sprig; 12) bowl of steamed white rice; 13) grilled fish on a skewer; 14) bundle of fresh vegetables with leek; 15) three brown eggs in a straw nest; 16) glass bottle of milk with cloth cap.",
+   "png_bytes": 912,
+   "b64_bytes": 1216,
+   "colors": 26,
+   "maxdist": 2222,
+   "alpha_pct": 80,
+   "sha1": "45dc86bef0"
+  },
+  {
+   "id": "icon_parcel",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 0,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1326,
+   "b64_bytes": 1768,
+   "colors": 20,
+   "maxdist": 2219,
+   "alpha_pct": 57,
+   "sha1": "b3274a5226"
+  },
+  {
+   "id": "icon_eel",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 1,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1439,
+   "b64_bytes": 1920,
+   "colors": 30,
+   "maxdist": 2331,
+   "alpha_pct": 68,
+   "sha1": "a6ff943b1d"
+  },
+  {
+   "id": "icon_boot",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 2,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1111,
+   "b64_bytes": 1484,
+   "colors": 13,
+   "maxdist": 2088,
+   "alpha_pct": 60,
+   "sha1": "366b02dce0"
+  },
+  {
+   "id": "icon_towel",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 3,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 713,
+   "b64_bytes": 952,
+   "colors": 11,
+   "maxdist": 2145,
+   "alpha_pct": 80,
+   "sha1": "8e7307db18"
+  },
+  {
+   "id": "icon_notebook",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 4,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 577,
+   "b64_bytes": 772,
+   "colors": 18,
+   "maxdist": 1595,
+   "alpha_pct": 78,
+   "sha1": "117a8e7009"
+  },
+  {
+   "id": "icon_bouquet_ino",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 5,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1449,
+   "b64_bytes": 1932,
+   "colors": 34,
+   "maxdist": 1899,
+   "alpha_pct": 68,
+   "sha1": "e6a80fd3fe"
+  },
+  {
+   "id": "icon_flowers_s",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 6,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1423,
+   "b64_bytes": 1900,
+   "colors": 46,
+   "maxdist": 2267,
+   "alpha_pct": 67,
+   "sha1": "d87b198d79"
+  },
+  {
+   "id": "icon_flowers_m",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 7,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1551,
+   "b64_bytes": 2068,
+   "colors": 43,
+   "maxdist": 1987,
+   "alpha_pct": 60,
+   "sha1": "76fa900b79"
+  },
+  {
+   "id": "icon_flowers_l",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 8,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1670,
+   "b64_bytes": 2228,
+   "colors": 40,
+   "maxdist": 2201,
+   "alpha_pct": 60,
+   "sha1": "be06fbb6f0"
+  },
+  {
+   "id": "icon_dog_food",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 9,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1116,
+   "b64_bytes": 1488,
+   "colors": 21,
+   "maxdist": 2247,
+   "alpha_pct": 61,
+   "sha1": "aef77f696c"
+  },
+  {
+   "id": "icon_dog_treat",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 10,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 853,
+   "b64_bytes": 1140,
+   "colors": 18,
+   "maxdist": 2191,
+   "alpha_pct": 71,
+   "sha1": "3df763fac0"
+  },
+  {
+   "id": "icon_shogi",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 11,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1081,
+   "b64_bytes": 1444,
+   "colors": 19,
+   "maxdist": 2223,
+   "alpha_pct": 56,
+   "sha1": "6ded3f27c7"
+  },
+  {
+   "id": "icon_chips",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 12,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1292,
+   "b64_bytes": 1724,
+   "colors": 25,
+   "maxdist": 1742,
+   "alpha_pct": 49,
+   "sha1": "ee63e65bc7"
+  },
+  {
+   "id": "icon_hairpin",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 13,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 843,
+   "b64_bytes": 1124,
+   "colors": 24,
+   "maxdist": 2414,
+   "alpha_pct": 84,
+   "sha1": "073145662d"
+  },
+  {
+   "id": "icon_tomato",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 14,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 815,
+   "b64_bytes": 1088,
+   "colors": 19,
+   "maxdist": 2304,
+   "alpha_pct": 61,
+   "sha1": "f2c1b7c482"
+  },
+  {
+   "id": "icon_bug_jar",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s3.png",
+   "cell": 15,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) wrapped paper parcel tied with string; 2) grilled eel skewer with glaze; 3) worn leather shinobi boot; 4) folded white bath towel; 5) plain notebook with pencil; 6) wrapped flower bouquet with ribbon; 7) small posy of wildflowers; 8) medium flower bouquet in paper wrap; 9) luxury flower arrangement with ribbon; 10) tin bowl of dog food; 11) bone-shaped dog treat; 12) shogi game piece with kanji mark; 13) paper bag of crisp potato chips; 14) kanzashi hairpin with small flower; 15) ripe red tomato with green stem; 16) glass jar with fireflies inside.",
+   "png_bytes": 1065,
+   "b64_bytes": 1420,
+   "colors": 32,
+   "maxdist": 2093,
+   "alpha_pct": 62,
+   "sha1": "751e44f6e8"
+  },
+  {
+   "id": "icon_weights",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s4.png",
+   "cell": 0,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) pair of ankle training weights with straps; 2) omamori luck charm amulet with knot; 3) fresh carp fish with shiny scales; 4) blue-flowered medicinal herb sprig; 5) konoha leaf spiral emblem sign, flat metal plaque; cells 6-16 empty magenta only.",
+   "png_bytes": 883,
+   "b64_bytes": 1180,
+   "colors": 14,
+   "maxdist": 2186,
+   "alpha_pct": 65,
+   "sha1": "5c2c9c4f2e"
+  },
+  {
+   "id": "icon_charm",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s4.png",
+   "cell": 1,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) pair of ankle training weights with straps; 2) omamori luck charm amulet with knot; 3) fresh carp fish with shiny scales; 4) blue-flowered medicinal herb sprig; 5) konoha leaf spiral emblem sign, flat metal plaque; cells 6-16 empty magenta only.",
+   "png_bytes": 909,
+   "b64_bytes": 1212,
+   "colors": 28,
+   "maxdist": 1844,
+   "alpha_pct": 81,
+   "sha1": "1dff923703"
+  },
+  {
+   "id": "icon_carp",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s4.png",
+   "cell": 2,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) pair of ankle training weights with straps; 2) omamori luck charm amulet with knot; 3) fresh carp fish with shiny scales; 4) blue-flowered medicinal herb sprig; 5) konoha leaf spiral emblem sign, flat metal plaque; cells 6-16 empty magenta only.",
+   "png_bytes": 973,
+   "b64_bytes": 1300,
+   "colors": 13,
+   "maxdist": 2260,
+   "alpha_pct": 76,
+   "sha1": "131e2e58e2"
+  },
+  {
+   "id": "icon_herb_blue",
+   "kind": "icon",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s4.png",
+   "cell": 3,
+   "grid": [
+    4,
+    4
+   ],
+   "chroma": "#ff00ff",
+   "status": "импортирован",
+   "prompt": "Retro pixel art game item icons in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching, thin dark ink outline, bold simple shapes readable at tiny size; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame. Exact 4x4 grid of 16 equal square cells with wide empty gaps between cells; each cell contains ONE centered item filling about 80 percent of its cell on a solid flat magenta background (#ff00ff). Cells in reading order (left to right, top to bottom): 1) pair of ankle training weights with straps; 2) omamori luck charm amulet with knot; 3) fresh carp fish with shiny scales; 4) blue-flowered medicinal herb sprig; 5) konoha leaf spiral emblem sign, flat metal plaque; cells 6-16 empty magenta only.",
+   "png_bytes": 946,
+   "b64_bytes": 1264,
+   "colors": 26,
+   "maxdist": 2293,
+   "alpha_pct": 77,
+   "sha1": "82a5837608"
   }
  ]
 }

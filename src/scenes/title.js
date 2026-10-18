@@ -99,7 +99,7 @@ G.scenes.register('title', () => {
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H;
       ctx.drawImage(bg, 0, 0);
-      G.assets.draw(ctx, 'icon_leaf', Math.round(W / 2 - 12), 2, 24, 24);   // V8: эмблема деревни над плашкой
+      G.assets.draw(ctx, 'icon_leaf', Math.round(W / 2 - 16), 2, 32, 32);   // V8: эмблема деревни над плашкой
       // логотип
       const ly = 26 + Math.round(Math.sin(t * 1.5) * 2);
       ctx.fillStyle = 'rgba(20,10,20,.55)';
