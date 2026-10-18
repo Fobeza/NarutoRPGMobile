@@ -23,7 +23,7 @@ G.debug = {
       `FPS ${this.fps}  ${G.screen.W}x${G.screen.H} x${G.screen.scale}`,
       'Сцены: ' + G.scenes.stack.map((s) => s.name || '?').join(' > '),
       ...((top && top.debugInfo && top.debugInfo()) || []),
-      `v${BUILD.version}`,
+      `v${BUILD.release} (${BUILD.version})`,
     ];
     const w = Math.max(...rows.map((r) => G.font.measure(r))) + 6;
     ctx.globalAlpha = 0.75;

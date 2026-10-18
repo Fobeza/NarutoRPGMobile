@@ -169,7 +169,7 @@ G.scenes.register('title', () => {
         G.font.draw(ctx, it, W / 2, y, { align: 'center', color: sel ? G.PAL.white : G.PAL.light, shadow: G.PAL.black });
       });
       G.font.draw(ctx, 'Нажми A', W / 2, H - 22, { align: 'center', color: Math.floor(t * 2) % 2 ? G.PAL.gray : G.PAL.light });
-      G.font.draw(ctx, 'v' + BUILD.version, W - 3, H - 11, { align: 'right', color: G.PAL.gray });
+      G.font.draw(ctx, 'v' + BUILD.release, W - 3, H - 11, { align: 'right', color: G.PAL.gray });
     },
   };
 });

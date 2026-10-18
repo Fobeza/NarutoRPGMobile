@@ -12,6 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
+RELEASE = "1.0"                              # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -119,7 +120,7 @@ def build(debug=False):
 
     version = hashlib.sha1((js + read("shell.html") + read("style.css")).encode("utf-8")).hexdigest()[:8]   # меняется при любой правке → телефоны подхватят обновление
     stamp = time.strftime("%Y-%m-%d %H:%M")
-    header = (f"'use strict';\nconst BUILD = {{ version: '{version}', date: '{stamp}', "
+    header = (f"'use strict';\nconst BUILD = {{ release: '{RELEASE}', version: '{version}', date: '{stamp}', "
               f"debug: {'true' if debug else 'false'} }};\n")
 
     shell = read("shell.html")
@@ -144,7 +145,7 @@ def build(debug=False):
         f.write(ed)
 
     size = os.path.getsize(os.path.join(OUT, "index.html"))
-    print(f"OK  версия {version}  index.html = {size/1024:.1f} КБ  ({len(JS_FILES)} модулей)")
+    print(f"OK  версия {RELEASE} ({version})  index.html = {size/1024:.1f} КБ  ({len(JS_FILES)} модулей)")
 
 
 if __name__ == "__main__":
