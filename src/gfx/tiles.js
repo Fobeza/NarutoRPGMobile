@@ -101,7 +101,7 @@ G.tiles = (() => {
   }
 
   // мощёная площадь: плитка 8×8 со смещением
-  function stone(c, ox, oy, base = '#cfc6b4', line = '#a89e8a', hi = '#e2dacb') {
+  function stone(c, ox, oy, base = '#cfc6b4', line = '#b8ae9a', hi = '#dad2c3') {
     px(c, ox, oy, base, T, T);
     px(c, ox, oy + 7, line, T, 1); px(c, ox, oy + 15, line, T, 1);
     px(c, ox + 7, oy, line, 1, 7); px(c, ox + 15, oy, line, 1, 7);
@@ -111,10 +111,11 @@ G.tiles = (() => {
 
   // главная улица: крупные плиты
   function mainroad(c, ox, oy) {
-    px(c, ox, oy, '#d8c8a0', T, T);
-    px(c, ox, oy + 15, '#b8a47a', T, 1); px(c, ox + 15, oy, '#b8a47a', 1, T);
-    px(c, ox, oy, '#e8dab8', T, 1); px(c, ox, oy, '#e8dab8', 1, T);
-    dots(c, ox, oy, 6, 21, ['#c4b48a', '#c4b48a', '#e4d6b0']);
+    // V9: стыки плит еле заметны — дорога читается цельной, а не лоскутами
+    px(c, ox, oy, '#d6c8a6', T, T);
+    px(c, ox, oy + 15, '#cbbd99', T, 1); px(c, ox + 15, oy, '#cbbd99', 1, T);
+    px(c, ox, oy, '#ddd0b2', T, 1); px(c, ox, oy, '#ddd0b2', 1, T);
+    dots(c, ox, oy, 6, 21, ['#cdbf9b', '#cdbf9b', '#e0d3b4']);
   }
 
   function darkstone(c, ox, oy) { stone(c, ox, oy, '#6a6478', '#4a4458', '#7c768a'); }
@@ -162,8 +163,8 @@ G.tiles = (() => {
   function tatami(c, ox, oy) {
     px(c, ox, oy, '#c8c070', T, T);
     for (let y = 1; y < 16; y += 2) px(c, ox, oy + y, '#b8b062', T, 1);
-    px(c, ox, oy, '#5a6a3a', T, 1); px(c, ox, oy + 15, '#5a6a3a', T, 1);
-    px(c, ox, oy, '#5a6a3a', 1, T);
+    px(c, ox, oy, '#8c9658', T, 1); px(c, ox, oy + 15, '#8c9658', T, 1);   // V9: швы татами мягче — пол без «клеток»
+    px(c, ox, oy, '#8c9658', 1, T);
   }
 
   function iwall(c, ox, oy) {
@@ -182,8 +183,8 @@ G.tiles = (() => {
 
   function tilefloor(c, ox, oy) {
     px(c, ox, oy, '#e8eef0', T, T);
-    px(c, ox, oy + 7, '#c8d0d8', T, 1); px(c, ox, oy + 15, '#c8d0d8', T, 1);
-    px(c, ox + 7, oy, '#c8d0d8', 1, T); px(c, ox + 15, oy, '#c8d0d8', 1, T);
+    px(c, ox, oy + 7, '#d6dce2', T, 1); px(c, ox, oy + 15, '#d6dce2', T, 1);
+    px(c, ox + 7, oy, '#d6dce2', 1, T); px(c, ox + 15, oy, '#d6dce2', 1, T);
   }
 
   function dustfloor(c, ox, oy) {
@@ -234,10 +235,10 @@ G.tiles = (() => {
   }
   // большие плиты площади с ромбом
   function plaza(c, ox, oy) {
-    px(c, ox, oy, '#d8d0c0', T, T);
-    px(c, ox, oy + 15, '#b0a898', T, 1); px(c, ox + 15, oy, '#b0a898', 1, T);
-    px(c, ox, oy, '#e8e2d4', T, 1); px(c, ox, oy, '#e8e2d4', 1, T);
-    for (let i = 0; i < 5; i++) { px(c, ox + 7 - i, oy + 3 + i, '#c4bcac'); px(c, ox + 8 + i, oy + 3 + i, '#c4bcac'); px(c, ox + 7 - i, oy + 12 - i, '#c4bcac'); px(c, ox + 8 + i, oy + 12 - i, '#c4bcac'); }
+    px(c, ox, oy, '#d4ccbc', T, T);
+    px(c, ox, oy + 15, '#c6bead', T, 1); px(c, ox + 15, oy, '#c6bead', 1, T);
+    px(c, ox, oy, '#dcd5c8', T, 1); px(c, ox, oy, '#dcd5c8', 1, T);
+    for (let i = 0; i < 5; i++) { px(c, ox + 7 - i, oy + 3 + i, '#cdc5b5'); px(c, ox + 8 + i, oy + 3 + i, '#cdc5b5'); px(c, ox + 7 - i, oy + 12 - i, '#cdc5b5'); px(c, ox + 8 + i, oy + 12 - i, '#cdc5b5'); }
   }
   function moss(c, ox, oy) { grass(c, ox, oy, 9, true, '#4a8a3c', '#6aa858', '#2e6a2e'); }
 
@@ -361,15 +362,9 @@ G.tiles = (() => {
     const up = map.get(tx, ty - 1), dn = map.get(tx, ty + 1), lf = map.get(tx - 1, ty), rt = map.get(tx + 1, ty);
     const hh = (i, s) => H(tx * 16 + i, ty, s);
 
-    // крупные пятна света и тени: земля перестаёт быть однотонной заливкой
+    // крупные пятна света и тени теперь — один плавный проход по всему чанку (map.groundLight), а не квадраты 4×4
     if (map.outdoor && G.mapgen && (GRASSY.has(id) || ROADY.has(id))) {
       const grass = GRASSY.has(id);
-      for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
-        const n = G.mapgen.noise(tx * 4 + i, ty * 4 + j, 77, grass ? 9 : 5);
-        if (n > 0.6) { ctx.globalAlpha = Math.min(grass ? 0.2 : 0.1, (n - 0.6) * 0.7); ctx.fillStyle = grass ? '#e6f59a' : '#fff4d0'; ctx.fillRect(x + i * 4, y + j * 4, 4, 4); }
-        else if (n < 0.34) { ctx.globalAlpha = Math.min(grass ? 0.2 : 0.1, (0.34 - n) * 0.7); ctx.fillStyle = grass ? '#12402a' : '#6a4a2a'; ctx.fillRect(x + i * 4, y + j * 4, 4, 4); }
-      }
-      ctx.globalAlpha = 1;
       if (grass && hh(1, 91) > 0.82) { // одиночные цветочки и камешки
         const fx = 2 + Math.floor(hh(2, 92) * 12), fy = 2 + Math.floor(hh(3, 93) * 12), r = hh(4, 94);
         if (r > 0.55) { const col = r > 0.85 ? '#ffffff' : r > 0.7 ? '#ffd84a' : '#f4a0c0'; px(ctx, x + fx, y + fy, col); px(ctx, x + fx, y + fy + 1, '#3e8a42'); }

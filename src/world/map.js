@@ -132,10 +132,33 @@ G.WorldMap = class {
       G.tiles.renderTile(ctx, this, cx * CH + x, cy * CH + y, x * T, y * T);
     }
     if (!this.outdoor) this.roomLight(c, cx * CH, cy * CH, tw, th);
+    else this.groundLight(c, cx * CH, cy * CH, tw, th);
     G.gfx.smooth(c);
     this.chunks.set(k, c);
     if (this.chunks.size > 12) this.chunks.delete(this.chunks.keys().next().value);
     return c;
+  }
+
+  // V9: плавные пятна света и тени на земле — гладкий шум в мировых координатах (швов между тайлами и чанками нет),
+  // трава заметнее, дороги и камень — едва; ступени между оттенками размыты дизерингом.
+  groundLight(c, gx, gy, tw, th) {
+    const T = G.CONFIG.TILE, ID = G.tiles.ID, S = G.shade, Hh = G.util.hash2;
+    const GR = G.tiles.GRASSY, RD = G.tiles.ROADY;
+    const lat = (ix, iy, sd) => Hh(ix, iy, 900 + sd);
+    const vn = (x, y, wl, sd) => {            // билинейный шум с плавным сглаживанием
+      const fx = x / wl, fy = y / wl, ix = Math.floor(fx), iy = Math.floor(fy);
+      let u = fx - ix, v = fy - iy; u = u * u * (3 - 2 * u); v = v * v * (3 - 2 * v);
+      const a = lat(ix, iy, sd), b = lat(ix + 1, iy, sd), cc = lat(ix, iy + 1, sd), d = lat(ix + 1, iy + 1, sd);
+      return a + (b - a) * u + (cc - a) * v + (a - b - cc + d) * u * v;
+    };
+    S.tint(c, 0, 0, tw * T, th * T, (u, v) => {
+      const wx = gx * T + u * tw * T, wy = gy * T + v * th * T;
+      const tile = this.get(Math.floor(wx / T), Math.floor(wy / T));
+      const grass = GR.has(tile);
+      if (!grass && !RD.has(tile)) return 0;
+      const n = (vn(wx, wy, 56, 1) - 0.5) * 0.7 + (vn(wx, wy, 22, 2) - 0.5) * 0.3;   // −0.5…+0.5
+      return n * (grass ? 0.2 : 0.07);
+    }, { steps: 40, keepInk: false });
   }
 
   // V9: свет в комнате — пол у стены в мягкой тени (стена заслоняет свет), к дальним углам чуть темнее
