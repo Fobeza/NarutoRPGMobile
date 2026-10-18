@@ -151,8 +151,9 @@ def resample(px, w, x0, y0, sw, sh, tw, th):
     return out
 
 
-def quantize(px, pal_rgb, want_alpha, chroma):
-    """Chroma-key → альфа; затем каждый цвет к ближайшему из G.PAL (вес 3/4/2)."""
+def quantize(px, pal_rgb, want_alpha, chroma, snap=None):
+    """Chroma-key → альфа; snap — довести близкие к фону цвета до точного фона;
+    затем каждый цвет к ближайшему из палитры импорта (вес 3/4/2)."""
     cache = {}
     colors, maxdist, transp = set(), 0, 0
     cr = cg = cb = 0
@@ -160,7 +161,14 @@ def quantize(px, pal_rgb, want_alpha, chroma):
         cr = int(chroma[1:3], 16)
         cg = int(chroma[3:5], 16)
         cb = int(chroma[5:7], 16)
+    sr = sg = sb = 0
+    if snap:
+        sr = int(snap[1:3], 16)
+        sg = int(snap[3:5], 16)
+        sb = int(snap[5:7], 16)
     for i in range(0, len(px), 4):
+        if snap and abs(px[i] - sr) + abs(px[i + 1] - sg) + abs(px[i + 2] - sb) < 96:
+            px[i], px[i + 1], px[i + 2] = sr, sg, sb
         if chroma and abs(px[i] - cr) + abs(px[i + 1] - cg) + abs(px[i + 2] - cb) < 300:
             px[i + 3] = 0
         if px[i + 3] < 128:
@@ -266,7 +274,7 @@ def main():
         x0, y0, sw, sh = crop_box(w, h, tw, th, a.get("crop_x", 0.5), a.get("crop_y", 0.5))
         small = resample(px, w, x0, y0, sw, sh, tw, th)
         want_alpha = a["kind"] == "icon"
-        colors, maxdist, transp = quantize(small, pal_rgb, want_alpha, a.get("chroma"))
+        colors, maxdist, transp = quantize(small, pal_rgb, want_alpha, a.get("chroma"), a.get("bg_snap"))
         npix = tw * th
         if want_alpha and transp == 0:
             errs.append(f"{a['id']}: ждал прозрачность, получил непрозрачную картинку")
