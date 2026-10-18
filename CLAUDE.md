@@ -8,9 +8,11 @@
 ```bash
 python3 build.py                     # src/ → index.html + sw.js (корень репозитория = сайт GitHub Pages)
 python3 -m http.server 8765          # локальный сервер из корня → http://localhost:8765/?debug=1
-python3 tools/check_all.py --quick   # сборка + быстрые тесты
-python3 tools/check_all.py           # все тесты + аудит карты и комнат (перед публикацией)
-python3 tools/balance.py 20          # баланс боёв → docs/BALANCE.md (после правок боя/врагов)
+python3 tools/check_node.py          # быстрые проверки без браузера (~12 с, нужен Node.js) — после любой правки
+python3 tools/check_all.py --quick   # сборка + Node-проверки + быстрые браузерные тесты
+python3 tools/check_all.py           # всё: Node + браузерные тесты + аудит карты и комнат (перед публикацией)
+python3 tools/balance.py 120         # баланс боёв → docs/BALANCE.md и docs/balance.csv (нужен Node, без браузера)
+node tools/node/golden.js > /tmp/before.txt   # отпечатки отрисовки — снять ДО рефакторинга боя/сцен
 python3 tools/render_chars.py /tmp/c.png naruto,sasuke   # посмотреть персонажей
 python3 tools/audit_rooms.py --shots # посмотреть и проверить все комнаты
 ```
@@ -28,9 +30,12 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 5. Шрифт пиксельный: символ, которого нет в `gfx/font.js` (`RAW`), выводится как «?». Добавляй глифы, если нужен новый значок.
 6. Новые поля сохранения — в `defaults()` в `systems/game.js` (старые сохранения дополнит `G.game.fix()`).
 7. Проверяй себя глазами: скриншоты через Playwright (`tools/tlib.py`), а не только тесты.
-   Комнаты — `audit_rooms.py`, карта — `render_map.py` (`unreachableDoors`/`unreachableTalk` пустые).
-8. После правок боя — `tools/balance.py`; целевые окна побед указаны в `docs/BALANCE.md`.
-9. Перед коммитом: `python3 tools/check_all.py` зелёный, запись в `docs/CHANGELOG.md`.
+   Комнаты — `audit_rooms.py`, карта — `render_map.py` (обе сообщают о проблемах кодом выхода).
+   Если браузера нет — `python3 tools/check_node.py` покрывает сценарии, данные, мир, комнаты, шрифт, сцены, бой и сохранения.
+8. После правок боя — `python3 tools/balance.py 120`; целевые окна побед — `tools/targets.json` (их же проверяет
+   `tools/node/checks.js`), таблицы — в `docs/BALANCE.md` (файл генерируется, руками его не правь).
+   Рефакторинг боя/сцен — только со снятыми отпечатками: `node tools/node/golden.js` до и после, `diff` пустой.
+9. Перед коммитом: `python3 tools/check_all.py` зелёный (без Playwright — `--node`), запись в `docs/CHANGELOG.md`.
 10. Публикация: `git push` в `main` — GitHub Pages обновится сам за 1–2 минуты.
 
 ## Карта кода (кратко)
@@ -40,5 +45,6 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 - `src/systems/` — время, задания, навигация, жизнь (часы/погода), Академия и сюжет (`story.js`), уроки, дружба,
   тренировки, катсцены, расписания (`schedule.js`), симулятор баланса (`sim.js`)
 - `src/world/` — генератор Конохи, интерьеры (`interiors.js`), жители (`village_*.js`, `cast.js`), крыши, эффекты
-- `src/scenes/` — экраны: `world.js` (карта, NPC, камера), `battle.js`, `train.js` (мини-игры), меню, календарь и др.
+- `src/scenes/` — экраны: `world.js` (карта, NPC, камера), `battle.js` (+ `battle_fx.js` эффекты и `battle_ai.js` ИИ врага),
+  `train.js` (мини-игры), меню, календарь и др.
 - Подробно — `docs/ARCHITECTURE.md`.

@@ -17,9 +17,14 @@ JS = r"""() => {
     while (q.length) { const [x, y] = q.pop(); for (const [a, c] of [[1,0],[-1,0],[0,1],[0,-1]]) { const nx = x + a, ny = y + c, k = nx * 999 + ny; if (!R.has(k) && walk(nx, ny)) { R.add(k); q.push([nx, ny]); } } }
     const iss = [];
     if (!walk(sx, sy)) iss.push('точка входа заблокирована');
-    let floor = 0, dead = 0;
-    for (let y = 2; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) if (walk(x, y)) { floor++; if (!R.has(x * 999 + y)) dead++; }
-    if (dead) iss.push('недоступных клеток пола: ' + dead);
+    // Пол, до которого не дойти: замкнутый (кухня за стойкой) — декорация, а вот клетка рядом с проходом — дыра.
+    let floor = 0, dead = 0, deadOpen = 0;
+    const at = (x, y) => R.has(x * 999 + y);
+    for (let y = 2; y < m.h - 1; y++) for (let x = 1; x < m.w - 1; x++) if (walk(x, y)) {
+      floor++;
+      if (!at(x, y)) { dead++; if (at(x + 1, y) || at(x - 1, y) || at(x, y + 1) || at(x, y - 1)) deadOpen++; }
+    }
+    if (deadOpen) iss.push('недоступных клеток пола рядом с проходом: ' + deadOpen);
     // как в world.interact(): игрок на достижимой клетке, смотрит в одну из 4 сторон, точка перед ним — fx,fy
     const fronts = []; for (const k of R) { const x = Math.floor(k / 999), y = k % 999, px = x * T + 8, py = y * T + 12; for (const [a, c] of [[1,0],[-1,0],[0,1],[0,-1]]) fronts.push([px + a * 12, py - 3 + c * 12]); }
     const npcOk = (n) => fronts.some(([fx, fy]) => Math.hypot(n.x - fx, n.y - 3 - fy) < (n.reach || 15));
@@ -46,7 +51,7 @@ JS = r"""() => {
     for (const o of m.objects) { const r = m.drawRect(o); if (r.x < T - 2 || r.x + r.w > (m.w - 1) * T + 2 || r.y + r.h > (m.h - 1) * T + 4) iss.push(`объект ${o.kind}@${Math.floor(o.x/T)},${Math.floor(o.y/T)} вылезает за стены`); }
     // спрайты, перекрывающие друг друга визуально (оба на полу, рисунок пересекается сильно)
     const ex = m.exit; if (ex && !R.has(ex.tx * 999 + (ex.ty - 1))) iss.push('выход недоступен');
-    out.push({ key, id: b.interior.id, name: b.name, w: m.w, h: m.h, floor, objs: m.objects.length, npcs: m.npcs.length, iss });
+    out.push({ key, id: b.interior.id, name: b.name, w: m.w, h: m.h, floor, decor: dead - deadOpen, objs: m.objects.length, npcs: m.npcs.length, iss });
   }
   return out;
 }"""
@@ -58,8 +63,10 @@ with sync_playwright() as p:
     bad = 0
     for r in res:
         if r.get('iss'): bad += 1
-        print(r['key'], '|', r.get('name'), f"{r.get('w')}x{r.get('h')} пол={r.get('floor')} объектов={r.get('objs')} npc={r.get('npcs')}")
-        for i in r.get('iss', []): print('   -', i)
+        decor = r.get('decor') or 0
+        print(r['key'], '|', r.get('name'), f"{r.get('w')}x{r.get('h')} пол={r.get('floor')} объектов={r.get('objs')} npc={r.get('npcs')}"
+              + (f" декор.пол={decor}" if decor else ''))
+        for i in r.get('iss', []): print('   ✘', i)
     print('комнат:', len(res), 'с проблемами:', bad)
     if '--shots' in sys.argv:
         os.makedirs(OUT + '/rooms', exist_ok=True)
@@ -70,3 +77,6 @@ with sync_playwright() as p:
             page.screenshot(path=OUT + '/rooms/' + r['key'].replace('/', '_') + '.png', clip={'x': 0, 'y': 0, 'width': 393, 'height': 560})
     print('errors', errors[:3])
     b.close()
+    # раньше аудит только печатал проблемы и всегда возвращал 0 — регрессии не валили check_all.py
+    if bad or errors:
+        sys.exit(1)

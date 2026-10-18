@@ -96,7 +96,7 @@ G.sim = {
     if (P.hp < P.hpMax * 0.35 && R() < 0.8 && tryP('tool', 'Бинт')) return true;
     if (P.ch < P.chMax * 0.2 && tryP('tool', 'Пилюля')) return true;
     if (!P.clones && R() < (b === 'nin' ? 0.45 : 0.2) && tech('bunshin')) return true;
-    if (d <= 3 && R() < (b === 'nin' ? 0.5 : b === 'bal' ? 0.25 : 0.08) && (tech('katon') || tech('fuuton'))) return true;
+    if (d <= 3 && R() < (b === 'nin' ? 0.55 : b === 'bal' ? 0.25 : 0.08) && (tech('katon') || tech('fuuton') || tech('suiton') || tech('raiton'))) return true;
     if (!E.s.fear && R() < (b === 'gen' ? 0.4 : 0.12) && tech('fear')) return true;
     if (!P.s.hidden && d >= 2 && R() < (b === 'nin' ? 0.4 : b === 'gen' ? 0.25 : 0.06) && tech('henge')) return true;
     if ((mode === 'bells' || mode === 'scroll') && d <= 2 && !E.s.blind && R() < 0.45 && (tryP('tool', 'Вспышка') || tryP('tool', 'Дым. бомба'))) return true;
@@ -123,7 +123,7 @@ G.sim = {
     { id: 'naruto_d14', day: 14, enemy: 'naruto', mode: 'spar', terrain: 'yard', label: 'Наруто, урок (д.14)' },
     { id: 'lee_d18', day: 18, enemy: 'lee', mode: 'spar', terrain: 'field', label: 'Рок Ли (д.18)' },
     { id: 'choji_d26', day: 26, enemy: 'choji', mode: 'ringout', terrain: 'ring', label: 'Турнир: Чоджи (д.26)' },
-    { id: 'kiba_d26', day: 26, enemy: 'kiba', mode: 'ringout', terrain: 'ring', label: 'Турнир: Киба (д.26)' },
+    { id: 'kiba_d26', day: 26, enemy: 'kiba_t', mode: 'ringout', terrain: 'ring', label: 'Турнир: Киба (д.26)' },
     { id: 'sasuke_d26', day: 26, enemy: 'sasuke', mode: 'ringout', terrain: 'ring', story: true, label: 'Турнир: Саске (д.26)' },
     { id: 'bully_d33', day: 33, enemy: 'bully', mode: 'ko', terrain: 'street', label: 'Хулиган, событие (д.33)' },
     { id: 'thief_d30', day: 30, enemy: 'thief', mode: 'ko', terrain: 'night', label: 'Ночной вор (д.30)' },

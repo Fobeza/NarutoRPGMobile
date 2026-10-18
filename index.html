@@ -222,7 +222,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { version: '94d07820', date: '2026-10-18 11:12', debug: false };
+const BUILD = { version: 'a7227cd8', date: '2026-10-18 09:14', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -2958,9 +2958,28 @@ G.tiles = (() => {
 G.script = (() => {
   const library = {};   // id → { ops, labels }
   const actions = {};   // имя → fn(args[], runner)
+  const problems = [];  // ошибки сценариев, найденные при разборе и выполнении (их ловит tools/check_node.py)
+
+  // Сообщение об ошибке сценария: пишем в список и в консоль. Игру не роняем —
+  // потерянная метка обрывается как «end», чтобы игрок не зависал в пустом диалоге.
+  function report(msg) {
+    if (!problems.includes(msg)) problems.push(msg);
+    console.warn('Сценарий: ' + msg);
+  }
+
+  // Проверить блоки: все ли метки переходов определены внутри своего сценария
+  function validateBlocks(list) {
+    for (const s of list) {
+      for (const op of s.ops) {
+        if (op.op === 'goto' || op.op === 'if') { if (!(op.label in s.labels)) report(`${s.id}: нет метки «${op.label}»`); }
+        else if (op.op === 'choice') for (const o of op.options) if (!(o.label in s.labels)) report(`${s.id}: нет метки «${o.label}»`);
+      }
+    }
+  }
 
   function parse(src) {
     let cur = null;
+    const touched = [];   // блоки этого вызова — проверить в конце (метка может быть объявлена позже перехода)
     const lines = src.split('\n');
     for (let n = 0; n < lines.length; n++) {
       const raw = lines[n];
@@ -2971,6 +2990,7 @@ G.script = (() => {
       if ((m = line.match(/^===\s*(\S+)/))) {
         cur = { id: m[1], ops: [], labels: {} };
         library[cur.id] = cur;
+        touched.push(cur);
         continue;
       }
       if (!cur) throw new Error('Скрипт: строка вне блока === : ' + line);
@@ -3000,8 +3020,9 @@ G.script = (() => {
       if ((m = line.match(/^(\w*)(?:\[([^\]]+)\])?(?:\((\w+)\))?\s*:\s*(.*)$/))) {
         ops.push({ op: 'say', who: m[1] || null, name: m[2] || null, emo: m[3] || null, text: m[4] }); continue;
       }
-      throw new Error(`Скрипт ${cur.id}: не понимаю строку «${line}»`);
+      report(`${cur.id}: не понимаю строку «${line}»`);   // строку пропускаем: игра работает, ошибку ловят проверки
     }
+    validateBlocks(touched);
   }
 
   // Проверка условия: flag.x | !flag.x | var.n >= 3
@@ -3012,7 +3033,7 @@ G.script = (() => {
       if (r !== undefined) return neg ? !r : r;
     }
     const m = cond.trim().match(/^(!?)(flag|var)\.(\w+)\s*(==|!=|>=|<=|>|<)?\s*(-?\d+)?$/);
-    if (!m) { console.warn('Плохое условие', cond); return false; }
+    if (!m) { report(`непонятное условие «${cond.trim()}»`); return false; }
     const store = m[2] === 'flag' ? G.state.flags : G.state.vars;
     const v = Number(store[m[3]] || 0);
     let r;
@@ -3054,7 +3075,7 @@ G.script = (() => {
             }
             case 'call': {
               const fn = actions[op.name];
-              if (fn) fn(op.args, r); else console.warn('Нет действия', op.name);
+              if (fn) fn(op.args, r); else report(`${id}: нет действия «${op.name}»`);
               break;
             }
           }
@@ -3062,14 +3083,23 @@ G.script = (() => {
         return { op: 'end' };
       },
       jump(label) {
-        if (!(label in s.labels)) throw new Error(`Скрипт ${id}: нет метки ${label}`);
+        if (!(label in s.labels)) {
+          // Метка потерялась (ошибка сценария). Раньше здесь летело исключение и игра зависала:
+          // сцена диалога оставалась в стеке без текущей операции. Теперь — сообщаем и завершаем диалог.
+          report(`${id}: нет метки ${label}`);
+          pc = s.ops.length;
+          return;
+        }
         pc = s.labels[label];
       },
     };
     return r;
   }
 
-  return { parse, runner, test, library, actions };
+  // Перепроверить всю библиотеку (используют проверки и режим отладки)
+  function validate() { for (const id of Object.keys(library)) validateBlocks([library[id]]); return problems.slice(); }
+
+  return { parse, runner, test, library, actions, problems, report, validate };
 })();
 
 // Базовые действия
@@ -3149,6 +3179,8 @@ G.dialog = (() => {
       pageLen() { return this.pages[this.page].reduce((s, l) => s + [...l].length, 0); },
 
       update(dt) {
+        // Сценарий оборвался аварийно (нет текущей операции) — закрываем окно, а не висим в нём навсегда
+        if (!this.cur || !this.pages || !this.pages.length) { G.scenes.pop(); return; }
         this.blink += dt;
         const total = this.pageLen();
         if (this.shown < total) {
@@ -3205,6 +3237,7 @@ G.dialog = (() => {
       },
 
       draw(ctx) {
+        if (!this.cur || !this.pages || !this.pages.length) return;   // аварийный диалог — не рисуем пустое окно
         const W = G.screen.W, Hs = G.screen.H;
         const x = 2, y = Hs - this.bottom - BOX_H, w = W - 4, h = BOX_H;
         G.gfx.window(ctx, x, y, w, h, 'paper');
@@ -3817,7 +3850,7 @@ G.EACTS = {
   retreat:  { name: 'Отходит',          range: [1, 2], w: 6,  kind: 'move', dir: -1 },
   guard:    { name: 'Защита',           range: [0, 9], w: 6,  kind: 'guard' },
   focus:    { name: 'Копит чакру',      range: [0, 9], w: 8,  kind: 'focus' },
-  fang:     { name: 'Гацуга!',          range: [1, 3], w: 14, kind: 'tai', dmg: 15, lunge: true, jutsu: true },
+  fang:     { name: 'Гацуга!',          range: [1, 3], w: 14, kind: 'tai', dmg: 11, lunge: true, jutsu: true },
   clones:   { name: 'Теневые клоны',    range: [0, 9], w: 10, kind: 'clones', jutsu: true },
   gentle:   { name: 'Мягкий кулак',     range: [1, 1], w: 10, kind: 'tai', dmg: 8, drain: 14, jutsu: true },
   baika:    { name: 'Техника увеличения', range: [1, 2], w: 18, kind: 'tai', dmg: 20, lunge: true, jutsu: true },
@@ -3839,13 +3872,13 @@ G.ENEMIES = {
                acts: ['stand'], lines: { start: '...', hurt: '*скрип*' } },
   dummy2:    { name: 'Манекен Ируки', spr: 'dummy', hp: 55, ch: 0, tai: 2, nin: 0, gen: 0, spd: 2, end: 2, know: 0, focus: 0, pref: 1,
                acts: ['swing', 'stand'], lines: { start: '*скрип-скрип*' } },
-  kiba:      { name: 'Киба', spr: 'kiba', male: true, hp: 74, ch: 40, tai: 5, nin: 3, gen: 1, spd: 6, end: 5, know: 2, focus: 1, pref: 1,
+  kiba:      { name: 'Киба', spr: 'kiba', male: true, hp: 72, ch: 34, tai: 7, nin: 3, gen: 1, spd: 6, end: 5, know: 2, focus: 1, pref: 1,
                acts: ['strike', 'combo', 'fang', 'approach', 'dash'], traits: ['impulsive'],
                lines: { start: 'Новенький? Мы с Акамару тебя мигом уделаем!', hurt: 'Акамару, это ничего!', low: 'Чёрт... да ты не так прост!', win: 'Ха! Сила стаи!', lose: 'Ладно-ладно... в следующий раз!' } },
-  naruto:    { name: 'Наруто', spr: 'naruto', male: true, hp: 115, ch: 80, tai: 5, nin: 4, gen: 1, spd: 5, end: 7, know: 1, focus: 1, pref: 1,
-               acts: ['strike', 'combo', 'kunai', 'clones', 'approach'], traits: ['impulsive', 'clones'],
+  naruto:    { name: 'Наруто', spr: 'naruto', male: true, hp: 125, ch: 80, tai: 6, nin: 4, gen: 1, spd: 7, end: 10, know: 1, focus: 3, pref: 1,
+               acts: ['strike', 'combo', 'kunai', 'clones', 'approach', 'guard'], traits: ['impulsive', 'clones'],
                lines: { start: 'Даттебайо! Покажу тебе стиль будущего Хокаге!', hurt: 'Ай-ай! Это нечестно!', low: 'Я никогда не сдаюсь!', win: 'Ура! Видел?!', lose: 'Эх... ты крутой! Ещё раз!' } },
-  sasuke:    { name: 'Саске', spr: 'sasuke', male: true, hp: 130, ch: 60, tai: 7, nin: 6, gen: 3, spd: 8, end: 6, know: 6, focus: 2, pref: 2,
+  sasuke:    { name: 'Саске', spr: 'sasuke', male: true, hp: 185, ch: 60, tai: 8, nin: 6, gen: 3, spd: 8, end: 8, know: 5, focus: 3, pref: 3,
                acts: ['strike', 'combo', 'kunai', 'shuriken', 'fireball', 'retreat', 'approach'], traits: ['kawarimi', 'deceive', 'climb', 'smart'],
                lines: { start: 'Хм. Посмотрим, чего ты стоишь.', hurt: 'Тц.', low: 'Не может быть...', win: 'Ты слабак.', lose: '...Неплохо. В следующий раз я не проиграю.' } },
   shikamaru: { name: 'Шикамару', spr: 'shikamaru', male: true, hp: 80, ch: 50, tai: 3, nin: 5, gen: 2, spd: 4, end: 4, know: 9, focus: 1, pref: 3,
@@ -3854,30 +3887,30 @@ G.ENEMIES = {
   hinata:    { name: 'Хината', spr: 'hinata', hp: 90, ch: 60, tai: 6, nin: 5, gen: 2, spd: 6, end: 5, know: 5, focus: 1, pref: 1,
                acts: ['gentle', 'strike', 'guard', 'approach'], traits: ['defensive'],
                lines: { start: 'Я... я постараюсь! Прости заранее!', hurt: 'Н-ничего...', low: 'Я не отступлю... как Наруто!', win: 'Ой! Ты в порядке?!', lose: 'Ты очень сильный...' } },
-  choji:     { name: 'Чоджи', spr: 'choji', male: true, hp: 165, ch: 50, tai: 6, nin: 4, gen: 1, spd: 2, end: 8, know: 2, focus: 0, pref: 1,
+  choji:     { name: 'Чоджи', spr: 'choji', male: true, hp: 230, ch: 50, tai: 11, nin: 6, gen: 1, spd: 2, end: 11, know: 2, focus: 3, pref: 1,
                acts: ['strike', 'baika', 'approach', 'focus'], traits: [],
                lines: { start: 'После боя — чипсы! Ням!', hurt: 'Уф!', low: 'Я не толстый! Я широкой кости!!!', win: 'Хрум! Победные чипсы!', lose: 'Пойду поем...' } },
   ino:       { name: 'Ино', spr: 'ino', hp: 80, ch: 55, tai: 4, nin: 4, gen: 7, spd: 5, end: 4, know: 5, focus: 1, pref: 2,
                acts: ['kunai', 'mind', 'strike', 'retreat'], traits: ['smart'],
                lines: { start: 'Быстренько закончим — мне ещё к Саске!', hurt: 'Эй, причёска!', low: 'Как ты смеешь?!', win: 'Красота — тоже сила!', lose: 'Хмф! Повезло тебе.' } },
-  lee:       { name: 'Рок Ли', spr: 'lee', male: true, hp: 130, ch: 0, tai: 10, nin: 0, gen: 0, spd: 11, end: 8, know: 3, focus: 2, pref: 1,
+  lee:       { name: 'Рок Ли', spr: 'lee', male: true, hp: 128, ch: 0, tai: 10, nin: 0, gen: 0, spd: 11, end: 11, know: 2, focus: 3, pref: 1,
                acts: ['strike', 'combo', 'whirl', 'dash', 'approach'], traits: ['climb', 'impulsive'],
                lines: { start: 'Сила юности! Покажи мне свою!', hurt: 'Отличный удар!', low: 'Гай-сенсей, я не подведу!', win: 'Тренируйся! 500 кругов вокруг деревни!', lose: 'Великолепно! Ты — мой соперник!' } },
   bully:     { name: 'Хулиган', grow: true, spr: 'bully', male: true, hp: 75, ch: 20, tai: 4, nin: 1, gen: 0, spd: 3, end: 4, know: 1, focus: 0, pref: 1,
                acts: ['strike', 'kunai', 'approach'], traits: ['impulsive'],
                lines: { start: 'Эй, мелкий! Гони деньги!', hurt: 'Ах ты!', win: 'Ха, слабак!', lose: 'Б-бежим отсюда!' } },
-  senior:    { name: 'Старшеклассник', spr: 'bully', male: true, hp: 95, ch: 40, tai: 6, nin: 4, gen: 2, spd: 6, end: 6, know: 4, focus: 1, pref: 2,
-               acts: ['strike', 'combo', 'kunai', 'shuriken', 'approach', 'retreat'], traits: ['kawarimi'],
+  senior:    { name: 'Старшеклассник', spr: 'bully', male: true, hp: 148, ch: 40, tai: 7, nin: 4, gen: 2, spd: 8, end: 9, know: 8, focus: 4, pref: 3,
+               acts: ['strike', 'combo', 'kunai', 'shuriken', 'approach', 'retreat'], traits: ['kawarimi', 'smart'],
                lines: { start: 'Свиток? Попробуй отними, малявка!', hurt: 'Тц, шустрый!', low: 'Да кто ты такой?!', win: 'Свиток останется у нас.', lose: 'Ладно-ладно, забирай!' } },
   thief:     { name: 'Ночной вор', grow: true, spr: 'thief', male: true, hp: 85, ch: 30, tai: 4, nin: 2, gen: 2, spd: 7, end: 4, know: 4, focus: 1, pref: 3,
                acts: ['kunai', 'shuriken', 'retreat', 'strike'], traits: ['kawarimi'],
                lines: { start: 'Ученичок? Не мешай работать.', hurt: 'Шустрый...', win: 'Сладких снов.', lose: 'Сдаюсь! Отдам всё!' } },
   dog:       { name: 'Бродячий пёс', grow: true, spr: 'dog', hp: 55, ch: 0, tai: 5, nin: 0, gen: 0, spd: 7, end: 3, know: 0, focus: 0, pref: 1,
                acts: ['bite', 'approach', 'dash'], traits: ['impulsive'], lines: { start: 'Р-р-р-гав!', lose: 'Скуль-скуль...' } },
-  iruka:     { name: 'Ирука', spr: 'iruka', male: true, hp: 140, ch: 70, tai: 7, nin: 6, gen: 4, spd: 7, end: 7, know: 8, focus: 3, pref: 2,
+  iruka:     { name: 'Ирука', spr: 'iruka', male: true, hp: 145, ch: 70, tai: 7, nin: 6, gen: 4, spd: 7, end: 7, know: 8, focus: 3, pref: 2,
                acts: ['strike', 'kunai', 'shuriken', 'guard', 'retreat', 'approach'], traits: ['kawarimi', 'smart'],
                lines: { start: 'Колокольчик у меня на поясе. Сорви его — и тест пройден!', hurt: 'Хорошо! Вот так!', low: 'Ты вырос, {name}.', win: 'Ещё рано. Тренируйся!', lose: 'Молодец! Я горжусь тобой.' } },
-  mizuki:    { name: 'Мизуки', spr: 'mizuki', male: true, hp: 210, ch: 90, tai: 8, nin: 7, gen: 5, spd: 7, end: 7, know: 7, focus: 2, pref: 3,
+  mizuki:    { name: 'Мизуки', spr: 'mizuki', male: true, hp: 235, ch: 90, tai: 8, nin: 7, gen: 5, spd: 7, end: 11, know: 7, focus: 3, pref: 3,
                acts: ['giant', 'kunai', 'combo', 'taunt', 'retreat', 'approach'], traits: ['kawarimi', 'deceive', 'climb', 'smart'], phase2: true,
                lines: { start: 'Ирука-сенсей тебе врал. Все тебе врали!', hurt: 'Щенок!', low: 'Довольно игр!', win: 'Свиток мой!', lose: 'Не... может... быть...' } },
 };
@@ -3923,7 +3956,12 @@ G.ENEMIES.asuma = { name: 'Асума', spr: 'asuma', male: true, hp: 170, ch: 9
 G.ENEMIES.konohamaru = { name: 'Конохамару', spr: 'konohamaru', male: true, hp: 60, ch: 30, tai: 3, nin: 2, gen: 1, spd: 5, end: 3, know: 1, focus: 1, pref: 1,
   acts: ['prank', 'strike', 'kunai', 'clones', 'approach'], traits: ['impulsive', 'clones'],
   lines: { start: 'Босс сказал, нужно сначала победить тебя! Сексуальное дзюцу-у-у!', hurt: 'Ай! Я же внук Хокаге!', win: 'Я круче всех!', lose: 'Погоди... я вырасту и вернусь!' } };
-G.ENEMIES.kiba.acts = ['strike', 'combo', 'fang', 'duo', 'approach', 'dash'];
+// Турнирный Киба (день 26): тот же соперник, но в полную силу — Гацуга и Акамару.
+// Базовый kiba оставлен слабым намеренно: он же идёт на спарринг дня 3 (когда у ниндзюцу/гендзюцу ещё нет техник)
+// и на повторные тренировки с другом (FRIENDS.kiba.spar).
+G.ENEMIES.kiba_t = Object.assign({}, G.ENEMIES.kiba, {
+  name: 'Киба и Акамару', hp: 150, ch: 40, tai: 9, spd: 9, end: 7, focus: 2, acts: ['strike', 'combo', 'fang', 'duo', 'approach', 'dash'],
+});
 
 // ── Стихийные техники (изучаются у наставников) ──
 Object.assign(G.TECHS, {
@@ -4782,15 +4820,16 @@ G.story = {
   // ── турнир академии: 3 боя на вылет ──
   tournament() {
     const v = G.state.vars;
-    const rounds = [['choji', 'Первый круг: Чоджи Акимичи!'], ['kiba', 'Полуфинал: Киба Инузука!'], ['sasuke', 'ФИНАЛ: Саске Учиха!']];
+    // третий элемент — id друга для бонуса (у турнирного Кибы боевой id другой: kiba_t)
+    const rounds = [['choji', 'Первый круг: Чоджи Акимичи!', 'choji'], ['kiba_t', 'Полуфинал: Киба Инузука!', 'kiba'], ['sasuke', 'ФИНАЛ: Саске Учиха!', 'sasuke']];
     let r = 0;
     const next = () => {
       if (r >= rounds.length) { v.tourney = 4; return end(); }
-      const [en, title] = rounds[r];
+      const [en, title, fid] = rounds[r];
       _say([{ who: 'iruka', text: title }], () => {
         G.flow.battle({ enemy: en, mode: 'ringout', terrain: 'ring', story: r === 2, storyLine: 'Я не проиграю! Не здесь!', onEnd: (res) => {
           G.state.vars.hp = 100;
-          if (res.win) { r++; G.friends.add(en, 1); next(); } else { v.tourney = r + 1; end(); }
+          if (res.win) { r++; G.friends.add(fid, 1); next(); } else { v.tourney = r + 1; end(); }
         } }, _world());
       });
     };
@@ -5462,7 +5501,7 @@ G.sim = {
     if (P.hp < P.hpMax * 0.35 && R() < 0.8 && tryP('tool', 'Бинт')) return true;
     if (P.ch < P.chMax * 0.2 && tryP('tool', 'Пилюля')) return true;
     if (!P.clones && R() < (b === 'nin' ? 0.45 : 0.2) && tech('bunshin')) return true;
-    if (d <= 3 && R() < (b === 'nin' ? 0.5 : b === 'bal' ? 0.25 : 0.08) && (tech('katon') || tech('fuuton'))) return true;
+    if (d <= 3 && R() < (b === 'nin' ? 0.55 : b === 'bal' ? 0.25 : 0.08) && (tech('katon') || tech('fuuton') || tech('suiton') || tech('raiton'))) return true;
     if (!E.s.fear && R() < (b === 'gen' ? 0.4 : 0.12) && tech('fear')) return true;
     if (!P.s.hidden && d >= 2 && R() < (b === 'nin' ? 0.4 : b === 'gen' ? 0.25 : 0.06) && tech('henge')) return true;
     if ((mode === 'bells' || mode === 'scroll') && d <= 2 && !E.s.blind && R() < 0.45 && (tryP('tool', 'Вспышка') || tryP('tool', 'Дым. бомба'))) return true;
@@ -5489,7 +5528,7 @@ G.sim = {
     { id: 'naruto_d14', day: 14, enemy: 'naruto', mode: 'spar', terrain: 'yard', label: 'Наруто, урок (д.14)' },
     { id: 'lee_d18', day: 18, enemy: 'lee', mode: 'spar', terrain: 'field', label: 'Рок Ли (д.18)' },
     { id: 'choji_d26', day: 26, enemy: 'choji', mode: 'ringout', terrain: 'ring', label: 'Турнир: Чоджи (д.26)' },
-    { id: 'kiba_d26', day: 26, enemy: 'kiba', mode: 'ringout', terrain: 'ring', label: 'Турнир: Киба (д.26)' },
+    { id: 'kiba_d26', day: 26, enemy: 'kiba_t', mode: 'ringout', terrain: 'ring', label: 'Турнир: Киба (д.26)' },
     { id: 'sasuke_d26', day: 26, enemy: 'sasuke', mode: 'ringout', terrain: 'ring', story: true, label: 'Турнир: Саске (д.26)' },
     { id: 'bully_d33', day: 33, enemy: 'bully', mode: 'ko', terrain: 'street', label: 'Хулиган, событие (д.33)' },
     { id: 'thief_d30', day: 30, enemy: 'thief', mode: 'ko', terrain: 'night', label: 'Ночной вор (д.30)' },
@@ -5725,6 +5764,12 @@ set flag.enrolled = 1
 iruka: Осталась формальность — вступительный тест. Покажи, в чём ты силён, а я решу, чему тебя учить.
 call charcreate
 end
+# again
+iruka: Наруто на качелях, у дерева к востоку от Академии. Передай про проверку печатей!
+end
+# after
+iruka: Опоздаешь завтра — будешь мыть доску вместе с Наруто.
+end
 
 === iruka_retest
 iruka: {name}! Чуть не забыл: ты так и не прошёл вступительный тест. Давай прямо сейчас.
@@ -5743,12 +5788,6 @@ iruka: Наверняка сидит на качелях у Академии. Н
 iruka: И ещё: на урок метания приходи со своими кунаями. Три штуки — в Оружейной на Главной улице.
 call time 12:30
 call quest start homework
-end
-# again
-iruka: Наруто на качелях, у дерева к востоку от Академии. Передай про проверку печатей!
-end
-# after
-iruka: Опоздаешь завтра — будешь мыть доску вместе с Наруто.
 end
 
 === shikamaru_class
@@ -6381,6 +6420,16 @@ villager_m[Хулиган]: ...Ну ладно. Ты вроде нормальн
 # fight
 call battle senior scroll forest st_field_win st_field_lose 12
 end
+# win
+: Свиток снова твой. Хулиганы растворяются в кустах — обошлось без драки.
+iruka: {name}! Ты нашёл свиток — и даже ни с кем не подрался? Вот это выдержка.
+iruka: Держи учебник по ловушкам: пригодится на экзамене.
+call give book_traps
+call note Свиток найден: договорился без боя
+call rep 2
+call friend iruka 2
+set flag.field_done = 1
+end
 
 === st_field_win
 iruka: {name}! Ты нашёл свиток — и справился с этими хулиганами? Отлично!
@@ -6853,7 +6902,8 @@ anko[Анко]: Эй, мелкий! Хочешь попробовать? Это 
 # eat
 anko[Анко]: Хорошо, ниндзя! Любишь острое — будешь жить долго!
 call eat 15
-call friend anko 1
+call rep 1
+call note Анко Митараси одобряет: +1 к репутации
 -> done
 # deny
 anko[Анко]: Зря! Но я не обижаюсь. Больше достанется мне.
@@ -8776,7 +8826,8 @@ G.interiors = (() => {
         npc(m, 'naruto', 4, 4, 'up', 'naruto_ramen_eve', { sched: [[18 * 60, 20 * 60 + 30, 2]] });
         npc(m, 'iruka', 6, 4, 'up', 'iruka_ramen', { sched: [[18 * 60 + 30, 21 * 60, 2]] });
       }
-      if (id === 'ichiraku') for (const o of m.objects) if (o.kind === 'kitchen' || (o.kind === 'counter' && [2, 7].includes(Math.floor(o.x / T)))) o.talk = 'ichiraku_cook';
+      // готовка — у двух стоек перед кухней: сами кухонные объекты стоят за стойкой, до них не дотянуться
+      if (id === 'ichiraku') for (const o of m.objects) if (o.kind === 'counter' && [2, 7].includes(Math.floor(o.x / T))) o.talk = 'ichiraku_cook';
       return m;
     },
 
@@ -12478,6 +12529,201 @@ G.scenes.register('savemenu', () => {
 });
 
 
+// ===== scenes/battle_fx.js =====
+// Визуальные эффекты боя «Дуэль шиноби»: всплывающий урон, дым, искры, снаряды, ауры, печати.
+// Вынесено из scenes/battle.js (пункт «разбить монолит боя»): ядро боя отвечает за состояния и ходы,
+// этот модуль — только за картинку эффектов. Поведение не изменилось (проверяется tools/node/golden.js).
+//
+// C — контекст боя, собирается один раз в scenes/battle.js:
+//   { fx, layout, X, rnd, PAL, P, E, sgn, other, state, seals }
+// fx и layout — объекты, которые меняются на месте (ссылка стабильна); state и seals — изменяемые
+// переменные ядра, поэтому приходят геттерами и читаются как C.state / C.seals.
+G.battleFx = {
+  make(C) {
+    const fx = C.fx, layout = C.layout, X = C.X, rnd = C.rnd, PAL = C.PAL;
+    const P = C.P, E = C.E, sgn = C.sgn, other = C.other;
+
+    const pop = (f, text, col, big) => fx.pops.push({ x: X(f.pos) + rnd(-6, 6), y: layout.groundY - 46, text, col: col || PAL.white, t: 0, big });
+    const puff = (pos, n = 10) => { for (let i = 0; i < n; i++) fx.puffs.push({ x: X(pos) + rnd(-8, 8), y: layout.groundY - rnd(4, 30), r: rnd(3, 7), vx: rnd(-20, 20), vy: rnd(-20, 4), t: 0 }); };
+
+    // ── визуальные эффекты боя: удары, урон, метание, печати, техники ──
+    const cy = () => layout.groundY - 22;
+    const V1 = (o) => { o.t = 0; o.delay = o.delay || 0; fx.vfx.push(o); return o; };
+    const hurt = (f, d, dirx) => { f.hurt = 0.42; f.kb = (dirx || (f === P ? -1 : 1)) * Math.min(12, 4 + d * 0.5); f.hs = d >= 15 ? 0.12 : 0.06; };
+    const impact = (f, d, col, kind) => {
+      const x = X(f.pos), big = d >= 15, dirx = f === P ? -1 : 1;
+      hurt(f, d, sgn(other(f), f));
+      V1({ type: 'star', x, y: cy(), r: big ? 20 : 13, dur: 0.28, col: col || '#fff6c8' });
+      V1({ type: 'slash', x, y: cy(), dir: dirx, dur: 0.26, big, col: kind === 'nin' ? '#9ad0ff' : '#ffffff' });
+      for (let i = 0; i < (big ? 12 : 6); i++) V1({ type: 'bit', x, y: cy(), vx: rnd(-70, 70) + dirx * 30, vy: rnd(-90, -10), dur: 0.5, col: i % 2 ? '#ffd84a' : '#ffffff' });
+      if (big) { fx.hitstop = 0.09; fx.zoom = 1.14; fx.zoomX = x; }
+    };
+    const lunge = (f, mul = 1) => { f.lg = sgn(f, other(f)) * 10 * mul; };
+    const proj = (from, to, kind, n = 1) => {
+      for (let i = 0; i < n; i++) V1({ type: 'proj', kind, x: X(from.pos), y: cy() - 4 + (i - (n - 1) / 2) * 7, x2: X(to.pos), y2: cy() - 2 + (i - (n - 1) / 2) * 5, dur: 0.22, delay: i * 0.05 });
+    };
+    const burst = (pos, col, r = 30) => { V1({ type: 'ring', x: X(pos), y: cy(), r, dur: 0.45, col }); V1({ type: 'ring', x: X(pos), y: cy(), r: r * 0.6, dur: 0.35, col: '#ffffff' }); };
+    const aura = (f, col, dur = 0.9) => V1({ type: 'aura', f, dur, col });
+    const leaves = (pos, n = 14) => { for (let i = 0; i < n; i++) V1({ type: 'leaf', x: X(pos), y: cy(), a: rnd(0, 6.28), sp: rnd(30, 80), dur: rnd(0.6, 1) }); };
+
+    function enemyFx(k) {
+      if (k === 'bug') { proj(E, P, 'bug', 4); aura(E, '#4a4a2a', 0.6); }
+      else if (k === 'duo') { lunge(E, 1.5); V1({ type: 'ring', x: X(E.pos), y: cy(), r: 24, dur: 0.35, col: '#c8a070' }); proj(E, P, 'fang', 2); }
+      else if (k === 'snake') { proj(E, P, 'snake', 3); aura(E, '#6a3a8a', 0.6); }
+      else if (k === 'blades') { lunge(E, 1.4); V1({ type: 'slash', x: X(P.pos), y: cy(), dir: -sgn(E, P), dur: 0.4, big: true, col: '#8ad0ff' }); }
+      else if (k === 'smoke') { puff(E.pos, 16); puff(P.pos, 10); }
+      else if (k === 'fire') { proj(E, P, 'fire', 1); aura(E, '#ff7a20', 0.5); }
+    }
+    function updateVfx(dt) {
+      for (const v of fx.vfx) {
+        if (v.delay > 0) { v.delay -= dt; continue; }
+        v.t += dt;
+        if (v.type === 'bit') { v.x += v.vx * dt; v.y += v.vy * dt; v.vy += 260 * dt; }
+      }
+      fx.vfx = fx.vfx.filter((v) => v.delay > 0 || v.t < v.dur);
+      for (const f of [P, E]) {
+        if (f.hurt > 0) f.hurt = Math.max(0, f.hurt - dt);
+        if (f.hs > 0) f.hs = Math.max(0, f.hs - dt);
+        if (f.kb) { f.kb *= Math.pow(0.002, dt); if (Math.abs(f.kb) < 0.3) f.kb = 0; }
+        if (f.lg) { f.lg *= Math.pow(0.0005, dt); Math.abs(f.lg) < 0.3 && (f.lg = 0); }
+      }
+    }
+    function drawVfx(ctx, t) {
+      for (const v of fx.vfx) {
+        if (v.delay > 0) continue;
+        const k = v.t / v.dur, a = 1 - k;
+        ctx.save();
+        if (v.type === 'star') {
+          ctx.globalAlpha = a; ctx.strokeStyle = v.col; ctx.lineWidth = 2; ctx.beginPath();
+          for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4 + 0.4, r0 = v.r * 0.25 * (1 + k), r1 = v.r * (0.5 + k); ctx.moveTo(v.x + Math.cos(an) * r0, v.y + Math.sin(an) * r0); ctx.lineTo(v.x + Math.cos(an) * r1, v.y + Math.sin(an) * r1); }
+          ctx.stroke(); ctx.fillStyle = '#fff'; ctx.globalAlpha = a * 0.9; ctx.beginPath(); ctx.arc(v.x, v.y, v.r * 0.28 * a + 1, 0, 7); ctx.fill();
+        } else if (v.type === 'slash') {
+          ctx.globalAlpha = a; ctx.strokeStyle = v.col; ctx.lineCap = 'round';
+          const L = v.big ? 26 : 18, sw = k * 0.9;
+          for (let i = 0; i < (v.big ? 3 : 2); i++) { ctx.lineWidth = 3 - i; ctx.beginPath(); ctx.arc(v.x - v.dir * 4, v.y, L - i * 4, -1.2 * v.dir - 0.5 + sw * v.dir, 1.0 * v.dir + sw * v.dir * 0.4, v.dir < 0); ctx.stroke(); }
+        } else if (v.type === 'bit') {
+          ctx.globalAlpha = a; ctx.fillStyle = v.col; ctx.fillRect(Math.round(v.x), Math.round(v.y), 2, 2);
+        } else if (v.type === 'proj') {
+          const px = v.x + (v.x2 - v.x) * k, py = v.y + (v.y2 - v.y) * k - Math.sin(k * Math.PI) * 4, dirx = Math.sign(v.x2 - v.x) || 1;
+          if (v.kind === 'fire') { ctx.globalAlpha = 0.9; ctx.fillStyle = '#ff9a30'; ctx.beginPath(); ctx.arc(px, py, 6, 0, 7); ctx.fill(); ctx.fillStyle = '#ffe070'; ctx.beginPath(); ctx.arc(px + dirx * 2, py, 3, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,120,30,0.5)'; ctx.fillRect(px - dirx * 14, py - 2, 14, 4); ctx.restore(); continue; }
+          if (v.kind === 'water') { ctx.globalAlpha = 0.9; ctx.fillStyle = '#4a9ae8'; ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.fill(); ctx.fillStyle = '#cfe8ff'; ctx.fillRect(px - 2, py - 3, 2, 2); ctx.fillStyle = 'rgba(74,154,232,0.5)'; ctx.fillRect(px - dirx * 16, py - 2, 16, 4); ctx.restore(); continue; }
+          if (v.kind === 'bolt') { ctx.strokeStyle = '#f0f070'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(v.x, v.y); for (let i = 1; i <= 7; i++) { const q = i / 7; ctx.lineTo(v.x + (px - v.x) * q, v.y + (py - v.y) * q + (i % 2 ? -6 : 6) * (1 - q) + Math.sin(t * 90 + i) * 2); } ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); continue; }
+          if (v.kind === 'wind') { ctx.strokeStyle = 'rgba(200,240,220,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 7, t * 20, t * 20 + 4); ctx.stroke(); ctx.beginPath(); ctx.arc(px - dirx * 10, py, 5, -t * 20, -t * 20 + 3.5); ctx.stroke(); ctx.restore(); continue; }
+          if (v.kind === 'bug') { ctx.fillStyle = '#2a2a1a'; for (let i = 0; i < 5; i++) ctx.fillRect(px - dirx * i * 3 + Math.sin(t * 40 + i * 2) * 3, py + Math.cos(t * 30 + i) * 4, 2, 2); ctx.restore(); continue; }
+          if (v.kind === 'snake') { ctx.strokeStyle = '#4a9a3a'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = 0; i <= 8; i++) { const q = i / 8, xx = v.x + (px - v.x) * q, yy = py + Math.sin(q * 9 + t * 20) * 4; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); ctx.restore(); continue; }
+          if (v.kind === 'fang') { ctx.globalAlpha = 0.7; ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.moveTo(px - dirx * 12, py - 4); ctx.lineTo(px + dirx * 6, py); ctx.lineTo(px - dirx * 12, py + 4); ctx.fill(); ctx.restore(); continue; }
+          ctx.translate(px, py);
+          ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff'; ctx.fillRect(-dirx * 14, -1, 14 * dirx > 0 ? 14 : -14, 1);
+          ctx.globalAlpha = 1;
+          if (v.kind === 'shuriken') { ctx.rotate(t * 30); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(-5, -1, 10, 2); ctx.fillRect(-1, -5, 2, 10); ctx.fillStyle = '#555a6a'; ctx.fillRect(-1, -1, 2, 2); }
+          else { ctx.rotate(dirx > 0 ? 0 : Math.PI); ctx.rotate(k * 2); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(-1, -6, 3, 8); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(-1, 2, 3, 4); if (v.kind === 'tag') { ctx.fillStyle = '#e8dcc0'; ctx.fillRect(2, 0, 3, 5); ctx.fillStyle = '#d03020'; ctx.fillRect(3, 1, 1, 3); } }
+        } else if (v.type === 'ring') {
+          ctx.globalAlpha = a * 0.8; ctx.strokeStyle = v.col; ctx.lineWidth = 3 * a + 1; ctx.beginPath(); ctx.arc(v.x, v.y, v.r * (0.2 + k * 0.8), 0, 7); ctx.stroke();
+          if (k < 0.5) { ctx.globalAlpha = (0.5 - k); ctx.fillStyle = v.col; ctx.fill(); }
+        } else if (v.type === 'leaf') {
+          const an = v.a + k * 7, r = 4 + k * v.sp * 0.5;
+          ctx.globalAlpha = a; ctx.fillStyle = '#5a9a3a'; ctx.fillRect(Math.round(v.x + Math.cos(an) * r), Math.round(v.y - k * 18 + Math.sin(an) * r * 0.6), 3, 2);
+        } else if (v.type === 'aura') {
+          const x = X(v.f.pos) + (v.f.kb || 0), pulse = 0.6 + 0.4 * Math.sin(t * 18);
+          ctx.globalAlpha = Math.min(1, a * 1.4) * 0.5 * pulse; ctx.fillStyle = v.col; ctx.beginPath(); ctx.ellipse(x, layout.groundY - 14, 14, 24, 0, 0, 7); ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+    // аура и печати над героем, пока идёт ввод печатей
+    function drawSealGlow(ctx, t) {
+      if (C.state !== 'seals' || !C.seals) return;
+      const x = X(P.pos), n = C.seals.seq.length, prog = C.seals.i / n, gy = layout.groundY;
+      ctx.save();
+      ctx.globalAlpha = 0.25 + 0.35 * prog; ctx.fillStyle = '#5ab0ff';
+      ctx.beginPath(); ctx.ellipse(x, gy - 16, 12 + prog * 6, 22 + prog * 6, 0, 0, 7); ctx.fill();
+      ctx.globalAlpha = 1;
+      for (let i = 0; i < 8; i++) { const ph = (t * 1.3 + i / 8) % 1; ctx.fillStyle = i % 2 ? '#bfe4ff' : '#5ab0ff'; ctx.fillRect(Math.round(x + Math.sin(i * 2.4 + t * 3) * (10 + prog * 6)), Math.round(gy - 6 - ph * 40), 2, 2); }
+      // кружок печати над головой: сегменты по числу печатей
+      const cy0 = gy - 56, R = 9;
+      ctx.translate(x, cy0); ctx.rotate(t * (1 + prog * 3));
+      ctx.strokeStyle = '#9ad0ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
+      for (let i = 0; i < n; i++) { const an = i / n * 6.283; ctx.fillStyle = i < C.seals.i ? '#ffe070' : '#33507a'; ctx.fillRect(Math.round(Math.cos(an) * R) - 1, Math.round(Math.sin(an) * R) - 1, 3, 3); }
+      ctx.restore();
+    }
+
+    return { pop, puff, cy, V1, hurt, impact, lunge, proj, burst, aura, leaves, enemyFx, updateVfx, drawVfx, drawSealGlow };
+  },
+};
+
+
+// ===== scenes/battle_ai.js =====
+// ИИ противника в бою «Дуэль шиноби»: какие приёмы допустимы, какой выбрать, что показать игроку.
+// Вынесено из scenes/battle.js — выбор хода врага не зависит от состояний и отрисовки, ему нужны только
+// бойцы, арена и данные противника. Поведение не изменилось (проверяется tools/node/golden.js).
+//
+// C — контекст боя: { P, E, ed, traps, dist, has, canStand, sgn, rnd, Hh }
+//   ed — данные противника (уже с поправкой на рост уличных врагов), Hh — G.hero.
+G.battleAi = {
+  make(C) {
+    const P = C.P, E = C.E, ed = C.ed, traps = C.traps, Hh = C.Hh;
+    const dist = C.dist, has = C.has, canStand = C.canStand, sgn = C.sgn, rnd = C.rnd;
+
+    // ── ИИ противника ──
+    function validAct(id, d) {
+      const a = G.EACTS[id]; if (!a) return false;
+      if (d < a.range[0] || d > a.range[1]) return false;
+      if (a.jutsu && E.ch < 10) return false;
+      if (a.kind === 'tai' && P.s.high && !has('climb')) return false;
+      if (a.kind === 'throw' && P.s.hidden) return false;
+      if (a.kind === 'move' && E.s.bound) return false;
+      if (a.kind === 'move' && a.dir > 0 && !canStand(E, E.pos + sgn(E, P))) return false;
+      if (a.kind === 'move' && a.dir < 0 && !canStand(E, E.pos - sgn(E, P))) return false;
+      if (id === 'clones' && E.clones > 0) return false;
+      if (id === 'trap' && traps.some((t) => t.owner === 'e')) return false;
+      if (id === 'shadow' && P.s.bound) return false;
+      if (id === 'mind' && P.s.conf) return false;
+      if (id === 'taunt' && (P.s.shaken || Math.random() < 0.5)) return false;
+      if ((id === 'kunai' || id === 'shuriken') && P.s.hidden) return false;
+      return true;
+    }
+    function decide() {
+      const d = dist();
+      if (has('lazy') && Math.random() < 0.15) return 'yawn';
+      let cand = (ed.acts || ['stand']).filter((id) => validAct(id, d));
+      if (P.s.hidden) cand = cand.filter((id) => G.EACTS[id].kind !== 'throw');
+      if (!cand.length) cand = ['guard'];
+      const hurt = E.hp / E.hpMax;
+      const w = cand.map((id) => {
+        const a = G.EACTS[id]; let s = 1;
+        if (a.kind === 'tai') s = d === 1 ? (ed.pref <= 1 ? 4 : 2) : 2.5;
+        if (a.kind === 'throw') s = d >= 2 ? (ed.pref >= 2 ? 3.5 : 1.5) : 0.4;
+        if (a.kind === 'move') s = (a.dir > 0 ? (d > ed.pref ? 3 + (has('impulsive') ? 2 : 0) : 0.2) : (d < ed.pref ? 3 : 0.2));
+        if (a.jutsu) s *= 1.6;
+        if (id === 'guard') s = has('defensive') ? 1.5 : (hurt < 0.35 ? 0.8 : 0.15);
+        if (id === 'focus') s = E.ch < 20 ? 2 : 0.3;
+        if (id === 'clones') s = 3;
+        if (id === 'trap') s = 2;
+        if (E.s.prov && a.kind === 'tai') s *= 3;
+        if (E.s.prov && (a.kind === 'move' && a.dir < 0 || id === 'guard')) s = 0.05;
+        return s * rnd(0.7, 1.3);
+      });
+      let sum = w.reduce((a, b) => a + b, 0), r = Math.random() * sum;
+      for (let i = 0; i < cand.length; i++) { r -= w[i]; if (r <= 0) return cand[i]; }
+      return cand[0];
+    }
+    function plan() {
+      E.plan = decide();
+      E.shown = E.plan;
+      if (has('deceive') && E.an <= 0 && Math.random() < 0.3) {
+        const alt = (ed.acts || []).filter((id) => id !== E.plan && G.EACTS[id] && G.EACTS[id].kind !== 'move');
+        if (alt.length) E.shown = alt[Math.floor(Math.random() * alt.length)];
+      }
+      E.plan2 = Hh.has('analyst') ? decide() : null;
+    }
+    const actName = (id) => id === 'yawn' ? 'Зевает' : (G.EACTS[id] || G.EACTS.stand).name;
+    const actOf = (id) => id === 'yawn' ? Object.assign({}, G.EACTS.stand, { name: 'Зевает' }) : (G.EACTS[id] || G.EACTS.stand);
+
+    return { validAct, decide, plan, actName, actOf };
+  },
+};
+
+
 // ===== scenes/battle.js =====
 // Бой «Дуэль шиноби» (план §4). opts: { enemy, mode: ko|spar|bells|scroll|survive|ringout, terrain, turns, ambush, story, allies }
 // onEnd(result) — result: { win, mode, enemy, ringout, surrender }
@@ -12541,109 +12787,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   const sgn = (a, b) => Math.sign(b.pos - a.pos) || 1;
   const objAt = (pos) => A.obj[pos];
   const other = (f) => (f === P ? E : P);
-  const pop = (f, text, col, big) => fx.pops.push({ x: X(f.pos) + rnd(-6, 6), y: layout.groundY - 46, text, col: col || PAL.white, t: 0, big });
-  const puff = (pos, n = 10) => { for (let i = 0; i < n; i++) fx.puffs.push({ x: X(pos) + rnd(-8, 8), y: layout.groundY - rnd(4, 30), r: rnd(3, 7), vx: rnd(-20, 20), vy: rnd(-20, 4), t: 0 }); };
 
-  // ── визуальные эффекты боя: удары, урон, метание, печати, техники ──
-  const cy = () => layout.groundY - 22;
-  const V1 = (o) => { o.t = 0; o.delay = o.delay || 0; fx.vfx.push(o); return o; };
-  const hurt = (f, d, dirx) => { f.hurt = 0.42; f.kb = (dirx || (f === P ? -1 : 1)) * Math.min(12, 4 + d * 0.5); f.hs = d >= 15 ? 0.12 : 0.06; };
-  const impact = (f, d, col, kind) => {
-    const x = X(f.pos), big = d >= 15, dirx = f === P ? -1 : 1;
-    hurt(f, d, sgn(other(f), f));
-    V1({ type: 'star', x, y: cy(), r: big ? 20 : 13, dur: 0.28, col: col || '#fff6c8' });
-    V1({ type: 'slash', x, y: cy(), dir: dirx, dur: 0.26, big, col: kind === 'nin' ? '#9ad0ff' : '#ffffff' });
-    for (let i = 0; i < (big ? 12 : 6); i++) V1({ type: 'bit', x, y: cy(), vx: rnd(-70, 70) + dirx * 30, vy: rnd(-90, -10), dur: 0.5, col: i % 2 ? '#ffd84a' : '#ffffff' });
-    if (big) { fx.hitstop = 0.09; fx.zoom = 1.14; fx.zoomX = x; }
-  };
-  const lunge = (f, mul = 1) => { f.lg = sgn(f, other(f)) * 10 * mul; };
-  const proj = (from, to, kind, n = 1) => {
-    for (let i = 0; i < n; i++) V1({ type: 'proj', kind, x: X(from.pos), y: cy() - 4 + (i - (n - 1) / 2) * 7, x2: X(to.pos), y2: cy() - 2 + (i - (n - 1) / 2) * 5, dur: 0.22, delay: i * 0.05 });
-  };
-  const burst = (pos, col, r = 30) => { V1({ type: 'ring', x: X(pos), y: cy(), r, dur: 0.45, col }); V1({ type: 'ring', x: X(pos), y: cy(), r: r * 0.6, dur: 0.35, col: '#ffffff' }); };
-  const aura = (f, col, dur = 0.9) => V1({ type: 'aura', f, dur, col });
-  const leaves = (pos, n = 14) => { for (let i = 0; i < n; i++) V1({ type: 'leaf', x: X(pos), y: cy(), a: rnd(0, 6.28), sp: rnd(30, 80), dur: rnd(0.6, 1) }); };
-
-  function enemyFx(k) {
-    if (k === 'bug') { proj(E, P, 'bug', 4); aura(E, '#4a4a2a', 0.6); }
-    else if (k === 'duo') { lunge(E, 1.5); V1({ type: 'ring', x: X(E.pos), y: cy(), r: 24, dur: 0.35, col: '#c8a070' }); proj(E, P, 'fang', 2); }
-    else if (k === 'snake') { proj(E, P, 'snake', 3); aura(E, '#6a3a8a', 0.6); }
-    else if (k === 'blades') { lunge(E, 1.4); V1({ type: 'slash', x: X(P.pos), y: cy(), dir: -sgn(E, P), dur: 0.4, big: true, col: '#8ad0ff' }); }
-    else if (k === 'smoke') { puff(E.pos, 16); puff(P.pos, 10); }
-    else if (k === 'fire') { proj(E, P, 'fire', 1); aura(E, '#ff7a20', 0.5); }
-  }
-  function updateVfx(dt) {
-    for (const v of fx.vfx) {
-      if (v.delay > 0) { v.delay -= dt; continue; }
-      v.t += dt;
-      if (v.type === 'bit') { v.x += v.vx * dt; v.y += v.vy * dt; v.vy += 260 * dt; }
-    }
-    fx.vfx = fx.vfx.filter((v) => v.delay > 0 || v.t < v.dur);
-    for (const f of [P, E]) {
-      if (f.hurt > 0) f.hurt = Math.max(0, f.hurt - dt);
-      if (f.hs > 0) f.hs = Math.max(0, f.hs - dt);
-      if (f.kb) { f.kb *= Math.pow(0.002, dt); if (Math.abs(f.kb) < 0.3) f.kb = 0; }
-      if (f.lg) { f.lg *= Math.pow(0.0005, dt); Math.abs(f.lg) < 0.3 && (f.lg = 0); }
-    }
-  }
-  function drawVfx(ctx, t) {
-    for (const v of fx.vfx) {
-      if (v.delay > 0) continue;
-      const k = v.t / v.dur, a = 1 - k;
-      ctx.save();
-      if (v.type === 'star') {
-        ctx.globalAlpha = a; ctx.strokeStyle = v.col; ctx.lineWidth = 2; ctx.beginPath();
-        for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4 + 0.4, r0 = v.r * 0.25 * (1 + k), r1 = v.r * (0.5 + k); ctx.moveTo(v.x + Math.cos(an) * r0, v.y + Math.sin(an) * r0); ctx.lineTo(v.x + Math.cos(an) * r1, v.y + Math.sin(an) * r1); }
-        ctx.stroke(); ctx.fillStyle = '#fff'; ctx.globalAlpha = a * 0.9; ctx.beginPath(); ctx.arc(v.x, v.y, v.r * 0.28 * a + 1, 0, 7); ctx.fill();
-      } else if (v.type === 'slash') {
-        ctx.globalAlpha = a; ctx.strokeStyle = v.col; ctx.lineCap = 'round';
-        const L = v.big ? 26 : 18, sw = k * 0.9;
-        for (let i = 0; i < (v.big ? 3 : 2); i++) { ctx.lineWidth = 3 - i; ctx.beginPath(); ctx.arc(v.x - v.dir * 4, v.y, L - i * 4, -1.2 * v.dir - 0.5 + sw * v.dir, 1.0 * v.dir + sw * v.dir * 0.4, v.dir < 0); ctx.stroke(); }
-      } else if (v.type === 'bit') {
-        ctx.globalAlpha = a; ctx.fillStyle = v.col; ctx.fillRect(Math.round(v.x), Math.round(v.y), 2, 2);
-      } else if (v.type === 'proj') {
-        const px = v.x + (v.x2 - v.x) * k, py = v.y + (v.y2 - v.y) * k - Math.sin(k * Math.PI) * 4, dirx = Math.sign(v.x2 - v.x) || 1;
-        if (v.kind === 'fire') { ctx.globalAlpha = 0.9; ctx.fillStyle = '#ff9a30'; ctx.beginPath(); ctx.arc(px, py, 6, 0, 7); ctx.fill(); ctx.fillStyle = '#ffe070'; ctx.beginPath(); ctx.arc(px + dirx * 2, py, 3, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,120,30,0.5)'; ctx.fillRect(px - dirx * 14, py - 2, 14, 4); ctx.restore(); continue; }
-        if (v.kind === 'water') { ctx.globalAlpha = 0.9; ctx.fillStyle = '#4a9ae8'; ctx.beginPath(); ctx.arc(px, py, 5, 0, 7); ctx.fill(); ctx.fillStyle = '#cfe8ff'; ctx.fillRect(px - 2, py - 3, 2, 2); ctx.fillStyle = 'rgba(74,154,232,0.5)'; ctx.fillRect(px - dirx * 16, py - 2, 16, 4); ctx.restore(); continue; }
-        if (v.kind === 'bolt') { ctx.strokeStyle = '#f0f070'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(v.x, v.y); for (let i = 1; i <= 7; i++) { const q = i / 7; ctx.lineTo(v.x + (px - v.x) * q, v.y + (py - v.y) * q + (i % 2 ? -6 : 6) * (1 - q) + Math.sin(t * 90 + i) * 2); } ctx.stroke(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); continue; }
-        if (v.kind === 'wind') { ctx.strokeStyle = 'rgba(200,240,220,0.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px, py, 7, t * 20, t * 20 + 4); ctx.stroke(); ctx.beginPath(); ctx.arc(px - dirx * 10, py, 5, -t * 20, -t * 20 + 3.5); ctx.stroke(); ctx.restore(); continue; }
-        if (v.kind === 'bug') { ctx.fillStyle = '#2a2a1a'; for (let i = 0; i < 5; i++) ctx.fillRect(px - dirx * i * 3 + Math.sin(t * 40 + i * 2) * 3, py + Math.cos(t * 30 + i) * 4, 2, 2); ctx.restore(); continue; }
-        if (v.kind === 'snake') { ctx.strokeStyle = '#4a9a3a'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = 0; i <= 8; i++) { const q = i / 8, xx = v.x + (px - v.x) * q, yy = py + Math.sin(q * 9 + t * 20) * 4; i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy); } ctx.stroke(); ctx.restore(); continue; }
-        if (v.kind === 'fang') { ctx.globalAlpha = 0.7; ctx.fillStyle = '#e8e0d0'; ctx.beginPath(); ctx.moveTo(px - dirx * 12, py - 4); ctx.lineTo(px + dirx * 6, py); ctx.lineTo(px - dirx * 12, py + 4); ctx.fill(); ctx.restore(); continue; }
-        ctx.translate(px, py);
-        ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff'; ctx.fillRect(-dirx * 14, -1, 14 * dirx > 0 ? 14 : -14, 1);
-        ctx.globalAlpha = 1;
-        if (v.kind === 'shuriken') { ctx.rotate(t * 30); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(-5, -1, 10, 2); ctx.fillRect(-1, -5, 2, 10); ctx.fillStyle = '#555a6a'; ctx.fillRect(-1, -1, 2, 2); }
-        else { ctx.rotate(dirx > 0 ? 0 : Math.PI); ctx.rotate(k * 2); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(-1, -6, 3, 8); ctx.fillStyle = '#6a4a2a'; ctx.fillRect(-1, 2, 3, 4); if (v.kind === 'tag') { ctx.fillStyle = '#e8dcc0'; ctx.fillRect(2, 0, 3, 5); ctx.fillStyle = '#d03020'; ctx.fillRect(3, 1, 1, 3); } }
-      } else if (v.type === 'ring') {
-        ctx.globalAlpha = a * 0.8; ctx.strokeStyle = v.col; ctx.lineWidth = 3 * a + 1; ctx.beginPath(); ctx.arc(v.x, v.y, v.r * (0.2 + k * 0.8), 0, 7); ctx.stroke();
-        if (k < 0.5) { ctx.globalAlpha = (0.5 - k); ctx.fillStyle = v.col; ctx.fill(); }
-      } else if (v.type === 'leaf') {
-        const an = v.a + k * 7, r = 4 + k * v.sp * 0.5;
-        ctx.globalAlpha = a; ctx.fillStyle = '#5a9a3a'; ctx.fillRect(Math.round(v.x + Math.cos(an) * r), Math.round(v.y - k * 18 + Math.sin(an) * r * 0.6), 3, 2);
-      } else if (v.type === 'aura') {
-        const x = X(v.f.pos) + (v.f.kb || 0), pulse = 0.6 + 0.4 * Math.sin(t * 18);
-        ctx.globalAlpha = Math.min(1, a * 1.4) * 0.5 * pulse; ctx.fillStyle = v.col; ctx.beginPath(); ctx.ellipse(x, layout.groundY - 14, 14, 24, 0, 0, 7); ctx.fill();
-      }
-      ctx.restore();
-    }
-  }
-  // аура и печати над героем, пока идёт ввод печатей
-  function drawSealGlow(ctx, t) {
-    if (state !== 'seals' || !seals) return;
-    const x = X(P.pos), n = seals.seq.length, prog = seals.i / n, gy = layout.groundY;
-    ctx.save();
-    ctx.globalAlpha = 0.25 + 0.35 * prog; ctx.fillStyle = '#5ab0ff';
-    ctx.beginPath(); ctx.ellipse(x, gy - 16, 12 + prog * 6, 22 + prog * 6, 0, 0, 7); ctx.fill();
-    ctx.globalAlpha = 1;
-    for (let i = 0; i < 8; i++) { const ph = (t * 1.3 + i / 8) % 1; ctx.fillStyle = i % 2 ? '#bfe4ff' : '#5ab0ff'; ctx.fillRect(Math.round(x + Math.sin(i * 2.4 + t * 3) * (10 + prog * 6)), Math.round(gy - 6 - ph * 40), 2, 2); }
-    // кружок печати над головой: сегменты по числу печатей
-    const cy0 = gy - 56, R = 9;
-    ctx.translate(x, cy0); ctx.rotate(t * (1 + prog * 3));
-    ctx.strokeStyle = '#9ad0ff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.stroke();
-    for (let i = 0; i < n; i++) { const an = i / n * 6.283; ctx.fillStyle = i < seals.i ? '#ffe070' : '#33507a'; ctx.fillRect(Math.round(Math.cos(an) * R) - 1, Math.round(Math.sin(an) * R) - 1, 3, 3); }
-    ctx.restore();
-  }
   const bubble = (key) => { const l = ed.lines && ed.lines[key]; if (l) fx.bubble = { text: G.util.fmt(l, { name: pName }), t: 2.2 }; };
   const xp = (stat, n) => { stats.used[stat] = (stats.used[stat] || 0) + n; };
   const gainWill = (n) => { P.will = clamp(P.will + n * (Hh.has('grit') ? 1.2 : 1), 0, 100); };
@@ -12678,6 +12822,15 @@ G.scenes.register('battle', (opts, onEnd) => {
     return out;
   }
 
+  // эффекты боя — в scenes/battle_fx.js (имена те же, что были здесь: 40+ мест вызова не меняются)
+  const FX = G.battleFx.make({
+    fx, layout, X, rnd, PAL, P, E, sgn, other,
+    get state() { return state; }, get seals() { return seals; },
+  });
+  const pop = FX.pop, puff = FX.puff, hurt = FX.hurt, impact = FX.impact, lunge = FX.lunge, proj = FX.proj;
+  const cy = FX.cy, V1 = FX.V1;
+  const burst = FX.burst, aura = FX.aura, leaves = FX.leaves, enemyFx = FX.enemyFx;
+  const updateVfx = FX.updateVfx, drawVfx = FX.drawVfx, drawSealGlow = FX.drawSealGlow;
   // ── движение ──
   function canStand(f, pos) {
     if (pos < 0 || pos > 4) return false;
@@ -12721,60 +12874,9 @@ G.scenes.register('battle', (opts, onEnd) => {
     }
   }
 
-  // ── ИИ противника ──
-  function validAct(id, d) {
-    const a = G.EACTS[id]; if (!a) return false;
-    if (d < a.range[0] || d > a.range[1]) return false;
-    if (a.jutsu && E.ch < 10) return false;
-    if (a.kind === 'tai' && P.s.high && !has('climb')) return false;
-    if (a.kind === 'throw' && P.s.hidden) return false;
-    if (a.kind === 'move' && E.s.bound) return false;
-    if (a.kind === 'move' && a.dir > 0 && !canStand(E, E.pos + sgn(E, P))) return false;
-    if (a.kind === 'move' && a.dir < 0 && !canStand(E, E.pos - sgn(E, P))) return false;
-    if (id === 'clones' && E.clones > 0) return false;
-    if (id === 'trap' && traps.some((t) => t.owner === 'e')) return false;
-    if (id === 'shadow' && P.s.bound) return false;
-    if (id === 'mind' && P.s.conf) return false;
-    if (id === 'taunt' && (P.s.shaken || Math.random() < 0.5)) return false;
-    if ((id === 'kunai' || id === 'shuriken') && P.s.hidden) return false;
-    return true;
-  }
-  function decide() {
-    const d = dist();
-    if (has('lazy') && Math.random() < 0.15) return 'yawn';
-    let cand = (ed.acts || ['stand']).filter((id) => validAct(id, d));
-    if (P.s.hidden) cand = cand.filter((id) => G.EACTS[id].kind !== 'throw');
-    if (!cand.length) cand = ['guard'];
-    const hurt = E.hp / E.hpMax;
-    const w = cand.map((id) => {
-      const a = G.EACTS[id]; let s = 1;
-      if (a.kind === 'tai') s = d === 1 ? (ed.pref <= 1 ? 4 : 2) : 2.5;
-      if (a.kind === 'throw') s = d >= 2 ? (ed.pref >= 2 ? 3.5 : 1.5) : 0.4;
-      if (a.kind === 'move') s = (a.dir > 0 ? (d > ed.pref ? 3 + (has('impulsive') ? 2 : 0) : 0.2) : (d < ed.pref ? 3 : 0.2));
-      if (a.jutsu) s *= 1.6;
-      if (id === 'guard') s = has('defensive') ? 1.5 : (hurt < 0.35 ? 0.8 : 0.15);
-      if (id === 'focus') s = E.ch < 20 ? 2 : 0.3;
-      if (id === 'clones') s = 3;
-      if (id === 'trap') s = 2;
-      if (E.s.prov && a.kind === 'tai') s *= 3;
-      if (E.s.prov && (a.kind === 'move' && a.dir < 0 || id === 'guard')) s = 0.05;
-      return s * rnd(0.7, 1.3);
-    });
-    let sum = w.reduce((a, b) => a + b, 0), r = Math.random() * sum;
-    for (let i = 0; i < cand.length; i++) { r -= w[i]; if (r <= 0) return cand[i]; }
-    return cand[0];
-  }
-  function plan() {
-    E.plan = decide();
-    E.shown = E.plan;
-    if (has('deceive') && E.an <= 0 && Math.random() < 0.3) {
-      const alt = (ed.acts || []).filter((id) => id !== E.plan && G.EACTS[id] && G.EACTS[id].kind !== 'move');
-      if (alt.length) E.shown = alt[Math.floor(Math.random() * alt.length)];
-    }
-    E.plan2 = Hh.has('analyst') ? decide() : null;
-  }
-  const actName = (id) => id === 'yawn' ? 'Зевает' : (G.EACTS[id] || G.EACTS.stand).name;
-  const actOf = (id) => id === 'yawn' ? Object.assign({}, G.EACTS.stand, { name: 'Зевает' }) : (G.EACTS[id] || G.EACTS.stand);
+  // ── ИИ противника — в scenes/battle_ai.js ──
+  const AI = G.battleAi.make({ P, E, ed, traps, dist, has, canStand, sgn, rnd, Hh });
+  const validAct = AI.validAct, decide = AI.decide, plan = AI.plan, actName = AI.actName, actOf = AI.actOf;
 
   // ── ходы ──
   function tick(f) {
@@ -13026,9 +13128,11 @@ G.scenes.register('battle', (opts, onEnd) => {
     const strong = seq.length >= 2 || !!combo;
     // реакция врага проверяется в начале цепочки
     let k = 0; let afterSweep = false; let total = 0;
-    // враг может встретить серию блоком (баланс): зависит от его Тай/Скор против твоих
+    // враг может встретить серию блоком (баланс): зависит от его Тай/Скор против твоих и от его Фокуса —
+    // опытный противник читает комбинации (Фокус раньше давал «+8% если больше нуля», из-за чего
+    // тайдзюцу-сборка почти не встречала сопротивления во второй половине игры)
     if (E.focusMax > 0 && !E.s.bound && !E.s.stun && !P.ambush && !E.s.fear) {
-      const bc = clamp(0.12 + (E.tai - P.tai) * 0.03 + (E.spd - P.spd) * 0.03 + (E.focus > 0 ? 0.08 : 0), 0.06, 0.45);
+      const bc = clamp(0.12 + (E.tai - P.tai) * 0.03 + (E.spd - P.spd) * 0.03 + E.focus * 0.06, 0.06, 0.45);
       if (Math.random() < bc) { E.s.guard = 1; say(`${E.name} ставит блок!`, PAL.light); }
     }
     const next = () => {
@@ -14486,20 +14590,54 @@ G.scenes.register('fonttest', () => {
 
   G.scenes.replace(G.scenes.make('title'));
 
-  // Цикл с ограничением dt (после сворачивания не «прыгаем» на секунды вперёд)
+  // Цикл с ограничением dt (после сворачивания не «прыгаем» на секунды вперёд).
+  // Кадр обёрнут в try/catch: исключение в update/draw больше не останавливает requestAnimationFrame
+  // (раньше любой сбой сцены означал полное зависание игры — приходилось перезагружать страницу).
   let last = performance.now();
+  let errStreak = 0;          // сколько кадров подряд падаем
+  let errBanner = null;       // { msg, t } — полоса с текстом ошибки на несколько секунд
+
+  function drawBanner(ctx, dt) {
+    if (!errBanner) return;
+    errBanner.t -= dt;
+    if (errBanner.t <= 0) { errBanner = null; return; }
+    ctx.fillStyle = '#600'; ctx.fillRect(0, 0, G.screen.W, 34);
+    G.font.draw(ctx, 'СБОЙ:', 3, 2, { color: '#fff' });
+    G.font.wrap(errBanner.msg, G.screen.W - 6).slice(0, 2)
+      .forEach((l, i) => G.font.draw(ctx, l, 3, 12 + i * 10, { color: '#fcc' }));
+  }
+
+  function frameError(e) {
+    errStreak++;
+    const msg = (e && e.message) || String(e);
+    errBanner = { msg: String(msg), t: 4 };
+    if (G.debug && G.debug.on) console.warn('Кадр:', (e && e.stack) || e);
+    // Падаем подряд — значит, верхняя сцена битая (например, оборванный диалог). Снимаем её и продолжаем.
+    if (errStreak >= 2) {
+      errStreak = 0;
+      if (G.scenes.stack.length > 1) { try { G.scenes.pop(); } catch (_) { G.scenes.stack.pop(); } }
+      G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };   // зависшее затемнение — сбрасываем
+    }
+  }
+
   function frame(now) {
     let dt = (now - last) / 1000;
     last = now;
     if (dt > 0.1) dt = 0.1;
-    G.input.poll();
-    G.debug.tick(dt);
-    G.scenes.update(dt);
-    const ctx = G.screen.ctx;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, G.screen.W, G.screen.H);
-    G.scenes.draw(ctx);
-    G.debug.draw(ctx);
+    try {
+      G.input.poll();
+      G.debug.tick(dt);
+      G.scenes.update(dt);
+      const ctx = G.screen.ctx;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, G.screen.W, G.screen.H);
+      G.scenes.draw(ctx);
+      G.debug.draw(ctx);
+      drawBanner(ctx, dt);
+      errStreak = 0;
+    } catch (e) {
+      frameError(e);
+    }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -14523,12 +14661,10 @@ G.scenes.register('fonttest', () => {
     navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW:', e));
   }
 
-  // Ошибки — на экран, чтобы видеть их на телефоне
+  // Ошибки вне игрового цикла (обработчики ввода, сохранение) — тоже на экран, чтобы видеть их на телефоне
   window.addEventListener('error', (e) => {
-    const ctx = G.screen.ctx;
-    ctx.fillStyle = '#600'; ctx.fillRect(0, 0, G.screen.W, 34);
-    G.font.draw(ctx, 'ОШИБКА:', 3, 2, { color: '#fff' });
-    G.font.wrap(String(e.message), G.screen.W - 6).slice(0, 2).forEach((l, i) => G.font.draw(ctx, l, 3, 12 + i * 10, { color: '#fcc' }));
+    errBanner = { msg: String(e.message || 'ошибка'), t: 4 };
+    if (G.debug && G.debug.on) console.warn('Ошибка:', e.error || e.message);
   });
 })();
 

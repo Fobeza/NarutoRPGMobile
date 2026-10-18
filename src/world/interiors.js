@@ -145,7 +145,8 @@ G.interiors = (() => {
         npc(m, 'naruto', 4, 4, 'up', 'naruto_ramen_eve', { sched: [[18 * 60, 20 * 60 + 30, 2]] });
         npc(m, 'iruka', 6, 4, 'up', 'iruka_ramen', { sched: [[18 * 60 + 30, 21 * 60, 2]] });
       }
-      if (id === 'ichiraku') for (const o of m.objects) if (o.kind === 'kitchen' || (o.kind === 'counter' && [2, 7].includes(Math.floor(o.x / T)))) o.talk = 'ichiraku_cook';
+      // готовка — у двух стоек перед кухней: сами кухонные объекты стоят за стойкой, до них не дотянуться
+      if (id === 'ichiraku') for (const o of m.objects) if (o.kind === 'counter' && [2, 7].includes(Math.floor(o.x / T))) o.talk = 'ichiraku_cook';
       return m;
     },
 
