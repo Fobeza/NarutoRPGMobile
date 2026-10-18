@@ -234,11 +234,18 @@ def detect_bands(px, w, h, axis):
     step = max(1, (w if axis == 'rows' else h) // 32)
 
     def dark(k):
+        # промежуток листа — почти сплошь тёмный: допускаем редкие светлые точки
+        # (антиалиасинг, метки), иначе соседние клетки сливаются в одну полосу
         if axis == 'rows':
             o = k * w * 4
-            return all(px[o + x * 4] + px[o + x * 4 + 1] + px[o + x * 4 + 2] < 120 for x in range(0, w, step))
-        o = k * 4
-        return all(px[o + y * w * 4] + px[o + y * w * 4 + 1] + px[o + y * w * 4 + 2] < 120 for y in range(0, h, step))
+            it = (px[o + x * 4] + px[o + x * 4 + 1] + px[o + x * 4 + 2] < 150 for x in range(0, w, step))
+        else:
+            o = k * 4
+            it = (px[o + y * w * 4] + px[o + y * w * 4 + 1] + px[o + y * w * 4 + 2] < 150 for y in range(0, h, step))
+        tot = hit = 0
+        for v in it:
+            tot += 1; hit += 1 if v else 0
+        return tot > 0 and hit / tot >= 0.85
 
     bands, start = [], None
     n = h if axis == 'rows' else w
@@ -267,6 +274,9 @@ def sheet_cell(px, w, h, cell):
         return None
     y0, y1 = rb[ry]
     x0, x1 = cb[rx]
+    # отступ от краёв полосы: в текстуру не должны попасть пиксели промежутков листа
+    if y1 - y0 > 16: y0, y1 = y0 + 2, y1 - 2
+    if x1 - x0 > 16: x0, x1 = x0 + 2, x1 - 2
     return sub_px(px, w, x0, y0, x1 - x0, y1 - y0), x1 - x0, y1 - y0
 
 
