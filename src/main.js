@@ -50,6 +50,7 @@
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, G.screen.W, G.screen.H);
       G.scenes.draw(ctx);
+      G.touch.draw(ctx);
       G.debug.draw(ctx);
       drawBanner(ctx, dt);
       errStreak = 0;

@@ -298,10 +298,13 @@ G.scenes.register('world', (pos) => {
     },
 
     // ---------- Взаимодействие (A) ----------
-    interact() {
+    // probeAction() ничего не делает, а только ищет, что случится по A: { run, label, show } или null.
+    // show — «заметное» действие (разговор, дверь, рыбалка…): для него на сенсорном экране всплывает кнопка.
+    // Табличка с названием здания тоже действие, но кнопку ради неё не показываем.
+    probeAction() {
       const p = this.player, m = this.map;
-      if (p.jump) return;
-      if (G.roofs && G.roofs.interact(this)) return;
+      if (p.jump) return null;
+      if (G.roofs && p.roof) return { show: true, label: 'Спрыгнуть', run: () => G.roofs.interact(this) };
       const v = G.actors.DIRV[p.dir];
       const fx = p.x + v[0] * 12, fy = p.y - 3 + v[1] * 12;
 
@@ -313,15 +316,17 @@ G.scenes.register('world', (pos) => {
         if (d < reach && d < bd) { bd = d; best = n; }
       }
       if (best) {
-        if (!best.reach) best.dir = G.actors.OPP[p.dir];
-        best.moving = false; best.anim = 0;
-        G.audio.sfx.select();
-        const qs = G.quests.scriptFor(best.id);
-        if (qs) this.talk(qs);
-        else if (best.shop) this.openShop(best);
-        else if (G.FRIENDS[best.id] && G.state.flags.day2_intro && !best.name) G.friends.menu(best, this);
-        else this.talk(best.talk);
-        return;
+        const shop = !G.quests.scriptFor(best.id) && best.shop;
+        return { show: true, label: shop ? 'Лавка' : 'Говорить', run: () => {
+          if (!best.reach) best.dir = G.actors.OPP[p.dir];
+          best.moving = false; best.anim = 0;
+          G.audio.sfx.select();
+          const qs = G.quests.scriptFor(best.id);
+          if (qs) this.talk(qs);
+          else if (best.shop) this.openShop(best);
+          else if (G.FRIENDS[best.id] && G.state.flags.day2_intro && !best.name) G.friends.menu(best, this);
+          else this.talk(best.talk);
+        } };
       }
       // объекты с описанием
       const near = m.query({ x: fx - 10, y: fy - 10, w: 20, h: 20 });
@@ -335,24 +340,34 @@ G.scenes.register('world', (pos) => {
           if (d < bdist) { bdist = d; bo = o; }
         }
       }
-      if (bo) { G.audio.sfx.select(); this.talk(bo.talk); return; }
+      if (bo) return { show: true, label: 'Осмотреть', run: () => { G.audio.sfx.select(); this.talk(bo.talk); } };
       // здания
       for (const o of near) {
         if (!o.isBuilding) continue;
         const r = { x: o.tx * T, y: o.ty * T, w: o.tw * T, h: o.th * T };
         if (fx < r.x || fx > r.x + r.w || fy < r.y || fy > r.y + r.h + 2) continue;
-        if (o.talk) { this.talk(o.talk); return; }
-        if (o.door && o.door.tx === Math.floor(fx / T) && p.dir === 'up') { this.enterBuilding(o); return; }
-        if (G.roofs && G.roofs.canClimb(this, o)) { G.roofs.climb(this, o); return; }
-        this.showToast(o.locked ? o.name + ' — заперто' : o.name);
-        G.audio.sfx.blip();
-        return;
+        if (o.talk) return { show: true, label: 'Осмотреть', run: () => this.talk(o.talk) };
+        if (o.door && o.door.tx === Math.floor(fx / T) && p.dir === 'up') return { show: true, label: 'Войти', run: () => this.enterBuilding(o) };
+        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: 'Залезть', run: () => G.roofs.climb(this, o) };
+        return { show: false, run: () => { this.showToast(o.locked ? o.name + ' — заперто' : o.name); G.audio.sfx.blip(); } };
       }
       // вода: рыбалка
       for (const k of [1, 1.8]) {
         const wx = p.x + v[0] * 12 * k, wy = p.y - 3 + v[1] * 12 * k;
-        if (G.outdoor && G.outdoor.isWater(m, wx, wy)) { G.audio.sfx.select(); G.outdoor.fish(this, G.outdoor.spotKind(m, wx, wy)); return; }
+        if (G.outdoor && G.outdoor.isWater(m, wx, wy)) return { show: true, label: 'Рыбалка', run: () => { G.audio.sfx.select(); G.outdoor.fish(this, G.outdoor.spotKind(m, wx, wy)); } };
       }
+      return null;
+    },
+    interact() {
+      const act = this.probeAction();
+      if (act) act.run();
+    },
+
+    // что показывать на сенсорном экране (engine/touch.js)
+    touch() {
+      if (this.cine || this.player.jump) return { sys: true };
+      const act = this.probeAction();
+      return { joy: true, sys: true, action: act && act.show ? { label: act.label } : null };
     },
 
     talk(t) {
@@ -839,7 +854,7 @@ G.scenes.register('world', (pos) => {
         G.font.draw(ctx, icon, 3, y + 5, { color: st ? G.QUEST_CATS[G.QUESTS[qid].cat].color : P.orange });
         let txt = st ? st.text : 'Метка: ' + (mk.label || 'место');
         const suffix = ok ? '' : ' ⏰ с ' + G.game.clock(st.time[0]);
-        while (G.font.measure(txt + suffix) > W - 16 && txt.length > 4) txt = txt.slice(0, -2) + '…';
+        while (G.font.measure(txt + suffix) > W - 66 && txt.length > 4) txt = txt.slice(0, -2) + '…';
         G.font.draw(ctx, txt + suffix, 13, y + 5, { color: !ok ? P.gray : flash ? P.yellow : P.white });
       } else {
         G.font.draw(ctx, '▶', 4, y + 5, { color: P.orange });

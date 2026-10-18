@@ -303,7 +303,7 @@ G.scenes.register('mapview', (world) => {
 
       // заголовок
       ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, TOP);
-      F.draw(ctx, 'КАРТА КОНОХИ', 4, 3, { color: P.orange });
+      F.draw(ctx, 'КАРТА КОНОХИ', 48, 3, { color: P.orange });   // слева — кнопка «Назад» сенсорного экрана
       F.draw(ctx, (z === 1 ? '×1' : '×2') + ' ' + G.game.clock(), W - 4, 3, { align: 'right', color: P.light });
 
       // строка-подсказка о месте под курсором
