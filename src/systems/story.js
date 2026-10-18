@@ -178,15 +178,16 @@ G.story = {
   // ── турнир академии: 3 боя на вылет ──
   tournament() {
     const v = G.state.vars;
-    const rounds = [['choji', 'Первый круг: Чоджи Акимичи!'], ['kiba', 'Полуфинал: Киба Инузука!'], ['sasuke', 'ФИНАЛ: Саске Учиха!']];
+    // третий элемент — id друга для бонуса (у турнирного Кибы боевой id другой: kiba_t)
+    const rounds = [['choji', 'Первый круг: Чоджи Акимичи!', 'choji'], ['kiba_t', 'Полуфинал: Киба Инузука!', 'kiba'], ['sasuke', 'ФИНАЛ: Саске Учиха!', 'sasuke']];
     let r = 0;
     const next = () => {
       if (r >= rounds.length) { v.tourney = 4; return end(); }
-      const [en, title] = rounds[r];
+      const [en, title, fid] = rounds[r];
       _say([{ who: 'iruka', text: title }], () => {
         G.flow.battle({ enemy: en, mode: 'ringout', terrain: 'ring', story: r === 2, storyLine: 'Я не проиграю! Не здесь!', onEnd: (res) => {
           G.state.vars.hp = 100;
-          if (res.win) { r++; G.friends.add(en, 1); next(); } else { v.tourney = r + 1; end(); }
+          if (res.win) { r++; G.friends.add(fid, 1); next(); } else { v.tourney = r + 1; end(); }
         } }, _world());
       });
     };

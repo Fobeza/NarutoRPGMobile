@@ -20,7 +20,18 @@ with sync_playwright() as p:
     }""", [rx, ry, rw, rh])
     open(out, 'wb').write(base64.b64decode(data.split(',')[1]))
     print(page.evaluate("G.world.get('konoha').buildings.length"), 'buildings')
-    print(page.evaluate("""(() => { const m = G.world.get('konoha'); const bad = m.buildings.filter((b) => b.door && b.interior && !m.reach[(b.door.ty + 1) * m.w + b.door.tx]).map((b) => b.tplId + '@' + b.door.tx + ',' + b.door.ty);
+    stats = page.evaluate("""(() => { const m = G.world.get('konoha'); const bad = m.buildings.filter((b) => b.door && b.interior && !m.reach[(b.door.ty + 1) * m.w + b.door.tx]).map((b) => b.tplId + '@' + b.door.tx + ',' + b.door.ty);
       const objs = m.objects.filter((o) => o.talk && !o.isBuilding).filter((o) => { const tx = Math.floor(o.x / 16), ty = Math.floor((o.y - 1) / 16); return ![[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,1]].some(([a, b]) => m.reach[(ty + b) * m.w + tx + a]); }).map((o) => o.kind + '@' + Math.floor(o.x / 16) + ',' + Math.floor(o.y / 16));
-      return { genMs: G.world.genMs, pockets: m.pocketTiles, unreachableDoors: bad, unreachableTalk: objs, auto: m.buildings.filter((b) => b.auto).length }; })()"""))
+      return { genMs: G.world.genMs, pockets: m.pocketTiles, unreachableDoors: bad, unreachableTalk: objs, auto: m.buildings.filter((b) => b.auto).length }; })()""")
+    print(stats)
     b.close()
+
+# Раньше скрипт всегда завершался нулём, а check_all.py искал в выводе точную подстроку «unreachableDoors': []» —
+# хрупко (пробелы, формат). Теперь недостижимые двери/объекты — это ненулевой код выхода и понятная строка.
+bad = list(stats.get('unreachableDoors') or []) + list(stats.get('unreachableTalk') or [])
+if bad:
+    print('✘ недостижимых дверей/объектов: %d' % len(bad))
+    for x in bad[:10]:
+        print('   -', x)
+    sys.exit(1)
+print('✔ недостижимых дверей и talk-объектов: 0')

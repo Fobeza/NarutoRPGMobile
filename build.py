@@ -42,7 +42,8 @@ JS_FILES = [
     # ── экраны (сцены) ──
     "scenes/title.js", "scenes/nameinput.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
-    "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js", "scenes/battle.js", "scenes/train.js",
+    "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
+    "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js",
     "scenes/gallery.js",
     # ── точка входа ──

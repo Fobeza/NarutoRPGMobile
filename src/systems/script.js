@@ -21,9 +21,28 @@
 G.script = (() => {
   const library = {};   // id → { ops, labels }
   const actions = {};   // имя → fn(args[], runner)
+  const problems = [];  // ошибки сценариев, найденные при разборе и выполнении (их ловит tools/check_node.py)
+
+  // Сообщение об ошибке сценария: пишем в список и в консоль. Игру не роняем —
+  // потерянная метка обрывается как «end», чтобы игрок не зависал в пустом диалоге.
+  function report(msg) {
+    if (!problems.includes(msg)) problems.push(msg);
+    console.warn('Сценарий: ' + msg);
+  }
+
+  // Проверить блоки: все ли метки переходов определены внутри своего сценария
+  function validateBlocks(list) {
+    for (const s of list) {
+      for (const op of s.ops) {
+        if (op.op === 'goto' || op.op === 'if') { if (!(op.label in s.labels)) report(`${s.id}: нет метки «${op.label}»`); }
+        else if (op.op === 'choice') for (const o of op.options) if (!(o.label in s.labels)) report(`${s.id}: нет метки «${o.label}»`);
+      }
+    }
+  }
 
   function parse(src) {
     let cur = null;
+    const touched = [];   // блоки этого вызова — проверить в конце (метка может быть объявлена позже перехода)
     const lines = src.split('\n');
     for (let n = 0; n < lines.length; n++) {
       const raw = lines[n];
@@ -34,6 +53,7 @@ G.script = (() => {
       if ((m = line.match(/^===\s*(\S+)/))) {
         cur = { id: m[1], ops: [], labels: {} };
         library[cur.id] = cur;
+        touched.push(cur);
         continue;
       }
       if (!cur) throw new Error('Скрипт: строка вне блока === : ' + line);
@@ -63,8 +83,9 @@ G.script = (() => {
       if ((m = line.match(/^(\w*)(?:\[([^\]]+)\])?(?:\((\w+)\))?\s*:\s*(.*)$/))) {
         ops.push({ op: 'say', who: m[1] || null, name: m[2] || null, emo: m[3] || null, text: m[4] }); continue;
       }
-      throw new Error(`Скрипт ${cur.id}: не понимаю строку «${line}»`);
+      report(`${cur.id}: не понимаю строку «${line}»`);   // строку пропускаем: игра работает, ошибку ловят проверки
     }
+    validateBlocks(touched);
   }
 
   // Проверка условия: flag.x | !flag.x | var.n >= 3
@@ -75,7 +96,7 @@ G.script = (() => {
       if (r !== undefined) return neg ? !r : r;
     }
     const m = cond.trim().match(/^(!?)(flag|var)\.(\w+)\s*(==|!=|>=|<=|>|<)?\s*(-?\d+)?$/);
-    if (!m) { console.warn('Плохое условие', cond); return false; }
+    if (!m) { report(`непонятное условие «${cond.trim()}»`); return false; }
     const store = m[2] === 'flag' ? G.state.flags : G.state.vars;
     const v = Number(store[m[3]] || 0);
     let r;
@@ -117,7 +138,7 @@ G.script = (() => {
             }
             case 'call': {
               const fn = actions[op.name];
-              if (fn) fn(op.args, r); else console.warn('Нет действия', op.name);
+              if (fn) fn(op.args, r); else report(`${id}: нет действия «${op.name}»`);
               break;
             }
           }
@@ -125,14 +146,23 @@ G.script = (() => {
         return { op: 'end' };
       },
       jump(label) {
-        if (!(label in s.labels)) throw new Error(`Скрипт ${id}: нет метки ${label}`);
+        if (!(label in s.labels)) {
+          // Метка потерялась (ошибка сценария). Раньше здесь летело исключение и игра зависала:
+          // сцена диалога оставалась в стеке без текущей операции. Теперь — сообщаем и завершаем диалог.
+          report(`${id}: нет метки ${label}`);
+          pc = s.ops.length;
+          return;
+        }
         pc = s.labels[label];
       },
     };
     return r;
   }
 
-  return { parse, runner, test, library, actions };
+  // Перепроверить всю библиотеку (используют проверки и режим отладки)
+  function validate() { for (const id of Object.keys(library)) validateBlocks([library[id]]); return problems.slice(); }
+
+  return { parse, runner, test, library, actions, problems, report, validate };
 })();
 
 // Базовые действия

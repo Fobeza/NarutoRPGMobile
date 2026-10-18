@@ -286,6 +286,16 @@ villager_m[Хулиган]: ...Ну ладно. Ты вроде нормальн
 # fight
 call battle senior scroll forest st_field_win st_field_lose 12
 end
+# win
+: Свиток снова твой. Хулиганы растворяются в кустах — обошлось без драки.
+iruka: {name}! Ты нашёл свиток — и даже ни с кем не подрался? Вот это выдержка.
+iruka: Держи учебник по ловушкам: пригодится на экзамене.
+call give book_traps
+call note Свиток найден: договорился без боя
+call rep 2
+call friend iruka 2
+set flag.field_done = 1
+end
 
 === st_field_win
 iruka: {name}! Ты нашёл свиток — и справился с этими хулиганами? Отлично!

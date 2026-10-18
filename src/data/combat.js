@@ -40,7 +40,7 @@ G.EACTS = {
   retreat:  { name: 'Отходит',          range: [1, 2], w: 6,  kind: 'move', dir: -1 },
   guard:    { name: 'Защита',           range: [0, 9], w: 6,  kind: 'guard' },
   focus:    { name: 'Копит чакру',      range: [0, 9], w: 8,  kind: 'focus' },
-  fang:     { name: 'Гацуга!',          range: [1, 3], w: 14, kind: 'tai', dmg: 15, lunge: true, jutsu: true },
+  fang:     { name: 'Гацуга!',          range: [1, 3], w: 14, kind: 'tai', dmg: 11, lunge: true, jutsu: true },
   clones:   { name: 'Теневые клоны',    range: [0, 9], w: 10, kind: 'clones', jutsu: true },
   gentle:   { name: 'Мягкий кулак',     range: [1, 1], w: 10, kind: 'tai', dmg: 8, drain: 14, jutsu: true },
   baika:    { name: 'Техника увеличения', range: [1, 2], w: 18, kind: 'tai', dmg: 20, lunge: true, jutsu: true },
@@ -62,13 +62,13 @@ G.ENEMIES = {
                acts: ['stand'], lines: { start: '...', hurt: '*скрип*' } },
   dummy2:    { name: 'Манекен Ируки', spr: 'dummy', hp: 55, ch: 0, tai: 2, nin: 0, gen: 0, spd: 2, end: 2, know: 0, focus: 0, pref: 1,
                acts: ['swing', 'stand'], lines: { start: '*скрип-скрип*' } },
-  kiba:      { name: 'Киба', spr: 'kiba', male: true, hp: 74, ch: 40, tai: 5, nin: 3, gen: 1, spd: 6, end: 5, know: 2, focus: 1, pref: 1,
+  kiba:      { name: 'Киба', spr: 'kiba', male: true, hp: 72, ch: 34, tai: 7, nin: 3, gen: 1, spd: 6, end: 5, know: 2, focus: 1, pref: 1,
                acts: ['strike', 'combo', 'fang', 'approach', 'dash'], traits: ['impulsive'],
                lines: { start: 'Новенький? Мы с Акамару тебя мигом уделаем!', hurt: 'Акамару, это ничего!', low: 'Чёрт... да ты не так прост!', win: 'Ха! Сила стаи!', lose: 'Ладно-ладно... в следующий раз!' } },
-  naruto:    { name: 'Наруто', spr: 'naruto', male: true, hp: 115, ch: 80, tai: 5, nin: 4, gen: 1, spd: 5, end: 7, know: 1, focus: 1, pref: 1,
-               acts: ['strike', 'combo', 'kunai', 'clones', 'approach'], traits: ['impulsive', 'clones'],
+  naruto:    { name: 'Наруто', spr: 'naruto', male: true, hp: 125, ch: 80, tai: 6, nin: 4, gen: 1, spd: 7, end: 10, know: 1, focus: 3, pref: 1,
+               acts: ['strike', 'combo', 'kunai', 'clones', 'approach', 'guard'], traits: ['impulsive', 'clones'],
                lines: { start: 'Даттебайо! Покажу тебе стиль будущего Хокаге!', hurt: 'Ай-ай! Это нечестно!', low: 'Я никогда не сдаюсь!', win: 'Ура! Видел?!', lose: 'Эх... ты крутой! Ещё раз!' } },
-  sasuke:    { name: 'Саске', spr: 'sasuke', male: true, hp: 130, ch: 60, tai: 7, nin: 6, gen: 3, spd: 8, end: 6, know: 6, focus: 2, pref: 2,
+  sasuke:    { name: 'Саске', spr: 'sasuke', male: true, hp: 185, ch: 60, tai: 8, nin: 6, gen: 3, spd: 8, end: 8, know: 5, focus: 3, pref: 3,
                acts: ['strike', 'combo', 'kunai', 'shuriken', 'fireball', 'retreat', 'approach'], traits: ['kawarimi', 'deceive', 'climb', 'smart'],
                lines: { start: 'Хм. Посмотрим, чего ты стоишь.', hurt: 'Тц.', low: 'Не может быть...', win: 'Ты слабак.', lose: '...Неплохо. В следующий раз я не проиграю.' } },
   shikamaru: { name: 'Шикамару', spr: 'shikamaru', male: true, hp: 80, ch: 50, tai: 3, nin: 5, gen: 2, spd: 4, end: 4, know: 9, focus: 1, pref: 3,
@@ -77,30 +77,30 @@ G.ENEMIES = {
   hinata:    { name: 'Хината', spr: 'hinata', hp: 90, ch: 60, tai: 6, nin: 5, gen: 2, spd: 6, end: 5, know: 5, focus: 1, pref: 1,
                acts: ['gentle', 'strike', 'guard', 'approach'], traits: ['defensive'],
                lines: { start: 'Я... я постараюсь! Прости заранее!', hurt: 'Н-ничего...', low: 'Я не отступлю... как Наруто!', win: 'Ой! Ты в порядке?!', lose: 'Ты очень сильный...' } },
-  choji:     { name: 'Чоджи', spr: 'choji', male: true, hp: 165, ch: 50, tai: 6, nin: 4, gen: 1, spd: 2, end: 8, know: 2, focus: 0, pref: 1,
+  choji:     { name: 'Чоджи', spr: 'choji', male: true, hp: 230, ch: 50, tai: 11, nin: 6, gen: 1, spd: 2, end: 11, know: 2, focus: 3, pref: 1,
                acts: ['strike', 'baika', 'approach', 'focus'], traits: [],
                lines: { start: 'После боя — чипсы! Ням!', hurt: 'Уф!', low: 'Я не толстый! Я широкой кости!!!', win: 'Хрум! Победные чипсы!', lose: 'Пойду поем...' } },
   ino:       { name: 'Ино', spr: 'ino', hp: 80, ch: 55, tai: 4, nin: 4, gen: 7, spd: 5, end: 4, know: 5, focus: 1, pref: 2,
                acts: ['kunai', 'mind', 'strike', 'retreat'], traits: ['smart'],
                lines: { start: 'Быстренько закончим — мне ещё к Саске!', hurt: 'Эй, причёска!', low: 'Как ты смеешь?!', win: 'Красота — тоже сила!', lose: 'Хмф! Повезло тебе.' } },
-  lee:       { name: 'Рок Ли', spr: 'lee', male: true, hp: 130, ch: 0, tai: 10, nin: 0, gen: 0, spd: 11, end: 8, know: 3, focus: 2, pref: 1,
+  lee:       { name: 'Рок Ли', spr: 'lee', male: true, hp: 128, ch: 0, tai: 10, nin: 0, gen: 0, spd: 11, end: 11, know: 2, focus: 3, pref: 1,
                acts: ['strike', 'combo', 'whirl', 'dash', 'approach'], traits: ['climb', 'impulsive'],
                lines: { start: 'Сила юности! Покажи мне свою!', hurt: 'Отличный удар!', low: 'Гай-сенсей, я не подведу!', win: 'Тренируйся! 500 кругов вокруг деревни!', lose: 'Великолепно! Ты — мой соперник!' } },
   bully:     { name: 'Хулиган', grow: true, spr: 'bully', male: true, hp: 75, ch: 20, tai: 4, nin: 1, gen: 0, spd: 3, end: 4, know: 1, focus: 0, pref: 1,
                acts: ['strike', 'kunai', 'approach'], traits: ['impulsive'],
                lines: { start: 'Эй, мелкий! Гони деньги!', hurt: 'Ах ты!', win: 'Ха, слабак!', lose: 'Б-бежим отсюда!' } },
-  senior:    { name: 'Старшеклассник', spr: 'bully', male: true, hp: 95, ch: 40, tai: 6, nin: 4, gen: 2, spd: 6, end: 6, know: 4, focus: 1, pref: 2,
-               acts: ['strike', 'combo', 'kunai', 'shuriken', 'approach', 'retreat'], traits: ['kawarimi'],
+  senior:    { name: 'Старшеклассник', spr: 'bully', male: true, hp: 148, ch: 40, tai: 7, nin: 4, gen: 2, spd: 8, end: 9, know: 8, focus: 4, pref: 3,
+               acts: ['strike', 'combo', 'kunai', 'shuriken', 'approach', 'retreat'], traits: ['kawarimi', 'smart'],
                lines: { start: 'Свиток? Попробуй отними, малявка!', hurt: 'Тц, шустрый!', low: 'Да кто ты такой?!', win: 'Свиток останется у нас.', lose: 'Ладно-ладно, забирай!' } },
   thief:     { name: 'Ночной вор', grow: true, spr: 'thief', male: true, hp: 85, ch: 30, tai: 4, nin: 2, gen: 2, spd: 7, end: 4, know: 4, focus: 1, pref: 3,
                acts: ['kunai', 'shuriken', 'retreat', 'strike'], traits: ['kawarimi'],
                lines: { start: 'Ученичок? Не мешай работать.', hurt: 'Шустрый...', win: 'Сладких снов.', lose: 'Сдаюсь! Отдам всё!' } },
   dog:       { name: 'Бродячий пёс', grow: true, spr: 'dog', hp: 55, ch: 0, tai: 5, nin: 0, gen: 0, spd: 7, end: 3, know: 0, focus: 0, pref: 1,
                acts: ['bite', 'approach', 'dash'], traits: ['impulsive'], lines: { start: 'Р-р-р-гав!', lose: 'Скуль-скуль...' } },
-  iruka:     { name: 'Ирука', spr: 'iruka', male: true, hp: 140, ch: 70, tai: 7, nin: 6, gen: 4, spd: 7, end: 7, know: 8, focus: 3, pref: 2,
+  iruka:     { name: 'Ирука', spr: 'iruka', male: true, hp: 145, ch: 70, tai: 7, nin: 6, gen: 4, spd: 7, end: 7, know: 8, focus: 3, pref: 2,
                acts: ['strike', 'kunai', 'shuriken', 'guard', 'retreat', 'approach'], traits: ['kawarimi', 'smart'],
                lines: { start: 'Колокольчик у меня на поясе. Сорви его — и тест пройден!', hurt: 'Хорошо! Вот так!', low: 'Ты вырос, {name}.', win: 'Ещё рано. Тренируйся!', lose: 'Молодец! Я горжусь тобой.' } },
-  mizuki:    { name: 'Мизуки', spr: 'mizuki', male: true, hp: 210, ch: 90, tai: 8, nin: 7, gen: 5, spd: 7, end: 7, know: 7, focus: 2, pref: 3,
+  mizuki:    { name: 'Мизуки', spr: 'mizuki', male: true, hp: 235, ch: 90, tai: 8, nin: 7, gen: 5, spd: 7, end: 11, know: 7, focus: 3, pref: 3,
                acts: ['giant', 'kunai', 'combo', 'taunt', 'retreat', 'approach'], traits: ['kawarimi', 'deceive', 'climb', 'smart'], phase2: true,
                lines: { start: 'Ирука-сенсей тебе врал. Все тебе врали!', hurt: 'Щенок!', low: 'Довольно игр!', win: 'Свиток мой!', lose: 'Не... может... быть...' } },
 };
@@ -146,7 +146,12 @@ G.ENEMIES.asuma = { name: 'Асума', spr: 'asuma', male: true, hp: 170, ch: 9
 G.ENEMIES.konohamaru = { name: 'Конохамару', spr: 'konohamaru', male: true, hp: 60, ch: 30, tai: 3, nin: 2, gen: 1, spd: 5, end: 3, know: 1, focus: 1, pref: 1,
   acts: ['prank', 'strike', 'kunai', 'clones', 'approach'], traits: ['impulsive', 'clones'],
   lines: { start: 'Босс сказал, нужно сначала победить тебя! Сексуальное дзюцу-у-у!', hurt: 'Ай! Я же внук Хокаге!', win: 'Я круче всех!', lose: 'Погоди... я вырасту и вернусь!' } };
-G.ENEMIES.kiba.acts = ['strike', 'combo', 'fang', 'duo', 'approach', 'dash'];
+// Турнирный Киба (день 26): тот же соперник, но в полную силу — Гацуга и Акамару.
+// Базовый kiba оставлен слабым намеренно: он же идёт на спарринг дня 3 (когда у ниндзюцу/гендзюцу ещё нет техник)
+// и на повторные тренировки с другом (FRIENDS.kiba.spar).
+G.ENEMIES.kiba_t = Object.assign({}, G.ENEMIES.kiba, {
+  name: 'Киба и Акамару', hp: 150, ch: 40, tai: 9, spd: 9, end: 7, focus: 2, acts: ['strike', 'combo', 'fang', 'duo', 'approach', 'dash'],
+});
 
 // ── Стихийные техники (изучаются у наставников) ──
 Object.assign(G.TECHS, {

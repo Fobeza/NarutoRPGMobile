@@ -13,11 +13,13 @@
 ```bash
 # 1. поправить файлы в src/  (что где лежит — ниже и в docs/)
 python3 build.py                    # 2. собрать → index.html + sw.js в корне
-python3 tools/check_all.py --quick  # 3. проверить (полная проверка — без --quick)
-git add -A && git commit -m "что изменил" && git push   # 4. через 1–2 минуты сайт обновится сам
+python3 tools/check_node.py         # 3. быстрые проверки без браузера (~12 с, нужен Node.js 18+)
+python3 tools/check_all.py --quick  # 4. то же + браузерные тесты (полная проверка — без --quick)
+git add -A && git commit -m "что изменил" && git push   # 5. через 1–2 минуты сайт обновится сам
 ```
 
-Никаких зависимостей для сборки: только Python 3. Для тестов нужен Playwright (`pip install playwright`).
+Никаких зависимостей для сборки и для самой игры: только Python 3. Node.js нужен для быстрых проверок
+(`tools/node/`), Playwright — для браузерных тестов и скриншотов (`pip install playwright`).
 Посмотреть игру локально: `python3 -m http.server 8765` в корне → http://localhost:8765/ (с `?debug=1` — режим отладки).
 
 ## Где что лежит

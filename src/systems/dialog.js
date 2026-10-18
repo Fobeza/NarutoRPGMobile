@@ -70,6 +70,8 @@ G.dialog = (() => {
       pageLen() { return this.pages[this.page].reduce((s, l) => s + [...l].length, 0); },
 
       update(dt) {
+        // Сценарий оборвался аварийно (нет текущей операции) — закрываем окно, а не висим в нём навсегда
+        if (!this.cur || !this.pages || !this.pages.length) { G.scenes.pop(); return; }
         this.blink += dt;
         const total = this.pageLen();
         if (this.shown < total) {
@@ -126,6 +128,7 @@ G.dialog = (() => {
       },
 
       draw(ctx) {
+        if (!this.cur || !this.pages || !this.pages.length) return;   // аварийный диалог — не рисуем пустое окно
         const W = G.screen.W, Hs = G.screen.H;
         const x = 2, y = Hs - this.bottom - BOX_H, w = W - 4, h = BOX_H;
         G.gfx.window(ctx, x, y, w, h, 'paper');
