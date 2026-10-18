@@ -1,25 +1,10 @@
 // Меню «Сохранение» (этап 4): сохранить, экспорт и импорт кода, восстановить утреннюю копию.
 G.scenes.register('savemenu', () => {
-  let idx = 0, toast = null, toastT = 0, boxOpen = false;
+  let idx = 0, toast = null, toastT = 0;
   const say = (t) => { toast = t; toastT = 1.8; };
   const world = () => G.scenes.stack.find((s) => s.name === 'world');
 
-  // DOM-окно с текстом (нужно, чтобы iOS дал скопировать/вставить)
-  function openBox({ title, text, readonly, okLabel, hint, onOk }) {
-    const box = document.getElementById('code-box'), ta = document.getElementById('cb-text');
-    document.getElementById('cb-title').textContent = title;
-    document.getElementById('cb-hint').textContent = hint || '';
-    document.getElementById('cb-hint').className = 'te-hint';
-    const ok = document.getElementById('cb-ok');
-    ok.textContent = okLabel;
-    ta.value = text || ''; ta.readOnly = !!readonly;
-    box.classList.remove('hidden'); boxOpen = true;
-    const close = () => { box.classList.add('hidden'); boxOpen = false; ta.blur(); G.input.consume(); };
-    ok.onpointerdown = (e) => { e.preventDefault(); onOk(ta, close); };
-    document.getElementById('cb-cancel').onpointerdown = (e) => { e.preventDefault(); close(); };
-    setTimeout(() => { if (readonly) { ta.focus(); ta.select(); } else ta.focus(); }, 50);
-  }
-  const hintErr = (t) => { const h = document.getElementById('cb-hint'); h.textContent = t; h.className = 'te-hint err'; };
+  const openBox = (o) => G.codeBox.open(o), hintErr = (t) => G.codeBox.hintErr(t);
 
   const items = () => {
     const bi = G.storage.backupInfo();
@@ -56,9 +41,9 @@ G.scenes.register('savemenu', () => {
     name: 'savemenu',
     transparent: true,
     openBox, // для автотеста
-    get boxOpen() { return boxOpen; },
+    get boxOpen() { return G.codeBox.isOpen; },
     update(dt) {
-      if (boxOpen) return;
+      if (G.codeBox.isOpen) return;
       const I = G.input, list = items();
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast = null; }
       if (I.repeat('up', dt)) { idx = (idx + list.length - 1) % list.length; G.audio.sfx.select(); }

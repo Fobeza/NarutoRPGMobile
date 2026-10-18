@@ -41,11 +41,11 @@ JS_FILES = [
     "world/roofs.js", "world/fx.js",
     "engine/debug.js",
     # ── экраны (сцены) ──
-    "scenes/title.js", "scenes/nameinput.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
+    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
-    "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js",
+    "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js", "scenes/settings.js",
     "scenes/gallery.js",
     # ── точка входа ──
     "main.js",

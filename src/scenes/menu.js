@@ -1,30 +1,14 @@
-// Меню паузы (кнопка МЕНЮ): задания, статус, сумка, читы (в отладке), настройки, сохранение. Статус, техники и дневник — на следующих этапах.
+// Меню паузы (кнопка МЕНЮ): задания, календарь, статус, сумка, персонажи, настройки (scenes/settings.js), сохранение.
 G.scenes.register('menu', () => {
   let idx = 0;
-  const S = G.storage.settings;
-  const SPEED_NAMES = ['мгновенно', 'медленно', 'обычно', 'быстро'];
-
-  let page = 'main';
-  const sub = (label, to) => ({ label, act: () => { page = to; idx = 0; } });
-  const items = () => page === 'set' ? [
-    { label: '< Назад', act: () => { page = 'main'; idx = 0; } },
-    { label: 'Звук: ' + (S.sound ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.sound = !S.sound; G.audio.setEnabled(S.sound); G.storage.saveSettings(); } },
-    { label: 'Текст: ' + SPEED_NAMES[S.textSpeed], act: () => { S.textSpeed = (S.textSpeed + 1) % 4; G.storage.saveSettings(); } },
-    { label: 'Мини-карта: ' + (S.minimap !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.minimap = S.minimap === false; G.storage.saveSettings(); } },
-    { label: 'Эффекты: ' + (S.fx !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.fx = S.fx === false; G.storage.saveSettings(); } },
-    { label: 'Подсказки: ' + (S.hints !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.hints = S.hints === false; G.storage.saveSettings(); } },
-    { label: 'Реакция в бою: ' + (S.reactSlow ? 'МЕДЛ.' : 'ОБЫЧН.'), act: () => { S.reactSlow = !S.reactSlow; G.storage.saveSettings(); } },
-    { label: 'Пиксели: ' + G.screen.density().name + ' (' + G.screen.W + ')', act: () => G.screen.cycleDensity() },
-    { label: 'Отладка: ' + (G.debug.on ? 'ВКЛ' : 'ВЫКЛ'), act: () => G.debug.toggle() },
-    ...(G.debug.on ? [{ label: 'Читы', act: () => G.scenes.push(G.scenes.make('cheats')) }, { label: 'Шрифт', act: () => G.scenes.push(G.scenes.make('fonttest')) }] : []),
-  ] : [
+  const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
-    sub('Настройки  ▸', 'set'),
+    { label: 'Настройки  ▸', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение…', act: () => G.scenes.push(G.scenes.make('savemenu')) },
     { label: 'В главное меню', act: () => G.scenes.fadeTo(G.scenes.make('title')) },
   ];
@@ -39,7 +23,7 @@ G.scenes.register('menu', () => {
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast = null; }
       if (I.repeat('up', dt)) { idx = (idx + list.length - 1) % list.length; G.audio.sfx.select(); }
       if (I.repeat('down', dt)) { idx = (idx + 1) % list.length; G.audio.sfx.select(); }
-      if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); if (page === 'set') { page = 'main'; idx = 0; return; } G.scenes.pop(); return; }
+      if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.tapNow) {
         const r = this.rect();
         const i = Math.floor((I.tapNow.y - r.y - 18) / 13);
@@ -50,14 +34,14 @@ G.scenes.register('menu', () => {
     },
     rect() {
       const n = items().length;
-      const w = page === 'set' ? 132 : 112, h = n * 13 + 26;
+      const w = 112, h = n * 13 + 26;
       return { x: Math.round((G.screen.W - w) / 2), y: Math.round((G.screen.H - h) / 2) - 10, w, h };
     },
     draw(ctx) {
       ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
       const r = this.rect();
       G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
-      G.font.draw(ctx, page === 'set' ? 'НАСТРОЙКИ' : 'МЕНЮ', r.x + r.w / 2, r.y + 5, { align: 'center', color: G.PAL.orange });
+      G.font.draw(ctx, 'МЕНЮ', r.x + r.w / 2, r.y + 5, { align: 'center', color: G.PAL.orange });
       items().forEach((it, i) => {
         const y = r.y + 18 + i * 13;
         const sel = i === idx;

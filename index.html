@@ -222,7 +222,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '1.0', version: '50c814c8', date: '2026-10-18 19:42', debug: false };
+const BUILD = { release: '1.0', version: 'bc22476c', date: '2026-10-18 19:51', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -10835,12 +10835,40 @@ G.debug = {
 };
 
 
+// ===== scenes/codebox.js =====
+// Окно ввода/копирования кода сохранения — обычный DOM-элемент поверх игры (iOS даёт в нём копировать и вставлять).
+// Используется в «Сохранение…» (экспорт, импорт) и на титульном экране («Загрузить игру»).
+//   G.codeBox.open({ title, text, readonly, okLabel, hint, onOk(ta, close) })
+//   G.codeBox.isOpen — пока окно открыто, сцены не обрабатывают ввод
+//   G.codeBox.hintErr(текст) — красная подсказка (код не подошёл)
+G.codeBox = (() => {
+  let open = false;
+  const $ = (id) => document.getElementById(id);
+  function show({ title, text, readonly, okLabel, hint, onOk }) {
+    const box = $('code-box'), ta = $('cb-text');
+    $('cb-title').textContent = title;
+    $('cb-hint').textContent = hint || '';
+    $('cb-hint').className = 'te-hint';
+    const ok = $('cb-ok');
+    ok.textContent = okLabel;
+    ta.value = text || ''; ta.readOnly = !!readonly;
+    box.classList.remove('hidden'); open = true;
+    const close = () => { box.classList.add('hidden'); open = false; ta.blur(); G.input.consume(); };
+    ok.onpointerdown = (e) => { e.preventDefault(); onOk(ta, close); };
+    $('cb-cancel').onpointerdown = (e) => { e.preventDefault(); close(); };
+    setTimeout(() => { if (readonly) { ta.focus(); ta.select(); } else ta.focus(); }, 50);
+  }
+  const hintErr = (t) => { const h = $('cb-hint'); h.textContent = t; h.className = 'te-hint err'; };
+  return { open: show, hintErr, get isOpen() { return open; } };
+})();
+
+
 // ===== scenes/title.js =====
 // Титульный экран: ночная Коноха, Скала Хокаге, «Воля Огня».
 G.scenes.register('title', () => {
   let t = 0;
   let idx = 0;
-  let items = [];
+  let items = [];   // кнопки главного меню: { label, act }
   let bg = null;
 
   // Фон — готовая картинка (gfx/title_art.js), растянутая на экран; пока не загрузилась или её нет — рисуем кодом
@@ -10945,11 +10973,46 @@ G.scenes.register('title', () => {
     return c;
   }
 
+  // Главное меню: «Продолжить» (если есть сохранение), «Новая игра», «Загрузить игру» (по коду), «Настройки»
+  function buildItems() {
+    items = [];
+    if (G.storage.hasSave()) items.push({ label: 'Продолжить', act: () => G.game.loadSaved() });
+    items.push({ label: 'Новая игра', act: newGame });
+    items.push({ label: 'Загрузить игру', act: loadByCode });
+    items.push({ label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) });
+  }
+  const menuY = (i) => G.screen.H - 62 - 14 * Math.max(0, items.length - 2) + i * 14;
+
+  function newGame() {
+    if (G.storage.hasSave()) {
+      // перезапись сохранения — только после подтверждения
+      G.dialog.start('confirm_new', { bottom: 30, onEnd: () => {
+        if (G.state.flags._confirm) { G.game.newState(); G.scenes.fadeTo(G.scenes.make('nameinput')); }
+        delete G.state.flags._confirm;
+      } });
+    } else {
+      G.game.newState();
+      G.scenes.fadeTo(G.scenes.make('nameinput'));
+    }
+  }
+
+  // «Загрузить игру»: вставить код, полученный в «Сохранение… → Экспорт кода»
+  function loadByCode() {
+    G.codeBox.open({
+      title: 'Загрузить игру', text: '', readonly: false, okLabel: 'ЗАГРУЗИТЬ',
+      hint: G.storage.hasSave() ? 'Вставь код сохранения. Текущая игра уйдёт в резервную копию' : 'Вставь код сохранения (его даёт «Сохранение… → Экспорт кода»)',
+      onOk: (ta, close) => {
+        if (!G.storage.importCode(ta.value)) { G.codeBox.hintErr('Код не подходит. Проверь, что он скопирован целиком'); G.audio.sfx.error(); return; }
+        close(); G.audio.sfx.confirm(); G.game.loadSaved();
+      },
+    });
+  }
+
   return {
     name: 'title',
     enter() {
       bg = buildBg();
-      items = G.storage.hasSave() ? ['Продолжить', 'Новая игра'] : ['Новая игра'];
+      buildItems();
       idx = 0;
       this._resize = G.events.on('resize', () => { bg = buildBg(); });
     },
@@ -10957,11 +11020,12 @@ G.scenes.register('title', () => {
 
     update(dt) {
       t += dt;
+      if (G.codeBox.isOpen) return;   // окно «Загрузить игру» открыто — меню ждёт
       const I = G.input;
-      if (I.repeat('up', dt) || I.repeat('down', dt)) { idx = (idx + 1) % items.length; G.audio.sfx.select(); }
+      if (I.repeat('up', dt)) { idx = (idx + items.length - 1) % items.length; G.audio.sfx.select(); }
+      if (I.repeat('down', dt)) { idx = (idx + 1) % items.length; G.audio.sfx.select(); }
       if (I.tapNow) {
-        const H = G.screen.H;
-        items.forEach((it, i) => { if (Math.abs(I.tapNow.y - (H - 62 + i * 14 + 4)) < 7) { idx = i; this.choose(); } });
+        items.forEach((it, i) => { if (Math.abs(I.tapNow.y - (menuY(i) + 4)) < 7) { idx = i; this.choose(); } });
         return;
       }
       if (I.pressed('a')) this.choose();
@@ -10969,19 +11033,7 @@ G.scenes.register('title', () => {
 
     choose() {
       G.audio.sfx.confirm();
-      const it = items[idx];
-      if (it === 'Продолжить') {
-        G.game.loadSaved();
-      } else if (G.storage.hasSave()) {
-        // перезапись сохранения — только после подтверждения
-        G.dialog.start('confirm_new', { bottom: 30, onEnd: () => {
-          if (G.state.flags._confirm) { G.game.newState(); G.scenes.fadeTo(G.scenes.make('nameinput')); }
-          delete G.state.flags._confirm;
-        } });
-      } else {
-        G.game.newState();
-        G.scenes.fadeTo(G.scenes.make('nameinput'));
-      }
+      items[idx].act();
     },
 
     draw(ctx) {
@@ -10999,12 +11051,15 @@ G.scenes.register('title', () => {
       const tmp = G.gfx.canvas(tw + 4, 12);
       G.font.draw(tmp.getContext('2d'), title, 1, 1, { color: G.PAL.orange, outline: G.PAL.ink });
       ctx.drawImage(tmp, Math.round(W / 2 - tmp.lw), ly + 12, tmp.lw * 2, tmp.lh * 2);
-      // меню
+      // меню: тёмная плашка под кнопками, чтобы текст читался поверх картинки
+      const my = menuY(0);
+      ctx.fillStyle = 'rgba(20,10,20,.55)';
+      ctx.fillRect(Math.round(W / 2 - 62), my - 6, 124, items.length * 14 + 4);
       items.forEach((it, i) => {
-        const y = H - 62 + i * 14;
-        const sel = i === idx;
-        if (sel && Math.floor(t * 3) % 2 === 0) G.font.draw(ctx, '▶', W / 2 - G.font.measure(it) / 2 - 10, y, { color: G.PAL.orange });
-        G.font.draw(ctx, it, W / 2, y, { align: 'center', color: sel ? G.PAL.white : G.PAL.light, shadow: G.PAL.black });
+        const y = menuY(i), sel = i === idx;
+        if (sel) { ctx.fillStyle = 'rgba(232,98,26,.28)'; ctx.fillRect(Math.round(W / 2 - 58), y - 3, 116, 13); }
+        if (sel && Math.floor(t * 3) % 2 === 0) G.font.draw(ctx, '▶', W / 2 - G.font.measure(it.label) / 2 - 10, y, { color: G.PAL.orange });
+        G.font.draw(ctx, it.label, W / 2, y, { align: 'center', color: sel ? G.PAL.white : G.PAL.light, shadow: G.PAL.black });
       });
       G.font.draw(ctx, 'Нажми A', W / 2, H - 22, { align: 'center', color: Math.floor(t * 2) % 2 ? G.PAL.gray : G.PAL.light });
       G.font.draw(ctx, 'v' + BUILD.release, W - 3, H - 11, { align: 'right', color: G.PAL.gray });
@@ -13255,26 +13310,11 @@ G.scenes.register('pause', () => ({
 // ===== scenes/savemenu.js =====
 // Меню «Сохранение» (этап 4): сохранить, экспорт и импорт кода, восстановить утреннюю копию.
 G.scenes.register('savemenu', () => {
-  let idx = 0, toast = null, toastT = 0, boxOpen = false;
+  let idx = 0, toast = null, toastT = 0;
   const say = (t) => { toast = t; toastT = 1.8; };
   const world = () => G.scenes.stack.find((s) => s.name === 'world');
 
-  // DOM-окно с текстом (нужно, чтобы iOS дал скопировать/вставить)
-  function openBox({ title, text, readonly, okLabel, hint, onOk }) {
-    const box = document.getElementById('code-box'), ta = document.getElementById('cb-text');
-    document.getElementById('cb-title').textContent = title;
-    document.getElementById('cb-hint').textContent = hint || '';
-    document.getElementById('cb-hint').className = 'te-hint';
-    const ok = document.getElementById('cb-ok');
-    ok.textContent = okLabel;
-    ta.value = text || ''; ta.readOnly = !!readonly;
-    box.classList.remove('hidden'); boxOpen = true;
-    const close = () => { box.classList.add('hidden'); boxOpen = false; ta.blur(); G.input.consume(); };
-    ok.onpointerdown = (e) => { e.preventDefault(); onOk(ta, close); };
-    document.getElementById('cb-cancel').onpointerdown = (e) => { e.preventDefault(); close(); };
-    setTimeout(() => { if (readonly) { ta.focus(); ta.select(); } else ta.focus(); }, 50);
-  }
-  const hintErr = (t) => { const h = document.getElementById('cb-hint'); h.textContent = t; h.className = 'te-hint err'; };
+  const openBox = (o) => G.codeBox.open(o), hintErr = (t) => G.codeBox.hintErr(t);
 
   const items = () => {
     const bi = G.storage.backupInfo();
@@ -13311,9 +13351,9 @@ G.scenes.register('savemenu', () => {
     name: 'savemenu',
     transparent: true,
     openBox, // для автотеста
-    get boxOpen() { return boxOpen; },
+    get boxOpen() { return G.codeBox.isOpen; },
     update(dt) {
-      if (boxOpen) return;
+      if (G.codeBox.isOpen) return;
       const I = G.input, list = items();
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast = null; }
       if (I.repeat('up', dt)) { idx = (idx + list.length - 1) % list.length; G.audio.sfx.select(); }
@@ -15526,33 +15566,17 @@ G.scenes.register('ending', () => {
 
 
 // ===== scenes/menu.js =====
-// Меню паузы (кнопка МЕНЮ): задания, статус, сумка, читы (в отладке), настройки, сохранение. Статус, техники и дневник — на следующих этапах.
+// Меню паузы (кнопка МЕНЮ): задания, календарь, статус, сумка, персонажи, настройки (scenes/settings.js), сохранение.
 G.scenes.register('menu', () => {
   let idx = 0;
-  const S = G.storage.settings;
-  const SPEED_NAMES = ['мгновенно', 'медленно', 'обычно', 'быстро'];
-
-  let page = 'main';
-  const sub = (label, to) => ({ label, act: () => { page = to; idx = 0; } });
-  const items = () => page === 'set' ? [
-    { label: '< Назад', act: () => { page = 'main'; idx = 0; } },
-    { label: 'Звук: ' + (S.sound ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.sound = !S.sound; G.audio.setEnabled(S.sound); G.storage.saveSettings(); } },
-    { label: 'Текст: ' + SPEED_NAMES[S.textSpeed], act: () => { S.textSpeed = (S.textSpeed + 1) % 4; G.storage.saveSettings(); } },
-    { label: 'Мини-карта: ' + (S.minimap !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.minimap = S.minimap === false; G.storage.saveSettings(); } },
-    { label: 'Эффекты: ' + (S.fx !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.fx = S.fx === false; G.storage.saveSettings(); } },
-    { label: 'Подсказки: ' + (S.hints !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.hints = S.hints === false; G.storage.saveSettings(); } },
-    { label: 'Реакция в бою: ' + (S.reactSlow ? 'МЕДЛ.' : 'ОБЫЧН.'), act: () => { S.reactSlow = !S.reactSlow; G.storage.saveSettings(); } },
-    { label: 'Пиксели: ' + G.screen.density().name + ' (' + G.screen.W + ')', act: () => G.screen.cycleDensity() },
-    { label: 'Отладка: ' + (G.debug.on ? 'ВКЛ' : 'ВЫКЛ'), act: () => G.debug.toggle() },
-    ...(G.debug.on ? [{ label: 'Читы', act: () => G.scenes.push(G.scenes.make('cheats')) }, { label: 'Шрифт', act: () => G.scenes.push(G.scenes.make('fonttest')) }] : []),
-  ] : [
+  const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
-    sub('Настройки  ▸', 'set'),
+    { label: 'Настройки  ▸', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение…', act: () => G.scenes.push(G.scenes.make('savemenu')) },
     { label: 'В главное меню', act: () => G.scenes.fadeTo(G.scenes.make('title')) },
   ];
@@ -15567,7 +15591,7 @@ G.scenes.register('menu', () => {
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast = null; }
       if (I.repeat('up', dt)) { idx = (idx + list.length - 1) % list.length; G.audio.sfx.select(); }
       if (I.repeat('down', dt)) { idx = (idx + 1) % list.length; G.audio.sfx.select(); }
-      if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); if (page === 'set') { page = 'main'; idx = 0; return; } G.scenes.pop(); return; }
+      if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.tapNow) {
         const r = this.rect();
         const i = Math.floor((I.tapNow.y - r.y - 18) / 13);
@@ -15578,14 +15602,14 @@ G.scenes.register('menu', () => {
     },
     rect() {
       const n = items().length;
-      const w = page === 'set' ? 132 : 112, h = n * 13 + 26;
+      const w = 112, h = n * 13 + 26;
       return { x: Math.round((G.screen.W - w) / 2), y: Math.round((G.screen.H - h) / 2) - 10, w, h };
     },
     draw(ctx) {
       ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
       const r = this.rect();
       G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
-      G.font.draw(ctx, page === 'set' ? 'НАСТРОЙКИ' : 'МЕНЮ', r.x + r.w / 2, r.y + 5, { align: 'center', color: G.PAL.orange });
+      G.font.draw(ctx, 'МЕНЮ', r.x + r.w / 2, r.y + 5, { align: 'center', color: G.PAL.orange });
       items().forEach((it, i) => {
         const y = r.y + 18 + i * 13;
         const sel = i === idx;
@@ -15598,6 +15622,58 @@ G.scenes.register('menu', () => {
         G.gfx.window(ctx, Math.round((G.screen.W - w) / 2), r.y + r.h + 4, w, 16, 'dark');
         G.font.draw(ctx, toast, G.screen.W / 2, r.y + r.h + 8, { align: 'center', color: G.PAL.white });
       }
+    },
+  };
+});
+
+
+// ===== scenes/settings.js =====
+// Экран «Настройки»: открывается из главного меню (титульный экран) и из меню паузы.
+G.scenes.register('settings', () => {
+  let idx = 0;
+  const S = G.storage.settings;
+  const SPEED_NAMES = ['мгновенно', 'медленно', 'обычно', 'быстро'];
+  const items = () => [
+    { label: '< Назад', act: () => G.scenes.pop() },
+    { label: 'Звук: ' + (S.sound ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.sound = !S.sound; G.audio.setEnabled(S.sound); G.storage.saveSettings(); } },
+    { label: 'Текст: ' + SPEED_NAMES[S.textSpeed], act: () => { S.textSpeed = (S.textSpeed + 1) % 4; G.storage.saveSettings(); } },
+    { label: 'Мини-карта: ' + (S.minimap !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.minimap = S.minimap === false; G.storage.saveSettings(); } },
+    { label: 'Эффекты: ' + (S.fx !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.fx = S.fx === false; G.storage.saveSettings(); } },
+    { label: 'Подсказки: ' + (S.hints !== false ? 'ВКЛ' : 'ВЫКЛ'), act: () => { S.hints = S.hints === false; G.storage.saveSettings(); } },
+    { label: 'Реакция в бою: ' + (S.reactSlow ? 'МЕДЛ.' : 'ОБЫЧН.'), act: () => { S.reactSlow = !S.reactSlow; G.storage.saveSettings(); } },
+    { label: 'Пиксели: ' + G.screen.density().name + ' (' + G.screen.W + ')', act: () => G.screen.cycleDensity() },
+    { label: 'Отладка: ' + (G.debug.on ? 'ВКЛ' : 'ВЫКЛ'), act: () => G.debug.toggle() },
+    ...(G.debug.on ? [{ label: 'Читы', act: () => G.scenes.push(G.scenes.make('cheats')) }, { label: 'Шрифт', act: () => G.scenes.push(G.scenes.make('fonttest')) }] : []),
+  ];
+  const rect = () => {
+    const n = items().length, w = 132, h = n * 13 + 26;
+    return { x: Math.round((G.screen.W - w) / 2), y: Math.round((G.screen.H - h) / 2) - 10, w, h };
+  };
+  return {
+    name: 'settings',
+    transparent: true,
+    update(dt) {
+      const I = G.input, list = items();
+      if (I.repeat('up', dt)) { idx = (idx + list.length - 1) % list.length; G.audio.sfx.select(); }
+      if (I.repeat('down', dt)) { idx = (idx + 1) % list.length; G.audio.sfx.select(); }
+      if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
+      if (I.tapNow) {
+        const r = rect(), i = Math.floor((I.tapNow.y - r.y - 18) / 13);
+        if (I.tapNow.x > r.x && I.tapNow.x < r.x + r.w && i >= 0 && i < list.length) { idx = i; G.audio.sfx.confirm(); list[i].act(); }
+        return;
+      }
+      if (I.pressed('a')) { G.audio.sfx.confirm(); list[idx].act(); }
+    },
+    draw(ctx) {
+      ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
+      const r = rect();
+      G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
+      G.font.draw(ctx, 'НАСТРОЙКИ', r.x + r.w / 2, r.y + 5, { align: 'center', color: G.PAL.orange });
+      items().forEach((it, i) => {
+        const y = r.y + 18 + i * 13, sel = i === idx;
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); G.font.draw(ctx, '▶', r.x + 7, y, { color: G.PAL.orange }); }
+        G.font.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.UI.selText : G.UI.dim });
+      });
     },
   };
 });
