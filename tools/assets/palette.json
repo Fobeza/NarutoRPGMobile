@@ -50,5 +50,9 @@
  "brown": "#6a4226",
  "brownDark": "#4a2a16",
  "hairBlack": "#2a2a3a",
- "hairBlackHi": "#46466a"
+ "hairBlackHi": "#46466a",
+ "skinLight": "#ffdcb8",
+ "skinMid": "#e8b48c",
+ "skinCool": "#c89878",
+ "blush": "#e8a088"
 }
