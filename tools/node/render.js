@@ -214,23 +214,24 @@ h.seed();
 const screen = { width: W, height: H };
 const ctx = new Raster(screen);
 
-function frame(name, setup, bg) {
+function frame(name, setup, bg, sz) {
   try {
     G.scenes.stack.length = 0;
+    const FW = sz ? sz[0] : W, FH = sz ? sz[1] : H;
+    screen.width = FW; screen.height = FH; ctx.ensure();
     setup();
     for (let i = 0; i < 6; i++) for (const s of G.scenes.stack.slice()) s.update && s.update(0.05);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clips = []; ctx.stack = [];
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, FW, FH);
     if (bg) bg();   // подложка «мира» рисуется после очистки, под прозрачные сцены
     for (const s of G.scenes.stack.slice()) s.draw && s.draw(ctx);
     // ×2 для глаз
-    const big = Buffer.alloc(W * 2 * H * 2 * 3);
-    ctx.ensure();
-    for (let y = 0; y < H * 2; y++) for (let x = 0; x < W * 2; x++) {
-      const o = ((y >> 1) * W + (x >> 1)) * 3, d = (y * W * 2 + x) * 3;
+    const big = Buffer.alloc(FW * 2 * FH * 2 * 3);
+    for (let y = 0; y < FH * 2; y++) for (let x = 0; x < FW * 2; x++) {
+      const o = ((y >> 1) * FW + (x >> 1)) * 3, d = (y * FW * 2 + x) * 3;
       big[d] = ctx.buf[o]; big[d + 1] = ctx.buf[o + 1]; big[d + 2] = ctx.buf[o + 2];
     }
-    fs.writeFileSync(path.join(OUT, name + '.png'), encodePng(W * 2, H * 2, big));
+    fs.writeFileSync(path.join(OUT, name + '.png'), encodePng(FW * 2, FH * 2, big));
     console.log('  ✓', name);
   } catch (e) { console.log('  ✗', name, e.message, '|', (e.stack || '').split('\n')[1]); }
 }
@@ -249,4 +250,52 @@ frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
 frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+// ---------- кадры окружения: контакты текстур, комната, улица ----------
+const TEX = ['tex_floor','tex_planks','tex_tatami','tex_mat','tex_tilefloor','tex_dustfloor','tex_grass','tex_grass2',
+  'tex_flowers','tex_path','tex_sand','tex_stone','tex_darkgrass','tex_dirt','tex_mainroad','tex_darkstone',
+  'tex_cobble','tex_brick','tex_gravel','tex_clover','tex_plaza','tex_moss','tex_iwall','tex_vwall'];
+{
+  const cols = 6, PS = 64, GP = 8;
+  const CW = cols * (PS + GP) + GP, CH = Math.ceil(TEX.length / cols) * (PS + GP) + GP;
+  frame('ui_tex_contact', () => {
+    const IDS = G.tiles.ID;
+    G.scenes.push({ name: 'texcontact', draw(c) {
+      c.fillStyle = '#101018'; c.fillRect(0, 0, CW, CH);
+      TEX.forEach((t, n) => {
+        const id = IDS[t.slice(4).toUpperCase()];
+        const bx = GP + (n % cols) * (PS + GP), by = GP + Math.floor(n / cols) * (PS + GP);
+        for (let ty = 0; ty < 4; ty++) for (let tx = 0; tx < 4; tx++)
+          G.tiles.drawTile(c, id, bx + tx * 16, by + ty * 16, tx, ty);
+      });
+    } });
+  }, null, [CW, CH]);
+}
+frame('ui_room', () => {
+  const ID = G.tiles.ID;
+  G.scenes.stack.length = 0;
+  G.scenes.push({ name: 'room', draw(c) {
+    for (let ty = 0; ty < 12; ty++) for (let tx = 0; tx < 15; tx++) {
+      let id = ID.FLOOR;
+      if (ty < 2) id = ID.IWALL;
+      else if (tx >= 4 && tx < 10 && ty >= 4 && ty < 8) id = ID.TATAMI;
+      else if (tx >= 11 && tx < 14 && ty >= 8 && ty < 11) id = ID.MAT;
+      G.tiles.drawTile(c, id, tx * 16, ty * 16, tx, ty);
+    }
+  } });
+});
+frame('ui_street', () => {
+  const ID = G.tiles.ID;
+  G.scenes.stack.length = 0;
+  G.scenes.push({ name: 'street', draw(c) {
+    for (let ty = 0; ty < 12; ty++) for (let tx = 0; tx < 15; tx++) {
+      let id = ID.GRASS;
+      if (ty < 2) id = ID.VWALL;
+      else if (ty >= 4 && ty <= 6) id = ID.MAINROAD;
+      else if (tx >= 6 && tx <= 8 && ty > 6) id = ID.PATH;
+      else if (tx < 3 && ty > 7) id = ID.COBBLE;
+      else if (tx > 11 && ty > 7) id = ID.PLAZA;
+      G.tiles.drawTile(c, id, tx * 16, ty * 16, tx, ty);
+    }
+  } });
+});
 console.log('кадры в', OUT);

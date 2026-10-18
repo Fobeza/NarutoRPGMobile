@@ -1850,6 +1850,582 @@
    "maxdist": 2293,
    "alpha_pct": 77,
    "sha1": "82a5837608"
+  },
+  {
+   "id": "tex_floor",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 0,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 627,
+   "b64_bytes": 836,
+   "colors": 14,
+   "maxdist": 909,
+   "alpha_pct": 0,
+   "sha1": "b893a2f8e4"
+  },
+  {
+   "id": "tex_planks",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 1,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 490,
+   "b64_bytes": 656,
+   "colors": 11,
+   "maxdist": 1130,
+   "alpha_pct": 0,
+   "sha1": "cd4e99dff6"
+  },
+  {
+   "id": "tex_tatami",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 2,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "ok",
+   "png_bytes": 1631,
+   "b64_bytes": 2176,
+   "colors": 22,
+   "maxdist": 1092,
+   "alpha_pct": 0,
+   "sha1": "5373eb206d"
+  },
+  {
+   "id": "tex_mat",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 3,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 1035,
+   "b64_bytes": 1380,
+   "colors": 13,
+   "maxdist": 726,
+   "alpha_pct": 0,
+   "sha1": "2bcecbb17e"
+  },
+  {
+   "id": "tex_tilefloor",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 4,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 461,
+   "b64_bytes": 616,
+   "colors": 8,
+   "maxdist": 514,
+   "alpha_pct": 0,
+   "sha1": "8c7ce1f601"
+  },
+  {
+   "id": "tex_dustfloor",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 5,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 375,
+   "b64_bytes": 500,
+   "colors": 11,
+   "maxdist": 964,
+   "alpha_pct": 0,
+   "sha1": "ecc5ed67cf"
+  },
+  {
+   "id": "tex_grass",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 6,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 578,
+   "b64_bytes": 772,
+   "colors": 7,
+   "maxdist": 824,
+   "alpha_pct": 0,
+   "sha1": "1ea57133c6"
+  },
+  {
+   "id": "tex_grass2",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 7,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 425,
+   "b64_bytes": 568,
+   "colors": 6,
+   "maxdist": 750,
+   "alpha_pct": 0,
+   "sha1": "359493590a"
+  },
+  {
+   "id": "tex_flowers",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 8,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "ok",
+   "png_bytes": 1141,
+   "b64_bytes": 1524,
+   "colors": 25,
+   "maxdist": 1210,
+   "alpha_pct": 0,
+   "sha1": "0d1af577cc"
+  },
+  {
+   "id": "tex_path",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 9,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 289,
+   "b64_bytes": 388,
+   "colors": 8,
+   "maxdist": 985,
+   "alpha_pct": 0,
+   "sha1": "ec494410e0"
+  },
+  {
+   "id": "tex_sand",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 10,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 426,
+   "b64_bytes": 568,
+   "colors": 6,
+   "maxdist": 215,
+   "alpha_pct": 0,
+   "sha1": "bf0d46a368"
+  },
+  {
+   "id": "tex_stone",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 11,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 258,
+   "b64_bytes": 344,
+   "colors": 8,
+   "maxdist": 800,
+   "alpha_pct": 0,
+   "sha1": "a76cd63cd5"
+  },
+  {
+   "id": "tex_darkgrass",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 12,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 732,
+   "b64_bytes": 976,
+   "colors": 9,
+   "maxdist": 708,
+   "alpha_pct": 0,
+   "sha1": "401670534e"
+  },
+  {
+   "id": "tex_dirt",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 13,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 538,
+   "b64_bytes": 720,
+   "colors": 12,
+   "maxdist": 906,
+   "alpha_pct": 0,
+   "sha1": "26224bc0ab"
+  },
+  {
+   "id": "tex_mainroad",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 14,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 362,
+   "b64_bytes": 484,
+   "colors": 6,
+   "maxdist": 778,
+   "alpha_pct": 0,
+   "sha1": "f3e19a2041"
+  },
+  {
+   "id": "tex_darkstone",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s5.png",
+   "cell": 15,
+   "grid": [
+    4,
+    4
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) warm honey wooden plank floor, horizontal planks with grain lines and dark nails; 2) worn dark brown deck planks with narrow gaps and cracks; 3) woven straw tatami surface with dark green cloth border stripes along cell edges; 4) red-brown woven reed mat texture with tight weave rows; 5) pale ceramic square tile grid with thin grey grout lines; 6) packed earth floor with small pebbles and hairline cracks; 7) green grass turf with fine blades and tiny tufts; 8) slightly darker uneven grass turf with tufts; 9) grass turf dotted with tiny white and pink flowers; 10) packed sandy dirt path with scattered pebbles; 11) pale warm sand with soft ripple lines; 12) grey stone paving slabs with mortar seams; 13) dark shaded grass turf under trees; 14) brown dirt ground with pebbles and dry patches; 15) light packed village road with faint wheel ruts; 16) dark grey stone paving with moss in seams.",
+   "seam": "mirror",
+   "png_bytes": 648,
+   "b64_bytes": 864,
+   "colors": 10,
+   "maxdist": 677,
+   "alpha_pct": 0,
+   "sha1": "6cf70448cd"
+  },
+  {
+   "id": "tex_cobble",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 0,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "mirror",
+   "png_bytes": 716,
+   "b64_bytes": 956,
+   "colors": 10,
+   "maxdist": 948,
+   "alpha_pct": 0,
+   "sha1": "21fd43c561"
+  },
+  {
+   "id": "tex_brick",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 1,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "mirror",
+   "png_bytes": 692,
+   "b64_bytes": 924,
+   "colors": 14,
+   "maxdist": 1195,
+   "alpha_pct": 0,
+   "sha1": "625d93c4e4"
+  },
+  {
+   "id": "tex_gravel",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 2,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "ok",
+   "png_bytes": 1654,
+   "b64_bytes": 2208,
+   "colors": 9,
+   "maxdist": 942,
+   "alpha_pct": 0,
+   "sha1": "ad59681357"
+  },
+  {
+   "id": "tex_clover",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 3,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "ok",
+   "png_bytes": 1600,
+   "b64_bytes": 2136,
+   "colors": 11,
+   "maxdist": 1263,
+   "alpha_pct": 0,
+   "sha1": "c29d566c4d"
+  },
+  {
+   "id": "tex_plaza",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 4,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "mirror",
+   "png_bytes": 463,
+   "b64_bytes": 620,
+   "colors": 12,
+   "maxdist": 1107,
+   "alpha_pct": 0,
+   "sha1": "11bfb4c802"
+  },
+  {
+   "id": "tex_moss",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 5,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "mirror",
+   "png_bytes": 660,
+   "b64_bytes": 880,
+   "colors": 11,
+   "maxdist": 1193,
+   "alpha_pct": 0,
+   "sha1": "a61e0093d7"
+  },
+  {
+   "id": "tex_iwall",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 6,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "mirror",
+   "png_bytes": 584,
+   "b64_bytes": 780,
+   "colors": 18,
+   "maxdist": 1140,
+   "alpha_pct": 0,
+   "sha1": "36dca5d36e"
+  },
+  {
+   "id": "tex_vwall",
+   "kind": "tex",
+   "target": [
+    64,
+    64
+   ],
+   "file": "assets/src/sheets/s6.png",
+   "cell": 7,
+   "grid": [
+    4,
+    3
+   ],
+   "tile": true,
+   "status": "импортирован",
+   "prompt": "Retro pixel art seamless game surface textures in serious seinen manga ink style: crisp square pixels, confident ink linework, limited palette of about 16 colors, two-tone shading with fine ink hatching; no anti-aliasing, no smooth gradients, no blur, no text, no letters, no watermark, no logo, no frame, no objects, no borders, no vignette. Exact 4x4 grid of 16 equal square cells separated by thin pure black gutters; each cell is ONE flat top-down seamless square tileable texture: the pattern continues perfectly when the cell is repeated side by side and up down, edges match exactly. Cells in reading order (left to right, top to bottom): 1) round grey cobblestones packed tightly; 2) red brick paving in offset rows; 3) grey gravel of small angular pebbles; 4) grass turf with clover leaf clusters; 5) large light stone plaza slabs with wide seams; 6) mossy green ground with soft mounds; 7) interior warm cream plaster wall face with thin wooden beam lattice; 8) village wall stone facing of large grey-brown blocks with mortar; cells 9-16 flat black.",
+   "seam": "mirror",
+   "png_bytes": 671,
+   "b64_bytes": 896,
+   "colors": 12,
+   "maxdist": 1184,
+   "alpha_pct": 0,
+   "sha1": "a05a496cce"
   }
  ]
 }
