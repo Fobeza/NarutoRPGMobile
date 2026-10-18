@@ -129,7 +129,8 @@ def crop_box(w, h, tw, th, cx, cy):
 
 
 def resample(px, w, x0, y0, sw, sh, tw, th):
-    """Усреднение блоками: из «крупного пикселя» генератора — в логическую сетку."""
+    """Без сглаживания: пиксель цели = самый частый цвет блока источника
+    (блок из Majority-голосов; прозрачность, если половина блока прозрачна)."""
     out = bytearray(tw * th * 4)
     for ty in range(th):
         sy0 = y0 + (sh * ty) // th
@@ -137,18 +138,77 @@ def resample(px, w, x0, y0, sw, sh, tw, th):
         for tx in range(tw):
             sx0 = x0 + (sw * tx) // tw
             sx1 = max(sx0 + 1, x0 + (sw * (tx + 1)) // tw)
-            n = 0
-            r = g = b = a = 0
+            votes = {}
+            na = n = 0
             for sy in range(sy0, sy1):
-                seg = px[(sy * w + sx0) * 4:(sy * w + sx1) * 4]
-                r += sum(seg[0::4])
-                g += sum(seg[1::4])
-                b += sum(seg[2::4])
-                a += sum(seg[3::4])
-                n += sx1 - sx0
+                base = sy * w * 4
+                for sx in range(sx0, sx1):
+                    o = base + sx * 4
+                    n += 1
+                    if px[o + 3] < 128:
+                        na += 1
+                        continue
+                    k = (px[o], px[o + 1], px[o + 2])
+                    votes[k] = votes.get(k, 0) + 1
             o = (ty * tw + tx) * 4
-            out[o], out[o + 1], out[o + 2], out[o + 3] = r // n, g // n, b // n, a // n
+            if na * 2 >= n:
+                out[o:o + 4] = b"\x00\x00\x00\x00"
+            else:
+                r, g, b = max(votes.items(), key=lambda kv: kv[1])[0]
+                out[o], out[o + 1], out[o + 2], out[o + 3] = r, g, b, 255
     return out
+
+
+def cell_box(w, h, cell, grid):
+    """Равная клетка листа-сетки (cols×rows), чтение слева направо, сверху вниз."""
+    cols, rows = grid
+    cw, ch = w // cols, h // rows
+    return (cell % cols) * cw, (cell // cols) * ch, cw, ch
+
+
+def sub_px(px, w, x0, y0, sw, sh):
+    out = bytearray(sw * sh * 4)
+    for y in range(sh):
+        src = ((y0 + y) * w + x0) * 4
+        out[y * sw * 4:(y + 1) * sw * 4] = px[src:src + sw * 4]
+    return out
+
+
+def keyout(px, hexcol, thr=300):
+    """Ключ-фон → альфа 0 (до обрезки клетки по границам предмета)."""
+    cr, cg, cb = int(hexcol[1:3], 16), int(hexcol[3:5], 16), int(hexcol[5:7], 16)
+    for i in range(0, len(px), 4):
+        if abs(px[i] - cr) + abs(px[i + 1] - cg) + abs(px[i + 2] - cb) < thr:
+            px[i + 3] = 0
+
+
+def bbox_trim(px, w, h, margin=1):
+    """Обрезать клетку до границ предмета: генератор не держит сетку идеально."""
+    xs0, ys0, xs1, ys1 = w, h, -1, -1
+    for y in range(h):
+        row = y * w * 4
+        for x in range(w):
+            if px[row + x * 4 + 3] >= 128:
+                if x < xs0: xs0 = x
+                if x > xs1: xs1 = x
+                if y < ys0: ys0 = y
+                if y > ys1: ys1 = y
+    if xs1 < 0:
+        return px, w, h
+    xs0, ys0 = max(0, xs0 - margin), max(0, ys0 - margin)
+    xs1, ys1 = min(w - 1, xs1 + margin), min(h - 1, ys1 + margin)
+    return sub_px(px, w, xs0, ys0, xs1 - xs0 + 1, ys1 - ys0 + 1), xs1 - xs0 + 1, ys1 - ys0 + 1
+
+
+def square_pad(px, w, h):
+    """Дополнить прозрачным до квадрата — предмет не растягивается."""
+    side = max(w, h)
+    out = bytearray(side * side * 4)
+    ox, oy = (side - w) // 2, (side - h) // 2
+    for y in range(h):
+        o = ((y + oy) * side + ox) * 4
+        out[o:o + w * 4] = px[y * w * 4:(y + 1) * w * 4]
+    return out, side, side
 
 
 def quantize(px, pal_rgb, want_alpha, chroma, snap=None):
@@ -271,6 +331,14 @@ def main():
             continue
         tw, th = a["target"]
         w, h, px = decode_png(src)
+        if a.get("cell") is not None:
+            cx, cy, cw, ch = cell_box(w, h, a["cell"], a.get("grid", [4, 4]))
+            px = sub_px(px, w, cx, cy, cw, ch)
+            w, h = cw, ch
+            if a.get("chroma"):
+                keyout(px, a["chroma"])
+            px, w, h = bbox_trim(px, w, h)
+            px, w, h = square_pad(px, w, h)
         x0, y0, sw, sh = crop_box(w, h, tw, th, a.get("crop_x", 0.5), a.get("crop_y", 0.5))
         small = resample(px, w, x0, y0, sw, sh, tw, th)
         want_alpha = a["kind"] == "icon"

@@ -242,7 +242,9 @@ function backdrop() {
   ctx.fillStyle = '#2e6a32'; ctx.fillRect(0, 176, W, 6);
 }
 frame('ui_world_menu', () => { G.scenes.push(G.scenes.make('menu')); }, backdrop);
-frame('ui_bag', () => { G.scenes.push(G.scenes.make('bag')); }, backdrop);
+frame('ui_bag', () => {
+  G.state.inv = { kunai: 3, ramen_miso: 2, bandage: 1, book_history: 1, flowers_s: 2, shuriken: 5 };
+  G.scenes.push(G.scenes.make('bag')); }, backdrop);
 frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
