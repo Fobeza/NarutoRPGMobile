@@ -448,13 +448,13 @@
    "bg_snap": "#f4ecd8",
    "status": "импортирован",
    "insert": "gfx/chars_render.js: portrait(id) → окна диалогов, статус, галерея",
-   "prompt": "Retro pixel art character portrait bust in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of about 16 colors, head and shoulders bust in slight three-quarter view, bold simple shapes readable at tiny size, two-tone shading with fine ink hatching on the shadow side, thin dark ink outline, subtle screentone dither on shadow transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no chibi, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no UI, no frame, no vignette. Single centered bust on a solid flat parchment background (#f4ecd8); head and shoulders fill about 75 percent of the frame. Warm living skin tone always: base #f6c89a, shade #d89a6a, highlight #ffdcb8; never white, never grey face. Chubby boy around twelve with a round full face and double chin: brown spiky hair (#a0502a with #c8703a highlight), red spiral swirl marks on both cheeks (#7a2a2a), thick red scarf wrapped around the neck (#7a2a2a), green jacket (#3a7a4a), gentle easygoing smile.",
-   "png_bytes": 1143,
-   "b64_bytes": 1524,
-   "colors": 35,
-   "maxdist": 1130,
+   "prompt": "Retro pixel art character portrait bust in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of about 16 colors, head and shoulders bust in slight three-quarter view, bold simple shapes readable at tiny size, two-tone shading with fine ink hatching on the shadow side, thin dark ink outline, subtle screentone dither on shadow transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no chibi, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no UI, no frame, no vignette. Single centered bust on a solid flat parchment background (#f4ecd8); head and shoulders fill about 75 percent of the frame. Warm living skin tone always: base #f6c89a, shade #d89a6a, highlight #ffdcb8; never white, never grey face. Chubby boy around twelve with a round full face and double chin: metal forehead protector plate with leaf spiral symbol (#c8ccd8 plate) on a dark green cloth band across the forehead (#3a4a3a cloth), brown spiky hair (#a0502a with #c8703a highlight), red spiral swirl marks on both cheeks (#7a2a2a), thick red scarf wrapped around the neck (#7a2a2a), green jacket (#3a7a4a), gentle easygoing smile.",
+   "png_bytes": 1321,
+   "b64_bytes": 1764,
+   "colors": 34,
+   "maxdist": 1138,
    "alpha_pct": 0,
-   "sha1": "fdb42553ec"
+   "sha1": "4603579809"
   },
   {
    "id": "portrait_ino",
@@ -469,13 +469,13 @@
    "bg_snap": "#f4ecd8",
    "status": "импортирован",
    "insert": "gfx/chars_render.js: portrait(id) → окна диалогов, статус, галерея",
-   "prompt": "Retro pixel art character portrait bust in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of about 16 colors, head and shoulders bust in slight three-quarter view, bold simple shapes readable at tiny size, two-tone shading with fine ink hatching on the shadow side, thin dark ink outline, subtle screentone dither on shadow transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no chibi, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no UI, no frame, no vignette. Single centered bust on a solid flat parchment background (#f4ecd8); head and shoulders fill about 75 percent of the frame. Warm living skin tone always: base #f6c89a, shade #d89a6a, highlight #ffdcb8; never white, never grey face. Girl around twelve with a young round child face: long blonde ponytail with two long bangs framing the face (#f0d870 with #fff0a8 highlight), bright blue eyes (#5a8ad8), purple cropped top with white trim (#7a4a9a, #e8e4dc), light blush (#e8a088), confident sassy smile.",
-   "png_bytes": 1347,
-   "b64_bytes": 1796,
-   "colors": 29,
-   "maxdist": 1163,
+   "prompt": "Retro pixel art character portrait bust in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of about 16 colors, head and shoulders bust in slight three-quarter view, bold simple shapes readable at tiny size, two-tone shading with fine ink hatching on the shadow side, thin dark ink outline, subtle screentone dither on shadow transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no chibi, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no UI, no frame, no vignette. Single centered bust on a solid flat parchment background (#f4ecd8); head and shoulders fill about 75 percent of the frame. Warm living skin tone always: base #f6c89a, shade #d89a6a, highlight #ffdcb8; never white, never grey face. Teenage kunoichi around fifteen, mature adult-like face, NOT a child: elongated face oval, sharp defined jawline and chin, slender neck, composed confident gaze; long blonde ponytail with two long bangs framing the face (#f0d870 with #fff0a8 highlight), bright blue eyes (#5a8ad8), metal forehead protector plate with leaf spiral symbol (#c8ccd8 plate) on a dark purple cloth band across the forehead (#5a3a6a cloth), purple cropped top with white trim (#7a4a9a, #e8e4dc), light blush (#e8a088), confident sassy slight smirk.",
+   "png_bytes": 1136,
+   "b64_bytes": 1516,
+   "colors": 25,
+   "maxdist": 1180,
    "alpha_pct": 0,
-   "sha1": "4eeca156d4"
+   "sha1": "c708586ac7"
   },
   {
    "id": "portrait_shino",
@@ -490,13 +490,13 @@
    "bg_snap": "#f4ecd8",
    "status": "импортирован",
    "insert": "gfx/chars_render.js: portrait(id) → окна диалогов, статус, галерея",
-   "prompt": "Retro pixel art character portrait bust in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of about 16 colors, head and shoulders bust in slight three-quarter view, bold simple shapes readable at tiny size, two-tone shading with fine ink hatching on the shadow side, thin dark ink outline, subtle screentone dither on shadow transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no chibi, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no UI, no frame, no vignette. Single centered bust on a solid flat parchment background (#f4ecd8); head and shoulders fill about 75 percent of the frame. Warm living skin tone always: base #f6c89a, shade #d89a6a, highlight #ffdcb8; never white, never grey face. Boy around twelve: dark brown short neat hair (#3a3a30), round dark sunglasses completely covering the eyes (#1a1a1a), high-collared olive-grey jacket zipped to the chin (#6a7a6a), stoic expressionless face.",
-   "png_bytes": 1046,
-   "b64_bytes": 1396,
+   "prompt": "Retro pixel art character portrait bust in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of about 16 colors, head and shoulders bust in slight three-quarter view, bold simple shapes readable at tiny size, two-tone shading with fine ink hatching on the shadow side, thin dark ink outline, subtle screentone dither on shadow transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no chibi, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no UI, no frame, no vignette. Single centered bust on a solid flat parchment background (#f4ecd8); head and shoulders fill about 75 percent of the frame. Warm living skin tone always: base #f6c89a, shade #d89a6a, highlight #ffdcb8; never white, never grey face. Boy around twelve: dark brown short neat hair (#3a3a30), round dark sunglasses completely covering the eyes (#1a1a1a), metal forehead protector plate with leaf spiral symbol (#c8ccd8 plate) on a dark grey cloth band across the forehead (#3a3a30 cloth), high-collared olive-grey jacket zipped to the chin (#6a7a6a), stoic expressionless face.",
+   "png_bytes": 965,
+   "b64_bytes": 1288,
    "colors": 25,
-   "maxdist": 1102,
+   "maxdist": 1069,
    "alpha_pct": 0,
-   "sha1": "7bd266e83c"
+   "sha1": "6c0fc05adf"
   },
   {
    "id": "portrait_guy",
