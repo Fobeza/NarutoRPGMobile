@@ -1,0 +1,7 @@
+# служебное — не коммитится
+build/
+tools/shots/
+__pycache__/
+*.pyc
+*.zip
+.DS_Store

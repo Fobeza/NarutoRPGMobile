@@ -217,7 +217,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { version: '6ee5b19f', date: '2026-10-18 09:39', debug: false };
+const BUILD = { version: '9b2c630f', date: '2026-10-18 10:58', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -959,6 +959,14 @@ G.font = (() => {
     '%': '##..#|##..#|...#.|..#..|.#...|#..##|#..##',
     '*': '.....|#.#.#|.###.|#####|.###.|#.#.#|.....',
     '…': '.....|.....|.....|.....|.....|.....|#.#.#',
+    '→': '.....|..#..|...#.|#####|...#.|..#..|.....',
+    '←': '.....|..#..|.#...|#####|.#...|..#..|.....',
+    '↑': '..#..|.###.|#.#.#|..#..|..#..|..#..|.....',
+    '↓': '.....|..#..|..#..|..#..|#.#.#|.###.|..#..',
+    '▸': '.....|.#...|.##..|.###.|.##..|.#...|.....',
+    '▶': '.....|.#...|.##..|.###.|.##..|.#...|.....',
+    '◂': '.....|...#.|..##.|.###.|..##.|...#.|.....',
+    '◀': '.....|...#.|..##.|.###.|..##.|...#.|.....',
     '<': '...#|..#.|.#..|#...|.#..|..#.|...#',
     '>': '#...|.#..|..#.|...#|..#.|.#..|#...',
     '_': '.....|.....|.....|.....|.....|.....|.....|#####',
@@ -1230,351 +1238,45 @@ G.gfx = {
 
 
 // ===== gfx/chars.js =====
-// Персонажи «бумажная кукла»: тело + причёска + повязка + метки лица + цвета одежды.
-// Кадр 16×20. Направления: down, left, right (зеркало left), up. Кадры: 0 — стойка, 1 и 2 — шаги.
-// Коды пикселей тела:
-//   o контур  s кожа  S тень кожи  e глаза  t верх  T тень верха  a пояс/акцент
-//   p штаны  P тень штанов  f обувь
-// Коды причёски: h волосы  H блик  o контур
-// Повязка (протектор): b металл  B ткань
-// Метки лица: m (усы Наруто, шрам Ируки)
+// Персонажи: общий API. Описания внешности — data/characters.js (G.chars.DEFS, G.chars.STY),
+// отрисовка спрайтов и портретов — gfx/chars_render.js (sheet, draw, portrait).
+// Кадр 16×20 логических пикселей (32×40 реальных). Направления: down, left, right (зеркало left), up.
 G.chars = (() => {
-  // ---------- Тело ----------
-  const UPPER = {
-    down: [
-      '................',
-      '................',
-      '................',
-      '................',
-      '.....oooooo.....',
-      '....osssssso....',
-      '...osssssssso...',
-      '...osssssssso...',
-      '...osesssseso...',
-      '...osesssseso...',
-      '...oSssssssSo...',
-      '....oSSSSSSo....',
-      '...otttttttto...',
-      '..osttttttttso..',
-      '..osTttttttTso..',
-      '...oaaaaaaaao...',
-      '...oppppppppo...',
-    ],
-    up: [
-      '................',
-      '................',
-      '................',
-      '................',
-      '.....oooooo.....',
-      '....osssssso....',
-      '...osssssssso...',
-      '...osssssssso...',
-      '...osssssssso...',
-      '...osssssssso...',
-      '...osssssssso...',
-      '....oSSSSSSo....',
-      '...otttttttto...',
-      '..osTttttttTso..',
-      '..osTTTTTTTTso..',
-      '...oaaaaaaaao...',
-      '...oppppppppo...',
-    ],
-    left: [
-      '................',
-      '................',
-      '................',
-      '................',
-      '.....oooooo.....',
-      '....osssssso....',
-      '...osssssssso...',
-      '...osssssssso...',
-      '...osesssssso...',
-      '...osesssssso...',
-      '...osssssssSo...',
-      '....oSSSSSSo....',
-      '....otttttto....',
-      '....ottsstto....',
-      '....oTtsstTo....',
-      '....oaaaaaao....',
-      '....oppppppo....',
-    ],
-  };
-  const LEGS = {
-    down: [
-      ['....oppooppo....', '....oPPooPPo....', '....offooffo....'],
-      ['....oppooppo....', '....oPPooffo....', '....offo........'],
-      ['....oppooppo....', '....offooPPo....', '........offo....'],
-    ],
-    left: [
-      ['.....oppppo.....', '.....oPPPPo.....', '....offffo......'],
-      ['....oppoppo.....', '...oPPo.oPPo....', '..offo...offo...'],
-      ['.....oppppo.....', '.....oPPPPo.....', '.....offffo.....'],
-    ],
-  };
-  LEGS.up = LEGS.down;
+  const DEFS = {};      // id → { name, hair, band?, marks?, skin?: [кожа, тень], colors: { h,H волосы; t,T верх; a акцент; p,P низ; f обувь; e глаза; b,B протектор } }
+  const STY = {};       // id → { top, sleeve, ex: [детали], hair?, body?, kid?, eye?, cat?, dog? }
+  const DIRS = ['down', 'left', 'right', 'up'];
+  const FW = 16, FH = 20;
+  const WALK = [1, 0, 2, 0];   // анимация ходьбы: кадры листа
+  function nameOf(id) {
+    const d = DEFS[id];
+    return d ? G.util.fmt(d.name, { name: G.state.hero.name }) : id;
+  }
+  return { DEFS, STY, DIRS, FW, FH, WALK, nameOf };
+})();
 
-  // ---------- Причёски ----------
-  // Каждая: { down:[...], up:[...], left:[...] }, строки начинаются с ряда 0
-  const HAIR = {
-    spiky: { // Наруто
-      down: [
-        '................',
-        '....o.o..o.o....',
-        '...ohohoohoho...',
-        '..ohhhhhhhhhho..',
-        '.ohhhHhhhhHhhho.',
-        '..ohhhhhhhhhho..',
-        '..ohhohhhhohho..',
-        '..oho.h..h.oho..',
-      ],
-      up: [
-        '................',
-        '....o.o..o.o....',
-        '...ohohoohoho...',
-        '..ohhhhhhhhhho..',
-        '.ohhhhhhhhhhhho.',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '...ohhhhhhhho...',
-        '...ohohhhohho...',
-      ],
-      left: [
-        '................',
-        '.....o.o..o.o...',
-        '....ohohoohoho..',
-        '...ohhhhhhhhhho.',
-        '..ohhhhhhhhhhhho',
-        '...ohhhhhhhhhho.',
-        '...ohhohhhhhhho.',
-        '...oh..hhhhhho..',
-        '........hhhho...',
-        '.........hho....',
-      ],
-    },
-    duck: { // Саске
-      down: [
-        '................',
-        '................',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhhhhhhhho..',
-        '.ohhhHhhhhhhhho.',
-        '.ohhhhhhhhhhhho.',
-        '.oho.hh..hh.oho.',
-        '.oho........oho.',
-        '.oho........oho.',
-        '..o..........o..',
-      ],
-      up: [
-        '................',
-        '....o.o..o.o....',
-        '...ohohoohoho...',
-        '..ohhhhhhhhhho..',
-        '.ohhhhhhhhhhhho.',
-        '.ohhhhhhhhhhhho.',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '...ohhhhhhhho...',
-        '....ohhhhhho....',
-      ],
-      left: [
-        '................',
-        '...........o.o..',
-        '.....oooooohoho.',
-        '....ohhhhhhhhho.',
-        '...ohhhhhhhhhhho',
-        '..ohhhhhhhhhhho.',
-        '..ohhhhhhhhhhho.',
-        '..oho.hhhhhhho..',
-        '..oho...hhhho...',
-        '..oho....hho....',
-      ],
-    },
-    long: { // Сакура, Ино
-      down: [
-        '................',
-        '................',
-        '................',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhHhhhhhho..',
-        '..ohh......hho..',
-        '..oh........ho..',
-        '..oh........ho..',
-        '..oh........ho..',
-        '..oh........ho..',
-        '..ohh......hho..',
-        '..ohho....ohho..',
-        '...oo......oo...',
-      ],
-      up: [
-        '................',
-        '................',
-        '................',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '...ohhhhhhhho...',
-      ],
-      left: [
-        '................',
-        '................',
-        '................',
-        '.....ooooooo....',
-        '....ohhhhhhho...',
-        '...ohhhhhhhhho..',
-        '...ohh..hhhhhho.',
-        '...oh...hhhhhho.',
-        '........hhhhhho.',
-        '........hhhhhho.',
-        '........ohhhhho.',
-        '.........ohhhho.',
-        '.........ohhho..',
-        '..........ooo...',
-      ],
-    },
-    pony: { // Ирука, Шикамару (хвост сверху)
-      down: [
-        '.......oo.......',
-        '......ohho......',
-        '......ohho......',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhHhhhhhho..',
-        '..ohh.hhhh.hho..',
-        '..oh........ho..',
-      ],
-      up: [
-        '.......oo.......',
-        '......ohho......',
-        '.......oo.......',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '...ohhhhhhhho...',
-      ],
-      left: [
-        '................',
-        '...........oo...',
-        '..........ohho..',
-        '.....oooooooho..',
-        '....ohhhhhhhho..',
-        '...ohhhhhhhhhho.',
-        '...ohh.hhhhhhho.',
-        '...oh....hhhhho.',
-        '.........hhhho..',
-      ],
-    },
-    short: { // герой, жители
-      down: [
-        '................',
-        '................',
-        '................',
-        '....o.oooo.o....',
-        '...ohohhhhoho...',
-        '..ohhhHhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..oho.hhhh.oho..',
-      ],
-      up: [
-        '................',
-        '................',
-        '................',
-        '....o.oooo.o....',
-        '...ohohhhhoho...',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '...ohohhhhoho...',
-      ],
-      left: [
-        '................',
-        '................',
-        '................',
-        '.....o.ooo.o....',
-        '....ohohhhhoho..',
-        '...ohhhhhhhhhho.',
-        '...ohhhhhhhhhho.',
-        '...oho.hhhhhho..',
-        '........hhhho...',
-      ],
-    },
-    bob: { // Хината
-      down: [
-        '................',
-        '................',
-        '................',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhHhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohh......hho..',
-        '..oh........ho..',
-        '..oh........ho..',
-        '..oh........ho..',
-        '..ooo......ooo..',
-      ],
-      up: [
-        '................',
-        '................',
-        '................',
-        '....oooooooo....',
-        '...ohhhhhhhho...',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..ohhhhhhhhhho..',
-        '..oooooooooooo..',
-      ],
-      left: [
-        '................',
-        '................',
-        '................',
-        '.....ooooooo....',
-        '....ohhhhhhho...',
-        '...ohhhhhhhhho..',
-        '...ohhhhhhhhhho.',
-        '...oh...hhhhhho.',
-        '........hhhhhho.',
-        '........hhhhhho.',
-        '........hhhhhho.',
-        '........ooooooo.',
-      ],
-    },
-    bald: { down: [], up: [], left: [] },
-  };
 
-  // ---------- Повязка-протектор ----------
-  const BAND = {
-    down: ['', '', '', '', '', '....obbbbbbo....', '..oBbbbbbbbbBo..'],
-    up: ['', '', '', '', '', '', '..oBBBBBBBBBBo..', '......oBBo......'],
-    left: ['', '', '', '', '', '...obbbo........', '...obbboBBBBBo..', '............BBo.'],
-  };
-
-  // ---------- Метки лица ----------
-  const MARKS = {
-    whiskers: { down: { 10: '...om......mo...' }, left: { 10: '...om.......o...' }, up: {} },
-    scar: { down: { 9: '.....mmmmmm.....' }, left: { 9: '...mmmm.........' }, up: {} },
-  };
-
-  // ---------- Определения персонажей ----------
+// ===== data/characters.js =====
+// ВНЕШНОСТЬ ВСЕХ ПЕРСОНАЖЕЙ — в одном месте.
+// Как добавить персонажа: docs/CONTENT_GUIDE.md → «Новый персонаж».
+//
+// DEFS[id] = { name, hair, band?, marks?, skin?: [кожа, тень], colors }
+//   hair:   short | spiky | duck | long | pony | bob | bowl | ino | bun | buns | lowpony | sage | bald
+//   colors: h/H — волосы и блик, t/T — верх и его тень, a — акцент (пояс, отделка), p/P — низ, f — обувь,
+//           e — глаза, b/B — металл и ткань протектора (если band: true)
+// STY[id]  = { top, sleeve, ex, hair?, body?, kid?, eye?, inner?, shorts?, cat?, dog? }
+//   top:    plain | jacket | vest | dress | robe | apron       sleeve: long | short | mesh
+//   ex:     детали — goggles, swirl, whiskers, hcollar, fan, wraps, ribbon, circle, blush, fluff, scar, hood, fang,
+//           swirlcheek, scarfc, shades, brows, warmers, belt, teeth, stache, hokagehat, wrinkle, scowl, mask, hoodcloth,
+//           beard, glasses, bun, band, cap, chef, sedge, scarf, satchel, eyeband, midriff, skirt, lines, plaster,
+//           senbon, redline, scarbig, dzeye, purpleeyes
+//   body: 'fat' — полный; kid: 1 — ребёнок (румянец); eye: 'pale' — глаза Хьюга; cat/dog: 1 — животное
+(() => {
   const P = G.PAL;
-  const DEFS = {
+  const D = G.chars.DEFS;
+  const def = (id, name, hair, c, extra) => { D[id] = Object.assign({ name, hair, colors: Object.assign({ e: P.ink }, c) }, extra || {}); };
+
+  // ── основные персонажи ──
+  Object.assign(D, {
     hero: {
       name: '{name}', hair: 'short',
       colors: { h: '#3a2a2a', H: '#5a4040', t: '#3a5a8a', T: '#2a4066', a: P.orange, p: '#2e2e44', P: '#22223a', f: '#3a4a7a', e: P.ink },
@@ -1660,98 +1362,115 @@ G.chars = (() => {
       name: 'Жительница', hair: 'long',
       colors: { h: '#3a2a1a', H: '#5a4a3a', t: '#a85a6a', T: '#844252', a: '#e8d8b8', p: '#a85a6a', P: '#844252', f: '#3a2a1a', e: P.ink },
     },
-  };
+});
 
-  const SHEETS = {};
-  const PORTRAITS = {};
-  const DIRS = ['down', 'left', 'right', 'up'];
-  const FW = 16, FH = 20;
+  // ── жители и новые персонажи ──
+  def('cart', 'Картограф', 'bald', { h: '#d8d8d8', H: '#fff', t: '#4a6a5a', T: '#34503f', a: '#d8c890', p: '#4a4a5a', P: '#36364a', f: '#3a2a1a' });
+  def('grandma', 'Бабушка', 'bob', { h: '#c8c8d0', H: '#e8e8f0', t: '#8a5a7a', T: '#6a4060', a: '#e8d8b8', p: '#8a5a7a', P: '#6a4060', f: '#3a2a1a' });
+  def('kid_m', 'Мальчик', 'spiky', { h: '#7a4a2a', H: '#9a6a4a', t: '#3a8a4a', T: '#2a6a36', a: '#e8d8b8', p: '#4a4a5a', P: '#36364a', f: '#3a2a1a' });
+  def('kid_f', 'Девочка', 'pony', { h: '#2a2a3a', H: '#4a4a5a', t: '#e8a0b0', T: '#c0788a', a: '#fff', p: '#e8a0b0', P: '#c0788a', f: '#3a2a1a' });
+  def('chunin', 'Чунин', 'short', { h: '#3a2a2a', H: '#5a4040', t: '#3a5a3a', T: '#2a4028', a: '#2a2a44', p: '#2a2a44', P: '#22223a', f: '#22223a' });
+  def('merchant', 'Торговец', 'bald', { h: '#5a3a1a', H: '#7a5a3a', t: '#b8803a', T: '#8a5e28', a: '#e8d8b8', p: '#5a4a3a', P: '#3a2e22', f: '#2a1a0a' });
+  def('cook', 'Повар', 'short', { h: '#3a2a1a', H: '#5a4a3a', t: '#e8e4dc', T: '#bcb8b0', a: '#e8e4dc', p: '#4a4a5a', P: '#36364a', f: '#3a2a1a' });
+  def('fisher', 'Рыбак', 'short', { h: '#6a5a3a', H: '#8a7a5a', t: '#5a7a9a', T: '#3a5a7a', a: '#d8c890', p: '#5a5a4a', P: '#3a3a2e', f: '#3a2a1a' });
+  def('konohamaru', 'Конохамару', 'spiky', { h: '#5a3a1a', H: '#7a5a3a', t: '#e8d040', T: '#b09820', a: '#2a8aca', p: '#3a3a6a', P: '#2a2a50', f: '#2a2a50' });
+  def('anko', 'Анко', 'pony', { h: '#5a3a6a', H: '#7a5a8a', t: '#d8c8a0', T: '#a89870', a: '#8a5a3a', p: '#8a5a3a', P: '#6a4228', f: '#22223a' });
+  def('courier', 'Рассыльный', 'short', { h: '#3a2a1a', H: '#5a4a3a', t: '#c8402a', T: '#98301e', a: '#e8d8b8', p: '#3a3a4a', P: '#2a2a38', f: '#2a1a0a' });
+  def('tora', 'Тора', 'bald', { h: '#d08030', H: '#e8a050', t: '#d08030', T: '#a86020', a: '#d08030', p: '#d08030', P: '#a86020', f: '#6a3a10' });
+  def('kakashi', 'Какаши', 'spiky', { h: '#c8c8d0', H: '#e8e8f0', t: '#2a3a5a', T: '#1a2640', a: '#3a5a3a', p: '#2a3a5a', P: '#1a2640', f: '#22223a' });
+  def('asuma', 'Асума', 'short', { h: '#2a2a1a', H: '#4a4a3a', t: '#3a5a3a', T: '#2a4028', a: '#2a2a44', p: '#2a2a44', P: '#22223a', f: '#22223a' });
 
-  function colorsFor(def) {
-    const skin = def.skin || [P.skin, P.skinShade];
-    return Object.assign({
-      o: P.ink, s: skin[0], S: skin[1], e: P.ink, m: '#8a5a3a',
-      b: '#c8ccd8', B: P.navy,
-    }, def.colors);
-  }
 
-  function drawFrame(ctx, def, dir, f, ox, oy) {
-    const src = dir === 'right' ? 'left' : dir;
-    const col = colorsFor(def);
-    const bob = f === 0 ? 0 : 1;
-    // тело
-    G.gfx.paint(ctx, UPPER[src], col, ox, oy + bob);
-    G.gfx.paint(ctx, LEGS[src][f], col, ox, oy + 17);
-    // метки лица
-    if (def.marks && MARKS[def.marks][src]) {
-      const mk = MARKS[def.marks][src];
-      for (const y in mk) G.gfx.paint(ctx, [mk[y]], col, ox, oy + bob + Number(y));
-    }
-    // волосы и повязка
-    const hair = HAIR[def.hair] || HAIR.short;
-    G.gfx.paint(ctx, hair[src], col, ox, oy + bob);
-    if (def.band) G.gfx.paint(ctx, BAND[src], col, ox, oy + bob);
-  }
+  const vest = { t: P.vest, T: P.vestDark, a: P.navy, p: P.navy, P: '#121a30', f: P.navy, b: '#c8ccd8', B: P.navy };
 
-  // Лист спрайтов: 3 кадра × 4 направления
-  function sheet(id) {
-    if (SHEETS[id]) return SHEETS[id];
-    const def = DEFS[id];
-    const c = G.gfx.canvas(FW * 3, FH * 4);
-    const ctx = c.getContext('2d');
-    DIRS.forEach((dir, di) => {
-      for (let f = 0; f < 3; f++) {
-        if (dir === 'right') continue;
-        drawFrame(ctx, def, dir, f, f * FW, di * FH);
-      }
-    });
-    // правая сторона — зеркало левой (покадрово)
-    const leftRow = G.gfx.canvas(FW, FH);
-    for (let f = 0; f < 3; f++) {
-      const lc = leftRow.getContext('2d');
-      lc.clearRect(0, 0, FW, FH);
-      lc.drawImage(c, f * FW, 1 * FH, FW, FH, 0, 0, FW, FH);
-      const m = G.gfx.mirror(leftRow);
-      ctx.drawImage(m, f * FW, 2 * FH);
-    }
-    G.gfx.smooth(c);
-    SHEETS[id] = c;
-    return c;
-  }
+  def('tenten', 'Тентен', 'buns', { h: '#6a3a1e', H: '#8a5a36', t: '#e87a9a', T: '#b85674', a: '#f0e8d0', p: '#4a6a4a', P: '#34503a', f: '#3a2a1a', e: '#6a3a1e' });
+  def('neji', 'Нэдзи', 'lowpony', { h: '#4a2e1e', H: '#6a4a34', t: '#e8e4dc', T: '#bcb8b0', a: '#8a6a4a', p: '#e8e4dc', P: '#bcb8b0', f: '#2a2a3a', e: '#e8e4f8', b: '#c8ccd8', B: '#e8e4dc' });
+  def('akamaru', 'Акамару', 'bald', { t: '#f4f0e8', T: '#c8c0b0' });
+  def('hanabi', 'Ханаби', 'bob', { h: '#4a3a3a', H: '#6a5a5a', t: '#d8d0e8', T: '#a8a0c0', a: '#a8a0c0', p: '#4a4a6a', P: '#34344e', f: '#2a2a3a', e: '#e8e4f8' });
+  def('kurenai', 'Куренай', 'long', { h: '#2a2230', H: '#4a3a52', t: '#f0ece0', T: '#c8c0b0', a: '#c83a3a', p: '#f0ece0', P: '#c8c0b0', f: '#3a2a2a', e: '#c82a2a' });
+  def('ebisu', 'Эбису', 'short', Object.assign({ h: '#3a2a2a', H: '#5a4040', e: P.ink }, vest, { a: '#e8d8b8' }));
+  def('izumo', 'Идзумо', 'short', Object.assign({ h: '#2a2a3a', H: '#4a4a5a', e: P.ink }, vest));
+  def('kotetsu', 'Котэцу', 'spiky', Object.assign({ h: '#3a2a22', H: '#5a4438', e: P.ink }, vest));
+  def('shizune', 'Сидзуне', 'bob', { h: '#1a1a24', H: '#3a3a4a', t: '#1e1e2e', T: '#12121e', a: '#f0ece0', p: '#1e1e2e', P: '#12121e', f: '#2a2a3a', e: P.ink });
+  def('genma', 'Гэнма', 'spiky', Object.assign({ h: '#4a3a2a', H: '#6a5a44', e: P.ink }, vest));
+  def('ibiki', 'Ибики', 'bald', { t: '#2a2a30', T: '#1a1a20', a: '#c8a050', p: '#2a2a30', P: '#1a1a20', f: '#1a1a20', e: P.ink, b: '#c8ccd8', B: '#2a2a30' });
+  def('shikaku', 'Шикаку', 'pony', Object.assign({ h: '#1a1a24', H: '#3a3a4a', e: P.ink }, vest, { t: '#7a7a6a', T: '#5a5a4a' }));
+  def('inoichi', 'Иноичи', 'pony', Object.assign({ h: '#f0d870', H: '#fff0a8', e: '#5a8ad8' }, vest, { t: '#7a4a9a', T: '#5a3a7a' }));
+  def('choza', 'Тёдза', 'spiky', { h: '#a0502a', H: '#c8703a', t: '#8a3a2a', T: '#5a2418', a: '#d8c890', p: '#4a3a2a', P: '#32281c', f: '#2a2a2a', e: P.ink });
+  def('fugaku', 'Фугаку', 'short', { h: '#1a1a24', H: '#3a3a4a', t: '#1e2a4a', T: '#121a30', a: '#e8e4dc', p: '#2a2a44', P: '#1a1a30', f: '#1a1a24', e: P.ink });
+  def('mikoto', 'Микото', 'long', { h: '#1a1a24', H: '#3a3a4a', t: '#8a6a9a', T: '#664a78', a: '#e8d8b8', p: '#8a6a9a', P: '#664a78', f: '#3a2a2a', e: P.ink });
+  def('itachi', 'Итачи', 'lowpony', Object.assign({ h: '#1a1a24', H: '#3a3a4a', e: P.ink }, vest, { t: '#3a3a44', T: '#26262e', a: '#c8ccd8', B: '#2a2a3a' }));
+  def('jiraiya', 'Джирайя', 'sage', { h: '#e8e8f0', H: '#ffffff', t: '#3a7a4a', T: '#26543a', a: '#c83a3a', p: '#5a3a2a', P: '#3a281c', f: '#2a2a2a', e: P.ink, b: '#c8ccd8', B: '#2a2a3a' });
+  def('orochimaru', 'Орочимару', 'long', { h: '#14121c', H: '#2a2a3a', t: '#d8d0e0', T: '#a8a0b8', a: '#7a4a9a', p: '#d8d0e0', P: '#a8a0b8', f: '#3a3a4a', e: '#e8c840' }, { skin: ['#ece4da', '#c8bcae'] });
+  def('homura', 'Хомура', 'short', { h: '#b8b8c0', H: '#e0e0e8', t: '#c8b898', T: '#a09074', a: '#8a6a4a', p: '#c8b898', P: '#a09074', f: '#3a2a1a', e: P.ink });
+  def('koharu', 'Кохару', 'bun', { h: '#c8c8d0', H: '#f0f0f8', t: '#7a6a8a', T: '#584a68', a: '#e8d8b8', p: '#7a6a8a', P: '#584a68', f: '#3a2a1a', e: P.ink });
+  def('danzo', 'Данзо', 'short', { h: '#3a3a40', H: '#5a5a62', t: '#b8a888', T: '#8a7c62', a: '#2a2a30', p: '#b8a888', P: '#8a7c62', f: '#3a2a1a', e: P.ink });
 
-  // Анимация ходьбы: кадры [1,0,2,0]
-  const WALK = [1, 0, 2, 0];
 
-  // Нарисовать персонажа: (x, y) — точка под ногами (центр)
-  function draw(ctx, id, dir, frame, x, y) {
-    const s = sheet(id);
-    const di = DIRS.indexOf(dir);
-    ctx.drawImage(s, frame * FW, di * FH, FW, FH, Math.round(x - FW / 2), Math.round(y - FH + 1), FW, FH);
-  }
-
-  // Временный портрет 32×32: голова и плечи ×2 (настоящие портреты — позже)
-  function portrait(id) {
-    if (PORTRAITS[id]) return PORTRAITS[id];
-    const s = sheet(id);
-    const c = G.gfx.canvas(32, 32);
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#e8dcc0';
-    ctx.fillRect(0, 0, 32, 32);
-    ctx.drawImage(s, 0, 0, FW, 16, 0, 1, 32, 32);
-    PORTRAITS[id] = c;
-    return c;
-  }
-
-  function nameOf(id) {
-    const d = DEFS[id];
-    return d ? G.util.fmt(d.name, { name: G.state.hero.name }) : id;
-  }
-
-  return { DEFS, HAIR, sheet, draw, portrait, nameOf, WALK, FW, FH, DIRS };
+  // ── стили одежды и детали ──
+  Object.assign(G.chars.STY, {
+    hero: { top: 'plain', sleeve: 'short', ex: ['collar'] },
+    naruto: { top: 'jacket', sleeve: 'long', inner: '#2a3870', ex: ['goggles', 'swirl', 'whiskers'] },
+    sasuke: { top: 'plain', sleeve: 'short', ex: ['hcollar', 'fan', 'wraps'], shorts: true },
+    sakura: { top: 'dress', sleeve: 'short', ex: ['ribbon', 'circle', 'blush'], shorts: true },
+    hinata: { top: 'jacket', sleeve: 'long', inner: '#4a4a7a', ex: ['fluff', 'blush'], eye: 'pale' },
+    iruka: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['scar'] },
+    shikamaru: { top: 'vest', sleeve: 'mesh', inner: '#5a5a4a', ex: [] },
+    ino: { hair: 'ino', top: 'plain', sleeve: 'short', ex: ['midriff', 'skirt', 'blush'] },
+    kiba: { top: 'jacket', sleeve: 'long', inner: '#4a4a56', ex: ['hood', 'fang'] },
+    choji: { top: 'plain', sleeve: 'short', body: 'fat', ex: ['swirlcheek', 'scarfc'] },
+    shino: { top: 'jacket', sleeve: 'long', inner: '#3a4a3a', ex: ['hcollar', 'shades'] },
+    lee: { top: 'plain', sleeve: 'long', ex: ['brows', 'warmers', 'belt'] },
+    guy: { top: 'vest', sleeve: 'long', inner: '#2a7a2a', ex: ['brows', 'warmers', 'teeth'] },
+    mizuki: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: [] },
+    teuchi: { top: 'apron', sleeve: 'short', ex: ['stache'] },
+    ayame: { top: 'apron', sleeve: 'short', ex: ['blush'] },
+    hokage: { top: 'robe', sleeve: 'long', ex: ['hokagehat', 'wrinkle'] },
+    bully: { top: 'plain', sleeve: 'short', body: 'fat', ex: ['scowl'] },
+    thief: { top: 'plain', sleeve: 'long', ex: ['mask', 'hoodcloth'] },
+    villager_m: { top: 'plain', sleeve: 'long', ex: [] },
+    villager_f: { top: 'dress', sleeve: 'long', ex: ['skirt', 'blush'] },
+    cart: { top: 'robe', sleeve: 'long', ex: ['beard', 'glasses'] },
+    grandma: { hair: 'bun', top: 'robe', sleeve: 'long', ex: ['bun', 'wrinkle'] },
+    kid_m: { top: 'plain', sleeve: 'short', ex: [], kid: 1 },
+    kid_f: { top: 'dress', sleeve: 'short', ex: ['blush'], kid: 1 },
+    chunin: { top: 'vest', sleeve: 'long', inner: '#2a2a44', ex: ['band'] },
+    merchant: { top: 'vest', sleeve: 'long', inner: '#e8d8b8', ex: ['stache', 'cap'] },
+    cook: { top: 'apron', sleeve: 'short', ex: ['chef'] },
+    fisher: { top: 'vest', sleeve: 'short', inner: '#d8c890', ex: ['sedge'] },
+    konohamaru: { top: 'plain', sleeve: 'short', ex: ['goggles', 'scarf'], kid: 1 },
+    anko: { top: 'jacket', sleeve: 'mesh', inner: '#6a4a8a', ex: ['skirt', 'band'] },
+    courier: { top: 'vest', sleeve: 'short', inner: '#e8d8b8', ex: ['cap', 'satchel'] },
+    tora: { cat: 1 },
+    akamaru: { dog: 1 },
+    tenten: { top: 'plain', sleeve: 'short', ex: ['blush'], hair: 'buns' },
+    neji: { top: 'robe', sleeve: 'long', ex: ['band'], eye: 'pale', hair: 'lowpony' },
+    hanabi: { top: 'jacket', sleeve: 'long', inner: '#6a6a9a', ex: ['blush'], eye: 'pale', kid: 1, hair: 'bob' },
+    kurenai: { top: 'dress', sleeve: 'mesh', ex: ['blush'], hair: 'long' },
+    ebisu: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['shades', 'hcollar'] },
+    izumo: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['band'] },
+    kotetsu: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['plaster', 'band'] },
+    shizune: { top: 'dress', sleeve: 'long', ex: ['blush'], hair: 'bob' },
+    genma: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['senbon', 'band'] },
+    ibiki: { top: 'robe', sleeve: 'long', ex: ['scarbig', 'band'] },
+    shikaku: { top: 'vest', sleeve: 'long', inner: '#3a3a4a', ex: ['scar'] },
+    inoichi: { top: 'vest', sleeve: 'long', inner: '#4a2a6a', ex: ['stache'], hair: 'ino' },
+    choza: { top: 'plain', sleeve: 'short', body: 'fat', ex: ['stache', 'swirl'] },
+    fugaku: { top: 'jacket', sleeve: 'long', inner: '#2a3a5a', ex: ['lines', 'hcollar', 'fan'] },
+    mikoto: { top: 'dress', sleeve: 'long', ex: ['blush'], hair: 'long' },
+    itachi: { top: 'vest', sleeve: 'long', inner: '#1e1e2a', ex: ['lines', 'band'], hair: 'lowpony' },
+    jiraiya: { top: 'robe', sleeve: 'long', ex: ['redline', 'band'], hair: 'sage' },
+    orochimaru: { top: 'robe', sleeve: 'long', ex: ['purpleeyes'], hair: 'long' },
+    homura: { top: 'robe', sleeve: 'long', ex: ['glasses', 'wrinkle'] },
+    koharu: { top: 'robe', sleeve: 'long', ex: ['glasses', 'wrinkle'], hair: 'bun' },
+    danzo: { top: 'robe', sleeve: 'long', ex: ['dzeye', 'wrinkle', 'wraps'] },
+    kakashi: { top: 'vest', sleeve: 'long', inner: '#2a3a5a', ex: ['mask', 'eyeband'] },
+    asuma: { top: 'vest', sleeve: 'long', inner: '#2a2a44', ex: ['stache', 'band'] },
+});
 })();
 
 
-// ===== gfx/chars2.js =====
+// ===== gfx/chars_render.js =====
 // Персонажи 2.0: процедурная отрисовка в удвоенном разрешении (кадр 32×40 «тонких» пикселей на 16×20 логических).
 // Каждая деталь — геометрическая форма со светотенью (свет сверху-слева), автоматическим контуром и швами между частями.
 // Подменяет G.chars.sheet / draw / portrait; описание персонажей (G.chars.DEFS) остаётся прежним: hair, band, marks, skin, colors.
@@ -1838,65 +1557,8 @@ G.chars = (() => {
 
   // ---------- стили персонажей (поверх DEFS) ----------
   // top: jacket | vest | dress | robe | apron | plain; sleeve: long | short | mesh; ex: набор деталей; body: fat | slim
-  const STY = {
-    hero: { top: 'plain', sleeve: 'short', ex: ['collar'] },
-    naruto: { top: 'jacket', sleeve: 'long', inner: '#2a3870', ex: ['goggles', 'swirl', 'whiskers'] },
-    sasuke: { top: 'plain', sleeve: 'short', ex: ['hcollar', 'fan', 'wraps'], shorts: true },
-    sakura: { top: 'dress', sleeve: 'short', ex: ['ribbon', 'circle', 'blush'], shorts: true },
-    hinata: { top: 'jacket', sleeve: 'long', inner: '#4a4a7a', ex: ['fluff', 'blush'], eye: 'pale' },
-    iruka: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['scar'] },
-    shikamaru: { top: 'vest', sleeve: 'mesh', inner: '#5a5a4a', ex: [] },
-    ino: { hair: 'ino', top: 'plain', sleeve: 'short', ex: ['midriff', 'skirt', 'blush'] },
-    kiba: { top: 'jacket', sleeve: 'long', inner: '#4a4a56', ex: ['hood', 'fang'] },
-    choji: { top: 'plain', sleeve: 'short', body: 'fat', ex: ['swirlcheek', 'scarfc'] },
-    shino: { top: 'jacket', sleeve: 'long', inner: '#3a4a3a', ex: ['hcollar', 'shades'] },
-    lee: { top: 'plain', sleeve: 'long', ex: ['brows', 'warmers', 'belt'] },
-    guy: { top: 'vest', sleeve: 'long', inner: '#2a7a2a', ex: ['brows', 'warmers', 'teeth'] },
-    mizuki: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: [] },
-    teuchi: { top: 'apron', sleeve: 'short', ex: ['stache'] },
-    ayame: { top: 'apron', sleeve: 'short', ex: ['blush'] },
-    hokage: { top: 'robe', sleeve: 'long', ex: ['hokagehat', 'wrinkle'] },
-    bully: { top: 'plain', sleeve: 'short', body: 'fat', ex: ['scowl'] },
-    thief: { top: 'plain', sleeve: 'long', ex: ['mask', 'hoodcloth'] },
-    villager_m: { top: 'plain', sleeve: 'long', ex: [] },
-    villager_f: { top: 'dress', sleeve: 'long', ex: ['skirt', 'blush'] },
-    cart: { top: 'robe', sleeve: 'long', ex: ['beard', 'glasses'] },
-    grandma: { hair: 'bun', top: 'robe', sleeve: 'long', ex: ['bun', 'wrinkle'] },
-    kid_m: { top: 'plain', sleeve: 'short', ex: [], kid: 1 },
-    kid_f: { top: 'dress', sleeve: 'short', ex: ['blush'], kid: 1 },
-    chunin: { top: 'vest', sleeve: 'long', inner: '#2a2a44', ex: ['band'] },
-    merchant: { top: 'vest', sleeve: 'long', inner: '#e8d8b8', ex: ['stache', 'cap'] },
-    cook: { top: 'apron', sleeve: 'short', ex: ['chef'] },
-    fisher: { top: 'vest', sleeve: 'short', inner: '#d8c890', ex: ['sedge'] },
-    konohamaru: { top: 'plain', sleeve: 'short', ex: ['goggles', 'scarf'], kid: 1 },
-    anko: { top: 'jacket', sleeve: 'mesh', inner: '#6a4a8a', ex: ['skirt', 'band'] },
-    courier: { top: 'vest', sleeve: 'short', inner: '#e8d8b8', ex: ['cap', 'satchel'] },
-    tora: { cat: 1 },
-    akamaru: { dog: 1 },
-    tenten: { top: 'plain', sleeve: 'short', ex: ['blush'], hair: 'buns' },
-    neji: { top: 'robe', sleeve: 'long', ex: ['band'], eye: 'pale', hair: 'lowpony' },
-    hanabi: { top: 'jacket', sleeve: 'long', inner: '#6a6a9a', ex: ['blush'], eye: 'pale', kid: 1, hair: 'bob' },
-    kurenai: { top: 'dress', sleeve: 'mesh', ex: ['blush'], hair: 'long' },
-    ebisu: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['shades', 'hcollar'] },
-    izumo: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['band'] },
-    kotetsu: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['plaster', 'band'] },
-    shizune: { top: 'dress', sleeve: 'long', ex: ['blush'], hair: 'bob' },
-    genma: { top: 'vest', sleeve: 'long', inner: '#1e2a4a', ex: ['senbon', 'band'] },
-    ibiki: { top: 'robe', sleeve: 'long', ex: ['scarbig', 'band'] },
-    shikaku: { top: 'vest', sleeve: 'long', inner: '#3a3a4a', ex: ['scar'] },
-    inoichi: { top: 'vest', sleeve: 'long', inner: '#4a2a6a', ex: ['stache'], hair: 'ino' },
-    choza: { top: 'plain', sleeve: 'short', body: 'fat', ex: ['stache', 'swirl'] },
-    fugaku: { top: 'jacket', sleeve: 'long', inner: '#2a3a5a', ex: ['lines', 'hcollar', 'fan'] },
-    mikoto: { top: 'dress', sleeve: 'long', ex: ['blush'], hair: 'long' },
-    itachi: { top: 'vest', sleeve: 'long', inner: '#1e1e2a', ex: ['lines', 'band'], hair: 'lowpony' },
-    jiraiya: { top: 'robe', sleeve: 'long', ex: ['redline', 'band'], hair: 'sage' },
-    orochimaru: { top: 'robe', sleeve: 'long', ex: ['purpleeyes'], hair: 'long' },
-    homura: { top: 'robe', sleeve: 'long', ex: ['glasses', 'wrinkle'] },
-    koharu: { top: 'robe', sleeve: 'long', ex: ['glasses', 'wrinkle'], hair: 'bun' },
-    danzo: { top: 'robe', sleeve: 'long', ex: ['dzeye', 'wrinkle', 'wraps'] },
-    kakashi: { top: 'vest', sleeve: 'long', inner: '#2a3a5a', ex: ['mask', 'eyeband'] },
-    asuma: { top: 'vest', sleeve: 'long', inner: '#2a2a44', ex: ['stache', 'band'] },
-  };
+  // стили одежды и детали — G.chars.STY (data/characters.js)
+
 
   // ---------- причёски ----------
   // Для каждого стиля: FP — окно лица спереди (кожа, не закрытая волосами), spikes — торчащие пряди, back — волосы позади головы/тела
@@ -1982,7 +1644,7 @@ G.chars = (() => {
     const B = makeBuf(k);
     const col = Object.assign({ s: P.skin, S: P.skinShade, e: P.ink, b: '#c8ccd8', B: P.navy, m: '#8a5a3a' }, def.colors);
     if (def.skin) { col.s = def.skin[0]; col.S = def.skin[1]; }
-    const st = STY[id] || { top: 'plain', sleeve: 'long', ex: [] };
+    const st = G.chars.STY[id] || { top: 'plain', sleeve: 'long', ex: [] };
     if (st.cat) { renderCat(B, dir, f, col); outline(B); return B; }
     if (st.dog) { renderDog(B, dir, f, col); outline(B); return B; }
     const ex = new Set(st.ex || []);
@@ -2393,7 +2055,7 @@ G.chars = (() => {
     return c;
   }
 
-  Object.assign(G.chars, { sheet, draw, portrait, STY, renderFrame, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
+  Object.assign(G.chars, { sheet, draw, portrait, renderFrame, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
 })();
 
 
@@ -4116,7 +3778,7 @@ const _S = (names) => names.map((n) => G.SEALS.indexOf(n));
 // Техники ниндзюцу/гендзюцу. learn — флаг, открывающий технику. ch — чакра, w — вес на шкале ходов.
 G.TECHS = {
   kawarimi: { name: 'Каварими',       seals: _S(['Овца', 'Кабан', 'Бык', 'Собака', 'Змея']), ch: 8,  w: 0,  reaction: true, desc: 'Реакция: вместо тебя полено, ты — за спиной врага.' },
-  henge:    { name: 'Хенге',          seals: _S(['Собака', 'Кабан', 'Овца']),                ch: 10, w: 9,  desc: 'Превратиться в камень: враг теряет тебя, засада ×2.' },
+  henge:    { name: 'Хенге',          seals: _S(['Собака', 'Кабан', 'Овца']),                ch: 8, w: 9,  desc: 'Превратиться в камень: враг теряет тебя, засада ×2.' },
   fear:     { name: 'Ложный страх',   seals: _S(['Тигр', 'Змея', 'Крыса', 'Птица']),         ch: 12, w: 10, gen: true, desc: 'Гендзюцу: враг видит кошмар и теряет ходы.' },
   bunshin:  { name: 'Буншин',         seals: _S(['Овца', 'Змея', 'Тигр']),                   ch: 14, w: 10, desc: 'Два иллюзорных клона принимают удары на себя.' },
   sexy:     { name: 'Секси-дзюцу',    seals: _S(['Овца']),                                   ch: 6,  w: 6,  desc: 'Подарок Наруто. Противник-мужчина в нокдауне. Позор.' },
@@ -4132,9 +3794,9 @@ G.MOVES = {
   upper:  { name: 'Апперкот', dmg: 6, desc: 'После подсечки — ×1,5.' },
 };
 G.COMBOS = {
-  academy: { name: 'Связка Академии', seq: ['punch', 'punch', 'kick'], mul: 1.2, desc: 'Базовая связка Ируки.' },
-  air:     { name: 'Воздушное комбо', seq: ['sweep', 'upper', 'punch'], mul: 1.35, down: true, desc: 'Подбросить и добить в прыжке (Гай).' },
-  whirl:   { name: 'Вихрь Листа',     seq: ['kick', 'kick', 'sweep'],   mul: 1.45, push: 2, desc: 'Коноха Сэнпу! (Рок Ли).' },
+  academy: { name: 'Связка Академии', seq: ['punch', 'punch', 'kick'], mul: 1.15, desc: 'Базовая связка Ируки.' },
+  air:     { name: 'Воздушное комбо', seq: ['sweep', 'upper', 'punch'], mul: 1.28, down: true, desc: 'Подбросить и добить в прыжке (Гай).' },
+  whirl:   { name: 'Вихрь Листа',     seq: ['kick', 'kick', 'sweep'],   mul: 1.38, push: 2, desc: 'Коноха Сэнпу! (Рок Ли).' },
 };
 
 // Действия противников
@@ -4172,7 +3834,7 @@ G.ENEMIES = {
                acts: ['stand'], lines: { start: '...', hurt: '*скрип*' } },
   dummy2:    { name: 'Манекен Ируки', spr: 'dummy', hp: 55, ch: 0, tai: 2, nin: 0, gen: 0, spd: 2, end: 2, know: 0, focus: 0, pref: 1,
                acts: ['swing', 'stand'], lines: { start: '*скрип-скрип*' } },
-  kiba:      { name: 'Киба', spr: 'kiba', male: true, hp: 80, ch: 40, tai: 5, nin: 3, gen: 1, spd: 6, end: 5, know: 2, focus: 1, pref: 1,
+  kiba:      { name: 'Киба', spr: 'kiba', male: true, hp: 74, ch: 40, tai: 5, nin: 3, gen: 1, spd: 6, end: 5, know: 2, focus: 1, pref: 1,
                acts: ['strike', 'combo', 'fang', 'approach', 'dash'], traits: ['impulsive'],
                lines: { start: 'Новенький? Мы с Акамару тебя мигом уделаем!', hurt: 'Акамару, это ничего!', low: 'Чёрт... да ты не так прост!', win: 'Ха! Сила стаи!', lose: 'Ладно-ладно... в следующий раз!' } },
   naruto:    { name: 'Наруто', spr: 'naruto', male: true, hp: 115, ch: 80, tai: 5, nin: 4, gen: 1, spd: 5, end: 7, know: 1, focus: 1, pref: 1,
@@ -5732,7 +5394,7 @@ G.sim = {
     }
     return snaps;
   },
-  techsAt(d) { const t = []; if (d >= 8) t.push('kawarimi'); if (d >= 15) t.push('henge'); if (d >= 17) t.push('fear'); if (d >= 43) t.push('bunshin'); return t; },
+  techsAt(d) { const t = []; if (d >= 8) t.push('kawarimi'); if (d >= 15) t.push('henge'); if (d >= 17) t.push('fear'); if (d >= 43) t.push('bunshin'); if (d >= 20) t.push('fuuton'); if (d >= 24) t.push('katon'); return t; },
   combosAt(d) { const c = []; if (d >= 18) c.push('air'); if (d >= 40) c.push('whirl'); return c; },
   invAt(d) { return d < 14 ? { kunai: 6, shuriken: 8, bandage: 2, smoke_bomb: 1, wire: 1 } : d < 38 ? { kunai: 8, shuriken: 10, bandage: 3, smoke_bomb: 1, flash_bomb: 1, wire: 2, chakra_pill: 1 } : { kunai: 10, shuriken: 12, bandage: 3, smoke_bomb: 2, flash_bomb: 1, wire: 2, chakra_pill: 2, tag_explosive: 2 }; },
 
@@ -5795,10 +5457,13 @@ G.sim = {
     if (P.hp < P.hpMax * 0.35 && R() < 0.8 && tryP('tool', 'Бинт')) return true;
     if (P.ch < P.chMax * 0.2 && tryP('tool', 'Пилюля')) return true;
     if (!P.clones && R() < (b === 'nin' ? 0.45 : 0.2) && tech('bunshin')) return true;
+    if (d <= 3 && R() < (b === 'nin' ? 0.5 : b === 'bal' ? 0.25 : 0.08) && (tech('katon') || tech('fuuton'))) return true;
     if (!E.s.fear && R() < (b === 'gen' ? 0.4 : 0.12) && tech('fear')) return true;
     if (!P.s.hidden && d >= 2 && R() < (b === 'nin' ? 0.4 : b === 'gen' ? 0.25 : 0.06) && tech('henge')) return true;
     if ((mode === 'bells' || mode === 'scroll') && d <= 2 && !E.s.blind && R() < 0.45 && (tryP('tool', 'Вспышка') || tryP('tool', 'Дым. бомба'))) return true;
     if (d <= 2 && R() < 0.08 && tryP('tool', 'Взрыв. печать')) return true;
+    // ниндзюцу-игрок разрывает дистанцию, чтобы спрятаться в Хенге и ударить из засады
+    if (b === 'nin' && d <= 1 && !P.s.hidden && P.ch >= 8 && G.combat.knows('henge') && R() < 0.4 && (tryP('move', 'Отскок') || tryP('move', 'Назад'))) return true;
     if (d <= 1) {
       if (P.br >= 3) for (const c of ['Вихрь Листа', 'Воздушное комбо', 'Связка Академии']) if (R() < 0.7 && tryP('tai', c)) return true;
       if (P.br >= 1) { const seqs = [['punch', 'kick', 'sweep'], ['sweep', 'upper', 'punch'], ['punch', 'punch', 'kick'], ['kick', 'punch', 'upper']]; S.act('tai', seqs[Math.floor(R() * seqs.length)].slice(0, Math.min(3, P.br))); return true; }
@@ -7031,7 +6696,7 @@ end
 `);
 
 
-// ===== data/story2.js =====
+// ===== data/story_scenes.js =====
 // Дополнительные сцены по мотивам аниме и задания «исследуй деревню»
 G.script.actions.money = (a) => G.game.earn(Number(a[0]) || 0);
 G.script.actions.friend = (a) => G.friends.add(a[0], Number(a[1]) || 1);
@@ -9006,14 +8671,13 @@ G.interiors = (() => {
       const m = room(info.id, 'Дом героя', 10, 8, ID.TATAMI, { exitX: 5 });
       put(m, 'futon', 1, 4, { talk: 'home_bed' }, 9);
       put(m, 'chest', 3, 2, { talk: ['Сундук. Здесь будут храниться вещи, которые не влезают в подсумок.'] });
-      put(m, 'desk', 6, 2, { talk: ['Стол для учёбы. Учебник «История Конохи» открыт на главе про Первого Хокаге.'] }, 13);
-      onWall(m, 'calendar', 5, { talk: 'home_calendar' });
-      onWall(m, 'window', 2);
-      onWall(m, 'window', 8);
-      put(m, 'kitchen', 7, 3, { talk: 'home_kitchen' }, 24);
+      put(m, 'desk', 5, 2, { talk: ['Стол для учёбы. Учебник «История Конохи» открыт на главе про Первого Хокаге.'] }, 13);
+      onWall(m, 'calendar', 4, { talk: 'home_calendar' });
+      onWall(m, 'window', 6);
+      put(m, 'kitchen', 7, 2, { talk: 'home_kitchen' }, 16);
       put(m, 'flowerpot', 8, 5, { talk: ['Цветок в горшке. Его надо поливать — как у Наруто.'] });
       put(m, 'table', 4, 5, null, 16);
-      onWall(m, 'emblem', 7, { talk: ['Знак Листа. Его оставили тебе родители.'] });
+      onWall(m, 'emblem', 2, { talk: ['Знак Листа. Его оставили тебе родители.'] });
       return m;
     },
 
@@ -9042,7 +8706,13 @@ G.interiors = (() => {
       if (r.chance(0.5)) put(m, 'chest', w - 2, h - 3);
       onWall(m, 'window', 2); onWall(m, r.chance(0.5) ? 'scroll' : 'window', w - 5);
       const who = r.chance(0.5) ? 'villager_m' : 'villager_f';
-      npc(m, who, r.int(3, w - 4), r.int(3, h - 3), 'down', [VILLAGER_LINES[r.int(0, VILLAGER_LINES.length - 1)]], { ai: 'wander' });
+      let nx = r.int(3, w - 4), ny = r.int(3, h - 3);
+      for (let i = 0; i < 30; i++) {
+        const f = { x: nx * T + 2, y: ny * T + 4, w: 12, h: 10 };
+        if (!m.objects.some((o) => o.box && G.util.rectsOverlap(f, o.box))) break;
+        nx = r.int(2, w - 3); ny = r.int(3, h - 3);
+      }
+      npc(m, who, nx, ny, 'down', [VILLAGER_LINES[r.int(0, VILLAGER_LINES.length - 1)]], { ai: 'wander' });
       return m;
     },
 
@@ -9101,7 +8771,7 @@ G.interiors = (() => {
         npc(m, 'naruto', 4, 4, 'up', 'naruto_ramen_eve', { sched: [[18 * 60, 20 * 60 + 30, 2]] });
         npc(m, 'iruka', 6, 4, 'up', 'iruka_ramen', { sched: [[18 * 60 + 30, 21 * 60, 2]] });
       }
-      if (id === 'ichiraku') for (const o of m.objects) if (o.kind === 'kitchen') o.talk = 'ichiraku_cook';
+      if (id === 'ichiraku') for (const o of m.objects) if (o.kind === 'kitchen' || (o.kind === 'counter' && [2, 7].includes(Math.floor(o.x / T)))) o.talk = 'ichiraku_cook';
       return m;
     },
 
@@ -9113,7 +8783,7 @@ G.interiors = (() => {
       onWall(m, 'window', 1); onWall(m, 'window', 10); onWall(m, 'emblem', 2);
       put(m, 'desk', 6, 3, { talk: ['Учительский стол. Журнал посещаемости, красная ручка и... фото Ичираку?'] }, 0);
       // парты в три ряда колонок: у каждой — два места «за» партой (лицом к доске)
-      for (const r of [5, 7]) for (const x of [1, 2, 4, 5, 7, 8]) put(m, 'desk', x, r, null, 0);
+      for (const r of [5, 7]) for (const x of [1, 4, 7]) put(m, 'desk', x, r, null, 16);
       put(m, 'plant', 1, 3); put(m, 'plant', 10, 3); put(m, 'plant', 10, 8);
       const H = 60, day1 = () => G.state.vars.day === 1, cls = [[8 * H, 13 * H, 'wd']];
       m.seats = { hero: { tx: 5, ty: 8 } };
@@ -9194,6 +8864,13 @@ G.interiors = (() => {
         hyuga_hall: ['Главный дом клана Хьюга. Строго, чисто и очень тихо.', 'Во дворе слышны удары — кто-то тренирует Мягкий кулак.'],
         inuzuka_hall: ['Дом клана Инузука. Отовсюду лают собаки.', 'Киба и Акамару опять убежали гулять.'],
       }[info.kind] || ['Зал клана.'];
+      const extra = {
+        nara_hall: () => { put(m, 'deer', 4, 7, { talk: ['Олень клана Нара. Смотрит на тебя спокойно и немного лениво.'] }); put(m, 'herb', 8, 7, { box: null }); put(m, 'herb_blue', 7, 7, { box: null }); },
+        akimichi_hall: () => { put(m, 'hibachi', 4, 7); put(m, 'pots', 8, 7); put(m, 'sacks', 3, 7); },
+        hyuga_hall: () => { put(m, 'dummy', 4, 7, { talk: ['Манекен весь в точечных вмятинах — следы Мягкого кулака.'] }); put(m, 'bonsai', 8, 7); put(m, 'andon', 7, 7); },
+        inuzuka_hall: () => { put(m, 'basket', 4, 7, { box: null, talk: ['Собачья лежанка. Вся в шерсти.'] }); put(m, 'basket', 8, 7, { box: null }); put(m, 'barrel', 3, 7); },
+      }[info.kind];
+      if (extra) extra();
       npc(m, 'villager_m', 6, 6, 'up', [{ who: 'villager_m', name: 'Член клана', text: lines[0] }, { text: lines[1] }]);
       return m;
     },
@@ -9223,6 +8900,8 @@ G.interiors = (() => {
       const m = room(info.id, 'Додзё', w, h, ID.FLOOR, { exitX: 6 });
       put(m, 'rack', 2, 2, null, 0); put(m, 'rack', 10, 2, null, 0);
       put(m, 'dummy', 4, 5); put(m, 'dummy', 8, 5);
+      put(m, 'log', 2, 7); put(m, 'barrel', 10, 7); put(m, 'cushion', 5, 7, { box: null }); put(m, 'cushion_b', 7, 7, { box: null });
+      onWall(m, 'banner', 3); onWall(m, 'banner', 9);
       onWall(m, 'scroll', 6, { talk: ['Свиток: «Сила без контроля — ничто». Подпись: Майто Гай.'] });
       npc(m, 'villager_m', 6, 4, 'down', [{ who: 'villager_m', name: 'Мастер додзё', text: 'Тайдзюцу — основа всего. Без крепкого тела и техники не помогут!' }, { text: '(Тренировки появятся на этапе 7.)' }]);
       return m;
@@ -9241,19 +8920,26 @@ G.interiors = (() => {
     const cozy = !['academy_hall', 'hokage_hall', 'library', 'hospital'].includes(kind);
     const ex = m.exit ? m.exit.tx : Math.floor(w / 2);
     const used = new Set();
-    const mark = (o) => {
-      const x0 = Math.floor((o.x - (o.ox || 0)) / T), x1 = Math.floor((o.x - (o.ox || 0) + (o.w || T) - 1) / T);
-      const y0 = Math.floor((o.y - (o.oy || 0)) / T), y1 = Math.floor((o.y - 1) / T);
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) used.add(x + ',' + y);
+    // клетки, которые занимает рисунок объекта (с учётом смещения спрайта)
+    const cells = (x, y, ox, oy, ow, oh) => {
+      const out = [];
+      const x0 = Math.floor((x + ox + 1) / T), x1 = Math.floor((x + ox + ow - 2) / T);
+      const y0 = Math.max(2, Math.floor((y + oy + 1) / T)), y1 = Math.floor((y - 1) / T);
+      for (let yy = y0; yy <= y1; yy++) for (let xx = x0; xx <= x1; xx++) out.push([xx, yy]);
+      return out;
     };
-    for (const o of m.objects) if (o.layer !== 'floor' || o.box) mark(o);
+    const mark = (o) => { for (const [x, y] of cells(o.x, o.y, o.ox || 0, o.oy || 0, o.w || T, o.h || T)) used.add(x + ',' + y); if (o.box) for (let yy = Math.floor(o.box.y / T); yy <= Math.floor((o.box.y + o.box.h - 1) / T); yy++) for (let xx = Math.floor(o.box.x / T); xx <= Math.floor((o.box.x + o.box.w - 1) / T); xx++) used.add(xx + ',' + yy); };
+    for (const o of m.objects) if (o.y !== T + 13) mark(o);
     for (const n of m.npcs) { const tx = Math.floor(n.x / T), ty = Math.floor(n.y / T); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) used.add((tx + a) + ',' + (ty + b)); }
     const floor = (x, y) => x >= 1 && x <= w - 2 && y >= 2 && y <= h - 2 && m.get(x, y) !== ID.VOID && m.get(x, y) !== ID.IWALL && m.get(x, y) !== ID.MAT && m.get(x, y) !== ID.WATER;
     const lane = (x, y) => y >= h - 3 && Math.abs(x - ex) <= 1;
     const free = (x, y) => floor(x, y) && !used.has(x + ',' + y) && !lane(x, y);
     const take = (x, y) => used.add(x + ',' + y);
+    // поместится ли объект kind в клетку (x, y): все клетки рисунка — свободный пол
+    const fits = (k, x, y, dx = 8) => { const s = G.tiles.object(k); return cells(x * T + dx, y * T + 15, s.ox, s.oy, s.w, s.h).every(([cx, cy]) => free(cx, cy)); };
+    const place = (k, x, y, extra) => { const o = put(m, k, x, y, extra); mark(o); return o; };
     // мебель вдоль стен (до настенных украшений); высокая мебель занимает и стену
-    const wallBusy = m.objects.filter((o) => o.y === T + 13 || (o.y - (o.oy || 0)) < 2 * T).map((o) => Math.floor(o.x / T));
+    const wallBusy = m.objects.filter((o) => o.y === T + 13 || (o.y + (o.oy || 0)) < 2 * T).map((o) => Math.floor(o.x / T));
     const solids = cozy ? ['tansu', 'wardrobe', 'hibachi', 'vase', 'bonsai', 'bookpile', 'lowtable'] : ['vase', 'bonsai', 'bookpile'];
     const spots = [];
     for (let x = 1; x <= w - 2; x++) spots.push([x, 2]);
@@ -9262,14 +8948,14 @@ G.interiors = (() => {
     let ns = 0;
     for (const [x, y] of spots) {
       if (ns >= (cozy ? 3 : 2)) break;
-      if (!free(x, y) || !free(x - 1, y) && !free(x + 1, y)) continue;
-      // клетка и соседи не должны быть заняты, чтобы предметы не налезали друг на друга
-      let clear = true;
-      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (used.has((x + a) + ',' + (y + b)) && !(a === 0 && b === 0 && false)) clear = false;
-      if (!clear) continue;
       const k = solids[r.int(0, solids.length - 1)];
-      if (y === 2 && wallBusy.some((b) => Math.abs(b - x) < 2)) continue;
-      put(m, k, x, y); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) take(x + a, y + b); ns++;
+      if (!fits(k, x, y)) continue;
+      // соседние клетки тоже свободны — между предметами остаётся проход
+      let clear = true;
+      for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if ((a || b) && used.has((x + a) + ',' + (y + b))) clear = false;
+      if (!clear) continue;
+      if (y === 2 && wallBusy.some((bx) => Math.abs(bx - x) < 2)) continue;
+      place(k, x, y); for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) take(x + a, y + b); ns++;
       if (y === 2) wallBusy.push(x);
     }
     // настенные украшения — только на свободных участках стены
@@ -9284,10 +8970,10 @@ G.interiors = (() => {
     let nf = 0;
     for (let i = 0; i < 40 && nf < (cozy ? 4 : 2); i++) {
       const x = r.int(1, w - 2), y = r.int(3, h - 2);
-      if (!free(x, y)) continue;
       const k = soft[r.int(0, soft.length - 1)];
-      if (k === 'cat' && !cozy) continue;
-      put(m, k, x, y, { box: null }); take(x, y); nf++;
+      if (k === 'cat' && (!cozy || r() > 0.25 || m.objects.some((o) => o.kind === 'cat'))) continue;
+      if (!fits(k, x, y)) continue;
+      place(k, x, y, { box: null }); nf++;
     }
   }
 
@@ -9498,7 +9184,7 @@ G.world = {
 };
 
 
-// ===== world/extra.js =====
+// ===== world/village_extra.js =====
 // Этапы 7–9: дополнительные жители, места тренировок, доска поручений, ночной торговец, секретные свитки.
 (() => {
   const H = 60;
@@ -9584,28 +9270,12 @@ G.world = {
 })();
 
 
-// ===== world/life2.js =====
+// ===== world/village_life.js =====
 // Живая деревня: новые персонажи, имена и реплики жителей, эмоции над головами, исследовательские задания.
 G.life2 = (() => {
   const T = 16, H = 60;
   const P = G.PAL;
-  // ── новые образы ──
-  const D = G.chars.DEFS;
-  const def = (id, name, hair, c, marks) => { if (!D[id]) D[id] = { name, hair, marks, colors: Object.assign({ e: P.ink }, c) }; };
-  def('cart', 'Картограф', 'bald', { h: '#d8d8d8', H: '#fff', t: '#4a6a5a', T: '#34503f', a: '#d8c890', p: '#4a4a5a', P: '#36364a', f: '#3a2a1a' });
-  def('grandma', 'Бабушка', 'bob', { h: '#c8c8d0', H: '#e8e8f0', t: '#8a5a7a', T: '#6a4060', a: '#e8d8b8', p: '#8a5a7a', P: '#6a4060', f: '#3a2a1a' });
-  def('kid_m', 'Мальчик', 'spiky', { h: '#7a4a2a', H: '#9a6a4a', t: '#3a8a4a', T: '#2a6a36', a: '#e8d8b8', p: '#4a4a5a', P: '#36364a', f: '#3a2a1a' });
-  def('kid_f', 'Девочка', 'pony', { h: '#2a2a3a', H: '#4a4a5a', t: '#e8a0b0', T: '#c0788a', a: '#fff', p: '#e8a0b0', P: '#c0788a', f: '#3a2a1a' });
-  def('chunin', 'Чунин', 'short', { h: '#3a2a2a', H: '#5a4040', t: '#3a5a3a', T: '#2a4028', a: '#2a2a44', p: '#2a2a44', P: '#22223a', f: '#22223a' });
-  def('merchant', 'Торговец', 'bald', { h: '#5a3a1a', H: '#7a5a3a', t: '#b8803a', T: '#8a5e28', a: '#e8d8b8', p: '#5a4a3a', P: '#3a2e22', f: '#2a1a0a' });
-  def('cook', 'Повар', 'short', { h: '#3a2a1a', H: '#5a4a3a', t: '#e8e4dc', T: '#bcb8b0', a: '#e8e4dc', p: '#4a4a5a', P: '#36364a', f: '#3a2a1a' });
-  def('fisher', 'Рыбак', 'short', { h: '#6a5a3a', H: '#8a7a5a', t: '#5a7a9a', T: '#3a5a7a', a: '#d8c890', p: '#5a5a4a', P: '#3a3a2e', f: '#3a2a1a' });
-  def('konohamaru', 'Конохамару', 'spiky', { h: '#5a3a1a', H: '#7a5a3a', t: '#e8d040', T: '#b09820', a: '#2a8aca', p: '#3a3a6a', P: '#2a2a50', f: '#2a2a50' });
-  def('anko', 'Анко', 'pony', { h: '#5a3a6a', H: '#7a5a8a', t: '#d8c8a0', T: '#a89870', a: '#8a5a3a', p: '#8a5a3a', P: '#6a4228', f: '#22223a' });
-  def('courier', 'Рассыльный', 'short', { h: '#3a2a1a', H: '#5a4a3a', t: '#c8402a', T: '#98301e', a: '#e8d8b8', p: '#3a3a4a', P: '#2a2a38', f: '#2a1a0a' });
-  def('tora', 'Тора', 'bald', { h: '#d08030', H: '#e8a050', t: '#d08030', T: '#a86020', a: '#d08030', p: '#d08030', P: '#a86020', f: '#6a3a10' });
-  def('kakashi', 'Какаши', 'spiky', { h: '#c8c8d0', H: '#e8e8f0', t: '#2a3a5a', T: '#1a2640', a: '#3a5a3a', p: '#2a3a5a', P: '#1a2640', f: '#22223a' });
-  def('asuma', 'Асума', 'short', { h: '#2a2a1a', H: '#4a4a3a', t: '#3a5a3a', T: '#2a4028', a: '#2a2a44', p: '#2a2a44', P: '#22223a', f: '#22223a' });
+  // внешность новых жителей — data/characters.js
 
   // ── имена и реплики жителей ──
   const NAMES_M = ['Кента', 'Сэйдзи', 'Дайсукэ', 'Горо', 'Рэн', 'Такэси', 'Масару', 'Хироши', 'Сабуро', 'Юкио'];
@@ -9924,31 +9594,7 @@ end
 G.cast = (() => {
   const T = 16, P = G.PAL;
   const D = G.chars.DEFS;
-  const def = (id, name, hair, c, extra) => { if (!D[id]) D[id] = Object.assign({ name, hair, colors: Object.assign({ e: P.ink }, c) }, extra || {}); };
-  const vest = { t: P.vest, T: P.vestDark, a: P.navy, p: P.navy, P: '#121a30', f: P.navy, b: '#c8ccd8', B: P.navy };
-
-  def('tenten', 'Тентен', 'buns', { h: '#6a3a1e', H: '#8a5a36', t: '#e87a9a', T: '#b85674', a: '#f0e8d0', p: '#4a6a4a', P: '#34503a', f: '#3a2a1a', e: '#6a3a1e' });
-  def('neji', 'Нэдзи', 'lowpony', { h: '#4a2e1e', H: '#6a4a34', t: '#e8e4dc', T: '#bcb8b0', a: '#8a6a4a', p: '#e8e4dc', P: '#bcb8b0', f: '#2a2a3a', e: '#e8e4f8', b: '#c8ccd8', B: '#e8e4dc' });
-  def('akamaru', 'Акамару', 'bald', { t: '#f4f0e8', T: '#c8c0b0' });
-  def('hanabi', 'Ханаби', 'bob', { h: '#4a3a3a', H: '#6a5a5a', t: '#d8d0e8', T: '#a8a0c0', a: '#a8a0c0', p: '#4a4a6a', P: '#34344e', f: '#2a2a3a', e: '#e8e4f8' });
-  def('kurenai', 'Куренай', 'long', { h: '#2a2230', H: '#4a3a52', t: '#f0ece0', T: '#c8c0b0', a: '#c83a3a', p: '#f0ece0', P: '#c8c0b0', f: '#3a2a2a', e: '#c82a2a' });
-  def('ebisu', 'Эбису', 'short', Object.assign({ h: '#3a2a2a', H: '#5a4040', e: P.ink }, vest, { a: '#e8d8b8' }));
-  def('izumo', 'Идзумо', 'short', Object.assign({ h: '#2a2a3a', H: '#4a4a5a', e: P.ink }, vest));
-  def('kotetsu', 'Котэцу', 'spiky', Object.assign({ h: '#3a2a22', H: '#5a4438', e: P.ink }, vest));
-  def('shizune', 'Сидзуне', 'bob', { h: '#1a1a24', H: '#3a3a4a', t: '#1e1e2e', T: '#12121e', a: '#f0ece0', p: '#1e1e2e', P: '#12121e', f: '#2a2a3a', e: P.ink });
-  def('genma', 'Гэнма', 'spiky', Object.assign({ h: '#4a3a2a', H: '#6a5a44', e: P.ink }, vest));
-  def('ibiki', 'Ибики', 'bald', { t: '#2a2a30', T: '#1a1a20', a: '#c8a050', p: '#2a2a30', P: '#1a1a20', f: '#1a1a20', e: P.ink, b: '#c8ccd8', B: '#2a2a30' });
-  def('shikaku', 'Шикаку', 'pony', Object.assign({ h: '#1a1a24', H: '#3a3a4a', e: P.ink }, vest, { t: '#7a7a6a', T: '#5a5a4a' }));
-  def('inoichi', 'Иноичи', 'pony', Object.assign({ h: '#f0d870', H: '#fff0a8', e: '#5a8ad8' }, vest, { t: '#7a4a9a', T: '#5a3a7a' }));
-  def('choza', 'Тёдза', 'spiky', { h: '#a0502a', H: '#c8703a', t: '#8a3a2a', T: '#5a2418', a: '#d8c890', p: '#4a3a2a', P: '#32281c', f: '#2a2a2a', e: P.ink });
-  def('fugaku', 'Фугаку', 'short', { h: '#1a1a24', H: '#3a3a4a', t: '#1e2a4a', T: '#121a30', a: '#e8e4dc', p: '#2a2a44', P: '#1a1a30', f: '#1a1a24', e: P.ink });
-  def('mikoto', 'Микото', 'long', { h: '#1a1a24', H: '#3a3a4a', t: '#8a6a9a', T: '#664a78', a: '#e8d8b8', p: '#8a6a9a', P: '#664a78', f: '#3a2a2a', e: P.ink });
-  def('itachi', 'Итачи', 'lowpony', Object.assign({ h: '#1a1a24', H: '#3a3a4a', e: P.ink }, vest, { t: '#3a3a44', T: '#26262e', a: '#c8ccd8', B: '#2a2a3a' }));
-  def('jiraiya', 'Джирайя', 'sage', { h: '#e8e8f0', H: '#ffffff', t: '#3a7a4a', T: '#26543a', a: '#c83a3a', p: '#5a3a2a', P: '#3a281c', f: '#2a2a2a', e: P.ink, b: '#c8ccd8', B: '#2a2a3a' });
-  def('orochimaru', 'Орочимару', 'long', { h: '#14121c', H: '#2a2a3a', t: '#d8d0e0', T: '#a8a0b8', a: '#7a4a9a', p: '#d8d0e0', P: '#a8a0b8', f: '#3a3a4a', e: '#e8c840' }, { skin: ['#ece4da', '#c8bcae'] });
-  def('homura', 'Хомура', 'short', { h: '#b8b8c0', H: '#e0e0e8', t: '#c8b898', T: '#a09074', a: '#8a6a4a', p: '#c8b898', P: '#a09074', f: '#3a2a1a', e: P.ink });
-  def('koharu', 'Кохару', 'bun', { h: '#c8c8d0', H: '#f0f0f8', t: '#7a6a8a', T: '#584a68', a: '#e8d8b8', p: '#7a6a8a', P: '#584a68', f: '#3a2a1a', e: P.ink });
-  def('danzo', 'Данзо', 'short', { h: '#3a3a40', H: '#5a5a62', t: '#b8a888', T: '#8a7c62', a: '#2a2a30', p: '#b8a888', P: '#8a7c62', f: '#3a2a1a', e: P.ink });
+  // внешность — data/characters.js
 
   // ── реплики (случайные из набора; первая фраза — всегда представление) ──
   const LINES = {
@@ -10685,7 +10331,7 @@ G.scenes.register('world', (pos) => {
     // Мягкое обновление по часам: те, кто сейчас на экране, не исчезают и не возникают из воздуха
     softRefresh() {
       if (G.schedule) G.schedule.sync(this);
-      const m = this.map, cx = this.cam.x, cy = this.cam.y, W = G.screen.W, VH = this.viewH();
+      const m = this.map, cx = this.cam.x, cy = this.cam.y, W = G.screen.W / (this.z || 1), VH = this.viewH() / (this.z || 1);
       const onScreen = (n) => n.x > cx - 16 && n.x < cx + W + 16 && n.y > cy - 8 && n.y < cy + VH + 40;
       const cur = new Set(this.npcs);
       this.npcs = m.npcs.filter((n) => {
@@ -10779,7 +10425,7 @@ G.scenes.register('world', (pos) => {
       if (this.trail) { this.trail.t += dt; if (this.trail.t > this.trail.dur) this.trail = null; }
 
       if (G.debug.on && I.tapNow && I.tapNow.y > HUD_H && I.tapNow.y < G.screen.H - STRIP_H) {
-        const tx = I.tapNow.x + this.cam.x, ty = I.tapNow.y - HUD_H + this.cam.y;
+        const z = this.z || 1, tx = I.tapNow.x / z + this.cam.x, ty = (I.tapNow.y - HUD_H) / z + this.cam.y;
         if (!m.blockedRect(G.actors.feet(p, tx, ty))) { p.x = tx; p.y = ty; }
       }
 
@@ -11084,9 +10730,18 @@ G.scenes.register('world', (pos) => {
 
     showToast(text) { this.toast = { text, t: 2.2 }; },
     viewH() { return G.screen.H - HUD_H - STRIP_H; },
+    // Масштаб: в помещениях комната крупнее (вписывается в экран), на улице — 1
+    zoom() {
+      const m = this.map;
+      if (!m || m.outdoor !== false) return 1;
+      const W = G.screen.W, VH = this.viewH();
+      const z = Math.min(W / (m.w * T + 8), VH / (m.h * T + 40));
+      return Math.max(1, Math.min(3, Math.floor(z * 4) / 4));
+    },
 
     updateCamera() {
-      const W = G.screen.W, VH = this.viewH(), m = this.map, p = this.player;
+      const z = this.z = this.zoom();
+      const W = G.screen.W / z, VH = this.viewH() / z, m = this.map, p = this.player;
       const mw = m.w * T, mh = m.h * T;
       let fx = p.x, fy = p.y;
       const ct = G.cine && G.cine.camTarget();
@@ -11102,13 +10757,15 @@ G.scenes.register('world', (pos) => {
 
     // ---------- Отрисовка ----------
     draw(ctx) {
-      const W = G.screen.W, VH = this.viewH(), m = this.map, p = this.player;
+      const z = this.z || 1, SW = G.screen.W, SVH = this.viewH();
+      const W = SW / z, VH = SVH / z, m = this.map, p = this.player;
       const cx = this.cam.x, cy = this.cam.y;
 
-      ctx.fillStyle = m.bg; ctx.fillRect(0, HUD_H, W, VH);
+      ctx.fillStyle = m.bg; ctx.fillRect(0, HUD_H, SW, SVH);
       ctx.save();
-      ctx.beginPath(); ctx.rect(0, HUD_H, W, VH); ctx.clip();
-      ctx.translate(-cx, HUD_H - cy);
+      ctx.beginPath(); ctx.rect(0, HUD_H, SW, SVH); ctx.clip();
+      if (z !== 1) { ctx.translate(0, HUD_H); ctx.scale(z, z); ctx.translate(-cx, -cy); }
+      else ctx.translate(-cx, HUD_H - cy);
 
       m.drawGround(ctx, cx, cy, W, VH, this.time);
 
@@ -11169,6 +10826,8 @@ G.scenes.register('world', (pos) => {
         for (const a of this.others) { const b = G.actors.feet(a); ctx.strokeStyle = 'rgba(255,255,0,.8)'; ctx.strokeRect(b.x + 0.5, b.y + 0.5, b.w - 1, b.h - 1); }
       }
       ctx.restore();
+      {
+      const W = SW, VH = SVH;
       G.fx.vignette(ctx, W, VH, HUD_H);
 
       this.drawMinimap(ctx, W);
@@ -11193,6 +10852,7 @@ G.scenes.register('world', (pos) => {
       }
       if (G.cine) G.cine.drawBars(ctx, HUD_H, VH, W);
       this.drawArrow(ctx, W, VH);   // стрелка цели — поверх табличек и уведомлений
+      }
     },
 
     hintsOn() { return G.storage.settings.hints !== false; },
@@ -11225,7 +10885,7 @@ G.scenes.register('world', (pos) => {
       const r = this.navHop();
       if (!r) return;
       const { tgt, h } = r;
-      const sx = h.x - this.cam.x, sy = h.y - this.cam.y + HUD_H - 10;
+      const z = this.z || 1, sx = (h.x - this.cam.x) * z, sy = (h.y - this.cam.y) * z + HUD_H - 10;
       if (sx > 6 && sx < W - 6 && sy > HUD_H + 6 && sy < HUD_H + VH - 6) return;
       const ccx = W / 2, ccy = HUD_H + VH / 2;
       const dx = sx - ccx, dy = sy - ccy;
@@ -12650,8 +12310,9 @@ G.scenes.register('status', () => {
       bars.forEach(([nm, val, col], i) => {
         const yy = y + 5 + i * 10;
         F.draw(ctx, nm, 8, yy, { color: P.light });
-        ctx.fillStyle = '#0c0a12'; ctx.fillRect(70, yy + 1, 80, 5);
-        ctx.fillStyle = col; ctx.fillRect(71, yy + 2, Math.round(78 * val / 100), 3);
+        const bw = Math.max(80, W - 70 - 60);
+        ctx.fillStyle = '#0c0a12'; ctx.fillRect(70, yy + 1, bw, 5);
+        ctx.fillStyle = col; ctx.fillRect(71, yy + 2, Math.round((bw - 2) * Math.max(0, Math.min(100, val)) / 100), 3);
         F.draw(ctx, i === 4 ? g.moodName() : String(Math.round(val)), W - 8, yy, { align: 'right', color: val < 20 ? '#ff7a6a' : P.white });
       });
       y += bars.length * 10 + 11;
@@ -12659,9 +12320,9 @@ G.scenes.register('status', () => {
       G.gfx.window(ctx, 2, y, W - 4, 48, 'dark');
       if (!G.hero.ready()) F.draw(ctx, 'Вступительный тест ещё не пройден', W / 2, y + 20, { align: 'center', color: P.gray });
       else G.STATS.forEach((s, i) => {
-        const x = 8 + (i % 2) * 92, yy = y + 5 + Math.floor(i / 2) * 10;
+        const cw = Math.floor((W - 16) / 2), x = 8 + (i % 2) * cw, yy = y + 5 + Math.floor(i / 2) * 10;
         F.draw(ctx, s.id === 'ctrl' ? 'Контроль' : s.name, x, yy, { color: P.light });
-        F.draw(ctx, String(G.hero.stat(s.id)), x + 84, yy, { align: 'right', color: P.yellow });
+        F.draw(ctx, String(G.hero.stat(s.id)), x + cw - 10, yy, { align: 'right', color: P.yellow });
       });
       y += 51;
       // навыки
@@ -12680,11 +12341,13 @@ G.scenes.register('status', () => {
       y += 10;
       if (!met.length) F.draw(ctx, 'Пока ни с кем не знаком', 6, y, { color: P.gray });
       met.forEach((id, i) => {
-        const x = 6 + (i % 2) * 92, yy = y + Math.floor(i / 2) * 10;
+        const cw = Math.floor((W - 12) / 2), x = 6 + (i % 2) * cw, yy = y + Math.floor(i / 2) * 10;
         if (yy > H - 22) return;
         const n = G.friends.level(id);
         F.draw(ctx, G.chars.nameOf(id), x, yy, { color: P.white });
-        F.draw(ctx, '♥'.repeat(Math.min(5, n)) || '·', x + 86, yy, { align: 'right', color: '#f08aa0' });
+        const hn = Math.max(0, Math.min(5, n));
+        F.draw(ctx, '♥'.repeat(hn), x + cw - 10 - F.measure('·'.repeat(5 - hn)), yy, { align: 'right', color: '#f08aa0' });
+        F.draw(ctx, '·'.repeat(5 - hn), x + cw - 10, yy, { align: 'right', color: '#5a5068' });
       });
       F.draw(ctx, 'Любая кнопка — назад', W / 2, H - 12, { align: 'center', color: P.gray });
     },
@@ -12852,7 +12515,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   P.br = P.brMax; P.focus = P.focusMax;
   if (opts.will) P.will = opts.will;
   // уличные противники растут вместе с героем (баланс): HP +1,5%/день, Тай +1 за 2 недели, Скор +1 за 3
-  if (ed.grow) { const d = V.day || 1; ed = Object.assign({}, ed, { hp: Math.round(ed.hp * (1 + 0.015 * d)), tai: ed.tai + Math.floor(d / 14), spd: ed.spd + Math.floor(d / 21), end: ed.end + Math.floor(d / 21) }); }
+  if (ed.grow) { const d = V.day || 1; ed = Object.assign({}, ed, { hp: Math.round(ed.hp * (1 + 0.025 * d)), tai: ed.tai + Math.floor(d / 9), spd: ed.spd + Math.floor(d / 14), end: ed.end + Math.floor(d / 21) }); }
   const E = Object.assign({}, ed, { side: 'e', pos: opts.epos != null ? opts.epos : 3, hpMax: ed.hp, hp: ed.hp, chMax: ed.ch, ch: ed.ch,
     focusMax: ed.focus, t: 3, s: {}, clones: 0, realIdx: 1, an: 0, feinted: false, plan: 'stand', shown: 'stand', plan2: null, phase: 1 });
   if (opts.ambush) { P.ambush = 1.5; E.t = 12; }
@@ -13215,7 +12878,7 @@ G.scenes.register('battle', (opts, onEnd) => {
         fx.logs.push({ x: X(P.pos), t: 0 }); puff(P.pos, 14); AU.sfx.puff();
         const behind = E.pos + sgn(P, E);
         if (canStand(P, behind)) P.pos = behind;
-        P.ambush = Math.max(P.ambush, 1.4 + P.nin * 0.04); P.t = Math.min(P.t, E.t + a.w * fac(E.spd) - 0.1);
+        P.ambush = Math.max(P.ambush, 1.5 + P.nin * 0.07); P.t = Math.min(P.t, E.t + a.w * fac(E.spd) - 0.1);
         say('Каварими! Полено вместо тебя — ты у врага за спиной!', PAL.yellow); xp('nin', 2);
       } else if (choice === 'kawa_fail') { say('Печать сорвалась! Каварими не вышло...', '#ff9a7a'); P.focus--; P.ch -= 4; }
       else if (choice === 'clash_ok') { miss = true; E.hp -= 4; pop(E, '-4'); say('Звон клинков! Ты отбил удар кунаем!', PAL.yellow); sfx.clang(); gainWill(10); stats.reacts++; }
@@ -13260,11 +12923,12 @@ G.scenes.register('battle', (opts, onEnd) => {
     }
     let d = spec.dmg;
     const stat = spec.kind === 'tai' ? P.tai : spec.kind === 'throw' ? (P.tai + P.spd) / 2 : P.nin;
-    d *= 1 + stat * 0.065;
+    d *= 1 + stat * (spec.kind === 'tai' ? 0.055 : spec.kind === 'nin' ? 0.08 : 0.065);
     if (spec.kind !== 'nin') d /= 1 + (E.end || 0) * 0.04;   // стойкость врага (баланс: tools/balance.py)
     if (spec.kind === 'throw' && Hh.has('eagle_eye')) d *= 1.2;
     if (spec.kind === 'throw' && P.s.high) d *= 1.3;
     if (P.ambush) { d *= P.ambush; say(P.ambush >= 2 ? 'ЗАСАДА! Урон ×2!' : 'Удар со спины!', PAL.yellow); P.ambush = 0; }
+    if (P.clones > 0 && spec.kind === 'tai') d *= 1 + P.clones * (0.1 + P.nin * 0.02);   // клоны Буншина бьют вместе с героем (сила — от Ниндзюцу)
     if (Hh.has('grit') && P.hp < P.hpMax * 0.3) d *= 1.25;
     if (P.s.shaken) d *= 0.8;
     if (E.s.guard && spec.kind !== 'nin') d *= 0.5;
@@ -13416,7 +13080,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (confused()) return;
     startSeals(tid, free, (pf) => {
       const t = G.TECHS[tid];
-      aura(P, pf ? '#ffe070' : '#7ac0ff', 0.7); if (tid === 'henge') { P.s.hidden = 'henge'; P.ambush = 1.8 + P.nin * 0.04; puff(P.pos, 12); AU.sfx.puff(); say('Хенге! Ты превратился в камень. Враг тебя потерял.', '#9ad0ff'); xp('gen', 1); return endTurn(t.w); }
+      aura(P, pf ? '#ffe070' : '#7ac0ff', 0.7); if (tid === 'henge') { P.s.hidden = 'henge'; P.ambush = 1.9 + P.nin * 0.08; puff(P.pos, 12); AU.sfx.puff(); say('Хенге! Ты превратился в камень. Враг тебя потерял.', '#9ad0ff'); xp('gen', 1); return endTurn(t.w); }
       if (tid === 'bunshin') { P.clones = pf ? 3 : 2; puff(P.pos, 14); AU.sfx.puff(); say(`Буншин! Рядом с тобой ${P.clones} клона.`, '#9ad0ff'); return endTurn(t.w); }
       if (tid === 'fear') {
         const resist = clamp(E.gen * 0.07 + (has('smart') ? 0.1 : 0) - (pf ? 0.15 : 0) - P.gen * 0.03, 0.05, 0.8);
@@ -13458,7 +13122,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       fx.cut = { t: 0, text: 'ФИНАЛЬНОЕ КОМБО', who: 'hero' }; fx.hitstop = 0.15; fx.flash = 0.4; fx.lines = 0.8; aura(P, '#ffb030', 1.2); burst(P.pos, '#ffb030', 36);
       say('ФИНАЛЬНОЕ КОМБО!', PAL.yellow);
       if (dist() > 1) step(P, true, dist() - 1);
-      return attack({ kind: 'tai', dmg: 16 + P.tai * 1.5, crit: true, noReact: true, targetDone: true, onHit: (e) => { e.t += 6; } }, () => endTurn(8, 0.9));
+      return attack({ kind: 'tai', dmg: 14 + P.tai * 1.3, crit: true, noReact: true, targetDone: true, onHit: (e) => { e.t += 6; } }, () => endTurn(8, 0.9));
     }
     if (kind === 'heal') { const h = Math.round(P.hpMax * 0.5); P.hp = Math.min(P.hpMax, P.hp + h); P.ch = Math.min(P.chMax, P.ch + Math.round(P.chMax * 0.5)); P.br = P.brMax; pop(P, '+' + h, '#8ae070', true); say('Второе дыхание! Силы возвращаются!', '#8ae070'); return endTurn(5, 0.8); }
   }
@@ -13823,6 +13487,25 @@ G.scenes.register('battle', (opts, onEnd) => {
       ctx.restore();
     }
   }
+  // дальний план: кроны деревьев (природа) или силуэты крыш (улица/арена), два слоя с дымкой
+  function drawFar(ctx, L, W) {
+    const nat = !(A.ring || A === G.ARENAS.street), base = L.groundY - 4;
+    const haze = (c, k) => { const h = c.replace('#', ''); const n = [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)); const sk = A.sky[1].replace('#', ''); const m = [0, 2, 4].map((i) => parseInt(sk.substr(i, 2), 16)); return 'rgb(' + n.map((v, i) => Math.round(v + (m[i] - v) * k)).join(',') + ')'; };
+    for (const [layer, k, step, hh] of [[0, 0.55, 30, 34], [1, 0, 22, 18]]) {
+      ctx.fillStyle = haze(A.far, k);
+      for (let i = -1; i * step < W + step; i++) {
+        const x = i * step + (layer ? 0 : 11), h = hh + ((i * 7 + layer * 3) % 11) + Math.max(0, Math.round((L.arH - 120) * (layer ? 0.12 : 0.22) * (((i + layer) * 5) % 3) / 2));
+        if (nat) {
+          ctx.fillRect(x + step / 2 - 2, base - h * 0.5, 4, h * 0.5);
+          ctx.beginPath(); ctx.ellipse(x + step / 2, base - h * 0.6, step * 0.62, h * 0.55, 0, 0, 7); ctx.fill();
+          ctx.beginPath(); ctx.ellipse(x + step / 2 + step * 0.3, base - h * 0.45, step * 0.45, h * 0.4, 0, 0, 7); ctx.fill();
+        } else {
+          ctx.fillRect(x, base - h, step - 2, h);
+          ctx.beginPath(); ctx.moveTo(x - 3, base - h); ctx.lineTo(x + step / 2 - 1, base - h - 8); ctx.lineTo(x + step + 1, base - h); ctx.fill();
+        }
+      }
+    }
+  }
   function drawAll(ctx) {
     relayout();
     const L = layout, t = S.time || 0;
@@ -13832,9 +13515,12 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (fx.zoom > 1.005) { const zx = fx.zoomX != null ? fx.zoomX : W / 2, zy = L.groundY - 20; ctx.translate(zx, zy); ctx.scale(fx.zoom, fx.zoom); ctx.translate(-zx, -zy); }
     // арена
     ctx.save(); ctx.beginPath(); ctx.rect(0, L.ar, W, L.arH); ctx.clip();
+    // базовое приближение арены: на широких экранах бойцы крупнее (позиции 0–4 остаются в кадре)
+    const bz = clamp((W - 16) / (4 * SP + 70), 1, 1.6), bzy = L.groundY + 6;
+    ctx.save(); if (bz > 1.01) { ctx.translate(W / 2, bzy); ctx.scale(bz, bz); ctx.translate(-W / 2, -bzy); }
     const bands = 6; for (let i = 0; i < bands; i++) { ctx.fillStyle = i < bands / 2 ? A.sky[0] : A.sky[1]; ctx.fillRect(0, L.ar + i * (L.arH / bands) * 0.7, W, L.arH); }
     ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let i = 0; i < 4; i++) { const cx = ((i * 83 + t * (3 + i)) % (W + 60)) - 30, cy = L.ar + 10 + ((i * 29) % Math.max(20, L.arH - 90)); ctx.fillRect(cx, cy, 26, 5); ctx.fillRect(cx + 5, cy - 3, 14, 3); }
-    ctx.fillStyle = A.far; for (let i = 0; i * 22 - 6 < W; i++) { const x = i * 22 - 6, h = 14 + ((i * 7) % 11) + Math.max(0, Math.round((L.arH - 120) * 0.25 * ((i * 5) % 3) / 2)); ctx.fillRect(x, L.groundY - 16 - h, 20, h + 16); }
+    drawFar(ctx, L, W);
     ctx.fillStyle = A.ground; ctx.fillRect(0, L.groundY - 4, W, L.arH);
     ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let i = 0; i < 5; i++) ctx.fillRect(X(i) - 14, L.groundY + 2, 28, 3);
     if (A.ring) { const r0 = Math.max(4, X(0) - 20), r1 = Math.min(W - 4, X(4) + 20); ctx.fillStyle = '#a8683a'; ctx.fillRect(r0, L.groundY + 6, r1 - r0, 2); ctx.fillStyle = '#c8401c'; ctx.fillRect(r0, L.groundY - 4, 2, 12); ctx.fillRect(r1 - 2, L.groundY - 4, 2, 12); }
@@ -13875,6 +13561,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     for (const lg of fx.logs) { ctx.globalAlpha = 1 - lg.t / 1.2; ctx.fillStyle = PAL.wood; ctx.fillRect(lg.x - 5, L.groundY - 26 + lg.t * 10, 10, 24); ctx.fillStyle = PAL.woodDark; ctx.fillRect(lg.x - 5, L.groundY - 26 + lg.t * 10, 10, 2); ctx.globalAlpha = 1; }
     for (const p of fx.puffs) { ctx.globalAlpha = 1 - p.t / 0.7; ctx.fillStyle = '#e8e4dc'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + p.t), 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
     for (const p of fx.pops) F.draw(ctx, p.text, p.x, p.y - p.t * 18, { align: 'center', color: p.col });
+    ctx.restore();
     if (fx.bubble) {
       const lines = F.wrap(fx.bubble.text, 120).slice(0, 3), bw = 128, bh = lines.length * 10 + 6;
       const bx = clamp(ex - bw / 2, 2, W - bw - 2), by = L.ar + 2;
@@ -14735,7 +14422,7 @@ G.scenes.register('gallery', () => {
       ctx.fillStyle = P.ink; ctx.fillRect(110, 40, 36, 36);
       ctx.drawImage(G.chars.portrait(id), 112, 42);
       G.font.draw(ctx, 'портрет', 128, 79, { align: 'center', color: P.light });
-      G.font.draw(ctx, '(временный)', 128, 89, { align: 'center', color: P.gray });
+      G.font.draw(ctx, '', 128, 89, { align: 'center', color: P.gray });
 
       // все 4 направления × 3 кадра
       for (let r = 0; r < 4; r++) for (let f = 0; f < 3; f++)

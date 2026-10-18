@@ -1,0 +1,115 @@
+// Визуальные эффекты мира: тени от зданий и деревьев по положению солнца, светящиеся ночью окна,
+// падающие лепестки, светлячки и мягкая виньетка. Всё включается настройкой «Эффекты» (S.fx !== false).
+G.fx = (() => {
+  const T = G.CONFIG.TILE;
+  const H = G.util.hash2;
+  const enabled = () => G.storage.settings.fx !== false;
+
+  // Положение солнца: -1 утро (тень на запад) … 0 полдень … +1 вечер; sun — сила дневного света 0..1
+  function sun(min) {
+    const h = min / 60;
+    const a = Math.max(-1, Math.min(1, (h - 12) / 6));
+    const sun = Math.max(0, Math.min(1, Math.min((h - 5.5) / 1.5, (19.5 - h) / 1.5)));
+    return { a, sun };
+  }
+
+  function ellipse(ctx, cx, cy, rx, ry) {
+    for (let y = -ry; y <= ry; y++) {
+      const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry + 0.01))));
+      ctx.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2, 1);
+    }
+  }
+  const TREES = { tree: [8, 3], pine: [7, 3], sakura: [9, 3], maple: [8, 3], ginkgo: [8, 3], bamboo: [5, 2], watertower: [7, 3] };
+
+  // Тени на земле: рисуем до объектов, чтобы здания и деревья ложились поверх
+  function shadows(ctx, vis, map, min) {
+    if (!enabled() || !map.outdoor) return;
+    // контактная тень у основания зданий: стена не «висит» над землёй
+    ctx.fillStyle = 'rgba(14,16,40,0.26)';
+    for (const o of vis) {
+      if (!o.isBuilding || o.sortY < 0 || o.tplId === 'gate') continue;
+      const y1 = o.y + o.th * T;
+      ctx.fillRect(o.x + 1, y1, o.tw * T - 2, 2);
+      ctx.globalAlpha = 0.5; ctx.fillRect(o.x + 3, y1 + 2, o.tw * T - 6, 2); ctx.globalAlpha = 1;
+    }
+    const { a, sun: s } = sun(min);
+    if (s <= 0.05) return;
+    ctx.fillStyle = `rgba(20,24,50,${(0.24 * s).toFixed(3)})`;
+    for (const o of vis) {
+      if (o.isBuilding) {
+        if (o.sortY < 0 || o.tplId === 'gate') continue;
+        const wh = G.buildgfx.wallH(o.tplDef, o.tplId), len = Math.min(26, wh * 0.8 + 6);
+        const sx = Math.round(a * len * 0.75), sy = Math.round(5 + (1 - Math.abs(a)) * 3);
+        const x0 = o.x, y1 = o.y + o.th * T;
+        // тень на земле перед и сбоку от здания: сдвинутый прямоугольник основания
+        ctx.fillRect(x0 + sx + (sx > 0 ? 2 : -0), y1 - 6 + 0, o.tw * T, sy + 6);
+        if (sx) ctx.fillRect(sx > 0 ? x0 + o.tw * T : x0 + sx, y1 - Math.round(o.th * T * 0.5), Math.abs(sx), Math.round(o.th * T * 0.5) + sy);
+      } else if (TREES[o.kind]) {
+        const [rx, ry] = TREES[o.kind];
+        ellipse(ctx, o.x + a * 5, o.y - 1, rx, ry);
+      } else if (o.kind === 'lamp' || o.kind === 'stonelamp') {
+        ctx.fillRect(Math.round(o.x - 1 + a * 3), o.y - 1, 6, 1);
+      }
+    }
+  }
+
+  // Окна светятся тёплым светом ночью (карта окон хранится в спрайте здания: spr.glow)
+  function windows(ctx, vis, map, k, time) {
+    if (!enabled() || !map.outdoor || k <= 0.02) return;
+    ctx.globalCompositeOperation = 'lighter';
+    for (const o of vis) {
+      if (!o.isBuilding || !o.spr || !o.spr.glow) continue;
+      const lit = H(o.tx, o.ty, 77);
+      if (lit < 0.28) continue;
+      const flick = lit > 0.9 ? 0.85 + 0.15 * Math.sin(time * 7 + o.tx) : 1;
+      ctx.globalAlpha = Math.min(1, k) * 0.62 * flick;
+      ctx.drawImage(o.spr.glow, o.x + o.spr.ox, o.y + o.spr.oy);
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // Лепестки днём, светлячки ночью (в мировых координатах вокруг камеры)
+  function particles(ctx, cx, cy, W, VH, map, min, time) {
+    if (!enabled() || !map.outdoor || G.life.raining()) return;
+    const { sun: s } = sun(min);
+    if (s > 0.3) {
+      for (let i = 0; i < 16; i++) {
+        const sp = 9 + (i % 5) * 4;
+        const x = cx + ((i * 47 + time * sp) % (W + 24)) - 12 + Math.sin(time * 1.6 + i) * 4;
+        const y = cy + ((i * 83 + time * (14 + (i % 4) * 4)) % (VH + 24)) - 12;
+        ctx.fillStyle = i % 3 ? '#f8c0d4' : '#fff0f6';
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(Math.round(x), Math.round(y), 2, 1); ctx.fillRect(Math.round(x) + 1, Math.round(y) + 1, 1, 1);
+      }
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 14; i++) {
+        const bl = 0.5 + 0.5 * Math.sin(time * (1.2 + (i % 4) * 0.3) + i * 2.1);
+        if (bl < 0.25) continue;
+        const x = cx + ((i * 61 + Math.sin(time * 0.5 + i) * 18 + 400) % W);
+        const y = cy + VH * 0.35 + ((i * 37) % (VH * 0.6)) + Math.sin(time * 0.8 + i * 1.7) * 6;
+        const gr = ctx.createRadialGradient(x, y, 0, x, y, 6);
+        gr.addColorStop(0, `rgba(210,255,120,${(0.8 * bl).toFixed(2)})`); gr.addColorStop(1, 'rgba(160,255,80,0)');
+        ctx.fillStyle = gr; ctx.fillRect(x - 6, y - 6, 12, 12);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  // Мягкое затемнение по краям (в экранных координатах)
+  let vig = null, vigKey = '';
+  function vignette(ctx, W, VH, y0) {
+    if (!enabled()) return;
+    const key = W + 'x' + VH;
+    if (key !== vigKey) {
+      vigKey = key; vig = G.gfx.canvas(W, VH); const c = vig.getContext('2d');
+      const gr = c.createRadialGradient(W / 2, VH / 2, Math.min(W, VH) * 0.45, W / 2, VH / 2, Math.hypot(W, VH) * 0.56);
+      gr.addColorStop(0, 'rgba(8,10,30,0)'); gr.addColorStop(1, 'rgba(8,10,30,0.34)');
+      c.fillStyle = gr; c.fillRect(0, 0, W, VH);
+    }
+    ctx.drawImage(vig, 0, y0);
+  }
+
+  return { sun, shadows, windows, particles, vignette, enabled };
+})();

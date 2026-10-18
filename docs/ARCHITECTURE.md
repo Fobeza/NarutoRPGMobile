@@ -1,0 +1,83 @@
+# Архитектура
+
+Игра — один HTML-файл без библиотек. Исходники разбиты на модули в `src/`, `build.py` склеивает их
+в `index.html` в порядке списка `JS_FILES`. Все модули пишут в один глобальный объект `G`.
+
+## Порядок модулей и правило зависимостей
+
+Модуль может **при загрузке** пользоваться только тем, что подключено выше в `JS_FILES`.
+Внутри функций (которые вызываются позже, во время игры) — чем угодно.
+
+```
+engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data/* → systems/* →
+сюжет и диалоги → world/* → data/schedule.js + systems/schedule.js → scenes/* → main.js
+```
+
+Добавил новый файл — впиши его в `JS_FILES` (в `build.py`) в подходящую группу.
+
+## Главные объекты
+
+| Объект | Где | Что это |
+|---|---|---|
+| `G.state` | systems/game.js | **Всё сохраняемое**: `hero`, `flags` (флаги 0/1), `vars` (числа: день, минуты, деньги, нужды…), `inv` (предметы), `quests`, `daily` (сбрасывается каждую ночь), `log`, `fog` |
+| `G.game` | systems/game.js | время (`advance`, `clock`, `dayName`), деньги (`earn`), сумка (`give`, `count`, `pouchUsed`), нужды, переходы (`pending`) |
+| `G.scenes` | engine/scenes.js | стек экранов: `register(name, factory)`, `make`, `push`, `pop`, `fadeTo` |
+| `G.script` | systems/script.js | язык диалогов (`docs/SCRIPTS.md`): `parse`, `actions`, условия |
+| `G.dialog` | systems/dialog.js | окно диалога: `start(id)`, `say(lines)` |
+| `G.world` | world/world.js | карты (кэш), `konoha()`, `get(id)`, NPC (`makeNpc`, `populateKonoha`) |
+| `G.chars` | gfx/chars.js + data/characters.js + gfx/chars_render.js | персонажи: `DEFS`, `STY`, `sheet`, `draw`, `portrait`, `nameOf` |
+| `G.quests` / `G.QUESTS` | systems/quests.js / data/quests.js | задания |
+| `G.life` | systems/life.js | часы, погода, будни/выходные, видимость NPC по расписанию |
+| `G.schedule` / `G.SCHED` | systems/schedule.js / data/schedule.js | перемещения персонажей по деревне, данные для календаря |
+| `G.academy`, `G.calendar`, `G.STORY` | systems/story.js | уроки и оценки, календарь событий, сюжетные события по дням |
+| `G.lessons` | systems/lessons.js | содержание уроков (лекции, вопросы, тесты) |
+| `G.cine` | systems/cine.js | катсцены (актёры ходят, камера следует) |
+| `G.friends` / `G.FRIENDS` | systems/friends.js | дружба, подарки, совместные тренировки |
+| `G.train` / `G.TRAININGS` | systems/train.js | тренировки и подработки-мини-игры |
+| `G.ENEMIES`, `G.EACTS`, `G.TECHS`, `G.MOVES`, `G.COMBOS`, `G.ARENAS` | data/combat.js | бой |
+| `G.ITEMS`, `G.SHOPS` | data/items.js | предметы и магазины |
+
+## Время и сохранения
+
+- Время: `G.state.vars.day` (1–56) и `vars.min` (минуты от полуночи). 1 реальная секунда ≈ 1 игровая минута (`systems/life.js`, `RATE`).
+- День недели: `(day - 1) % 7`, 0 = Пн. Будни — `G.life.weekday(day)`. Учебные дни — `G.academy.isSchoolDay(day)`.
+- Сохранение — `engine/storage.js` → `localStorage` (+ резервная копия, экспорт кода). Новые поля состояния
+  дописывай в `defaults()` в `systems/game.js`; для старых сохранений недостающее заполняет `G.game.fix()`.
+
+## Мир
+
+- **Коноха** генерируется детерминированно (`world/mapgen.js`) из раскладки `data/konoha_layout.js`
+  и шаблонов `data/buildings.js`. Тайл — 16 логических пикселей.
+- **Интерьеры** — маленькие карты (`world/interiors.js`, словарь `KINDS`): каждый «вид» комнаты — функция,
+  которая ставит пол, мебель (`put`, `onWall`) и NPC (`npc`). После неё `decorate()` добавляет уют, проверяя,
+  что предметы не налезают друг на друга и на стены. В комнатах камера увеличивает картинку (`world.zoom()`).
+- **Жители**: `G.world.populateKonoha(m)` расставляет NPC. Модули `village_extra.js`, `village_life.js`, `cast.js`
+  и `systems/schedule.js` по очереди «оборачивают» эту функцию и добавляют своих. NPC видим, если проходит
+  `G.life.visible(n)`: окна `sched` `[от, до, 'wd'|'we'|день]`, `cond()`, `keep()`, `dryOnly` (прячется в дождь).
+- **Расписание**: если у персонажа в `G.SCHED` есть строки с местом (шаблон здания), `systems/schedule.js`
+  превращает их в маршрут — NPC появляется у нужного здания в своё окно (переход — вне экрана героя).
+- **Движение NPC**: поиск пути по клеткам (`scenes/world.js`: `npcWalk`, `planPath`).
+
+## Графика
+
+- Все холсты «подробные»: 2 реальных пикселя на 1 логический (`gfx/sprites.js`, `G.gfx.HI`).
+  Код рисует в логических координатах; `drawImage` пропатчен, чтобы корректно масштабировать такие холсты.
+- **Персонажи** рисуются процедурно (`gfx/chars_render.js`): формы (эллипсы, многоугольники) → светотень по краям →
+  швы между частями → контур. Кадр 32×40 реальных пикселей, 4 направления × 3 кадра. Портрет — тот же рендер ×3.
+  Описание внешности — только данные в `data/characters.js`.
+- Тайлы и объекты — `gfx/tiles.js` (`obj('имя', w, h, рисование)`), здания — `world/buildgfx.js`.
+- Шрифт — свой пиксельный (`gfx/font.js`). Символа нет в шрифте → рисуется «?». Новые символы добавляются в `RAW`.
+
+## Бой (`scenes/battle.js`)
+
+Пошаговая «дуэль» на 5 позициях со шкалой ходов (вес действия × скорость). Меню: движение, тайдзюцу
+(цепочки и комбо с ритм-нажатием), метание, ниндзюцу (печати), инструменты, ещё. Реакции на атаки врага
+(уклон/блок/Каварими). Режимы: `ko`, `spar`, `bells`, `scroll`, `survive`, `ringout`.
+Запуск из сценария: `call battle <враг> <режим> <арена> [скрипт_победы|-] [скрипт_поражения|-] [ходы]` или `G.game.pending = { type: 'battle', enemy, mode, terrain }`.
+Баланс проверяется симулятором (`systems/sim.js` + `tools/balance.py`), который играет настоящими боями.
+
+## Экраны (сцены)
+
+Сцена — объект `{ name, update(dt), draw(ctx), enter?, exit?, resume?, transparent? }`, регистрируется
+`G.scenes.register('имя', (...args) => сцена)`. Ввод: `G.input.pressed('a'|'b'|'menu'|'map'|'goal'|'up'…)`,
+`G.input.repeat(...)`, касания — `G.input.tapNow {x, y}`. Размер экрана — `G.screen.W/H` (логические пиксели).

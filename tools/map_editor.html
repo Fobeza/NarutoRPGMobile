@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Редактор карты Конохи — Воля Огня (dev)</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #16141e; color: #e8e2f0; font: 13px/1.35 -apple-system, system-ui, sans-serif; }
+  #top { height: 42px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: #221e2e; border-bottom: 1px solid #3a3448; }
+  #top h1 { font-size: 14px; margin: 0 12px 0 0; color: #ff9a4a; }
+  button, select, input { font: inherit; color: inherit; }
+  button { background: #3a3448; border: 1px solid #4a4460; border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+  button:hover { background: #4a4460; }
+  button.on { background: #e8621a; border-color: #ff9a4a; color: #fff; }
+  #main { position: absolute; top: 42px; bottom: 24px; left: 0; right: 0; display: flex; }
+  #left, #right { width: 240px; background: #1e1a28; overflow-y: auto; padding: 8px; border-right: 1px solid #3a3448; }
+  #right { border-right: 0; border-left: 1px solid #3a3448; width: 260px; }
+  #view { flex: 1; position: relative; overflow: hidden; background: #0e0c14; }
+  canvas { position: absolute; left: 0; top: 0; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #8c84a0; margin: 12px 0 6px; }
+  .pal { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+  .pal:hover { background: #2e2a3a; }
+  .pal.sel { background: #e8621a33; outline: 1px solid #e8621a; }
+  .sw { width: 14px; height: 14px; border-radius: 2px; flex: 0 0 auto; border: 1px solid #0006; }
+  .pal .sz { margin-left: auto; color: #6c6680; font-size: 11px; }
+  .pal.placed { opacity: .5; }
+  .pal.placed::after { content: '✔'; color: #7cc05a; margin-left: 4px; }
+  #status { position: absolute; bottom: 0; left: 0; right: 0; height: 24px; background: #221e2e; border-top: 1px solid #3a3448; padding: 3px 10px; color: #8c84a0; font-size: 12px; display: flex; gap: 20px; }
+  .prop { margin: 6px 0; }
+  .prop label { display: block; color: #8c84a0; font-size: 11px; }
+  .prop input, .prop select { width: 100%; background: #2e2a3a; border: 1px solid #4a4460; border-radius: 3px; padding: 4px; }
+  .warn { color: #ff7a5a; font-size: 12px; margin: 3px 0; }
+  #modal { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; }
+  #modal .box { width: min(800px, 90vw); background: #221e2e; border: 1px solid #4a4460; border-radius: 6px; padding: 14px; }
+  #modal textarea { width: 100%; height: 50vh; background: #14121c; color: #cfe; border: 1px solid #4a4460; font: 12px monospace; }
+  .help { color: #8c84a0; font-size: 12px; }
+  kbd { background: #3a3448; border-radius: 3px; padding: 0 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div id="top">
+  <h1>🍃 Редактор карты Конохи</h1>
+  <button data-mode="select" class="on" title="V">Выбор</button>
+  <button data-mode="district" title="D">Район</button>
+  <button data-mode="road" title="R">Дорога</button>
+  <button data-mode="building" title="B">Здание</button>
+  <span style="flex:1"></span>
+  <button id="b-undo" title="Ctrl+Z">↶ Отменить</button>
+  <button id="b-screen" title="S">Рамка экрана</button>
+  <button id="b-draft">Черновик Конохи</button>
+  <button id="b-clear">Очистить</button>
+  <button id="b-import">Импорт</button>
+  <button id="b-export">Экспорт JSON</button>
+</div>
+<div id="main">
+  <div id="left">
+    <div id="pal-district"><h3>Районы</h3></div>
+    <div id="pal-road"><h3>Дороги</h3></div>
+    <div id="pal-building"><h3>Здания</h3></div>
+  </div>
+  <div id="view"><canvas id="cv"></canvas></div>
+  <div id="right">
+    <h3>Выбранный объект</h3>
+    <div id="props"><div class="help">Ничего не выбрано</div></div>
+    <h3>Проверка</h3>
+    <div id="warnings"></div>
+    <h3>Подсказка</h3>
+    <div class="help">
+      <b>Район</b> — тяни прямоугольник.<br>
+      <b>Дорога</b> — тяни линию (прямая по горизонтали/вертикали).<br>
+      <b>Здание</b> — выбери шаблон слева, кликни на карту.<br>
+      <b>Выбор</b> — клик выбирает, перетаскивание двигает, <kbd>Del</kbd> удаляет.<br>
+      Прокрутка — <kbd>колесо</kbd> / правая кнопка мыши. Масштаб — <kbd>Ctrl</kbd>+колесо или <kbd>+</kbd>/<kbd>−</kbd>.<br>
+      <kbd>S</kbd> — рамка размера экрана iPhone (12×~14 тайлов).<br>
+      Всё сохраняется в браузере автоматически.<br><br>
+      Жилые кварталы позже заполнятся домами автоматически (генератор, этап 2) — ставь только ключевые здания.
+    </div>
+  </div>
+</div>
+<div id="status"><span id="st-pos">—</span><span id="st-zoom"></span><span id="st-count"></span></div>
+<div id="modal"><div class="box">
+  <div id="m-title" style="font-weight:700;margin-bottom:8px">Экспорт</div>
+  <textarea id="m-text" spellcheck="false"></textarea>
+  <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+    <button id="m-copy">Копировать</button><button id="m-download">Скачать .json</button>
+    <button id="m-apply" style="display:none">Загрузить</button><button id="m-close">Закрыть</button>
+  </div>
+</div></div>
+
+<script>
+/*__SHARED__*/
+</script>
+<script>
+(() => {
+  const MAPW = G.MAP_SIZE.w, MAPH = G.MAP_SIZE.h;
+  const LS = 'wof_map_editor';
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const view = document.getElementById('view');
+
+  let nextId = 1;
+  let data = load() || clone(G.KONOHA_DRAFT);
+  ensureIds();
+  let mode = 'select', zoom = 6, panX = 20, panY = 20;
+  let palSel = { district: 'residential', road: 'street', building: 'house_m' };
+  let selected = null;     // {kind, item}
+  let drag = null;         // активное действие мыши
+  let mouse = { tx: 0, ty: 0, inside: false };
+  let showScreen = false;
+  const undo = [];
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function load() { try { return JSON.parse(localStorage.getItem(LS)); } catch (_) { return null; } }
+  function save() { localStorage.setItem(LS, JSON.stringify(data)); }
+  function snapshot() { undo.push(JSON.stringify(data)); if (undo.length > 100) undo.shift(); }
+  function ensureIds() {
+    for (const k of ['districts', 'roads', 'buildings']) for (const it of data[k]) { if (!it.id) it.id = 'o' + nextId++; else nextId = Math.max(nextId, +String(it.id).slice(1) + 1 || nextId); }
+  }
+
+  // ---------- Палитры ----------
+  function buildPalettes() {
+    const mk = (parent, key, list, info) => {
+      const host = document.getElementById(parent);
+      host.querySelectorAll('.pal, .cat').forEach((e) => e.remove());
+      let lastCat = null;
+      for (const id in list) {
+        const t = list[id];
+        if (t.cat && t.cat !== lastCat) {
+          lastCat = t.cat;
+          const c = document.createElement('div'); c.className = 'cat help'; c.style.margin = '6px 0 2px';
+          c.textContent = { house: 'Жильё', food: 'Еда', shop: 'Лавки', official: 'Официальные', clan: 'Кланы', training: 'Тренировки', landmark: 'Ориентиры' }[t.cat] || t.cat;
+          host.appendChild(c);
+        }
+        const el = document.createElement('div');
+        el.className = 'pal' + (palSel[key] === id ? ' sel' : '');
+        if (t.unique && data.buildings.some((b) => b.tpl === id)) el.classList.add('placed');
+        el.innerHTML = `<span class="sw" style="background:${t.color}"></span>${t.name}<span class="sz">${info(t)}</span>`;
+        el.onclick = () => { palSel[key] = id; setMode(key); buildPalettes(); };
+        host.appendChild(el);
+      }
+    };
+    mk('pal-district', 'district', G.DISTRICTS, () => '');
+    mk('pal-road', 'road', G.ROADS, (t) => t.w + ' т.');
+    mk('pal-building', 'building', G.BUILDINGS, (t) => `${t.w}×${t.h}`);
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+    draw();
+  }
+  document.querySelectorAll('[data-mode]').forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
+
+  // ---------- Геометрия ----------
+  function roadRect(r) {
+    const w = G.ROADS[r.type].w;
+    const x = Math.min(r.x1, r.x2), y = Math.min(r.y1, r.y2);
+    if (r.y1 === r.y2) return { x, y: r.y1, w: Math.abs(r.x2 - r.x1) + 1, h: w };
+    return { x: r.x1, y, w, h: Math.abs(r.y2 - r.y1) + 1 };
+  }
+  function bRect(b) { const t = G.BUILDINGS[b.tpl]; return { x: b.x, y: b.y, w: t.w, h: t.h }; }
+  const ov = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const inR = (r, x, y) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h;
+
+  function hitTest(tx, ty) {
+    for (let i = data.buildings.length - 1; i >= 0; i--) if (inR(bRect(data.buildings[i]), tx, ty)) return { kind: 'buildings', item: data.buildings[i] };
+    for (let i = data.roads.length - 1; i >= 0; i--) if (inR(roadRect(data.roads[i]), tx, ty)) return { kind: 'roads', item: data.roads[i] };
+    for (let i = data.districts.length - 1; i >= 0; i--) if (inR(data.districts[i], tx, ty)) return { kind: 'districts', item: data.districts[i] };
+    return null;
+  }
+
+  // ---------- Отрисовка ----------
+  function resize() { cv.width = view.clientWidth; cv.height = view.clientHeight; draw(); }
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    const Z = zoom;
+    ctx.fillStyle = '#0e0c14'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.save(); ctx.translate(panX, panY);
+    ctx.fillStyle = '#5aa046'; ctx.fillRect(0, 0, MAPW * Z, MAPH * Z);
+
+    for (const d of data.districts) {
+      ctx.fillStyle = G.DISTRICTS[d.type].color; ctx.globalAlpha = 0.75;
+      ctx.fillRect(d.x * Z, d.y * Z, d.w * Z, d.h * Z); ctx.globalAlpha = 1;
+    }
+    for (const r of data.roads) {
+      const rr = roadRect(r); ctx.fillStyle = G.ROADS[r.type].color;
+      ctx.fillRect(rr.x * Z, rr.y * Z, rr.w * Z, rr.h * Z);
+    }
+    // сетка
+    if (Z >= 5) {
+      ctx.strokeStyle = 'rgba(0,0,0,.12)'; ctx.lineWidth = 1; ctx.beginPath();
+      for (let x = 0; x <= MAPW; x++) { ctx.moveTo(x * Z + .5, 0); ctx.lineTo(x * Z + .5, MAPH * Z); }
+      for (let y = 0; y <= MAPH; y++) { ctx.moveTo(0, y * Z + .5); ctx.lineTo(MAPW * Z, y * Z + .5); }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,.35)';
+    for (let x = 0; x <= MAPW; x += 16) { ctx.beginPath(); ctx.moveTo(x * Z + .5, 0); ctx.lineTo(x * Z + .5, MAPH * Z); ctx.stroke(); }
+    for (let y = 0; y <= MAPH; y += 16) { ctx.beginPath(); ctx.moveTo(0, y * Z + .5); ctx.lineTo(MAPW * Z, y * Z + .5); ctx.stroke(); }
+
+    const bad = new Set(problems().map((p) => p.id));
+    for (const b of data.buildings) {
+      const t = G.BUILDINGS[b.tpl], r = bRect(b);
+      ctx.fillStyle = t.color; ctx.fillRect(r.x * Z, r.y * Z, r.w * Z, r.h * Z);
+      ctx.strokeStyle = bad.has(b.id) ? '#ff2a2a' : '#000a'; ctx.lineWidth = bad.has(b.id) ? 2 : 1;
+      ctx.strokeRect(r.x * Z + .5, r.y * Z + .5, r.w * Z - 1, r.h * Z - 1);
+      if (t.door) { ctx.fillStyle = '#2a1a10'; ctx.fillRect((b.x + t.door[0]) * Z + 1, (b.y + t.door[1]) * Z + Z * .4, Z - 2, Z * .6); }
+    }
+    // подписи
+    ctx.textBaseline = 'top'; ctx.font = `${Math.max(9, Math.min(13, Z * 1.6))}px system-ui`;
+    for (const d of data.districts) if (d.label && d.w * Z > 40) { ctx.fillStyle = '#0009'; ctx.fillText(d.label, d.x * Z + 3, d.y * Z + 2); }
+    if (Z >= 4) for (const b of data.buildings) {
+      const t = G.BUILDINGS[b.tpl]; if (t.w * Z < 30) continue;
+      ctx.fillStyle = '#000c'; ctx.fillText(t.name, b.x * Z + 2, b.y * Z + 2, t.w * Z - 4);
+    }
+    // выделение
+    if (selected) {
+      const it = selected.item;
+      const r = selected.kind === 'buildings' ? bRect(it) : selected.kind === 'roads' ? roadRect(it) : it;
+      ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+      ctx.strokeRect(r.x * Z - 1, r.y * Z - 1, r.w * Z + 2, r.h * Z + 2); ctx.setLineDash([]);
+    }
+    // предпросмотр
+    if (mouse.inside) {
+      if (mode === 'building') {
+        const t = G.BUILDINGS[palSel.building];
+        ctx.globalAlpha = .6; ctx.fillStyle = t.color; ctx.fillRect(mouse.tx * Z, mouse.ty * Z, t.w * Z, t.h * Z); ctx.globalAlpha = 1;
+      }
+      if (drag && drag.type === 'district') {
+        const r = normRect(drag.sx, drag.sy, mouse.tx, mouse.ty);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(r.x * Z, r.y * Z, r.w * Z, r.h * Z);
+      }
+      if (drag && drag.type === 'road') {
+        const rr = roadRect(roadFromDrag()); ctx.globalAlpha = .7; ctx.fillStyle = '#fff';
+        ctx.fillRect(rr.x * Z, rr.y * Z, rr.w * Z, rr.h * Z); ctx.globalAlpha = 1;
+      }
+      if (showScreen) {
+        ctx.strokeStyle = '#ff9a4a'; ctx.lineWidth = 2;
+        ctx.strokeRect((mouse.tx - 6) * Z, (mouse.ty - 7) * Z, 12 * Z, 14 * Z);
+      }
+    }
+    ctx.restore();
+    document.getElementById('st-zoom').textContent = `масштаб ${zoom}`;
+    document.getElementById('st-count').textContent = `районов ${data.districts.length} · дорог ${data.roads.length} · зданий ${data.buildings.length}`;
+  }
+
+  function normRect(ax, ay, bx, by) {
+    const x = Math.max(0, Math.min(ax, bx)), y = Math.max(0, Math.min(ay, by));
+    return { x, y, w: Math.min(MAPW, Math.max(ax, bx) + 1) - x, h: Math.min(MAPH, Math.max(ay, by) + 1) - y };
+  }
+  function roadFromDrag() {
+    const dx = Math.abs(mouse.tx - drag.sx), dy = Math.abs(mouse.ty - drag.sy);
+    return dx >= dy
+      ? { type: palSel.road, x1: drag.sx, y1: drag.sy, x2: mouse.tx, y2: drag.sy }
+      : { type: palSel.road, x1: drag.sx, y1: drag.sy, x2: drag.sx, y2: mouse.ty };
+  }
+
+  // ---------- Проверка ----------
+  function problems() {
+    const out = [];
+    const B = data.buildings;
+    for (let i = 0; i < B.length; i++) {
+      const a = bRect(B[i]);
+      if (a.x < 0 || a.y < 0 || a.x + a.w > MAPW || a.y + a.h > MAPH) out.push({ id: B[i].id, msg: `${G.BUILDINGS[B[i].tpl].name}: за краем карты` });
+      for (let j = i + 1; j < B.length; j++) if (ov(a, bRect(B[j]))) out.push({ id: B[i].id, msg: `${G.BUILDINGS[B[i].tpl].name} пересекается с ${G.BUILDINGS[B[j].tpl].name}` });
+      if (!G.BUILDINGS[B[i].tpl].onRoad) for (const r of data.roads) if (ov(a, roadRect(r))) out.push({ id: B[i].id, msg: `${G.BUILDINGS[B[i].tpl].name} стоит на дороге` });
+    }
+    const seen = {};
+    for (const b of B) if (G.BUILDINGS[b.tpl].unique) { if (seen[b.tpl]) out.push({ id: b.id, msg: `${G.BUILDINGS[b.tpl].name}: уникальное здание стоит дважды` }); seen[b.tpl] = 1; }
+    return out;
+  }
+  function refreshSide() {
+    const w = document.getElementById('warnings');
+    const ps = problems();
+    w.innerHTML = ps.length ? ps.slice(0, 30).map((p) => `<div class="warn">⚠ ${p.msg}</div>`).join('') : '<div class="help" style="color:#7cc05a">✔ Проблем нет</div>';
+    const pr = document.getElementById('props');
+    if (!selected) { pr.innerHTML = '<div class="help">Ничего не выбрано</div>'; return; }
+    const it = selected.item;
+    if (selected.kind === 'districts') {
+      pr.innerHTML = `<div class="prop"><label>Тип</label><select id="p-type">${Object.keys(G.DISTRICTS).map((k) => `<option value="${k}" ${k === it.type ? 'selected' : ''}>${G.DISTRICTS[k].name}</option>`).join('')}</select></div>
+        <div class="prop"><label>Название</label><input id="p-label" value="${it.label || ''}"></div>
+        <div class="help">x ${it.x}, y ${it.y}, ${it.w}×${it.h}</div>`;
+      document.getElementById('p-type').onchange = (e) => { snapshot(); it.type = e.target.value; save(); draw(); };
+      document.getElementById('p-label').oninput = (e) => { it.label = e.target.value; save(); draw(); };
+    } else if (selected.kind === 'roads') {
+      pr.innerHTML = `<div class="prop"><label>Тип</label><select id="p-type">${Object.keys(G.ROADS).map((k) => `<option value="${k}" ${k === it.type ? 'selected' : ''}>${G.ROADS[k].name}</option>`).join('')}</select></div>
+        <div class="help">(${it.x1},${it.y1}) → (${it.x2},${it.y2})</div>`;
+      document.getElementById('p-type').onchange = (e) => { snapshot(); it.type = e.target.value; save(); draw(); };
+    } else {
+      const t = G.BUILDINGS[it.tpl];
+      pr.innerHTML = `<div style="font-weight:700">${t.name}</div><div class="help">шаблон: ${it.tpl}<br>x ${it.x}, y ${it.y}, ${t.w}×${t.h}<br>${t.interior ? 'интерьер: ' + t.interior : 'без интерьера'}${t.door ? '<br>дверь: ' + (it.x + t.door[0]) + ',' + (it.y + t.door[1]) : ''}</div>`;
+    }
+  }
+
+  // ---------- Мышь ----------
+  function toTile(e) {
+    const r = cv.getBoundingClientRect();
+    return { tx: Math.floor((e.clientX - r.left - panX) / zoom), ty: Math.floor((e.clientY - r.top - panY) / zoom) };
+  }
+  cv.addEventListener('contextmenu', (e) => e.preventDefault());
+  cv.addEventListener('mousedown', (e) => {
+    const { tx, ty } = toTile(e);
+    if (e.button === 2 || e.button === 1) { drag = { type: 'pan', x: e.clientX, y: e.clientY, px: panX, py: panY }; return; }
+    if (mode === 'select') {
+      selected = hitTest(tx, ty);
+      if (selected) { snapshot(); drag = { type: 'move', sx: tx, sy: ty, orig: clone(selected.item) }; }
+      refreshSide();
+    } else if (mode === 'district') drag = { type: 'district', sx: tx, sy: ty };
+    else if (mode === 'road') drag = { type: 'road', sx: tx, sy: ty };
+    else if (mode === 'building') {
+      snapshot();
+      const b = { id: 'o' + nextId++, tpl: palSel.building, x: tx, y: ty };
+      data.buildings.push(b); selected = { kind: 'buildings', item: b };
+      save(); buildPalettes(); refreshSide();
+    }
+    draw();
+  });
+  window.addEventListener('mousemove', (e) => {
+    const t = toTile(e);
+    mouse.tx = t.tx; mouse.ty = t.ty;
+    const r = cv.getBoundingClientRect();
+    mouse.inside = e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
+    document.getElementById('st-pos').textContent = `тайл ${t.tx}, ${t.ty}` + (mouse.inside ? '' : '');
+    if (drag && drag.type === 'pan') { panX = drag.px + e.clientX - drag.x; panY = drag.py + e.clientY - drag.y; }
+    if (drag && drag.type === 'move') {
+      const dx = t.tx - drag.sx, dy = t.ty - drag.sy, it = selected.item, o = drag.orig;
+      if ('x1' in it) { it.x1 = o.x1 + dx; it.x2 = o.x2 + dx; it.y1 = o.y1 + dy; it.y2 = o.y2 + dy; }
+      else { it.x = o.x + dx; it.y = o.y + dy; }
+    }
+    draw();
+  });
+  window.addEventListener('mouseup', () => {
+    if (!drag) return;
+    if (drag.type === 'district') {
+      const r = normRect(drag.sx, drag.sy, mouse.tx, mouse.ty);
+      if (r.w > 0 && r.h > 0) { snapshot(); const d = { id: 'o' + nextId++, type: palSel.district, ...r, label: G.DISTRICTS[palSel.district].name }; data.districts.push(d); selected = { kind: 'districts', item: d }; }
+    }
+    if (drag.type === 'road') {
+      const rd = roadFromDrag();
+      if (rd.x1 !== rd.x2 || rd.y1 !== rd.y2) { snapshot(); rd.id = 'o' + nextId++; data.roads.push(rd); selected = { kind: 'roads', item: rd }; }
+    }
+    drag = null; save(); refreshSide(); draw();
+  });
+  cv.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      const r = cv.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      const old = zoom;
+      zoom = Math.max(2, Math.min(24, zoom + (e.deltaY < 0 ? 1 : -1)));
+      panX = mx - (mx - panX) * zoom / old; panY = my - (my - panY) * zoom / old;
+    } else { panX -= e.deltaX; panY -= e.deltaY; }
+    draw();
+  }, { passive: false });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { doUndo(); e.preventDefault(); return; }
+    if (e.code === 'Delete' || e.code === 'Backspace') {
+      if (selected) { snapshot(); data[selected.kind] = data[selected.kind].filter((x) => x !== selected.item); selected = null; save(); buildPalettes(); refreshSide(); draw(); }
+    }
+    const m = { KeyV: 'select', KeyD: 'district', KeyR: 'road', KeyB: 'building' }[e.code];
+    if (m) setMode(m);
+    if (e.code === 'KeyS') { showScreen = !showScreen; draw(); }
+    if (e.key === '+' || e.key === '=') { zoom = Math.min(24, zoom + 1); draw(); }
+    if (e.key === '-') { zoom = Math.max(2, zoom - 1); draw(); }
+    if (selected && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      e.preventDefault(); snapshot();
+      const d = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.code];
+      const it = selected.item;
+      if ('x1' in it) { it.x1 += d[0]; it.x2 += d[0]; it.y1 += d[1]; it.y2 += d[1]; } else { it.x += d[0]; it.y += d[1]; }
+      save(); refreshSide(); draw();
+    }
+  });
+
+  function doUndo() { if (!undo.length) return; data = JSON.parse(undo.pop()); selected = null; save(); buildPalettes(); refreshSide(); draw(); }
+  document.getElementById('b-undo').onclick = doUndo;
+  document.getElementById('b-screen').onclick = (e) => { showScreen = !showScreen; e.target.classList.toggle('on', showScreen); draw(); };
+  document.getElementById('b-draft').onclick = () => { if (confirm('Заменить карту черновиком Конохи?')) { snapshot(); data = clone(G.KONOHA_DRAFT); ensureIds(); selected = null; save(); buildPalettes(); refreshSide(); draw(); } };
+  document.getElementById('b-clear').onclick = () => { if (confirm('Очистить карту?')) { snapshot(); data = { version: 1, size: { w: MAPW, h: MAPH }, districts: [], roads: [], buildings: [] }; selected = null; save(); buildPalettes(); refreshSide(); draw(); } };
+
+  // ---------- Экспорт / импорт ----------
+  const modal = document.getElementById('modal'), mt = document.getElementById('m-text');
+  function exportJson() {
+    const strip = (arr) => arr.map(({ id, ...rest }) => rest);
+    return JSON.stringify({ version: 1, size: data.size, districts: strip(data.districts), roads: strip(data.roads), buildings: strip(data.buildings) }, null, 1);
+  }
+  document.getElementById('b-export').onclick = () => {
+    document.getElementById('m-title').textContent = 'Экспорт — вставь это в src/data/konoha_layout.js (G.KONOHA_DRAFT = ...)';
+    mt.value = exportJson(); document.getElementById('m-apply').style.display = 'none'; modal.style.display = 'flex'; mt.select();
+  };
+  document.getElementById('b-import').onclick = () => {
+    document.getElementById('m-title').textContent = 'Импорт — вставь JSON и нажми «Загрузить»';
+    mt.value = ''; document.getElementById('m-apply').style.display = ''; modal.style.display = 'flex'; mt.focus();
+  };
+  document.getElementById('m-apply').onclick = () => {
+    try { const d = JSON.parse(mt.value); if (!d.buildings) throw 0; snapshot(); data = d; ensureIds(); save(); buildPalettes(); refreshSide(); draw(); modal.style.display = 'none'; }
+    catch (_) { alert('Не получилось прочитать JSON'); }
+  };
+  document.getElementById('m-copy').onclick = () => { mt.select(); navigator.clipboard && navigator.clipboard.writeText(mt.value); };
+  document.getElementById('m-download').onclick = () => {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([mt.value], { type: 'application/json' }));
+    a.download = 'konoha_layout.json'; a.click();
+  };
+  document.getElementById('m-close').onclick = () => (modal.style.display = 'none');
+
+  buildPalettes(); refreshSide(); resize();
+})();
+</script>
+</body>
+</html>

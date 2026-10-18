@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Воля Огня">
+<meta name="theme-color" content="#14121c">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="__ICON__">
+<link rel="icon" href="__ICON__">
+<title>Воля Огня — Naruto RPG</title>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="screen-wrap">
+    <canvas id="screen" width="192" height="256"></canvas>
+  </div>
+
+  <div id="pad">
+    <div id="dpad" class="btn-zone">
+      <div class="dp-arm dp-up"></div>
+      <div class="dp-arm dp-down"></div>
+      <div class="dp-arm dp-left"></div>
+      <div class="dp-arm dp-right"></div>
+      <div class="dp-center"></div>
+    </div>
+
+    <div id="sys-btns">
+      <div class="pill" data-btn="menu">МЕНЮ</div>
+      <div class="pill" data-btn="map">КАРТА</div>
+      <div class="pill" data-btn="goal">ЦЕЛЬ</div>
+    </div>
+
+    <div id="ab">
+      <div class="round" id="btn-b" data-btn="b"><span>B</span></div>
+      <div class="round" id="btn-a" data-btn="a"><span>A</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Ввод текста (имя героя): реальный input, чтобы iOS открывал клавиатуру -->
+<div id="text-entry" class="hidden">
+  <div class="te-box">
+    <div class="te-title" id="te-title">Как тебя зовут?</div>
+    <input id="te-input" type="text" maxlength="12" autocomplete="off" autocorrect="off"
+           autocapitalize="words" spellcheck="false" enterkeyhint="done">
+    <div class="te-hint" id="te-hint">1–12 символов</div>
+    <div class="te-ok" id="te-ok">ГОТОВО</div>
+  </div>
+</div>
+
+<!-- Код сохранения: экспорт (скопировать) и импорт (вставить) -->
+<div id="code-box" class="hidden">
+  <div class="te-box">
+    <div class="te-title" id="cb-title">Код сохранения</div>
+    <textarea id="cb-text" rows="6" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"></textarea>
+    <div class="te-hint" id="cb-hint"></div>
+    <div class="cb-row"><div class="te-ok" id="cb-ok">КОПИРОВАТЬ</div><div class="te-ok cb-cancel" id="cb-cancel">ЗАКРЫТЬ</div></div>
+  </div>
+</div>
+
+<div id="rotate">
+  <div>
+    <div class="rot-icon">⟲</div>
+    Поверни телефон вертикально
+  </div>
+</div>
+
+<script>
+/*__JS__*/
+</script>
+</body>
+</html>
