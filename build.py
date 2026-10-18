@@ -116,7 +116,7 @@ def build(debug=False):
         js_parts.append(f"\n// ===== {rel} =====\n{code}")
     js = "\n".join(js_parts)
 
-    version = hashlib.sha1(js.encode("utf-8")).hexdigest()[:8]
+    version = hashlib.sha1((js + read("shell.html") + read("style.css")).encode("utf-8")).hexdigest()[:8]   # меняется при любой правке → телефоны подхватят обновление
     stamp = time.strftime("%Y-%m-%d %H:%M")
     header = (f"'use strict';\nconst BUILD = {{ version: '{version}', date: '{stamp}', "
               f"debug: {'true' if debug else 'false'} }};\n")

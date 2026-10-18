@@ -34,6 +34,11 @@ body { position: fixed; inset: 0; }
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
 }
+/* Safari (не «на экране Домой»): под строкой состояния iOS размывает содержимое полосой ~30pt —
+   опускаем игру ниже этой полосы, чтобы верхний HUD не попадал под размытие */
+@media (display-mode: browser) {
+  #app { padding-top: calc(env(safe-area-inset-top) + 30px); }
+}
 
 /* ===== Экран ===== */
 #screen-wrap {
@@ -217,7 +222,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { version: '9b2c630f', date: '2026-10-18 10:58', debug: false };
+const BUILD = { version: '94d07820', date: '2026-10-18 11:12', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
