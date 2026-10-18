@@ -5,9 +5,25 @@ G.scenes.register('title', () => {
   let items = [];
   let bg = null;
 
-  // V9: ночная Коноха со светотенью — небо с дизерным градиентом, луна, Скала Хокаге с объёмом, огни деревни
+  // Фон — готовая картинка (gfx/title_art.js), растянутая на экран; пока не загрузилась или её нет — рисуем кодом
+  let art = null;
+  function artReady() {
+    if (!G.titleArt || typeof Image === 'undefined') return false;
+    if (!art) { art = new Image(); art.onload = () => { bg = buildBg(); }; art.src = G.titleArt; }
+    return art.complete && (art.naturalWidth || art.width) > 0;
+  }
   function buildBg() {
-    const W = G.screen.W, H = G.screen.H, S = G.shade, BG = G.battleBg, Hh = G.util.hash2;
+    const W = G.screen.W, H = G.screen.H;
+    if (artReady()) {
+      const c = G.gfx.canvas(W, H), x = c.getContext('2d');
+      x.imageSmoothingEnabled = false; x.drawImage(art, 0, 0, W, H);
+      return c;
+    }
+    return drawBg(W, H);
+  }
+  // V9: ночная Коноха со светотенью — запасной фон кодом
+  function drawBg(W, H) {
+    const S = G.shade, BG = G.battleBg, Hh = G.util.hash2;
     const c = G.gfx.canvas(W, H), x = c.getContext('2d');
     x.fillStyle = '#100c1a'; x.fillRect(0, 0, W, H);
     const rockY = Math.floor(H * 0.42), roofY = Math.floor(H * 0.6);

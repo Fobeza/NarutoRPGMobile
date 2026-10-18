@@ -22,7 +22,7 @@ JS_FILES = [
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/palette.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js",
     "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",
-    "gfx/tiles.js", "gfx/icons.js",
+    "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
