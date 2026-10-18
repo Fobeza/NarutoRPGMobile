@@ -200,6 +200,76 @@ def bbox_trim(px, w, h, margin=1):
     return sub_px(px, w, xs0, ys0, xs1 - xs0 + 1, ys1 - ys0 + 1), xs1 - xs0 + 1, ys1 - ys0 + 1
 
 
+def seam_score(px, w, h):
+    """Насколько заметен шов на стыке повторов против внутренних швов."""
+    def cd(a, b):
+        return sum(abs(px[(y * w + a) * 4 + k] - px[(y * w + b) * 4 + k]) for y in range(h) for k in range(3))
+    def rd(a, b):
+        return sum(abs(px[(a * w + x) * 4 + k] - px[(b * w + x) * 4 + k]) for x in range(w) for k in range(3))
+    wx = cd(0, w - 1)
+    ix = sum(cd(x, x + 1) for x in range(1, w - 2)) / max(1, w - 3)
+    wy = rd(0, h - 1)
+    iy = sum(rd(y, y + 1) for y in range(1, h - 2)) / max(1, h - 2)
+    return wx / max(1.0, ix), wy / max(1.0, iy)
+
+
+def mirror_tile(px, w, h):
+    """Зеркальная симметризация: гарантия бесшовности, если генератор дал шов."""
+    out = bytearray(w * h * 4)
+    for y in range(h):
+        my = y if y < h // 2 else h - 1 - y
+        for x in range(w):
+            mx = x if x < w // 2 else w - 1 - x
+            o, s = (y * w + x) * 4, (my * w + mx) * 4
+            out[o:o + 4] = px[s:s + 4]
+    return out
+
+
+_band_cache = {}
+
+
+def detect_bands(px, w, h, axis):
+    """Контентные полосы листа, разделённые тёмными промежутками (ось: 'rows' | 'cols')."""
+    key = (id(px), w, h, axis)
+    step = max(1, (w if axis == 'rows' else h) // 32)
+
+    def dark(k):
+        if axis == 'rows':
+            o = k * w * 4
+            return all(px[o + x * 4] + px[o + x * 4 + 1] + px[o + x * 4 + 2] < 120 for x in range(0, w, step))
+        o = k * 4
+        return all(px[o + y * w * 4] + px[o + y * w * 4 + 1] + px[o + y * w * 4 + 2] < 120 for y in range(0, h, step))
+
+    bands, start = [], None
+    n = h if axis == 'rows' else w
+    for k in range(n):
+        d = dark(k)
+        if not d and start is None:
+            start = k
+        elif d and start is not None:
+            if k - start > 8:
+                bands.append((start, k))
+            start = None
+    if start is not None and n - start > 8:
+        bands.append((start, n))
+    return bands
+
+
+def sheet_cell(px, w, h, cell):
+    """Клетка листа по детекту промежутков: порядок чтения слева направо, сверху вниз."""
+    key = (id(px), w, h)
+    if key not in _band_cache:
+        _band_cache[key] = (detect_bands(px, w, h, 'rows'), detect_bands(px, w, h, 'cols'))
+    rb, cb = _band_cache[key]
+    cols = len(cb) or 4
+    ry, rx = divmod(cell, cols)
+    if ry >= len(rb) or rx >= cols:
+        return None
+    y0, y1 = rb[ry]
+    x0, x1 = cb[rx]
+    return sub_px(px, w, x0, y0, x1 - x0, y1 - y0), x1 - x0, y1 - y0
+
+
 def square_pad(px, w, h):
     """Дополнить прозрачным до квадрата — предмет не растягивается."""
     side = max(w, h)
@@ -332,16 +402,31 @@ def main():
         tw, th = a["target"]
         w, h, px = decode_png(src)
         if a.get("cell") is not None:
-            cx, cy, cw, ch = cell_box(w, h, a["cell"], a.get("grid", [4, 4]))
-            px = sub_px(px, w, cx, cy, cw, ch)
-            w, h = cw, ch
+            if a.get("tile"):
+                got = sheet_cell(px, w, h, a["cell"])
+                if got is None:
+                    errs.append(f"{a['id']}: клетка {a['cell']} вне детекта листа")
+                    continue
+                px, w, h = got
+            else:
+                cx, cy, cw, ch = cell_box(w, h, a["cell"], a.get("grid", [4, 4]))
+                px = sub_px(px, w, cx, cy, cw, ch)
+                w, h = cw, ch
             if a.get("chroma"):
                 keyout(px, a["chroma"])
-            px, w, h = bbox_trim(px, w, h)
-            px, w, h = square_pad(px, w, h)
+            if not a.get("tile"):
+                px, w, h = bbox_trim(px, w, h)
+                px, w, h = square_pad(px, w, h)
         x0, y0, sw, sh = crop_box(w, h, tw, th, a.get("crop_x", 0.5), a.get("crop_y", 0.5))
         small = resample(px, w, x0, y0, sw, sh, tw, th)
         want_alpha = a["kind"] == "icon"
+        if a.get("tile"):
+            rx, ry = seam_score(small, tw, th)
+            if rx > 1.6 or ry > 1.6:
+                small = mirror_tile(small, tw, th)
+                a["seam"] = "mirror"
+            else:
+                a["seam"] = "ok"
         colors, maxdist, transp = quantize(small, pal_rgb, want_alpha, a.get("chroma"), a.get("bg_snap"))
         npix = tw * th
         if want_alpha and transp == 0:

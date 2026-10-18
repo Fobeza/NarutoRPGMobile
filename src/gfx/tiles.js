@@ -32,6 +32,38 @@ G.tiles = (() => {
 
   let atlas = null;
 
+  // V8, волна 5: бесшовные текстуры поверхностей 64×64 из ассетов. Текстура семплится
+  // кусками 16×16 по клеткам ((tx%4, ty%4)) — период 64 px, швов нет по построению.
+  // Нет текстуры или ассеты выключены (?assets=0) — работаем процедурным атласом, как раньше.
+  const TEXID = {
+    FLOOR: 'tex_floor', PLANKS: 'tex_planks', TATAMI: 'tex_tatami', MAT: 'tex_mat',
+    TILEFLOOR: 'tex_tilefloor', DUSTFLOOR: 'tex_dustfloor', GRASS: 'tex_grass', GRASS2: 'tex_grass2',
+    FLOWERS: 'tex_flowers', PATH: 'tex_path', SAND: 'tex_sand', STONE: 'tex_stone',
+    DARKGRASS: 'tex_darkgrass', DIRT: 'tex_dirt', MAINROAD: 'tex_mainroad', DARKSTONE: 'tex_darkstone',
+    COBBLE: 'tex_cobble', BRICK: 'tex_brick', GRAVEL: 'tex_gravel', CLOVER: 'tex_clover',
+    PLAZA: 'tex_plaza', MOSS: 'tex_moss', IWALL: 'tex_iwall', VWALL: 'tex_vwall',
+  };
+  const TEXBYID = {};
+  for (const k of Object.keys(TEXID)) TEXBYID[ID[k]] = TEXID[k];
+  let texc = null;
+  function texCanvas(id) {
+    const aid = TEXBYID[id];
+    if (!aid || !G.assets || !G.assets.ready(aid)) return null;
+    if (!texc) texc = {};
+    if (!texc[id]) {
+      const cv = G.gfx.canvas(64, 64);
+      cv.getContext('2d').drawImage(G.assets.img(aid), 0, 0, 64, 64);
+      texc[id] = cv;
+    }
+    return texc[id];
+  }
+  function texBlit(ctx, id, x, y, gx, gy) {
+    const tc = texCanvas(id);
+    if (!tc) return false;
+    ctx.drawImage(tc, ((gx % 4) + 4) % 4 * T, ((gy % 4) + 4) % 4 * T, T, T, x, y, T, T);
+    return true;
+  }
+
   function px(c, x, y, col, w = 1, h = 1) { c.fillStyle = col; c.fillRect(x, y, w, h); }
   function dots(c, ox, oy, n, seed, cols) {
     for (let i = 0; i < n; i++) {
@@ -287,8 +319,11 @@ G.tiles = (() => {
   }
 
   // Простой тайл без учёта соседей
-  function drawTile(ctx, id, x, y) {
+  function drawTile(ctx, id, x, y, tx, ty) {
     if (!atlas) build();
+    const gx = tx === undefined ? Math.floor(x / T) : tx;
+    const gy = ty === undefined ? Math.floor(y / T) : ty;
+    if (texBlit(ctx, id, x, y, gx, gy)) return;
     ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
   }
 
@@ -356,8 +391,10 @@ G.tiles = (() => {
     const id = map.get(tx, ty);
     if (id < 0) return;
     const vs = map.outdoor ? VAR[id] : null, hv = vs ? H(tx, ty, 555) : 1;
-    if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
-    else ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
+    if (!texBlit(ctx, id, x, y, tx, ty)) {
+      if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
+      else ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
+    }
     const up = map.get(tx, ty - 1), dn = map.get(tx, ty + 1), lf = map.get(tx - 1, ty), rt = map.get(tx + 1, ty);
     const hh = (i, s) => H(tx * 16 + i, ty, s);
 
