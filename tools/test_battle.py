@@ -70,7 +70,7 @@ with sync_playwright() as p:
         if B(page, "return s.state") == "menu": break
         if B(page, "return s.state") == "react": key(page, "KeyZ")
         time.sleep(0.2)
-    B(page, "s.P.will = 100; s.E.hp = Math.min(s.E.hp, 30); return 1")
+    B(page, "s.P.will = 100; s.E.hp = Math.min(s.E.hp, 22); return 1")
     key(page, "Escape")
     page.evaluate("(() => {})()")
     B(page, "s.act('misc', 'will'); return 1"); time.sleep(0.5); shot(page, "b08_moment")
