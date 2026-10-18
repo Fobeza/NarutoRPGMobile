@@ -680,7 +680,7 @@ G.scenes.register('world', (pos) => {
       if (G.storage.settings.minimap === false) return;
       const S = 48, x0 = W - S - 3, y0 = HUD_H + 3;
       const m = this.map, p = this.player;
-      ctx.fillStyle = G.PAL.ink; ctx.fillRect(x0 - 1, y0 - 1, S + 2, S + 2);
+      ctx.fillStyle = G.UI.edge; ctx.fillRect(x0 - 1, y0 - 1, S + 2, S + 2);
       ctx.fillStyle = '#14121c'; ctx.fillRect(x0, y0, S, S);
       ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, S, S); ctx.clip();
       let sc, ox, oy;

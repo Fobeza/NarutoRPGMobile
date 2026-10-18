@@ -84,14 +84,14 @@ G.scenes.register('journal', () => {
       G.gfx.window(ctx, 2, 15, W - 4, H - 37, 'paper');
       let y = 20;
       F.draw(ctx, cat.icon + ' ' + cat.name, 8, y, { color: cat.color }); y += 11;
-      for (const ln of F.wrap(d.title, W - 16)) { F.draw(ctx, ln, 8, y, { color: P.ink }); y += 11; }
+      for (const ln of F.wrap(d.title, W - 16)) { F.draw(ctx, ln, 8, y, { color: G.UI.text }); y += 11; }
       y += 2;
       for (const ln of F.wrap(d.desc, W - 16)) { F.draw(ctx, ln, 8, y, { color: P.gray }); y += 10; }
       y += 4;
       for (const v of stepsView(id)) {
         const txt = v.future ? '…' : v.st.text;
         const mark = v.done ? '✔' : v.cur ? '▶' : '·';
-        const col = v.done ? '#5a8a4a' : v.cur ? P.ink : '#a89a80';
+        const col = v.done ? G.UI.ok : v.cur ? G.UI.text : G.UI.dim;
         const lines = F.wrap(txt, W - 30);
         F.draw(ctx, mark, 9, y, { color: v.done ? '#5a8a4a' : P.orange });
         lines.forEach((ln) => { F.draw(ctx, ln, 19, y, { color: col }); y += 10; });

@@ -61,9 +61,9 @@ G.scenes.register('menu', () => {
       items().forEach((it, i) => {
         const y = r.y + 18 + i * 13;
         const sel = i === idx;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); }
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); }
         if (sel) G.font.draw(ctx, '▶', r.x + 7, y, { color: G.PAL.orange });
-        G.font.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.PAL.ink : G.PAL.gray });
+        G.font.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.UI.selText : G.UI.dim });
       });
       if (toast) {
         const w = G.font.measure(toast) + 12;

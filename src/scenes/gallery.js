@@ -29,7 +29,7 @@ G.scenes.register('gallery', () => {
       const di = G.chars.DIRS.indexOf(dir);
       ctx.drawImage(s, frame * 16, di * 20, 16, 20, 20, 44, 64, 80);
       // портрет
-      ctx.fillStyle = P.ink; ctx.fillRect(110, 40, 36, 36);
+      ctx.fillStyle = G.UI.edge; ctx.fillRect(110, 40, 36, 36);
       ctx.drawImage(G.chars.portrait(id), 112, 42);
       G.font.draw(ctx, 'портрет', 128, 79, { align: 'center', color: P.light });
       G.font.draw(ctx, '', 128, 89, { align: 'center', color: P.gray });
@@ -60,7 +60,7 @@ G.scenes.register('fonttest', () => {
       const W = G.screen.W, P = G.PAL;
       ctx.fillStyle = P.paper; ctx.fillRect(0, 0, W, G.screen.H);
       let y = 4;
-      const line = (t, col = P.ink) => { G.font.wrap(t, W - 8).forEach((l) => { G.font.draw(ctx, l, 4, y, { color: col }); y += 11; }); };
+      const line = (t, col = G.UI.text) => { G.font.wrap(t, W - 8).forEach((l) => { G.font.draw(ctx, l, 4, y, { color: col }); y += 11; }); };
       line('ШРИФТ: проверка', P.orange);
       line('АБВГДЕЁЖЗИЙКЛМНОП РСТУФХЦЧШЩЪЫЬЭЮЯ');
       line('абвгдеёжзийклмноп рстуфхцчшщъыьэюя');

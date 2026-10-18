@@ -25,7 +25,7 @@ G.scenes.register('bag', () => {
 
       // цель и состояние
       G.gfx.window(ctx, 2, 18, W - 4, 58, 'paper');
-      F.draw(ctx, `${g.dayNameFull()}, день ${v.day} · ${g.clock()}`, 8, 23, { color: P.ink });
+      F.draw(ctx, `${g.dayNameFull()}, день ${v.day} · ${g.clock()}`, 8, 23, { color: G.UI.text });
       F.draw(ctx, `${v.money} рё`, W - 8, 23, { align: 'right', color: '#b07a10' });
       const goal = g.goalText();
       F.wrap('Цель: ' + (goal || '—'), W - 16).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, 8, 35 + i * 11, { color: '#8a3a1a' }));
@@ -54,15 +54,15 @@ G.scenes.register('bag', () => {
           if (r >= rows) break;
         }
         const y = ly + 5 + r * 12, sel = i === idx;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(6, y - 2, W - 12, 12); F.draw(ctx, '▶', 8, y, { color: P.orange }); }
-        F.draw(ctx, it.name, 17, y, { color: sel ? P.ink : P.gray });
-        F.draw(ctx, '×' + it.n, W - 8, y, { align: 'right', color: P.ink });
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(6, y - 2, W - 12, 12); F.draw(ctx, '▶', 8, y, { color: P.orange }); }
+        F.draw(ctx, it.name, 17, y, { color: sel ? G.UI.selText : G.UI.dim });
+        F.draw(ctx, '×' + it.n, W - 8, y, { align: 'right', color: G.UI.text });
         r++;
       }
       // описание
       const dy = H - 20 - 44;
       G.gfx.window(ctx, 2, dy, W - 4, 42, 'paper');
-      if (L[idx]) F.wrap(L[idx].desc || '', W - 16).slice(0, 3).forEach((ln, i) => F.draw(ctx, ln, 8, dy + 5 + i * 11, { color: P.ink }));
+      if (L[idx]) F.wrap(L[idx].desc || '', W - 16).slice(0, 3).forEach((ln, i) => F.draw(ctx, ln, 8, dy + 5 + i * 11, { color: G.UI.text }));
       G.gfx.window(ctx, 2, H - 19, W - 4, 17, 'dark');
       F.draw(ctx, '(B) Назад', W / 2, H - 14, { align: 'center', color: P.light });
     },

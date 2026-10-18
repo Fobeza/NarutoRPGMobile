@@ -113,13 +113,13 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const who = shop.keeper.who;
       let tx = h.x + 7;
       if (G.chars.DEFS[who]) {
-        ctx.fillStyle = pal.ink; ctx.fillRect(h.x + 5, h.y + 6, 34, 34);
+        ctx.fillStyle = G.UI.edge; ctx.fillRect(h.x + 5, h.y + 6, 34, 34);
         ctx.drawImage(G.chars.portrait(who), h.x + 6, h.y + 7);
         tx = h.x + 44;
       }
       F.draw(ctx, title, tx, h.y + 4, { color: pal.orange });
       const greet = F.wrap('«' + shop.greet + '»', h.w - (tx - h.x) - 6).slice(0, 3);
-      greet.forEach((ln, i) => F.draw(ctx, ln, tx, h.y + 15 + i * 10, { color: pal.ink }));
+      greet.forEach((ln, i) => F.draw(ctx, ln, tx, h.y + 15 + i * 10, { color: G.UI.text }));
 
       // список
       const l = L.list;
@@ -128,11 +128,11 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const i = top + r;
         if (i >= items.length) break;
         const it = items[i], y = l.y + 5 + r * 13, sel = i === idx, lk = locked(it);
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(l.x + 4, y - 2, l.w - 8, 12); F.draw(ctx, '▶', l.x + 6, y, { color: pal.orange }); }
-        const col = lk ? '#b0a690' : sel ? pal.ink : pal.gray;
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(l.x + 4, y - 2, l.w - 8, 12); F.draw(ctx, '▶', l.x + 6, y, { color: pal.orange }); }
+        const col = lk ? G.UI.faint : sel ? G.UI.selText : G.UI.dim;
         F.draw(ctx, it.name, l.x + 15, y, { color: col });
         const price = lk ? '—' : it.price + ' рё';
-        F.draw(ctx, price, l.x + l.w - 7, y, { align: 'right', color: lk ? '#b0a690' : !G.game.canPay(it.price) ? '#c05a4a' : col });
+        F.draw(ctx, price, l.x + l.w - 7, y, { align: 'right', color: lk ? '#b0a690' : !G.game.canPay(it.price) ? G.UI.err : col });
       }
       if (top > 0) F.draw(ctx, '▲', l.x + l.w / 2, l.y - 1, { align: 'center', color: pal.orange });
       if (top + l.rows < items.length) F.draw(ctx, '▼', l.x + l.w / 2, l.y + l.h - 9, { align: 'center', color: pal.orange });
@@ -141,9 +141,9 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const inf = L.info, it = items[idx];
       G.gfx.window(ctx, inf.x, inf.y, inf.w, inf.h, 'paper');
       if (msg) {
-        F.wrap(msg, inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: msgErr ? '#c03a2a' : '#2a7a3a' }));
+        F.wrap(msg, inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: msgErr ? G.UI.err : G.UI.ok }));
       } else {
-        F.wrap(it.desc || '', inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: pal.ink }));
+        F.wrap(it.desc || '', inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: G.UI.text }));
       }
       const qy = inf.y + 33;
       if (it.cat === 'food' || it.cat === 'service') {

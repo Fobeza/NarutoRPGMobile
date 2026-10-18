@@ -82,8 +82,8 @@ G.scenes.register('savemenu', () => {
       F.draw(ctx, 'СОХРАНЕНИЕ', r.x + r.w / 2, r.y + 5, { align: 'center', color: P.orange });
       items().forEach((it, i) => {
         const y = r.y + 18 + i * 13, sel = i === idx;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); F.draw(ctx, '▶', r.x + 7, y, { color: P.orange }); }
-        F.draw(ctx, it.label, r.x + 15, y, { color: sel ? P.ink : P.gray, maxW: r.w - 20 });
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); F.draw(ctx, '▶', r.x + 7, y, { color: P.orange }); }
+        F.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.UI.selText : G.UI.dim, maxW: r.w - 20 });
       });
       if (toast) {
         const w = F.measure(toast) + 12;

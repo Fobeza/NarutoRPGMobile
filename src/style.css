@@ -3,7 +3,7 @@
 html, body {
   margin: 0; padding: 0; width: 100%; height: 100%;
   overflow: hidden; overscroll-behavior: none;
-  background: #14121c; color: #f4ecd8;
+  background: #0b0a10; color: #f4ecd8;
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none; touch-action: none;
   font-family: -apple-system, "SF Pro Rounded", system-ui, sans-serif;
@@ -36,8 +36,8 @@ body { position: fixed; inset: 0; }
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
-  border-radius: 6px;
-  box-shadow: 0 0 0 2px #2a2636, 0 6px 18px rgba(0,0,0,.5);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px #6a6a7a, 0 0 0 4px #17161d, 0 10px 26px rgba(0,0,0,.65);
 }
 
 /* ===== Геймпад ===== */
@@ -50,33 +50,33 @@ body { position: fixed; inset: 0; }
   width: 112px; height: 112px; touch-action: none;
 }
 .dp-arm, .dp-center {
-  position: absolute; background: #3a3548;
-  box-shadow: inset 0 -4px 0 #24202f, 0 2px 0 #0c0a12;
+  position: absolute; background: #26242e;
+  box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 2px 0 #000;
 }
 .dp-up    { left: 37px; top: 0;     width: 38px; height: 41px; border-radius: 8px 8px 0 0; }
 .dp-down  { left: 37px; bottom: 0;  width: 38px; height: 41px; border-radius: 0 0 8px 8px; }
 .dp-left  { left: 0;    top: 37px;  width: 41px; height: 38px; border-radius: 8px 0 0 8px; }
 .dp-right { right: 0;   top: 37px;  width: 41px; height: 38px; border-radius: 0 8px 8px 0; }
-.dp-center{ left: 37px; top: 37px;  width: 38px; height: 38px; box-shadow: none; }
+.dp-center{ left: 37px; top: 37px;  width: 38px; height: 38px; box-shadow: inset 0 1px 0 #3c3a46; }
 .dp-arm.on { background: #e8621a; box-shadow: inset 0 -4px 0 #a8420c; }
 .dp-arm::after {
   content: ""; position: absolute; left: 50%; top: 50%;
   width: 0; height: 0; border: 6px solid transparent; transform: translate(-50%, -50%);
 }
-.dp-up::after    { border-bottom-color: #8c84a0; margin-top: -4px; }
-.dp-down::after  { border-top-color: #8c84a0;    margin-top: 4px; }
-.dp-left::after  { border-right-color: #8c84a0;  margin-left: -4px; }
-.dp-right::after { border-left-color: #8c84a0;   margin-left: 4px; }
+.dp-up::after    { border-bottom-color: #8a86a0; margin-top: -4px; }
+.dp-down::after  { border-top-color: #8a86a0;    margin-top: 4px; }
+.dp-left::after  { border-right-color: #8a86a0;  margin-left: -4px; }
+.dp-right::after { border-left-color: #8a86a0;   margin-left: 4px; }
 
 #ab { position: absolute; right: 18px; top: 12px; width: 118px; height: 100px; }
 .round {
   position: absolute; width: 52px; height: 52px; border-radius: 50%;
-  background: #c8401c; box-shadow: inset 0 -5px 0 #8a2a10, 0 3px 0 #0c0a12;
+  background: #26242e; box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 0 0 2px #46341a, 0 3px 0 #000;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 18px; color: #ffe9d6; touch-action: none;
+  font-weight: 800; font-size: 18px; color: #ff9a4a; touch-action: none;
 }
 #btn-a { right: 0; top: 0; }
-#btn-b { left: 0; top: 40px; background: #6a5c8a; box-shadow: inset 0 -5px 0 #463c60, 0 3px 0 #0c0a12; }
+#btn-b { left: 0; top: 40px; color: #8a86a0; box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 0 0 2px #33313c, 0 3px 0 #000; }
 .round.on { transform: translateY(3px); filter: brightness(1.25); box-shadow: inset 0 -2px 0 rgba(0,0,0,.3); }
 
 #sys-btns {
@@ -85,11 +85,11 @@ body { position: fixed; inset: 0; }
 }
 .pill {
   min-width: 46px; height: 22px; padding: 0 7px; border-radius: 11px;
-  background: #2e2a3a; color: #b8b0cc; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  background: #26242e; color: #8a86a0; font-size: 10px; font-weight: 700; letter-spacing: 1px;
   display: flex; align-items: center; justify-content: center; touch-action: none;
-  box-shadow: 0 2px 0 #0c0a12;
+  box-shadow: 0 2px 0 #000;
 }
-.pill.on { background: #4a4460; color: #fff; }
+.pill.on { background: #34313e; color: #fff; }
 
 /* ===== Ввод текста ===== */
 #text-entry {
@@ -100,18 +100,18 @@ body { position: fixed; inset: 0; }
 }
 #text-entry.hidden { display: none; }
 .te-box {
-  width: 300px; background: #f4ecd8; color: #2a2030; border-radius: 4px;
-  border: 4px solid #2a2030; box-shadow: 0 0 0 3px #e8621a; padding: 16px;
+  width: 300px; background: #201d28; color: #dcd8e8; border-radius: 4px;
+  border: 4px solid #6a6a7a; box-shadow: 0 0 0 3px #46341a; padding: 16px;
   text-align: center; -webkit-user-select: text; user-select: text;
 }
 .te-title { font-weight: 800; font-size: 18px; margin-bottom: 12px; }
 #te-input {
   width: 100%; font-size: 22px; padding: 8px 10px; text-align: center;
-  border: 3px solid #2a2030; border-radius: 3px; background: #fff; color: #2a2030;
+  border: 3px solid #46444f; border-radius: 3px; background: #17151d; color: #dcd8e8;
   outline: none; font-weight: 700; -webkit-user-select: text; user-select: text;
 }
-.te-hint { font-size: 12px; color: #7a6c80; margin: 8px 0 12px; min-height: 15px; }
-.te-hint.err { color: #c8401c; font-weight: 700; }
+.te-hint { font-size: 12px; color: #8a86a0; margin: 8px 0 12px; min-height: 15px; }
+.te-hint.err { color: #ff6a5a; font-weight: 700; }
 .te-ok {
   display: inline-block; padding: 10px 28px; background: #e8621a; color: #fff;
   font-weight: 800; border-radius: 3px; box-shadow: inset 0 -4px 0 #a8420c; letter-spacing: 1px;
@@ -125,15 +125,15 @@ body { position: fixed; inset: 0; }
 #code-box.hidden { display: none; }
 #cb-text {
   width: 100%; height: 150px; font: 11px/1.3 ui-monospace, Menlo, monospace; padding: 6px;
-  border: 3px solid #2a2030; border-radius: 3px; background: #fff; color: #2a2030; resize: none;
+  border: 3px solid #46444f; border-radius: 3px; background: #17151d; color: #dcd8e8; resize: none;
   word-break: break-all; -webkit-user-select: text; user-select: text; outline: none;
 }
 .cb-row { display: flex; gap: 10px; justify-content: center; }
-.cb-cancel { background: #7a6c80; box-shadow: inset 0 -4px 0 #4a3e50; }
+.cb-cancel { background: #34313e; color: #8a86a0; box-shadow: inset 0 -3px 0 #101016; }
 
 /* ===== Альбомная ориентация ===== */
 #rotate {
-  position: fixed; inset: 0; background: #14121c; z-index: 50;
+  position: fixed; inset: 0; background: #0b0a10; z-index: 50;
   display: none; align-items: center; justify-content: center; text-align: center;
   font-size: 18px; font-weight: 700; color: #f4ecd8;
 }

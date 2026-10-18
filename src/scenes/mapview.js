@@ -342,7 +342,7 @@ G.scenes.register('mapview', (world) => {
       const c = this.card, p = c.p, r = this.cardRect(), F = G.font, P = G.PAL;
       G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
       let y = r.y + 6;
-      F.draw(ctx, p.name, r.x + 6, y, { color: P.ink }); y += 10;
+      F.draw(ctx, p.name, r.x + 6, y, { color: G.UI.text }); y += 10;
       const cat = { food: 'Еда', shop: 'Лавка', training: 'Тренировки', place: p.b.tplDef.cat === 'clan' ? 'Клан' : 'Место' }[p.kind];
       F.draw(ctx, cat, r.x + r.w - 6, r.y + 6, { align: 'right', color: P.gray });
       if (p.shop) {
@@ -359,8 +359,8 @@ G.scenes.register('mapview', (world) => {
       }
       c.opts.forEach((o, i) => {
         const by = r.btnY + i * 12, sel = i === c.sel;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(r.x + 4, by - 2, r.w - 8, 11); F.draw(ctx, '▶', r.x + 7, by, { color: P.orange }); }
-        F.draw(ctx, o.label, r.x + 16, by, { color: sel ? P.ink : P.gray });
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, by - 2, r.w - 8, 11); F.draw(ctx, '▶', r.x + 7, by, { color: P.orange }); }
+        F.draw(ctx, o.label, r.x + 16, by, { color: sel ? G.UI.selText : G.UI.dim });
       });
     },
   };
