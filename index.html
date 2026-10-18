@@ -222,7 +222,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { version: '76c663ae', date: '2026-10-18 19:22', debug: false };
+const BUILD = { version: 'f4918ee8', date: '2026-10-18 19:32', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -1260,7 +1260,6 @@ G.gfx = {
 // Светотень V9: «богатый пиксель-арт» кодом — без готовых картинок.
 // Свет всегда сверху-слева. Плавность — ступенями оттенков и упорядоченным дизерингом (матрица Байера 4×4)
 // на «тонких» пикселях холста (HI = 2), поэтому переходы мягкие, а пиксель остаётся чётким.
-//   ramp(col, n)        — ступени оттенка: тени холоднее (к фиолетовому), света теплее
 //   grad(c, …)          — дизерный градиент в прямоугольник холста (вертикальный / горизонтальный / радиальный)
 //   light(c, o)         — объём по силуэту готового спрайта: блик на кромках к свету, тень у дальних, затемнение низа
 //   shadow(ctx, …)      — мягкая статичная тень-эллипс (ядро + полутень с дизерингом)
@@ -1280,13 +1279,6 @@ G.shade = (() => {
   // k < 0 — тень (холоднее), k > 0 — свет (теплее); |k| ≤ 1
   const tone = (c, k) => (k < 0 ? mix(rgb(c), DARK, -k) : mix(rgb(c), LITE, k));
   const toneHex = (c, k) => hex(tone(c, k));
-  // ступени оттенка от тёмной к светлой; базовый цвет — в середине
-  function ramp(c, n = 5, span = 0.55) {
-    const out = [], m = (n - 1) / 2;
-    for (let i = 0; i < n; i++) out.push(toneHex(c, ((i - m) / m) * span * (i < m ? 1 : 0.8)));
-    return out;
-  }
-
   // ---------- доступ к пикселям «подробного» холста ----------
   // r = [X0, Y0, X1, Y1] в тонких px — читать только этот кусок (чтение всего холста дорогое)
   function pix(c, r) {
@@ -1511,7 +1503,7 @@ G.shade = (() => {
   // плотность внутри прямоугольника с мягким краем pen
   const box = (x, y, x0, y0, x1, y1, pen) => Math.max(0, Math.min(1, Math.min(x - x0, x1 - x, y - y0, y1 - y) / pen));
 
-  return { rgb, hex, mix, tone, toneHex, ramp, bayer, pix, grad, tint, defer, flush, light, ball, shadow, shadowImg, soft, box, DARK, LITE };
+  return { rgb, mix, tone, toneHex, bayer, pix, grad, tint, defer, flush, light, ball, shadow, soft, box };
 })();
 
 
@@ -3589,7 +3581,7 @@ G.icons = (() => {
     ctx.drawImage(c, Math.round(x + (w - s) / 2), Math.round(y + (h - s) / 2), s, s);
     return true;
   }
-  return { canvas, draw, raster, fill, flat, outline, shapes: { E, R, RR, PO, LN, OR, AND, SUB, ROT }, ids: () => Object.keys(DEF) };
+  return { canvas, draw, raster, fill, flat, outline, shapes: { E, R, RR, PO, LN, OR, AND, SUB, ROT } };
 })();
 
 

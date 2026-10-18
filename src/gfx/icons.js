@@ -348,5 +348,5 @@ G.icons = (() => {
     ctx.drawImage(c, Math.round(x + (w - s) / 2), Math.round(y + (h - s) / 2), s, s);
     return true;
   }
-  return { canvas, draw, raster, fill, flat, outline, shapes: { E, R, RR, PO, LN, OR, AND, SUB, ROT }, ids: () => Object.keys(DEF) };
+  return { canvas, draw, raster, fill, flat, outline, shapes: { E, R, RR, PO, LN, OR, AND, SUB, ROT } };
 })();

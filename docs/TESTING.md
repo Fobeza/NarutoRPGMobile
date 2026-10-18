@@ -64,7 +64,6 @@ node tools/node/golden.js > /tmp/after.txt     # после; diff должен �
 | `python3 tools/render_chars.py /tmp/c.png [id,id]` | Листы спрайтов и портреты персонажей |
 | `python3 tools/balance.py [N]` | Симуляция боёв (N боёв на ячейку) → `docs/BALANCE.md` и `docs/balance.csv`; нужен Node, браузер не запускает |
 | `python3 tools/check_node.py` | Все проверки без браузера (~12 с) |
-| `python3 tools/render_houses.py`, `shot_spot.py` | Рендер домов, снимок конкретной точки карты |
 
 ## Отладка в браузере
 
