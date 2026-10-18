@@ -35,13 +35,16 @@ G.tiles = (() => {
   // V8, волна 5: бесшовные текстуры поверхностей 64×64 из ассетов. Текстура семплится
   // кусками 16×16 по клеткам ((tx%4, ty%4)) — период 64 px, швов нет по построению.
   // Нет текстуры или ассеты выключены (?assets=0) — работаем процедурным атласом, как раньше.
+  // Текстурами закрыты структурные поверхности (полы, стены, камень, мощение):
+  // у них зеркальная бесшовность не читается. Трава/цветы/мох, дорога, тропа и земля
+  // остаются процедурными: там зеркальность видна «бабочкой», а дорога с листа
+  // вышла перспективной вместо плоской.
   const TEXID = {
     FLOOR: 'tex_floor', PLANKS: 'tex_planks', TATAMI: 'tex_tatami', MAT: 'tex_mat',
-    TILEFLOOR: 'tex_tilefloor', DUSTFLOOR: 'tex_dustfloor', GRASS: 'tex_grass', GRASS2: 'tex_grass2',
-    FLOWERS: 'tex_flowers', PATH: 'tex_path', SAND: 'tex_sand', STONE: 'tex_stone',
-    DARKGRASS: 'tex_darkgrass', DIRT: 'tex_dirt', MAINROAD: 'tex_mainroad', DARKSTONE: 'tex_darkstone',
-    COBBLE: 'tex_cobble', BRICK: 'tex_brick', GRAVEL: 'tex_gravel', CLOVER: 'tex_clover',
-    PLAZA: 'tex_plaza', MOSS: 'tex_moss', IWALL: 'tex_iwall', VWALL: 'tex_vwall',
+    TILEFLOOR: 'tex_tilefloor', DUSTFLOOR: 'tex_dustfloor',
+    SAND: 'tex_sand', STONE: 'tex_stone', DARKSTONE: 'tex_darkstone',
+    COBBLE: 'tex_cobble', BRICK: 'tex_brick', GRAVEL: 'tex_gravel',
+    IWALL: 'tex_iwall', VWALL: 'tex_vwall',
   };
   const TEXBYID = {};
   for (const k of Object.keys(TEXID)) TEXBYID[ID[k]] = TEXID[k];
@@ -51,7 +54,7 @@ G.tiles = (() => {
     if (!aid || !G.assets || !G.assets.ready(aid)) return null;
     if (!texc) texc = {};
     if (!texc[id]) {
-      const cv = G.gfx.canvas(64, 64);
+      const cv = G.gfx.canvas(64, 64, true);   // lo: 1× — семплирование texBlit идёт в логических px
       cv.getContext('2d').drawImage(G.assets.img(aid), 0, 0, 64, 64);
       texc[id] = cv;
     }
@@ -302,7 +305,7 @@ G.tiles = (() => {
   }
 
   function build() {
-    atlas = G.gfx.canvas(T * COUNT, T * 2);
+    atlas = G.gfx.canvas(T * COUNT, T * 2, true);   // lo: 1× — drawImage(atlas, …) берёт источник в логических px
     const c = atlas.getContext('2d');
     const fns = [
       (x) => grass(c, x, 0, 1, false), (x) => grass(c, x, 0, 2, true), (x) => flowers(c, x, 0), (x) => path(c, x, 0),
@@ -343,11 +346,12 @@ G.tiles = (() => {
 
   function blendEdges(ctx, map, tx, ty, x, y, id) {
     const r = RANK[id]; if (!r) return;
+    if (texCanvas(id)) return;   // текстуры не смешиваем с процедурными кромками
     const nbs = [[0, -1, 0], [0, 1, 1], [-1, 0, 2], [1, 0, 3]];
     const got = [0, 0, 0, 0];
     for (const [dx, dy, side] of nbs) {
       const nb = map.get(tx + dx, ty + dy), rn = RANK[nb];
-      if (!rn || rn <= r || nb === id) continue;
+      if (!rn || rn <= r || nb === id || texCanvas(nb)) continue;
       got[side] = nb;
       for (let i = 0; i < 16; i++) {
         const g = (side < 2 ? tx : ty) * 16 + i, line = side < 2 ? ty + dy : tx + dx;
@@ -399,7 +403,7 @@ G.tiles = (() => {
     const hh = (i, s) => H(tx * 16 + i, ty, s);
 
     // крупные пятна света и тени: земля перестаёт быть однотонной заливкой
-    if (map.outdoor && G.mapgen && (GRASSY.has(id) || id === ID.PATH || id === ID.DIRT)) {
+    if (map.outdoor && G.mapgen && (GRASSY.has(id) || ROADY.has(id))) {
       const grass = GRASSY.has(id);
       for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
         const n = G.mapgen.noise(tx * 4 + i, ty * 4 + j, 77, grass ? 9 : 5);
