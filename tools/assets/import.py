@@ -222,20 +222,44 @@ def encode_png(w, h, px, colors):
 # ---------- главный проход ----------
 
 
+def parse_data_js(text):
+    """Данные из собранного assets.js или index.html: ключ → data URI (для накопления и восстановления)."""
+    import re as _re
+    return dict(_re.findall(r"^    '([^']+)': '(data:image/png;base64,[A-Za-z0-9+/=]+)',$", text, _re.M))
+
+
 def main():
+    argv = [a for a in sys.argv[1:] if not a.startswith("--")]
+    merge_from = None
+    if "--merge-from" in sys.argv:
+        merge_from = sys.argv[sys.argv.index("--merge-from") + 1]
+        argv = [a for a in argv if a != merge_from]
     man = json.load(open(MAN, encoding="utf-8"))
     pal = json.load(open(PALF, encoding="utf-8"))
     pal_rgb = [tuple(int(v[i:i + 2], 16) for i in (1, 3, 5)) for v in pal.values()]
-    only = set(sys.argv[1:])
+    only = set(argv)
     entries = [a for a in man["assets"] if not only or a["id"] in only]
+    # накопление: то, что не перегенерируется сейчас, берём из прошлой сборки
+    prev = {}
+    if os.path.exists(OUTJS):
+        prev.update(parse_data_js(open(OUTJS, encoding="utf-8").read()))
+    if merge_from:
+        prev.update(parse_data_js(open(merge_from, encoding="utf-8").read()))
     data, errs, total = {}, [], 0
 
     for a in entries:
         if a.get("status") == "отклонён":
             continue
+        key = a.get("use_as", a["id"])
         src = os.path.join(ROOT, a["file"])
         if not os.path.exists(src):
-            errs.append(f"{a['id']}: нет файла {a['file']}")
+            if key in prev:
+                data[key] = prev[key]
+                a["status"] = "импортирован"
+                a["source"] = "прежняя сборка (негатив утерян, взят из бандла)"
+                print(f"  {a['id']:14s} негатива нет — оставлен из прежней сборки ({len(prev[key]) // 1024} КБ b64)")
+                continue
+            errs.append(f"{a['id']}: нет файла {a['file']} и нет в прежней сборке")
             continue
         tw, th = a["target"]
         w, h, px = decode_png(src)
@@ -273,6 +297,10 @@ def main():
         print("ОШИБКИ:")
         for e in errs:
             print("  ✘", e)
+    for k in prev:                      # ключи, не обработанные в этом прогоне, не теряем
+        if k not in data:
+            data[k] = prev[k]
+            print(f"  {k}: не перегенерирован в этом прогоне — оставлен из прежней сборки")
     json.dump(man, open(MAN, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     lines = ["// Ассеты V8: сгенерировано tools/assets/import.py — НЕ ПРАВИТЬ РУКАМИ.",
              "// Источники, промпты и статусы: tools/assets/manifest.json; план и правила: V8.md.",

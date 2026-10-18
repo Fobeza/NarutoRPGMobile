@@ -565,6 +565,8 @@
   // портрет 32×32 (голова и плечи): рендер на удвоенной сетке и обрезка
   function portrait(id) {
     if (PORTRAITS[id]) return PORTRAITS[id];
+    const got = G.assets.canvas('portrait_' + id, 32, 32);   // V8: сгенерированный портрет (64×64 физ. в холст 32×32 лог.); нет — процедурный
+    if (got) return (PORTRAITS[id] = got);
     const def = G.chars.DEFS[id], k = 3;
     const B = renderFrame(def, id, 'down', 0, k);
     const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d');
@@ -581,6 +583,9 @@
     PORTRAITS[id] = c;
     return c;
   }
+
+  // V8: ассеты могли догрузиться после того, как портрет закэшировался процедурным — сбросить такие
+  G.assets.onReady(() => { for (const k in PORTRAITS) if (!PORTRAITS[k]._asset) delete PORTRAITS[k]; });
 
   Object.assign(G.chars, { sheet, draw, portrait, renderFrame, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
 })();
