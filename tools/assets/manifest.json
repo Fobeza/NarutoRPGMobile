@@ -1,6 +1,6 @@
 {
  "_comment": "Реестр ассетов V8. План и правила — в V8.md. Промпты храним дословно: по ним любой ассет воспроизводится. Статусы: план → сгенерирован → принят → импортирован → в игре / отклонён.",
- "style_prefix": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette.",
+ "style_prefix": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette.",
  "budget_kb": 200,
  "assets": [
   {
@@ -15,13 +15,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js: фон всей ареной области вместо полос неба, drawFar и полосы земли",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop for a ninja village academy courtyard on a bright sunny morning. Very low horizon placed in the bottom tenth of the frame, the bottom strip is flat plain sandy training ground with no detail. Large open light blue sky (#8ac8f0 to #cfe8f8) with a few small flat pixel clouds occupying the upper 60 percent. Distant scenery kept low, no taller than 45 percent of the frame height: a wooden ninja academy building with red tile roofs (#b84a3a, #a8683a), a low wooden fence, two round green trees (#5aa046, #3e7a34, #2e6a32) and a couple of wooden training posts far away. Warm Konoha colors, dirt path tone #d8b67a.",
-   "png_bytes": 2723,
-   "b64_bytes": 3632,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a ninja village academy courtyard in clear morning light: very low horizon in the bottom tenth of the frame, bottom strip is flat packed sandy ground with sparse grass tufts and pebbles; upper half pale blue sky (#8ac8f0 to #cfe8f8) with long serious cloud banks; midground: weathered wooden academy house with red tile roof (#b84a3a, #8a3226) and plank walls (#a8683a, #7a4626), paper lantern by the door, old wooden fence with uneven posts, two irregular realistic trees in four greens (#7cc05a, #5aa046, #3e7a34, #2e6a32), wooden training posts with rope wraps, small stone lantern; all scenery kept under 45 percent of frame height.",
+   "png_bytes": 14128,
+   "b64_bytes": 18840,
    "colors": 33,
-   "maxdist": 2285,
+   "maxdist": 2256,
    "alpha_pct": 0,
-   "sha1": "bf36d0523d"
+   "sha1": "56566a196b"
   },
   {
    "id": "arena_field",
@@ -35,13 +35,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop for an open grassy ninja training field in bright daylight. Very low horizon in the bottom tenth, bottom strip is flat plain grass with no detail. Big light blue sky (#8ac8f0 to #d8eef8) with a few flat pixel clouds on the upper 60 percent. Distant scenery low, under 45 percent of frame height: a dark green forest line (#2e6a32, #1e4a26), a few bushes, one wooden target post and a grey boulder (#9a9aa8, #6a6a7a). Grass tones #7cb05a and #5aa046, warm sunlight.",
-   "png_bytes": 1861,
-   "b64_bytes": 2484,
-   "colors": 28,
-   "maxdist": 2612,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of an open ninja training field in clear morning light: very low horizon in the bottom tenth, bottom strip flat worn grass ground with sparse tufts and pebbles; upper half pale blue sky (#8ac8f0 to #d8eef8) with long serious cloud banks; midground: dark irregular forest line in ink-hatched greens (#2e6a32, #1e4a26), a weathered wooden target post with rope wraps, one mossy grey boulder (#9a9aa8, #6a6a7a), scattered grass tufts and worn dirt patches in grass tones (#7cb05a, #5aa046); all scenery kept under 45 percent of frame height.",
+   "png_bytes": 10717,
+   "b64_bytes": 14292,
+   "colors": 26,
+   "maxdist": 2287,
    "alpha_pct": 0,
-   "sha1": "f71d04e7b8"
+   "sha1": "6c198410be"
   },
   {
    "id": "arena_forest",
@@ -55,13 +55,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop inside a dense green forest at daytime, hazy greenish light between trunks (#4a7a5a to #8ab08a sky visible through the canopy). Very low horizon in the bottom tenth, bottom strip is flat plain dark mossy ground with no detail. Tall dark green tree trunks (#7a4a2a, #5a321a) and layered foliage silhouettes (#2e6a32, #1e4a26, #3e7a34) kept in the lower two thirds, canopy crowns not higher than 45 percent of frame height, a few pale light shafts. Deep forest mood, cool greens, no foreground objects.",
-   "png_bytes": 8153,
-   "b64_bytes": 10872,
-   "colors": 20,
-   "maxdist": 2002,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop inside an old dense forest at daytime: hazy green light between trunks (#4a7a5a to #8ab08a); very low horizon in the bottom tenth, bottom strip flat dark mossy ground with roots and stones; tall weathered tree trunks with bark hatching (#7a4a2a, #5a321a), layered canopy as dense irregular brush clusters in four greens (#7cc05a, #5aa046, #3e7a34, #1e4a26), a few pale light shafts, ink-hatched undergrowth; clear readable middle space between trunks, canopy mass in the upper third.",
+   "png_bytes": 21605,
+   "b64_bytes": 28808,
+   "colors": 25,
+   "maxdist": 1395,
    "alpha_pct": 0,
-   "sha1": "5b3a5dfdc1"
+   "sha1": "f5ad0fc82f"
   },
   {
    "id": "arena_night",
@@ -75,13 +75,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a dark forest at night. Very low horizon in the bottom tenth, bottom strip is flat plain very dark green ground with no detail. Huge night sky in deep indigo (#0e0c26 to #2a2a4a) filling the upper 60 percent with small single pixel stars and a pale round moon (#f8f0d0). Low silhouettes of pine trees and bushes in near black green (#141e1a, #1e2a1a), a few tiny yellow green firefly dots. Cold moonlit mood, high contrast, no foreground objects.",
-   "png_bytes": 1383,
-   "b64_bytes": 1844,
-   "colors": 17,
-   "maxdist": 1915,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures mossy stone, weathered bark, restrained earthy Konoha palette of about 32 colors, cold directional moonlight with hard cast shadows and deep two-step shades, long thin cloud bands with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a dark forest at night: very low horizon in the bottom tenth, bottom strip flat very dark ground with sparse stones; huge deep indigo sky (#0e0c26 to #2a2a4a) with single pixel stars and a pale round moon (#f8f0d0); low pine and bush silhouettes in near-black greens (#141e1a, #1e2a1a) with ink-hatched edges, a few tiny yellow-green firefly dots; cold moonlight, hard shadows, high contrast.",
+   "png_bytes": 5654,
+   "b64_bytes": 7540,
+   "colors": 16,
+   "maxdist": 1060,
    "alpha_pct": 0,
-   "sha1": "d62dda154c"
+   "sha1": "4f539eec9b"
   },
   {
    "id": "arena_river",
@@ -95,13 +95,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a river bank in daytime. Very low horizon in the bottom tenth, bottom strip is flat plain grass and pebbles with no detail. Bright sky (#8ac8f0 to #d8eef8) with flat pixel clouds on the upper half. A horizontal blue river band (#3a8ad0, #2a62a0, highlights #7ac0f0) running across the middle distance, a small stone bridge or stepping stones, grey rocks (#9a9aa8), green banks and a low tree line (#3e7a34, #2e6a32). Scenery kept under 45 percent of frame height.",
-   "png_bytes": 4053,
-   "b64_bytes": 5404,
-   "colors": 25,
-   "maxdist": 2557,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a river bank in clear daylight: very low horizon in the bottom tenth, bottom strip flat grass and pebble ground; pale blue sky (#8ac8f0 to #d8eef8) with long serious cloud banks; a horizontal river band across the middle distance in ink-lined water (#3a8ad0, #2a62a0) with highlight dashes (#7ac0f0), an old stone bridge with mossy blocks, grey boulders (#9a9aa8, #6a6a7a), grassy banks and a low ink-hatched tree line (#3e7a34, #2e6a32); all scenery kept under 45 percent of frame height.",
+   "png_bytes": 13108,
+   "b64_bytes": 17480,
+   "colors": 26,
+   "maxdist": 1593,
    "alpha_pct": 0,
-   "sha1": "31ebf6e7b0"
+   "sha1": "e0a9ffec82"
   },
   {
    "id": "arena_street",
@@ -115,13 +115,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no signs, no writing on buildings, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a Japanese style ninja village street at golden hour sunset. Very low horizon in the bottom tenth, bottom strip is flat plain packed dirt road (#b8945a) with no detail. Warm orange sky (#f0b070 to #f8d8a8) with flat pixel clouds on the upper half. Low row of distant wooden shop houses with red tile roofs (#b84a3a, #8a3226), timber walls (#a8683a, #7a4626), paper lanterns as small warm yellow dots (#ffd23a), one tree silhouette. Buildings under 45 percent of frame height, no people, empty street.",
-   "png_bytes": 5542,
-   "b64_bytes": 7392,
-   "colors": 21,
-   "maxdist": 886,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a ninja village street at muted sunset: very low horizon in the bottom tenth, bottom strip flat packed dirt road (#b8945a) with worn texture; restrained warm sky (#f0b070 to #f8d8a8); a low row of weathered wooden shop houses with uneven red tile roofs (#b84a3a, #8a3226), plank and plaster walls (#a8683a, #7a4626), paper lanterns as small warm glows (#ffd23a), one bare-branched tree silhouette, ink-hatched shadows stretching across the road; buildings kept under 45 percent of frame height.",
+   "png_bytes": 11100,
+   "b64_bytes": 14800,
+   "colors": 22,
+   "maxdist": 920,
    "alpha_pct": 0,
-   "sha1": "073a586f96"
+   "sha1": "cfe2c80833"
   },
   {
    "id": "arena_ring",
@@ -135,13 +135,13 @@
    "crop_y": 0.5,
    "status": "импортирован",
    "insert": "scenes/battle.js",
-   "prompt": "Retro 16-bit pixel art video game background, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no crowd, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a tournament fighting arena in a ninja village on a bright day. Very low horizon in the bottom tenth, bottom strip is flat plain sandy ring floor (#d8b67a) with no detail. Bright blue sky (#8ac8f0 to #e8f4f8) with flat pixel clouds on the upper 55 percent. Low wooden palisade fence around the ring, distant village rooftops in red tile (#b84a3a) and green hills, two tall banner poles with plain orange and blue cloth flags (#e8621a, #2a4a9a), empty wooden spectator stands with no people. Everything kept under 45 percent of frame height.",
-   "png_bytes": 5671,
-   "b64_bytes": 7564,
-   "colors": 40,
-   "maxdist": 2682,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (cracked wood planks, uneven roof tiles, mossy stone), restrained earthy Konoha palette of about 32 colors, dramatic directional sunlight with hard cast shadows and deep two-step shades, long flowing cloud banks with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky and ground transitions; gritty grounded serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Wide landscape composition, side view, empty battle stage backdrop of a tournament fighting arena in clear daylight: very low horizon in the bottom tenth, bottom strip flat packed sandy ring floor (#d8b67a) with worn texture; pale blue sky (#8ac8f0 to #e8f4f8) with long serious cloud banks; low weathered wooden palisade around the ring, empty wooden spectator stands with ink-hatched planks, distant village rooftops in red tile and ink-hatched green hills, two tall banner poles with plain orange and blue cloth flags (#e8621a, #2a4a9a); everything kept under 45 percent of frame height.",
+   "png_bytes": 11215,
+   "b64_bytes": 14956,
+   "colors": 32,
+   "maxdist": 1814,
    "alpha_pct": 0,
-   "sha1": "1a3467b327"
+   "sha1": "369a5074a8"
   },
   {
    "id": "title_night",
@@ -156,13 +156,13 @@
    "use_as": "title",
    "status": "импортирован",
    "insert": "scenes/title.js: buildBg() вместо процедурного ночного фона",
-   "prompt": "Retro 16-bit pixel art video game title screen illustration, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no title, no logo, no watermark, no characters, no people, no UI, no frame, no vignette. Vertical portrait composition for a tall narrow mobile screen. Night scene of a hidden leaf ninja village: deep indigo to purple sky gradient in flat bands (#1a1430, #2c2048, #4a3050, #6a3a4a) filling the top half with single pixel stars and a large pale moon (#f8f0d0) high on the right. Below it a huge dark rock cliff with four giant carved face silhouettes of past village leaders, weathered brown grey stone (#4a3a3a, #5a4848, #3a2c2c). At the bottom, dense clustered village rooftops in dark red tile (#8a3226, #b84a3a) with tiny warm yellow window lights (#ffd27a) and thin chimney smoke. Solemn warm mood, no foreground characters.",
-   "png_bytes": 10564,
-   "b64_bytes": 14088,
-   "colors": 27,
-   "maxdist": 975,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures (mossy stone, uneven roof tiles), restrained earthy Konoha palette of about 32 colors, cold directional moonlight with hard cast shadows and deep two-step shades, long thin cloud bands with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky transitions; gritty grounded solemn mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no title, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Vertical portrait composition for a tall narrow mobile screen. Night scene of a hidden leaf ninja village: deep indigo to purple sky in flat bands (#1a1430, #2c2048, #4a3050, #6a3a4a) with single pixel stars and a large pale moon (#f8f0d0) high on the right; below it a huge rock cliff with four giant carved faces of past village leaders, stone rendered with ink hatching and weathered tones (#4a3a3a, #5a4848, #3a2c2c); at the bottom dense clustered village rooftops in dark red tile (#8a3226, #b84a3a) with tiny warm window lights (#ffd27a) and thin chimney smoke; no foreground characters.",
+   "png_bytes": 22934,
+   "b64_bytes": 30580,
+   "colors": 25,
+   "maxdist": 1196,
    "alpha_pct": 0,
-   "sha1": "e19e5b5242"
+   "sha1": "d8bf0a5bbd"
   },
   {
    "id": "title_dusk",
@@ -176,13 +176,13 @@
    "crop_y": 1.0,
    "status": "импортирован",
    "insert": "кандидат на титул (запасной вариант, в игру не подключён)",
-   "prompt": "Retro 16-bit pixel art video game title screen illustration, crisp square pixels, limited palette of about 24 colors, clean readable silhouettes, flat colors with simple 2-tone shading, no anti-aliasing, no smooth gradients, no text, no letters, no title, no logo, no watermark, no characters, no people, no UI, no frame, no vignette. Vertical portrait composition for a tall narrow mobile screen. Sunset over a hidden leaf ninja village: warm orange and pink sky in flat bands (#e8621a, #f0a060, #ffd29a, #f8d8a8) filling the top half with a big low red sun and a few flat pixel clouds. In the middle distance a giant rock cliff with carved leader faces as a dark warm silhouette (#6a3a2a, #4a2a16). At the bottom, layered village rooftops in dark red tile (#8a3226) and timber houses (#7a4626), thin smoke from chimneys, a few small birds as single dark pixels, forest hills behind (#3e7a34, #2e6a32). Nostalgic hopeful mood, no foreground characters.",
-   "png_bytes": 11121,
-   "b64_bytes": 14828,
-   "colors": 34,
-   "maxdist": 1320,
+   "prompt": "Retro pixel art video game background in serious seinen manga ink style: crisp square pixels with precise confident ink linework, weathered realistic textures weathered realistic textures, restrained earthy Konoha palette of about 32 colors, dramatic directional low sunset light with hard cast shadows and deep two-step shades, long thin cloud bands with sharp ink edges (no spirals, no cartoon curls), foliage as dense irregular brush clusters with ink hatching, subtle screentone-like 1 pixel dither only on sky transitions; gritty grounded nostalgic serious mood, realistic proportions, no cute roundness, no exaggerated shapes, no anti-aliasing blur, no smooth gradients, no text, no letters, no watermark, no logo, no title, no logo, no characters, no people, no animals, no UI, no frame, no vignette. Vertical portrait composition for a tall narrow mobile screen. Sunset over a hidden leaf ninja village: restrained warm sky in flat bands (#e8621a, #f0a060, #ffd29a, #f8d8a8) with a big low red sun and long thin cloud bands; in the middle distance a giant rock cliff with carved leader faces as a dark warm ink-hatched silhouette (#6a3a2a, #4a2a16); at the bottom layered village rooftops in dark red tile (#8a3226) and timber houses (#7a4626), thin chimney smoke, a few small birds as single dark pixels, ink-hatched forest hills behind (#3e7a34, #2e6a32); no foreground characters.",
+   "png_bytes": 26805,
+   "b64_bytes": 35740,
+   "colors": 29,
+   "maxdist": 1117,
    "alpha_pct": 0,
-   "sha1": "550bda1ab4"
+   "sha1": "6d2d2ead6e"
   },
   {
    "id": "icon_leaf",
@@ -197,13 +197,13 @@
    "chroma": "#ff00ff",
    "status": "импортирован",
    "insert": "scenes/title.js: эмблема над логотипом",
-   "prompt": "Retro 16-bit pixel art game icon, crisp square pixels, limited palette of 6 colors, flat colors with simple 2-tone shading, no anti-aliasing, no text, no letters, no watermark, no frame. Single centered object on a solid flat pure magenta background (#ff00ff) for chroma key: a stylized green leaf emblem with a spiral swirl cut into it, the symbol of a hidden leaf ninja village, thick dark green outline (#1e4a26), leaf body in bright green (#5aa046) with a lighter highlight (#7cc05a), small stem at the top. Object fills about 80 percent of the frame, perfectly centered, symmetrical, clean pixel edges, nothing else in the image.",
-   "png_bytes": 916,
-   "b64_bytes": 1224,
-   "colors": 9,
-   "maxdist": 1419,
-   "alpha_pct": 56,
-   "sha1": "5eab203e0a"
+   "prompt": "Retro pixel art game icon in serious seinen manga ink style: crisp square pixels, precise confident ink linework, limited palette of 6 colors, flat colors with two-tone shading and ink hatching on the shadow side, no anti-aliasing, no text, no letters, no watermark, no frame. Single centered object on a solid flat pure magenta background (#ff00ff) for chroma key: a stylized green leaf emblem with a spiral swirl cut into it, the symbol of a hidden leaf ninja village, thick dark ink-green outline (#1e4a26), leaf body in muted green (#5aa046) with lighter highlight (#7cc05a) and ink-hatched shade, small stem at the top; object fills about 80 percent of the frame, perfectly centered, clean pixel edges, nothing else in the image.",
+   "png_bytes": 1162,
+   "b64_bytes": 1552,
+   "colors": 13,
+   "maxdist": 1281,
+   "alpha_pct": 41,
+   "sha1": "2a785b185b"
   }
  ]
 }
