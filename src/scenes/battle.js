@@ -638,6 +638,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   // ── сцена ──
   const S = {
     name: 'battle', P, E, opts, timeline: () => timeline(),
+    touch: () => ({ back: state === 'menu' && menu !== 'main' && menu !== 'momentPick' }),   // «Назад» в подменю на сенсорном экране
     get state() { return state; },
     // для автотеста
     debugWin() { result = { win: true }; finish(); },

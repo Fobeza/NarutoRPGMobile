@@ -9,10 +9,11 @@ G.scenes.register('fishing', (opts, onCatch, onClose) => {
   const S = {
     name: 'fishing',
     get phase() { return phase; },
+    touch: () => ({ back: phase === 'ready' || phase === 'result' }),
     finishNow(id) { fishId = id || 'fish'; end(true); },   // для автотеста
     update(dt) {
       t += dt;
-      const A = In.pressed('a') || !!In.tapNow, hold = In.held('a') || !!In.tapNow;
+      const A = In.pressed('a') || !!In.tapNow, hold = In.held('a') || !!In.tapNow || In.tapHeld > 0;
       if (In.pressed('b') && (phase === 'ready' || phase === 'result')) { AU.sfx.cancel(); G.scenes.pop(); onClose && onClose(); return; }
       if (phase === 'ready') { if (A && t > 0.2) { if (opts.left() <= 0) { msg = 'Рыба больше не клюёт сегодня.'; return; } phase = 'wait'; t = 0; wait = 1.5 + Math.random() * 4; AU.sfx.blip(); msg = ''; } return; }
       if (phase === 'wait') {
