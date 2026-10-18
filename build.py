@@ -20,7 +20,7 @@ JS_FILES = [
     # ── движок: экран, ввод, звук, сцены, сохранения ──
     "engine/core.js", "engine/screen.js", "engine/input.js", "engine/audio.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
-    "gfx/palette.js", "gfx/font.js", "gfx/sprites.js",
+    "gfx/palette.js", "gfx/font.js", "gfx/sprites.js", "gfx/assets.js",
     "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",
     "gfx/tiles.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──

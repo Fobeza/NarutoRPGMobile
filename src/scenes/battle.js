@@ -900,10 +900,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     // базовое приближение арены: на широких экранах бойцы крупнее (позиции 0–4 остаются в кадре)
     const bz = clamp((W - 16) / (4 * SP + 70), 1, 1.6), bzy = L.groundY + 6;
     ctx.save(); if (bz > 1.01) { ctx.translate(W / 2, bzy); ctx.scale(bz, bz); ctx.translate(-W / 2, -bzy); }
-    const bands = 6; for (let i = 0; i < bands; i++) { ctx.fillStyle = i < bands / 2 ? A.sky[0] : A.sky[1]; ctx.fillRect(0, L.ar + i * (L.arH / bands) * 0.7, W, L.arH); }
-    ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let i = 0; i < 4; i++) { const cx = ((i * 83 + t * (3 + i)) % (W + 60)) - 30, cy = L.ar + 10 + ((i * 29) % Math.max(20, L.arH - 90)); ctx.fillRect(cx, cy, 26, 5); ctx.fillRect(cx + 5, cy - 3, 14, 3); }
-    drawFar(ctx, L, W);
-    ctx.fillStyle = A.ground; ctx.fillRect(0, L.groundY - 4, W, L.arH);
+    // V8: фон арены — сгенерированный ассет (tools/assets/manifest.json). Нет картинки,
+    // она не готова или ассеты выключены (?assets=0) — прежняя процедурная отрисовка.
+    if (!G.assets.draw(ctx, 'arena_' + (opts.terrain || 'field'), 0, L.ar, W, L.arH)) {
+      const bands = 6; for (let i = 0; i < bands; i++) { ctx.fillStyle = i < bands / 2 ? A.sky[0] : A.sky[1]; ctx.fillRect(0, L.ar + i * (L.arH / bands) * 0.7, W, L.arH); }
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; for (let i = 0; i < 4; i++) { const cx = ((i * 83 + t * (3 + i)) % (W + 60)) - 30, cy = L.ar + 10 + ((i * 29) % Math.max(20, L.arH - 90)); ctx.fillRect(cx, cy, 26, 5); ctx.fillRect(cx + 5, cy - 3, 14, 3); }
+      drawFar(ctx, L, W);
+      ctx.fillStyle = A.ground; ctx.fillRect(0, L.groundY - 4, W, L.arH);
+    }
     ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let i = 0; i < 5; i++) ctx.fillRect(X(i) - 14, L.groundY + 2, 28, 3);
     if (A.ring) { const r0 = Math.max(4, X(0) - 20), r1 = Math.min(W - 4, X(4) + 20); ctx.fillStyle = '#a8683a'; ctx.fillRect(r0, L.groundY + 6, r1 - r0, 2); ctx.fillStyle = '#c8401c'; ctx.fillRect(r0, L.groundY - 4, 2, 12); ctx.fillRect(r1 - 2, L.groundY - 4, 2, 12); }
     for (const [pos, kind] of Object.entries(A.obj)) drawObj(ctx, kind, X(+pos), L.groundY, t);

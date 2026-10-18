@@ -19,6 +19,24 @@ class CanvasRenderingContext2D {}
 const NOOP = function () {};
 CanvasRenderingContext2D.prototype.drawImage = NOOP;
 
+// V8: заглушка Image для ассетов (data URI). Размеры читаем из заголовка PNG,
+// onload вызываем сразу — в Node картинка «готова» мгновенно, как и в браузере для data:.
+class ImageStub {
+  constructor() { this.complete = false; this.width = this.height = this.naturalWidth = this.naturalHeight = 0; this.onload = null; }
+  set src(v) {
+    this._src = v;
+    const m = /^data:image\/png;base64,/.exec(v || '');
+    if (m) {
+      const b = Buffer.from(v.slice(m[0].length), 'base64');
+      this.width = this.naturalWidth = b.readUInt32BE(16);
+      this.height = this.naturalHeight = b.readUInt32BE(20);
+    }
+    this.complete = true;
+    if (this.onload) this.onload();
+  }
+  get src() { return this._src; }
+};
+
 let uid = 0;
 function makeCtx(canvas, log) {
   const base = Object.create(CanvasRenderingContext2D.prototype);
@@ -134,7 +152,7 @@ g.name = '';
 def('btoa', (s) => Buffer.from(s, 'binary').toString('base64'));
 def('atob', (s) => Buffer.from(s, 'base64').toString('binary'));
 def('getComputedStyle', () => ({ getPropertyValue: () => '' }));
-def('Image', function () { return makeEl('img'); });
+def('Image', ImageStub);   // V8: data URI «готовы» сразу, размеры — из заголовка PNG
 def('AudioContext', undefined); def('webkitAudioContext', undefined);   // звук не нужен
 if (!g.performance || !g.performance.now) def('performance', { now: () => Date.now() });
 
@@ -191,5 +209,8 @@ function frames(scene, n = 1, ctx = null) {
   for (let i = 0; i < n; i++) { scene.update && scene.update(1 / 60); scene.draw && scene.draw(c); }
   return c;
 }
+
+// V8: ASSETS_OFF=1 — выключить сгенерированные ассеты (сравнение «до/после», golden без ассетов)
+if (G.assets && process.env.ASSETS_OFF) G.assets.enabled = false;
 
 module.exports = { G, ROOT, BUILD: g.BUILD, warns, loaded, seed, rng, rngOff, frames, recordingCtx, recordingCanvas, document, localStorage, store, elements, makeEl };

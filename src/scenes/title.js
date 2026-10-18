@@ -7,6 +7,8 @@ G.scenes.register('title', () => {
 
   function buildBg() {
     const W = G.screen.W, H = G.screen.H;
+    const img = G.assets.canvas('title', W, H);   // V8: сгенерированный фон; нет — рисуем процедурно, как раньше
+    if (img) return img;
     const c = G.gfx.canvas(W, H);
     const x = c.getContext('2d');
     // небо: градиент полосами
@@ -57,6 +59,8 @@ G.scenes.register('title', () => {
     name: 'title',
     enter() {
       bg = buildBg();
+      // V8: картинка могла догрузиться, пока показывали процедурный фон — пересобрать один раз
+      G.assets.onReady(() => { if (!bg || !bg._asset) bg = buildBg(); });
       items = G.storage.hasSave() ? ['Продолжить', 'Новая игра'] : ['Новая игра'];
       idx = 0;
       this._resize = G.events.on('resize', () => { bg = buildBg(); });
@@ -95,6 +99,7 @@ G.scenes.register('title', () => {
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H;
       ctx.drawImage(bg, 0, 0);
+      G.assets.draw(ctx, 'icon_leaf', Math.round(W / 2 - 12), 2, 24, 24);   // V8: эмблема деревни над плашкой
       // логотип
       const ly = 26 + Math.round(Math.sin(t * 1.5) * 2);
       ctx.fillStyle = 'rgba(20,10,20,.55)';
