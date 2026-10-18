@@ -14,17 +14,23 @@ G.scenes.register('journal', () => {
     return d.steps.map((st, i) => ({ st, done: i < s.step || s.st === 'done', cur: s.st === 'active' && i === s.step, future: s.st === 'active' && i > s.step }));
   }
 
+  const ROW = 18, LIST_Y = 44;
+  const listH = () => G.screen.H - LIST_Y - 6;
+  const rowsN = () => Math.floor((listH() - 12) / ROW);
+  const btnRects = () => { const W = G.screen.W, H = G.screen.H, bw = Math.round((W - 14) / 2); return { track: { x: 4, y: H - 30, w: bw, h: 26 }, back: { x: 4 + bw + 6, y: H - 30, w: bw, h: 26 } }; };
+  const inR = (t, r) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y < r.y + r.h;
+
   return {
     name: 'journal',
     update(dt) {
       const I = G.input;
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast = null; }
       if (detail) {
+        const B = btnRects();
+        const track = () => { if (G.quests.active(detail)) { G.quests.track(detail); G.audio.sfx.confirm(); toast = 'Отслеживается ★'; toastT = 1.3; } else G.audio.sfx.error(); };
         if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); detail = null; return; }
-        if (I.pressed('a') || (I.tapNow && I.tapNow.y > G.screen.H - 20 && I.tapNow.x < G.screen.W / 2)) {
-          if (G.quests.active(detail)) { G.quests.track(detail); G.audio.sfx.confirm(); toast = 'Отслеживается ★'; toastT = 1.3; }
-          else G.audio.sfx.error();
-        } else if (I.tapNow && I.tapNow.y > G.screen.H - 20) { G.audio.sfx.cancel(); detail = null; }
+        if (I.pressed('a')) { track(); return; }
+        if (I.tapNow) { if (inR(I.tapNow, B.track)) track(); else if (inR(I.tapNow, B.back)) { G.audio.sfx.cancel(); detail = null; } }
         return;
       }
       const L = items();
@@ -32,10 +38,9 @@ G.scenes.register('journal', () => {
       if (I.pressed('left') || I.pressed('right')) { tab = 1 - tab; idx = 0; top = 0; G.audio.sfx.select(); return; }
       if (I.tapNow) {
         const t = I.tapNow;
-        if (t.y < 30 && t.y > 14) { const nt = t.x < G.screen.W / 2 ? 0 : 1; if (nt !== tab) { tab = nt; idx = 0; top = 0; G.audio.sfx.select(); } return; }
-        if (t.y > G.screen.H - 20) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
-        const i = top + Math.floor((t.y - 38) / 14);
-        if (i >= 0 && i < L.length) { idx = i; detail = L[i]; G.audio.sfx.confirm(); }
+        if (t.y < LIST_Y - 2 && t.y > 18) { const nt = t.x < G.screen.W / 2 ? 0 : 1; if (nt !== tab) { tab = nt; idx = 0; top = 0; G.audio.sfx.select(); } return; }
+        const i = top + Math.floor((t.y - LIST_Y - 6) / ROW);
+        if (t.y > LIST_Y + 4 && i >= 0 && i < L.length) { idx = i; detail = L[i]; G.audio.sfx.confirm(); }
         return;
       }
       if (!L.length) return;
@@ -45,76 +50,71 @@ G.scenes.register('journal', () => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, H);
-      F.draw(ctx, 'ЗАДАНИЯ', W / 2, 4, { align: 'center', color: P.orange });
-
+      const W = G.screen.W, H = G.screen.H, F = G.font, U = G.ui, C = U.C;
+      U.backdrop(ctx);
+      U.title(ctx, 'ЗАДАНИЯ', W / 2, 3, 90);
       if (detail) return this.drawDetail(ctx, detail);
 
       // вкладки
-      TABS.forEach((t, i) => {
-        const x = i * (W / 2), sel = i === tab;
-        ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(x + 2, 15, W / 2 - 4, 14);
-        F.draw(ctx, t, x + W / 4, 18, { align: 'center', color: sel ? P.white : P.gray });
-      });
-      const L = items();
-      const rows = Math.floor((H - 20 - 36) / 14);
+      TABS.forEach((t, i) => U.tab(ctx, 4 + i * (W / 2 - 2), 21, W / 2 - 6, 20, t, i === tab));
+      const L = items(), rows = rowsN();
+      U.panel(ctx, 4, LIST_Y, W - 8, listH(), 'frame');
       if (idx < top) top = idx;
       if (idx >= top + rows) top = idx - rows + 1;
-      if (!L.length) F.draw(ctx, tab === 0 ? 'Нет активных заданий' : 'Пока пусто', W / 2, 60, { align: 'center', color: P.gray });
+      if (!L.length) F.draw(ctx, tab === 0 ? 'Нет активных заданий' : 'Пока пусто', W / 2, LIST_Y + 24, { align: 'center', color: C.inkDim });
       const tracked = G.quests.tracked();
       for (let r = 0; r < rows && top + r < L.length; r++) {
         const id = L[top + r], d = G.QUESTS[id], cat = G.QUEST_CATS[d.cat], s = G.quests.state(id);
-        const y = 36 + r * 14, sel = top + r === idx;
-        ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(2, y, W - 4, 13);
-        F.draw(ctx, cat.icon, 6, y + 3, { color: cat.color });
-        let title = d.title;
-        while (F.measure(title) > W - 44 && title.length > 4) title = title.slice(0, -2) + '…';
-        F.draw(ctx, title, 17, y + 3, { color: s.st === 'failed' ? '#a05a50' : s.st === 'done' ? P.gray : P.white });
+        const y = LIST_Y + 7 + r * ROW, sel = top + r === idx;
+        U.row(ctx, 9, y, W - 18, ROW - 2, sel);
+        F.draw(ctx, cat.icon, 14, y + 3, { color: sel ? '#f8eed0' : C.redDark });
+        const col = sel ? '#f8eed0' : s.st === 'failed' ? '#a05a50' : s.st === 'done' ? C.inkFaint : C.ink;
+        F.draw(ctx, d.title, 28, y + 3, { color: col, shadow: sel ? '#5a1408' : null, maxW: W - 66 });
         const mark = id === tracked ? '★' : s.st === 'done' ? '✔' : s.st === 'failed' ? '×' : '';
-        F.draw(ctx, mark, W - 7, y + 3, { align: 'right', color: id === tracked ? P.yellow : P.gray });
+        F.draw(ctx, mark, W - 16, y + 3, { align: 'right', color: id === tracked ? '#f4d46a' : C.inkFaint, shadow: sel ? '#5a1408' : null });
       }
-      G.gfx.window(ctx, 2, H - 19, W - 4, 17, 'dark');
-      F.draw(ctx, '< > вкладки  (A) открыть  (B) назад', W / 2, H - 14, { align: 'center', color: P.light });
+      if (top > 0) F.small.draw(ctx, '▲', W - 18, LIST_Y + 9, { color: C.red });
+      if (top + rows < L.length) F.small.draw(ctx, '▼', W - 18, LIST_Y + listH() - 18, { color: C.red });
     },
 
     drawDetail(ctx, id) {
-      const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL;
+      const W = G.screen.W, H = G.screen.H, F = G.font, U = G.ui, C = U.C;
       const d = G.QUESTS[id], cat = G.QUEST_CATS[d.cat], s = G.quests.state(id);
-      G.gfx.window(ctx, 2, 15, W - 4, H - 37, 'paper');
-      let y = 20;
-      F.draw(ctx, cat.icon + ' ' + cat.name, 8, y, { color: cat.color }); y += 11;
-      for (const ln of F.wrap(d.title, W - 16)) { F.draw(ctx, ln, 8, y, { color: G.UI.text }); y += 11; }
+      U.panel(ctx, 4, 22, W - 8, H - 58, 'frame');
+      const x0 = 14, tw = W - 28;
+      let y = 32;
+      F.draw(ctx, cat.icon + ' ' + cat.name, x0, y, { color: C.redDark }); y += 15;
+      for (const ln of F.wrap(d.title, tw)) { F.draw(ctx, ln, x0, y, { color: C.ink }); y += 14; }
       y += 2;
-      for (const ln of F.wrap(d.desc, W - 16)) { F.draw(ctx, ln, 8, y, { color: P.gray }); y += 10; }
-      y += 4;
+      for (const ln of F.small.wrap(d.desc, tw)) { F.small.draw(ctx, ln, x0, y, { color: C.inkDim }); y += 12; }
+      y += 6;
       for (const v of stepsView(id)) {
         const txt = v.future ? '…' : v.st.text;
         const mark = v.done ? '✔' : v.cur ? '▶' : '·';
-        const col = v.done ? G.UI.ok : v.cur ? G.UI.text : G.UI.dim;
-        const lines = F.wrap(txt, W - 30);
-        F.draw(ctx, mark, 9, y, { color: v.done ? '#5a8a4a' : P.orange });
-        lines.forEach((ln) => { F.draw(ctx, ln, 19, y, { color: col }); y += 10; });
+        const col = v.done ? C.ok : v.cur ? C.ink : C.inkFaint;
+        F.small.draw(ctx, mark, x0, y, { color: v.done ? C.ok : C.red });
+        F.small.wrap(txt, tw - 16).forEach((ln) => { F.small.draw(ctx, ln, x0 + 14, y, { color: col }); y += 12; });
         if (v.cur && v.st.time) {
           const ok = G.quests.timeOk(v.st);
-          F.draw(ctx, `⏰ ${G.game.clock(v.st.time[0])}–${G.game.clock(v.st.time[1] % 1440)}${ok ? '' : ' (сейчас нельзя)'}`, 19, y, { color: ok ? '#5a7a9a' : '#b05a4a' }); y += 10;
+          F.small.draw(ctx, `⏰ ${G.game.clock(v.st.time[0])}–${G.game.clock(v.st.time[1] % 1440)}${ok ? '' : ' (сейчас нельзя)'}`, x0 + 14, y, { color: ok ? '#3a62a0' : '#b8321c' }); y += 12;
         }
-        y += 2;
+        y += 3;
       }
       y += 3;
       if (s.due != null && s.st === 'active') {
         const left = s.due - G.state.vars.day;
-        F.draw(ctx, `Срок: до конца дня ${s.due} (${G.game.dayName(s.due)})${left === 0 ? ' — сегодня!' : ''}`, 8, y, { color: left === 0 ? '#c04a3a' : P.gray }); y += 11;
+        F.small.draw(ctx, `Срок: до конца дня ${s.due} (${G.game.dayName(s.due)})${left === 0 ? ' — сегодня!' : ''}`, x0, y, { color: left === 0 ? C.err : C.inkDim }); y += 13;
       }
-      if (d.reward && d.reward.text) { F.draw(ctx, 'Награда: ' + d.reward.text, 8, y, { color: '#8a6a10' }); y += 11; }
+      if (d.reward && d.reward.text) { F.small.draw(ctx, 'Награда: ' + d.reward.text, x0, y, { color: '#8a5a10', maxW: tw }); y += 13; }
       const st = { active: 'Активно', done: 'Выполнено ✔', failed: 'Провалено' }[s.st];
-      F.draw(ctx, st + (G.quests.tracked() === id ? ' · ★ отслеживается' : ''), 8, H - 36, { color: s.st === 'failed' ? '#c04a3a' : '#5a8a4a' });
-      G.gfx.window(ctx, 2, H - 19, W - 4, 17, 'dark');
-      F.draw(ctx, s.st === 'active' ? '(A) Отслеживать   (B) Назад' : '(B) Назад', W / 2, H - 14, { align: 'center', color: P.light });
+      F.small.draw(ctx, st + (G.quests.tracked() === id ? ' · ★ отслеживается' : ''), x0, H - 48, { color: s.st === 'failed' ? C.err : C.ok });
+      const B = btnRects();
+      U.button(ctx, B.track.x, B.track.y, B.track.w, B.track.h, 'Отслеживать', s.st === 'active' ? 'sel' : 'dis');
+      U.button(ctx, B.back.x, B.back.y, B.back.w, B.back.h, 'Назад', 'normal');
       if (toast) {
-        const w = F.measure(toast) + 12;
-        G.gfx.window(ctx, Math.round((W - w) / 2), H - 56, w, 16, 'dark');
-        F.draw(ctx, toast, W / 2, H - 52, { align: 'center', color: P.yellow });
+        const w = F.measure(toast) + 22;
+        U.panel(ctx, Math.round((W - w) / 2), H - 78, w, 19, 'night');
+        F.draw(ctx, toast, W / 2, H - 73, { align: 'center', color: '#f4d46a' });
       }
     },
   };

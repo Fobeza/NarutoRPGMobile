@@ -9,6 +9,7 @@ G.scenes.register('cheats', () => {
     G.scenes.stack.splice(G.scenes.stack.indexOf(w) + 1); // закрыть меню
     w.goTo(G.world.outsideOf(b));
   };
+  const RH = 13;
   const say = (t) => { toast = t; toastT = 1.4; };
   const items = [
     { label: '+1000 рё', act: () => { G.game.earn(1000); say('+1000 рё'); } },
@@ -37,7 +38,7 @@ G.scenes.register('cheats', () => {
   return {
     name: 'cheats',
     transparent: true,
-    rect() { const w = 150, h = items.length * 12 + 24; return { x: Math.round((G.screen.W - w) / 2), y: Math.min(G.screen.H - h - 2, Math.max(62, Math.round((G.screen.H - h) / 2))), w, h }; },
+    rect() { const w = Math.min(G.screen.W - 8, 170), h = items.length * RH + 26; return { x: Math.round((G.screen.W - w) / 2), y: Math.max(22, Math.min(G.screen.H - h - 22, Math.round((G.screen.H - h) / 2))), w, h }; },
     update(dt) {
       const I = G.input, n = items.length;
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) toast = null; }
@@ -52,19 +53,19 @@ G.scenes.register('cheats', () => {
       if (I.pressed('a')) { G.audio.sfx.confirm(); items[idx].act(); }
     },
     draw(ctx) {
-      const r = this.rect(), F = G.font, P = G.PAL;
-      ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
-      G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'dark');
-      F.draw(ctx, 'ЧИТЫ (отладка)', r.x + r.w / 2, r.y + 5, { align: 'center', color: '#7cff7c' });
+      const r = this.rect(), FS = G.font.small, U = G.ui, C = U.C;
+      ctx.globalAlpha = 0.55; ctx.fillStyle = '#0a0604'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
+      U.panel(ctx, r.x, r.y, r.w, r.h, 'frame');
+      U.title(ctx, 'ЧИТЫ (отладка)', r.x + r.w / 2, r.y - 7, 0);
       items.forEach((it, i) => {
-        const y = r.y + 17 + i * 12, sel = i === idx;
-        if (sel) F.draw(ctx, '▶', r.x + 6, y, { color: P.orange });
-        F.draw(ctx, it.label, r.x + 15, y, { color: sel ? P.white : P.light });
+        const y = r.y + 15 + i * RH, sel = i === idx;
+        U.row(ctx, r.x + 6, y - 1, r.w - 12, RH, sel);
+        FS.draw(ctx, it.label, r.x + 12, y + 2, { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: r.w - 24 });
       });
       if (toast) {
-        const w = F.measure(toast) + 12;
-        G.gfx.window(ctx, Math.round((G.screen.W - w) / 2), r.y + r.h + 4, w, 16, 'dark');
-        F.draw(ctx, toast, G.screen.W / 2, r.y + r.h + 8, { align: 'center', color: P.white });
+        const w = FS.measure(toast) + 20;
+        U.panel(ctx, Math.round((G.screen.W - w) / 2), r.y + r.h + 4, w, 17, 'night');
+        FS.draw(ctx, toast, G.screen.W / 2, r.y + r.h + 9, { align: 'center', color: '#f8eed0' });
       }
     },
   };

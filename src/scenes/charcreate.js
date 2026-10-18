@@ -6,7 +6,7 @@ G.scenes.register('charcreate', (onDone) => {
   const picked = [];
   let page = 0, idx = 0, msg = null, msgT = 0, confirm = false;
   const left = () => G.STAT_POINTS - G.STATS.reduce((a, s) => a + vals[s.id] - B, 0);
-  const ROW = 13, TOP = 30;
+  const ROW = 20, TOP = 46;
   const say = (t) => { msg = t; msgT = 1.6; };
 
   const S = {
@@ -70,81 +70,86 @@ G.scenes.register('charcreate', (onDone) => {
         const t = I.tapNow, i = Math.floor((t.y - TOP) / ROW);
         if (i < 0 || i >= n) return;
         idx = i;
-        if (page === 0 && i < G.STATS.length) this.change(t.x > G.screen.W - 40 ? +1 : t.x > G.screen.W - 70 ? -1 : 0);
+        if (page === 0 && i < G.STATS.length) this.change(t.x > G.screen.W - 34 ? +1 : t.x > G.screen.W - 70 ? -1 : 0);
         else this.activate();
       }
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, H);
-      F.draw(ctx, 'ВСТУПИТЕЛЬНЫЙ ТЕСТ', W / 2, 4, { align: 'center', color: P.orange });
+      const W = G.screen.W, H = G.screen.H, F = G.font, S = G.font.small, U = G.ui, C = U.C;
+      U.backdrop(ctx);
+      U.title(ctx, 'ВСТУПИТЕЛЬНЫЙ ТЕСТ', W / 2, 3, 150);
+      const bar = (txt, right, rcol) => { U.panel(ctx, 4, 22, W - 8, 20, 'frame'); S.draw(ctx, txt, 14, 28, { color: C.inkDim }); right && S.draw(ctx, right, W - 14, 28, { align: 'right', color: rcol }); };
+      const rowBg = (y, sel) => { U.row(ctx, 6, y, W - 12, ROW - 3, sel); };
       if (page === 0) {
         const l = left();
-        F.draw(ctx, 'Характеристики', 4, 17, { color: P.light });
-        F.draw(ctx, `Очки: ${l}`, W - 4, 17, { align: 'right', color: l ? P.yellow : '#8ac85a' });
+        bar('Характеристики', `Очки: ${l}`, l ? '#8a5a10' : C.ok);
+        U.panel(ctx, 4, TOP - 2, W - 8, (G.STATS.length + 2) * ROW + 6, 'frame');
         G.STATS.forEach((s, i) => {
-          const y = TOP + i * ROW, sel = i === idx, v = vals[s.id];
-          ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(2, y, W - 4, ROW - 1);
-          F.draw(ctx, s.name, 6, y + 3, { color: sel ? P.white : P.light });
-          // кружки: база — серые, добавленные — оранжевые
+          const y = TOP + 3 + i * ROW, sel = i === idx, v = vals[s.id];
+          rowBg(y, sel);
+          F.draw(ctx, s.name, 14, y + 2, { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: 90 });
+          // кружки: база — тёмные, добавленные — красные, свободные — пустые
           for (let k = 0; k < MAX; k++) {
-            const x = 88 + k * 7;
-            F.draw(ctx, k < v ? '●' : '○', x, y + 3, { color: k < B ? '#9a92a8' : k < v ? '#ff8a3a' : '#4a4458' });
+            const cx = 112 + k * 9, cy = y + 7;
+            ctx.fillStyle = k < B ? '#6a5238' : k < v ? C.red : 'rgba(46,30,20,.28)';
+            ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 7); ctx.fill();
+            if (k < v && k >= B) { ctx.fillStyle = C.redHi; ctx.fillRect(cx - 1, cy - 2, 1, 1); }
           }
-          F.draw(ctx, '−', W - 52, y + 3, { color: v > B ? P.white : '#4a4458' });
-          F.draw(ctx, String(v), W - 34, y + 3, { align: 'center', color: P.yellow });
-          F.draw(ctx, '+', W - 16, y + 3, { color: l > 0 && v < MAX ? P.white : '#4a4458' });
+          U.button(ctx, W - 68, y - 1, 20, 16, '−', v > B ? 'normal' : 'dis');
+          F.draw(ctx, String(v), W - 40, y + 2, { align: 'center', color: sel ? '#f4d46a' : C.redDark, shadow: sel ? '#5a1408' : null });
+          U.button(ctx, W - 30, y - 1, 20, 16, '+', l > 0 && v < MAX ? 'normal' : 'dis');
         });
-        const yb = TOP + G.STATS.length * ROW;
-        [['Случайно', idx === G.STATS.length], [l > 0 ? `Далее (осталось ${l})` : 'Далее ▶', idx === G.STATS.length + 1]].forEach(([t, sel], k) => {
+        const yb = TOP + 3 + G.STATS.length * ROW;
+        [['Случайно', idx === G.STATS.length], [l > 0 ? `Далее (осталось ${l})` : 'Далее', idx === G.STATS.length + 1]].forEach(([t, sel], k) => {
           const y = yb + k * ROW;
-          ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(2, y, W - 4, ROW - 1);
-          F.draw(ctx, t, W / 2, y + 3, { align: 'center', color: sel ? P.yellow : P.gray });
+          rowBg(y, sel);
+          F.draw(ctx, t, W / 2, y + 2, { align: 'center', color: sel ? '#f8eed0' : C.redDark, shadow: sel ? '#5a1408' : null });
         });
-        const s = G.STATS[idx];
-        const desc = s ? s.desc : idx === G.STATS.length ? 'Распределить очки случайно.' : 'Перейти к выбору навыков.';
-        this.drawDesc(ctx, desc, '< > изменить  (A) +1');
+        const st = G.STATS[idx];
+        this.drawDesc(ctx, st ? st.desc : idx === G.STATS.length ? 'Распределить очки случайно.' : 'Перейти к выбору навыков.');
       } else {
-        F.draw(ctx, 'Навыки: выбери 2', 4, 17, { color: P.light });
-        F.draw(ctx, `${picked.length}/2`, W - 4, 17, { align: 'right', color: picked.length === 2 ? '#8ac85a' : P.yellow });
+        bar('Навыки: выбери 2', `${picked.length}/2`, picked.length === 2 ? C.ok : '#8a5a10');
+        U.panel(ctx, 4, TOP - 2, W - 8, (G.SKILLS.length + 1) * ROW + 6, 'frame');
         G.SKILLS.forEach((s, i) => {
-          const y = TOP + i * ROW, sel = i === idx, on = picked.includes(s.id);
-          ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(2, y, W - 4, ROW - 1);
-          F.draw(ctx, on ? '■' : '□', 6, y + 3, { color: on ? '#ff8a3a' : P.gray });
-          F.draw(ctx, s.name, 16, y + 3, { color: on ? P.yellow : sel ? P.white : P.light });
-          if (s.now) F.draw(ctx, '★', W - 8, y + 3, { align: 'right', color: '#8ac85a' });
+          const y = TOP + 3 + i * ROW, sel = i === idx, on = picked.includes(s.id);
+          rowBg(y, sel);
+          // чекбокс-печать
+          ctx.fillStyle = sel ? '#f8eed0' : C.ink; ctx.fillRect(13, y + 3, 9, 9); ctx.fillStyle = sel ? C.red : '#ecdcb0'; ctx.fillRect(14, y + 4, 7, 7);
+          if (on) { ctx.fillStyle = sel ? '#f8eed0' : C.red; ctx.fillRect(16, y + 6, 3, 3); }
+          F.draw(ctx, s.name, 28, y + 2, { color: sel ? '#f8eed0' : on ? C.redDark : C.ink, shadow: sel ? '#5a1408' : null, maxW: W - 66 });
+          if (s.now) F.draw(ctx, '★', W - 16, y + 2, { align: 'right', color: sel ? '#f4d46a' : '#8a5a10' });
         });
-        const y = TOP + G.SKILLS.length * ROW, sel = idx === G.SKILLS.length;
-        ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(2, y, W - 4, ROW - 1);
-        F.draw(ctx, 'Готово ▶', W / 2, y + 3, { align: 'center', color: sel ? P.yellow : P.gray });
+        const y = TOP + 3 + G.SKILLS.length * ROW, sel = idx === G.SKILLS.length;
+        rowBg(y, sel);
+        F.draw(ctx, 'Готово', W / 2, y + 2, { align: 'center', color: sel ? '#f8eed0' : C.redDark, shadow: sel ? '#5a1408' : null });
         const s = G.SKILLS[idx];
-        this.drawDesc(ctx, s ? s.desc : 'Закончить тест.', '(A) выбрать (B) назад ★ сразу');
+        this.drawDesc(ctx, s ? s.desc + (s.now ? '  ★ действует сразу' : '') : 'Закончить тест.');
       }
       if (msg) {
-        const w = F.measure(msg) + 12;
-        G.gfx.window(ctx, Math.round((W - w) / 2), H / 2 - 8, w, 16, 'dark');
-        F.draw(ctx, msg, W / 2, H / 2 - 4, { align: 'center', color: P.yellow });
+        const w = F.measure(msg) + 22;
+        U.panel(ctx, Math.round((W - w) / 2), H / 2 - 10, w, 20, 'night');
+        F.draw(ctx, msg, W / 2, H / 2 - 4, { align: 'center', color: '#f4d46a' });
       }
       if (confirm) {
-        ctx.globalAlpha = 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
-        const bh = 74, by = Math.round(H / 2 - bh / 2);
-        G.gfx.window(ctx, 10, by, W - 20, bh, 'paper');
-        F.draw(ctx, 'Всё верно?', W / 2, by + 6, { align: 'center', color: G.UI.text });
+        ctx.globalAlpha = 0.6; ctx.fillStyle = '#0a0604'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+        const bh = 112, by = Math.round(H / 2 - bh / 2);
+        U.panel(ctx, 10, by, W - 20, bh, 'frame');
+        F.draw(ctx, 'Всё верно?', W / 2, by + 11, { align: 'center', color: C.redDark });
         const line = G.STATS.map((s) => `${s.short} ${vals[s.id]}`).join(' · ');
-        F.wrap(line, W - 36).forEach((ln, i) => F.draw(ctx, ln, W / 2, by + 18 + i * 10, { align: 'center', color: P.gray }));
-        F.draw(ctx, picked.map((id) => G.SKILLS.find((s) => s.id === id).name).join(', '), W / 2, by + 40, { align: 'center', color: '#8a3a1a' });
-        F.draw(ctx, '(A) Да      (B) Нет', W / 2, by + 56, { align: 'center', color: G.UI.text });
+        S.wrap(line, W - 44).forEach((ln, i) => S.draw(ctx, ln, W / 2, by + 30 + i * 12, { align: 'center', color: C.inkDim }));
+        S.draw(ctx, picked.map((id) => G.SKILLS.find((s) => s.id === id).name).join(', '), W / 2, by + 56, { align: 'center', color: C.redDark, maxW: W - 44 });
+        U.button(ctx, 20, by + bh - 34, Math.round((W - 52) / 2), 24, 'Да', 'sel');
+        U.button(ctx, 32 + Math.round((W - 52) / 2), by + bh - 34, Math.round((W - 52) / 2), 24, 'Нет', 'normal');
       }
     },
-    drawDesc(ctx, text, hint) {
-      const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL;
-      const lines = F.wrap(text, W - 16).slice(0, 3);
-      const h = 10 + lines.length * 10 + 10;
-      const y = H - h - 2;
-      G.gfx.window(ctx, 2, y, W - 4, h, 'dark');
-      lines.forEach((ln, i) => F.draw(ctx, ln, 8, y + 5 + i * 10, { color: P.white }));
-      F.draw(ctx, hint, W / 2, y + h - 12, { align: 'center', color: '#8a8498', max: 99 });
+    drawDesc(ctx, text) {
+      const W = G.screen.W, H = G.screen.H, S = G.font.small;
+      const lines = S.wrap(text, W - 32).slice(0, 3);
+      const h = 18 + lines.length * 12;
+      const y = H - h - 4;
+      G.ui.panel(ctx, 4, y, W - 8, h, 'frame');
+      lines.forEach((ln, i) => S.draw(ctx, ln, 14, y + 9 + i * 12, { color: G.ui.C.ink }));
     },
   };
   return S;

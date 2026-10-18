@@ -1,6 +1,7 @@
 // Меню «Сохранение» (этап 4): сохранить, экспорт и импорт кода, восстановить утреннюю копию.
 G.scenes.register('savemenu', () => {
   let idx = 0, toast = null, toastT = 0;
+  const W = 236;
   const say = (t) => { toast = t; toastT = 1.8; };
   const world = () => G.scenes.stack.find((s) => s.name === 'world');
 
@@ -29,7 +30,7 @@ G.scenes.register('savemenu', () => {
             close(); G.audio.sfx.confirm(); G.game.loadSaved();
           } });
       } },
-      { label: bi ? `Резервная копия: день ${bi.day}, ${G.game.clock(bi.min)}` : 'Резервной копии нет', act: () => {
+      { label: bi ? 'Резервная копия' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
         if (!bi) { G.audio.sfx.error(); return; }
         if (G.storage.restoreBackup()) { G.audio.sfx.confirm(); G.game.loadSaved(); }
       } },
@@ -50,30 +51,19 @@ G.scenes.register('savemenu', () => {
       if (I.repeat('down', dt)) { idx = (idx + 1) % list.length; G.audio.sfx.select(); }
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.tapNow) {
-        const r = this.rect(), i = Math.floor((I.tapNow.y - r.y - 18) / 13);
-        if (I.tapNow.x > r.x && I.tapNow.x < r.x + r.w && i >= 0 && i < list.length) { idx = i; G.audio.sfx.confirm(); list[i].act(); }
+        const i = G.ui.menu.hit(I.tapNow, list.length, W);
+        if (i >= 0) { idx = i; G.audio.sfx.confirm(); list[i].act(); }
         return;
       }
       if (I.pressed('a')) { G.audio.sfx.confirm(); list[idx].act(); }
     },
-    rect() {
-      const n = items().length, w = 170, h = n * 13 + 26;
-      return { x: Math.round((G.screen.W - w) / 2), y: Math.round((G.screen.H - h) / 2) - 10, w, h };
-    },
     draw(ctx) {
-      ctx.globalAlpha = 0.55; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
-      const r = this.rect(), F = G.font, P = G.PAL;
-      G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
-      F.draw(ctx, 'СОХРАНЕНИЕ', r.x + r.w / 2, r.y + 5, { align: 'center', color: P.orange });
-      items().forEach((it, i) => {
-        const y = r.y + 18 + i * 13, sel = i === idx;
-        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); F.draw(ctx, '▶', r.x + 7, y, { color: P.orange }); }
-        F.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.UI.selText : G.UI.dim, maxW: r.w - 20 });
-      });
+      const list = items();
+      const r = G.ui.menu.draw(ctx, 'СОХРАНЕНИЕ', list, idx, W);
       if (toast) {
-        const w = F.measure(toast) + 12;
-        G.gfx.window(ctx, Math.round((G.screen.W - w) / 2), r.y + r.h + 4, w, 16, 'dark');
-        F.draw(ctx, toast, G.screen.W / 2, r.y + r.h + 8, { align: 'center', color: P.white });
+        const F = G.font, w = F.measure(toast) + 22;
+        G.ui.panel(ctx, Math.round((G.screen.W - w) / 2), r.y + r.h + 6, w, 19, 'night');
+        F.draw(ctx, toast, G.screen.W / 2, r.y + r.h + 11, { align: 'center', color: '#f4d46a' });
       }
     },
   };

@@ -38,6 +38,7 @@ function makeCtx(canvas, log) {
   // log — массив: пишем каждый вызов метода рисования, чтобы можно было сравнить отрисовку «до/после» правки
   return new Proxy(base, {
     get(t, k) {
+      if (k === 'drawImage' && log) return (...a) => { log.push('drawImage(' + a.map(fmtArg).join(',') + ')'); };   // интерфейс собран из запечённых картинок
       if (k in t) return t[k];
       if (!log) return NOOP;
       return (...a) => { log.push(k + '(' + a.map(fmtArg).join(',') + ')'); };

@@ -199,4 +199,4 @@ my_room(info) {
 | текст в меню | `scenes/menu.js` |
 | подсказку в мини-игре | `INTRO` в `scenes/train.js` |
 | погоду | `G.life.weather()` в `systems/life.js` |
-| новый символ в шрифте | `RAW` в `gfx/font.js` (5×7 из `#` и `.`) |
+| новый символ в шрифте | `tools/make_font.py` (`used_chars()` или `ICONS`), затем `python3 tools/make_font.py` |

@@ -65,16 +65,17 @@ G.scenes.register('nameinput', () => {
     update(dt) { t += dt; },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H;
-      // фон: класс Академии (упрощённо)
-      ctx.fillStyle = '#c8a878'; ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = '#a8885a';
-      for (let y = 0; y < H; y += 8) ctx.fillRect(0, y, W, 1);
-      ctx.fillStyle = '#2a4a3a'; ctx.fillRect(16, 14, W - 32, 50);   // доска
-      ctx.fillStyle = '#7a4a2a'; ctx.fillRect(14, 12, W - 28, 2); ctx.fillRect(14, 64, W - 28, 3);
-      G.font.draw(ctx, 'Вступительный тест', W / 2, 24, { align: 'center', color: '#e8f0e0' });
-      G.font.draw(ctx, 'Академия Конохи', W / 2, 40, { align: 'center', color: '#b8d0b8' });
+      const W = G.screen.W, H = G.screen.H, U = G.ui;
+      // класс Академии: деревянный пол, доска в раме
+      U.backdrop(ctx);
+      U.wood(ctx, 0, 90, W, H - 90, '#8a5a36', false, 11);
+      U.panel(ctx, 14, 12, W - 28, 64, 'plank');
+      ctx.fillStyle = '#1f3a2e'; ctx.fillRect(18, 16, W - 36, 56);
+      G.shade.tint(ctx, 18, 16, W - 36, 56, (u, v) => 0.1 - 0.25 * v, { keepInk: false, steps: 10 });
+      G.font.draw(ctx, 'Вступительный тест', W / 2, 26, { align: 'center', color: '#e8f0e0' });
+      G.font.small.draw(ctx, 'Академия Конохи', W / 2, 48, { align: 'center', color: '#b8d0b8' });
       // Ирука у доски
+      G.shade.shadow(ctx, W / 2 + 1, 100, 8, 2, 0.35);
       G.chars.draw(ctx, 'iruka', 'down', 0, W / 2, 100);
     },
   };

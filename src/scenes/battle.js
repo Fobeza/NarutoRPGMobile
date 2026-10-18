@@ -1,7 +1,7 @@
 // Бой «Дуэль шиноби» (план §4). opts: { enemy, mode: ko|spar|bells|scroll|survive|ringout, terrain, turns, ambush, story, allies }
 // onEnd(result) — result: { win, mode, enemy, ringout, surrender }
 G.scenes.register('battle', (opts, onEnd) => {
-  const W = G.screen.W, F = G.font, PAL = G.PAL, AU = G.audio;
+  const W = G.screen.W, F = G.font, PAL = G.PAL, AU = G.audio, U = G.ui, C = U.C, FS = F.small;
   const A = G.ARENAS[opts.terrain || 'field'] || G.ARENAS.field;
   const mode = opts.mode || 'ko';
   let ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
@@ -78,9 +78,9 @@ G.scenes.register('battle', (opts, onEnd) => {
   const layout = {};
   function relayout() {
     const H = G.screen.H;
-    layout.tl = 0; layout.eb = 12; layout.ar = 33;
+    layout.tl = 0; layout.eb = 13; layout.ar = 40;
     const panelH = clamp(Math.round(H * 0.3), 74, 124);
-    layout.pn = H - panelH; layout.ms = layout.pn - 22; layout.pb = layout.ms - 24;
+    layout.pn = H - panelH; layout.ms = layout.pn - 27; layout.pb = layout.ms - 29;
     layout.arH = layout.pb - layout.ar; layout.groundY = layout.ar + layout.arH - 10;
     layout.panelH = panelH;
   }
@@ -778,10 +778,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   }
 
   // ── отрисовка ──
-  function bar(ctx, x, y, w, h, v, max, col) {
-    ctx.fillStyle = '#14121c'; ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = col; ctx.fillRect(x, y, Math.round(w * clamp(v / max, 0, 1)), h);
-  }
+  function bar(ctx, x, y, w, h, v, max, col) { U.gauge(ctx, x, y, w, h, clamp(v / max, 0, 1), col); }
   function drawFighter(ctx, f, x, y, face) {
     x += (f.kb || 0) + (f.lg || 0);
     if (f.hurt > 0) {
@@ -840,24 +837,27 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (state === 'intro') {
       const k = clamp((2.3 - stT) / 2.3, 0, 1), mid = L.ar + L.arH / 2;
       const a = clamp(k * 5, 0, 1) * clamp((1 - k) * 6, 0, 1);
-      ctx.save(); ctx.globalAlpha = a * 0.85; ctx.fillStyle = '#10121e'; ctx.fillRect(0, mid - 38, W, 76);
-      ctx.fillStyle = PAL.orange; ctx.fillRect(0, mid - 38, W, 2); ctx.fillRect(0, mid + 36, W, 2); ctx.globalAlpha = a;
+      ctx.save(); ctx.globalAlpha = a * 0.88; ctx.fillStyle = C.woodDeep; ctx.fillRect(0, mid - 40, W, 80);
+      ctx.fillStyle = C.red; ctx.fillRect(0, mid - 40, W, 2); ctx.fillRect(0, mid + 38, W, 2);
+      ctx.fillStyle = C.gold; ctx.fillRect(0, mid - 38, W, 1); ctx.fillRect(0, mid + 37, W, 1); ctx.globalAlpha = a;
       const slide = (1 - clamp(k * 4, 0, 1)) * 60;
       const por = (f, d) => G.chars.DEFS[f.spr] ? G.chars.portrait(f.spr) : G.chars.portrait(d);
-      ctx.drawImage(por(P, 'hero'), W * 0.22 - 24 - slide, mid - 24, 48, 48);
-      if (G.chars.DEFS[E.spr]) ctx.drawImage(G.chars.portrait(E.spr), W * 0.78 - 24 + slide, mid - 24, 48, 48);
-      else { ctx.fillStyle = '#2a2a3a'; ctx.fillRect(W * 0.78 - 24 + slide, mid - 24, 48, 48); F.draw(ctx, '?', W * 0.78 + slide, mid - 4, { align: 'center', color: PAL.gray }); }
-      F.draw(ctx, pName, W * 0.22, mid + 26, { align: 'center', color: PAL.white });
-      F.draw(ctx, E.name, W * 0.78, mid + 26, { align: 'center', color: PAL.orangeLight });
+      const lx = W * 0.22 - 24 - slide, rx = W * 0.78 - 24 + slide, py = mid - 28;
+      U.panel(ctx, lx - 3, py - 3, 54, 54, 'plank'); U.panel(ctx, rx - 3, py - 3, 54, 54, 'plank');
+      ctx.drawImage(por(P, 'hero'), lx, py, 48, 48);
+      if (G.chars.DEFS[E.spr]) ctx.drawImage(G.chars.portrait(E.spr), rx, py, 48, 48);
+      else { ctx.fillStyle = '#2a2018'; ctx.fillRect(rx, py, 48, 48); F.draw(ctx, '?', rx + 24, py + 20, { align: 'center', color: C.goldHi }); }
+      F.draw(ctx, pName, W * 0.22, mid + 28, { align: 'center', color: '#f8eed0', outline: C.woodEdge, maxW: W * 0.4 });
+      F.draw(ctx, E.name, W * 0.78, mid + 28, { align: 'center', color: C.goldHi, outline: C.woodEdge, maxW: W * 0.4 });
       const sc = 1 + (1 - clamp(k * 6, 0, 1)) * 0.8;
-      ctx.translate(W / 2, mid); ctx.scale(sc * 2, sc * 2); F.draw(ctx, 'VS', 0, -4, { align: 'center', color: PAL.yellow, outline: PAL.ink });
+      ctx.translate(W / 2, mid - 6); ctx.scale(sc * 2, sc * 2); F.draw(ctx, 'VS', 0, -4, { align: 'center', color: C.goldHi, outline: C.redDark });
       ctx.restore();
     }
     // K.O.
     if (fx.ko && state === 'end') {
       fx.ko.t += 0.016; const k = clamp(fx.ko.t * 4, 0, 1), mid = L.ar + L.arH * 0.4;
       ctx.save(); ctx.globalAlpha = k; ctx.translate(W / 2, mid); ctx.scale(2 + (1 - k) * 2, 2 + (1 - k) * 2);
-      F.draw(ctx, fx.ko.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', 0, -4, { align: 'center', color: fx.ko.win ? PAL.yellow : '#ff6a5a', outline: PAL.ink }); ctx.restore();
+      F.draw(ctx, fx.ko.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', 0, -4, { align: 'center', color: fx.ko.win ? C.goldHi : '#ff8a70', outline: C.woodEdge }); ctx.restore();
     }
     // вставка суперудара
     if (fx.cut) {
@@ -866,8 +866,130 @@ G.scenes.register('battle', (opts, onEnd) => {
       ctx.fillStyle = '#e8621a'; ctx.beginPath(); ctx.moveTo(0, mid - 22); ctx.lineTo(W * sl, mid - 30); ctx.lineTo(W * sl, mid + 22); ctx.lineTo(0, mid + 30); ctx.fill();
       ctx.fillStyle = '#fff'; for (let i = 0; i < 8; i++) ctx.fillRect(((i * 61 + k * 500) % W), mid - 22 + (i * 11) % 44, 30, 1);
       ctx.drawImage(G.chars.portrait('hero'), W - 56 - (1 - sl) * 60, mid - 28, 56, 56);
-      F.draw(ctx, fx.cut.text, 10, mid - 4, { color: PAL.white, outline: PAL.ink });
+      F.draw(ctx, fx.cut.text, 10, mid - 4, { color: '#f8eed0', outline: C.woodEdge });
       ctx.restore();
+    }
+  }
+  // ── интерфейс боя: «Свитки и дерево» (gfx/ui.js) ──
+  function woodRegion(ctx, y, h) { ctx.save(); ctx.beginPath(); ctx.rect(0, y, W, h); ctx.clip(); U.backdrop(ctx); ctx.restore(); }
+  function btn(ctx, t, r, label, sub, on, off, hot) {
+    const state = off ? 'dis' : on ? 'sel' : hot ? (Math.sin(t * 8) > 0 ? 'on' : 'normal') : 'normal';
+    U.button(ctx, r.x, r.y, r.w, r.h - 1, '', state);
+    const lf = r.w < 70 || r.h < 26 ? FS : F, hasSub = sub && r.h >= 26;
+    const th = lf.CAP + (hasSub ? 11 : 0), ty = r.y + Math.max(1, Math.floor((r.h - 1 - th) / 2));
+    const lc = off ? '#8a7a66' : state === 'on' ? C.ink : '#f8eed0';
+    lf.draw(ctx, label, r.x + r.w / 2, ty, { align: 'center', color: lc, shadow: off || state === 'on' ? null : '#160c06', maxW: r.w - 6 });
+    if (hasSub) FS.draw(ctx, sub, r.x + r.w / 2, ty + lf.CAP + 3, { align: 'center', color: off ? '#6a5a48' : state === 'sel' ? '#ffe0b0' : '#d8c49a', maxW: r.w - 6 });
+  }
+  function pips(ctx, x, y, n, full, col) {
+    for (let i = 0; i < n; i++) {
+      ctx.fillStyle = C.woodEdge; ctx.fillRect(x + i * 7, y, 6, 6);
+      ctx.fillStyle = i < full ? col : '#3a2a1e'; ctx.fillRect(x + i * 7 + 1, y + 1, 4, 4);
+      if (i < full) { ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(x + i * 7 + 1, y + 1, 4, 1); }
+    }
+  }
+  function drawHud(ctx, t) {
+    const L = layout, H = G.screen.H, FC = '#f8eed0', DIM = '#d8c49a';
+    woodRegion(ctx, 0, L.ar); woodRegion(ctx, L.pb - 1, H - L.pb + 1);
+    // шкала ходов
+    const tl = timeline();
+    FS.draw(ctx, 'Ходы', 4, 3, { color: DIM, shadow: '#160c06' });
+    tl.forEach((s, i) => {
+      const x = 36 + i * 18;
+      ctx.globalAlpha = i === 0 ? 1 : 0.72;
+      U.button(ctx, x, 1, 16, 10, '', s === 'p' ? 'on' : 'sel');
+      FS.draw(ctx, s === 'p' ? 'Я' : E.name[0], x + 8, 2, { align: 'center', color: s === 'p' ? C.ink : FC });
+      ctx.globalAlpha = 1;
+    });
+    const goal = { ko: 'нокаут', spar: 'спарринг', bells: 'колокольчик', scroll: 'свиток', survive: 'продержись', ringout: 'за край' }[mode];
+    const goalExtra = (mode === 'bells' || mode === 'scroll') && opts.turns ? ` ${Math.max(0, opts.turns - pTurns + (state === 'menu' ? 1 : 0))}х` : mode === 'survive' && opts.turns ? ` ${Math.max(0, opts.turns - eTurns)}х` : '';
+    FS.draw(ctx, goal + goalExtra, W - 4, 3, { align: 'right', color: C.goldHi, shadow: '#160c06', maxW: W - 130 });
+    // враг
+    U.panel(ctx, 2, L.eb, W - 4, 26, 'night');
+    FS.draw(ctx, E.name + (E.phase === 2 ? ' (ярость)' : ''), 7, L.eb + 3, { color: FC, maxW: 64 });
+    bar(ctx, 7, L.eb + 14, 62, 5, E.hp, E.hpMax, C.hp);
+    if (E.chMax) bar(ctx, 7, L.eb + 20, 62, 3, E.ch, E.chMax, C.chakra);
+    if (mode === 'spar' || mode === 'ringout') { ctx.fillStyle = C.goldHi; ctx.fillRect(7 + 19, L.eb + 13, 1, 7); }
+    const intent = E.an > 0 ? E.plan : E.shown, ik = actOf(intent).kind;
+    FS.draw(ctx, 'Намерение:', 76, L.eb + 3, { color: DIM });
+    FS.draw(ctx, actName(intent) + (E.an > 0 ? ' ✔' : ''), 76, L.eb + 14, { color: ik === 'tai' || ik === 'throw' || ik === 'nin' ? '#ff9a7a' : FC, maxW: W - 84 });
+    if (E.plan2) FS.draw(ctx, 'затем: ' + actName(E.plan2), W - 7, L.eb + 3, { align: 'right', color: DIM, maxW: W - 140 });
+    // герой
+    U.panel(ctx, 2, L.pb, W - 4, 28, 'night');
+    FS.draw(ctx, pName, 7, L.pb + 3, { color: FC, maxW: 52 });
+    const bx = 64;
+    FS.draw(ctx, 'Дых', bx, L.pb + 3, { color: DIM });
+    const bx2 = bx + FS.measure('Дых') + 4; pips(ctx, bx2, L.pb + 4, P.brMax, P.br, '#8ae0e0');
+    const fx0 = bx2 + P.brMax * 7 + 6;
+    FS.draw(ctx, 'Фокус', fx0, L.pb + 3, { color: DIM });
+    pips(ctx, fx0 + FS.measure('Фокус') + 5, L.pb + 4, P.focusMax, P.focus, C.goldHi);
+    const y2 = L.pb + 15, rem = W - 8 - 80, w1 = Math.round(rem * 0.42), w2 = Math.round(rem * 0.28);
+    let x = 6;
+    U.icon(ctx, 'heart', x, y2 - 3, '#e0562e'); x += 13;
+    bar(ctx, x, y2, w1, 5, P.hp, P.hpMax, C.hp); x += w1 + 3;
+    FS.draw(ctx, String(Math.max(0, P.hp)), x, y2 - 3, { color: FC }); x += 17;
+    U.icon(ctx, 'drop', x, y2 - 3, '#6aa8ff'); x += 13;
+    bar(ctx, x, y2, w2, 5, P.ch, P.chMax, C.chakra); x += w2 + 5;
+    const full = P.will >= 100;
+    FS.draw(ctx, 'Воля', x, y2 - 3, { color: full && Math.sin(t * 8) > 0 ? '#ffffff' : C.goldHi }); x += FS.measure('Воля') + 3;
+    bar(ctx, x, y2, Math.max(8, W - 8 - x), 5, P.will, 100, full ? C.goldHi : C.seal);
+    // сообщения
+    U.panel(ctx, 2, L.ms, W - 4, 26, 'plank');
+    const mt = (txt, col, i) => FS.draw(ctx, txt, 7, L.ms + 3 + i * 12, { color: col, maxW: W - 16 });
+    if (state === 'menu' && menu === 'tai' && chain.length) mt('Цепочка: ' + chain.map((m) => G.MOVES[m].name).join(' > '), C.goldHi, 0);
+    else if (state === 'menu') {
+      const bs = pageButtons(), b = bs[focus], desc = b && (b.off ? '✖ ' + b.off : b.desc), lm = msgs[msgs.length - 1];
+      if (desc) mt(desc, b.off ? '#ff9a7a' : FC, 0); else if (lm) mt(lm.t, lm.col, 0);
+      if (lm && desc) mt(lm.t, DIM, 1);
+    } else msgs.forEach((m, i) => mt(m.t, m.col, i));
+    // панель команд
+    if (state === 'menu') { const bs = pageButtons(); gridRects(bs.length).forEach((r, i) => btn(ctx, t, r, bs[i].label, bs[i].sub, i === focus, !!bs[i].off, bs[i].hot)); }
+    else if (state === 'target') { const n = E.clones + 1, rs = gridRects(n), names = n >= 3 ? ['Левый', 'Средний', 'Правый'] : ['Левый', 'Правый']; names.forEach((l, i) => btn(ctx, t, rs[i], l, E.an > 0 && i === E.realIdx ? 'настоящий!' : 'кто из них?', i === focus)); }
+    else if (state === 'react') {
+      const r = react;
+      if (Math.sin(t * 20) > -0.3) U.title(ctx, 'РЕАКЦИЯ!', W / 2, L.ar + 4, 64);
+      if (r.sub === 'kawa') {
+        U.panel(ctx, 2, L.ms, W - 4, 26, 'plank');
+        F.draw(ctx, 'Печать: ' + G.SEALS[r.need] + '!', W / 2, L.ms + 3, { align: 'center', color: C.goldHi, shadow: '#160c06' });
+        bar(ctx, 20, L.ms + 17, W - 40, 5, 1.3 - r.kt, 1.3, C.seal);
+        gridRects(3).forEach((rc, i) => btn(ctx, t, rc, G.SEALS[r.opts[i]], '', i === focus));
+      } else if (r.sub === 'clash') {
+        U.panel(ctx, 2, L.ms, W - 4, 26, 'plank');
+        F.draw(ctx, 'КАСАЙСЬ БЫСТРО! ' + r.taps + '/' + Math.round(3 + E.spd * 0.35), W / 2, L.ms + 3, { align: 'center', color: C.goldHi, shadow: '#160c06' });
+        bar(ctx, 20, L.ms + 17, W - 40, 5, 1.5 - r.kt, 1.5, C.seal);
+        btn(ctx, t, { x: 20, y: L.pn + 8, w: W - 40, h: L.panelH - 16 }, 'ВСТРЕЧНЫЙ КУНАЙ!', 'дзинь-дзинь', true);
+      } else {
+        bar(ctx, 8, L.ms + 18, W - 16, 5, r.max - r.t, r.max, C.seal);
+        const bs = reactButtons(); gridRects(4, 2).forEach((rc, i) => btn(ctx, t, rc, bs[i].label, bs[i].sub, i === focus, !!bs[i].off));
+      }
+    } else if (state === 'seals') {
+      const s = seals;
+      U.panel(ctx, 2, L.ms, W - 4, 26, 'plank');
+      bar(ctx, 8, L.ms + 18, W - 16, 5, s.limit - s.t, s.limit, s.t > s.limit * 0.55 ? C.seal : '#8ae070');
+      s.seq.forEach((si, i) => { const x = W / 2 - s.seq.length * 24 + i * 48 + 24; FS.draw(ctx, s.hint || i < s.i ? G.SEALS[si] : '???', x, L.ms + 4, { align: 'center', color: i < s.i ? '#8ae070' : i === s.i ? C.goldHi : DIM, maxW: 46 }); });
+      U.title(ctx, G.TECHS[s.tid].name, W / 2, L.ar + 4, 64);
+      gridRects(12, 4).forEach((r, i) => { btn(ctx, t, r, G.SEALS[i], '', i === focus); ctx.fillStyle = G.SEAL_COL[i]; ctx.fillRect(r.x + 3, r.y + 3, 2, r.h - 7); });
+    } else if (state === 'rhythm') {
+      const r = rhythm, p = clamp(r.t / r.dur, 0, 1), bx = 14, bw = W - 28, by = L.pn + Math.round(L.panelH / 2) - 4;
+      F.draw(ctx, r.mv.name + '! Коснись в жёлтой зоне', W / 2, L.pn + 8, { align: 'center', color: FC, shadow: '#160c06', maxW: W - 8 });
+      ctx.fillStyle = C.woodEdge; ctx.fillRect(bx - 2, by - 2, bw + 4, 16);
+      ctx.fillStyle = '#241a12'; ctx.fillRect(bx, by, bw, 12);
+      ctx.fillStyle = C.gold; ctx.fillRect(bx + bw * (r.zone - r.zw / 2), by, bw * r.zw, 12);
+      ctx.fillStyle = C.goldHi; ctx.fillRect(bx + bw * (r.zone - r.zw / 2), by, bw * r.zw, 2);
+      ctx.fillStyle = 'rgba(244,212,106,0.3)'; ctx.fillRect(bx + bw * (r.zone - r.zw * 1.6), by, bw * r.zw * 3.2, 12);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(bx + bw * p - 1, by - 4, 3, 20);
+    } else if (state === 'end') {
+      const win = result.win;
+      const title = win ? (result.ringout ? 'ПОБЕДА: ЗА КРАЕМ!' : 'ПОБЕДА!') : result.surrender ? 'ТЫ СДАЛСЯ' : result.timeout ? 'ВРЕМЯ ВЫШЛО' : 'ПОРАЖЕНИЕ';
+      U.panel(ctx, 6, L.pn + 4, W - 12, L.panelH - 10, 'scroll');
+      F.draw(ctx, title, W / 2, L.pn + 16, { align: 'center', color: win ? C.red : C.redDark, shadow: win ? C.goldHi : null, maxW: W - 30 });
+      FS.draw(ctx, `Ходов: ${pTurns} · реакций: ${stats.reacts}`, W / 2, L.pn + 33, { align: 'center', color: C.inkDim, maxW: W - 30 });
+      FS.draw(ctx, `Идеальных печатей: ${stats.perfect}`, W / 2, L.pn + 45, { align: 'center', color: C.inkDim, maxW: W - 30 });
+      if (stT > 1.0 && L.panelH >= 90) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, L.pn + 59, { align: 'center', color: Math.sin(t * 6) > 0 ? C.red : C.inkFaint });
+    } else if (state === 'intro') {
+      U.panel(ctx, 6, L.pn + 6, W - 12, 40, 'scroll');
+      FS.draw(ctx, A.name.toUpperCase(), W / 2, L.pn + 17, { align: 'center', color: C.inkDim, maxW: W - 30 });
+      F.draw(ctx, `${pName}  VS  ${E.name}`, W / 2, L.pn + 30, { align: 'center', color: C.redDark, maxW: W - 30 });
     }
   }
   function drawAll(ctx) {
@@ -923,114 +1045,20 @@ G.scenes.register('battle', (opts, onEnd) => {
     // полено (Каварими)
     for (const lg of fx.logs) { ctx.globalAlpha = 1 - lg.t / 1.2; ctx.fillStyle = PAL.wood; ctx.fillRect(lg.x - 5, L.groundY - 26 + lg.t * 10, 10, 24); ctx.fillStyle = PAL.woodDark; ctx.fillRect(lg.x - 5, L.groundY - 26 + lg.t * 10, 10, 2); ctx.globalAlpha = 1; }
     for (const p of fx.puffs) { ctx.globalAlpha = 1 - p.t / 0.7; ctx.fillStyle = '#e8e4dc'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1 + p.t), 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
-    for (const p of fx.pops) F.draw(ctx, p.text, p.x, p.y - p.t * 18, { align: 'center', color: p.col });
+    for (const p of fx.pops) F.draw(ctx, p.text, p.x, p.y - p.t * 18, { align: 'center', color: p.col, outline: '#160c06' });
     ctx.restore();
     if (fx.bubble) {
-      const lines = F.wrap(fx.bubble.text, 120).slice(0, 3), bw = 128, bh = lines.length * 10 + 6;
-      const bx = clamp(ex - bw / 2, 2, W - bw - 2), by = L.ar + 2;
-      ctx.fillStyle = G.UI.panel; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = G.UI.edge; ctx.fillRect(bx, by + bh, bw, 1);
-      lines.forEach((l, i) => F.draw(ctx, l, bx + 4, by + 3 + i * 10, { color: G.UI.text }));
+      const lines = FS.wrap(fx.bubble.text, 112).slice(0, 3), bw = 128, bh = lines.length * 12 + 14;
+      const bx = clamp(ex - bw / 2, 2, W - bw - 2), by = L.ar + 3;
+      U.panel(ctx, bx, by, bw, bh, 'frame');
+      lines.forEach((l, i) => FS.draw(ctx, l, bx + 8, by + 7 + i * 12, { color: C.ink }));
     }
     if (A.dark) { ctx.fillStyle = 'rgba(10,10,40,0.25)'; ctx.fillRect(0, L.ar, W, L.arH); }
     ctx.restore();
 
     drawCinema(ctx, t);
-    // шкала ходов
-    const tl = timeline();
-    F.draw(ctx, 'Ходы', 3, 2, { color: PAL.gray });
-    tl.forEach((s, i) => {
-      const x = 30 + i * 18;
-      ctx.fillStyle = s === 'p' ? '#2a4a7a' : '#7a2a2a'; ctx.fillRect(x, 1, 16, 10);
-      F.draw(ctx, s === 'p' ? 'Я' : E.name[0], x + 8, 1, { align: 'center', color: i === 0 ? PAL.yellow : PAL.white });
-    });
-    const goal = { ko: 'нокаут', spar: 'спарринг', bells: 'колокольчик', scroll: 'свиток', survive: 'продержись', ringout: 'за край' }[mode];
-    const goalExtra = (mode === 'bells' || mode === 'scroll') && opts.turns ? ` ${Math.max(0, opts.turns - pTurns + (state === 'menu' ? 1 : 0))}х` : mode === 'survive' && opts.turns ? ` ${Math.max(0, opts.turns - eTurns)}х` : '';
-    F.draw(ctx, goal + goalExtra, W - 3, 2, { align: 'right', color: PAL.orangeLight });
-    // враг
-    ctx.fillStyle = '#24202f'; ctx.fillRect(0, L.eb, W, 21);
-    F.draw(ctx, E.name + (E.phase === 2 ? ' (ярость)' : ''), 3, L.eb + 1, { color: PAL.white });
-    bar(ctx, 3, L.eb + 12, 60, 3, E.hp, E.hpMax, '#d84a3a');
-    if (E.chMax) bar(ctx, 3, L.eb + 16, 60, 2, E.ch, E.chMax, '#4a7ad8');
-    if (mode === 'spar' || mode === 'ringout') { ctx.fillStyle = PAL.yellow; ctx.fillRect(3 + 18, L.eb + 11, 1, 5); }
-    const intent = E.an > 0 ? E.plan : E.shown;
-    F.draw(ctx, 'Намерение:', 68, L.eb + 1, { color: PAL.gray });
-    F.draw(ctx, actName(intent) + (E.an > 0 ? ' ✔' : ''), 68, L.eb + 11, { color: (actOf(intent).kind === 'tai' || actOf(intent).kind === 'throw' || actOf(intent).kind === 'nin') ? '#ff9a7a' : PAL.light, maxW: W - 72 });
-    if (E.plan2) F.draw(ctx, 'затем: ' + actName(E.plan2), W - 3, L.eb + 1, { align: 'right', color: PAL.gray, maxW: 64 });
-    // герой
-    ctx.fillStyle = '#24202f'; ctx.fillRect(0, L.pb, W, 24);
-    F.draw(ctx, pName, 3, L.pb + 1, { color: PAL.white, maxW: 50 });
-    F.draw(ctx, 'HP', 3, L.pb + 12, { color: PAL.gray });
-    bar(ctx, 16, L.pb + 14, 46, 4, P.hp, P.hpMax, '#d84a3a'); F.draw(ctx, String(Math.max(0, P.hp)), 64, L.pb + 12, { color: PAL.white });
-    F.draw(ctx, 'Ч', 84, L.pb + 12, { color: PAL.gray });
-    bar(ctx, 92, L.pb + 14, 34, 4, P.ch, P.chMax, '#4a7ad8');
-    F.draw(ctx, 'Дых', 56, L.pb + 1, { color: PAL.gray });
-    for (let i = 0; i < P.brMax; i++) { ctx.fillStyle = i < P.br ? '#8ae0e0' : '#3a3548'; ctx.fillRect(76 + i * 6, L.pb + 4, 4, 4); }
-    F.draw(ctx, 'Фокус', 130, L.pb + 1, { color: PAL.gray });
-    for (let i = 0; i < P.focusMax; i++) { ctx.fillStyle = i < P.focus ? PAL.yellow : '#3a3548'; ctx.fillRect(162 + i * 8, L.pb + 3, 5, 5); }
-    F.draw(ctx, 'Воля', 130, L.pb + 12, { color: P.will >= 100 && Math.sin(t * 8) > 0 ? PAL.yellow : PAL.orangeLight });
-    bar(ctx, 156, L.pb + 14, 33, 4, P.will, 100, P.will >= 100 ? PAL.yellow : PAL.orange);
-    // сообщения
-    ctx.fillStyle = '#1a1724'; ctx.fillRect(0, L.ms, W, 22);
-    if (state === 'menu' && menu === 'tai' && chain.length) F.draw(ctx, 'Цепочка: ' + chain.map((m) => G.MOVES[m].name).join(' > '), 3, L.ms + 1, { color: PAL.yellow, maxW: W - 6 });
-    else if (state === 'menu') {
-      const bs = pageButtons(), b = bs[focus];
-      const desc = b && (b.off ? 'x ' + b.off : b.desc);
-      if (desc) F.draw(ctx, desc, 3, L.ms + 1, { color: b.off ? '#ff9a7a' : PAL.light, maxW: W - 6 });
-      else if (msgs.length) F.draw(ctx, msgs[msgs.length - 1].t, 3, L.ms + 1, { color: msgs[msgs.length - 1].col, maxW: W - 6 });
-      if (msgs.length && desc) F.draw(ctx, msgs[msgs.length - 1].t, 3, L.ms + 11, { color: PAL.gray, maxW: W - 6 });
-    } else msgs.forEach((m, i) => F.draw(ctx, m.t, 3, L.ms + 1 + i * 10, { color: m.col, maxW: W - 6 }));
-    // панель
-    ctx.fillStyle = '#100e18'; ctx.fillRect(0, L.pn, W, L.panelH + 40);
-    const btn = (r, label, sub, on, off, hot) => {
-      ctx.fillStyle = off ? '#1e1b28' : hot ? (Math.sin(t * 8) > 0 ? '#a8420c' : '#7a2a10') : '#2a2638'; ctx.fillRect(r.x, r.y, r.w, r.h);
-      ctx.fillStyle = on ? PAL.orange : '#3a3548'; ctx.fillRect(r.x, r.y, r.w, 1); ctx.fillRect(r.x, r.y + r.h - 1, r.w, 1); ctx.fillRect(r.x, r.y, 1, r.h); ctx.fillRect(r.x + r.w - 1, r.y, 1, r.h);
-      const ty = r.y + Math.max(1, Math.floor(r.h / 2) - (sub ? 9 : 5));
-      F.draw(ctx, label, r.x + r.w / 2, ty, { align: 'center', color: off ? '#5a5670' : on ? PAL.yellow : PAL.white, maxW: r.w - 2 });
-      if (sub) F.draw(ctx, sub, r.x + r.w / 2, ty + 10, { align: 'center', color: off ? '#4a4660' : PAL.gray, maxW: r.w - 2 });
-    };
-    if (state === 'menu') { const bs = pageButtons(); gridRects(bs.length).forEach((r, i) => btn(r, bs[i].label, bs[i].sub, i === focus, !!bs[i].off, bs[i].hot)); }
-    else if (state === 'target') { const n = E.clones + 1, rs = gridRects(n), names = n >= 3 ? ['Левый', 'Средний', 'Правый'] : ['Левый', 'Правый']; names.forEach((l, i) => btn(rs[i], l, E.an > 0 && i === E.realIdx ? 'настоящий!' : 'кто из них?', i === focus)); }
-    else if (state === 'react') {
-      const r = react;
-      F.draw(ctx, 'РЕАКЦИЯ!', W / 2, L.ar + 3, { align: 'center', color: Math.sin(t * 20) > 0 ? PAL.yellow : PAL.orange });
-      if (r.sub === 'kawa') {
-        F.draw(ctx, 'Печать: ' + G.SEALS[r.need] + '!', W / 2, L.ms + 1, { align: 'center', color: PAL.yellow });
-        bar(ctx, 20, L.ms + 14, W - 40, 3, 1.3 - r.kt, 1.3, PAL.orange);
-        gridRects(3).forEach((rc, i) => btn(rc, G.SEALS[r.opts[i]], '', i === focus));
-      } else if (r.sub === 'clash') {
-        F.draw(ctx, 'ЖМИ A БЫСТРО! ' + r.taps + '/' + Math.round(3 + E.spd * 0.35), W / 2, L.ms + 1, { align: 'center', color: PAL.yellow });
-        bar(ctx, 20, L.ms + 14, W - 40, 3, 1.5 - r.kt, 1.5, PAL.orange);
-        btn({ x: 20, y: L.pn + 8, w: W - 40, h: L.panelH - 16 }, 'ВСТРЕЧНЫЙ КУНАЙ!', 'дзинь-дзинь', true);
-      } else {
-        bar(ctx, 4, L.ms + 18, W - 8, 3, r.max - r.t, r.max, PAL.orange);
-        const bs = reactButtons(); gridRects(4, 2).forEach((rc, i) => btn(rc, bs[i].label, bs[i].sub, i === focus, !!bs[i].off));
-      }
-    } else if (state === 'seals') {
-      const s = seals;
-      ctx.fillStyle = '#1a1724'; ctx.fillRect(0, L.ms, W, 22);
-      bar(ctx, 4, L.ms + 18, W - 8, 3, s.limit - s.t, s.limit, s.t > s.limit * 0.55 ? PAL.orange : '#8ae070');
-      s.seq.forEach((si, i) => { const x = W / 2 - s.seq.length * 19 + i * 38 + 19; F.draw(ctx, s.hint || i < s.i ? G.SEALS[si] : '???', x, L.ms + 4, { align: 'center', color: i < s.i ? '#8ae070' : i === s.i ? PAL.yellow : PAL.gray, maxW: 37 }); });
-      F.draw(ctx, G.TECHS[s.tid].name, W / 2, L.ar + 3, { align: 'center', color: PAL.yellow });
-      gridRects(12, 4).forEach((r, i) => { ctx.fillStyle = G.SEAL_COL[i]; ctx.fillRect(r.x + 2, r.y + 2, 3, r.h - 4); btn(Object.assign({}, r, { x: r.x + 5, w: r.w - 5 }), G.SEALS[i], '', i === focus); });
-    } else if (state === 'rhythm') {
-      const r = rhythm, p = clamp(r.t / r.dur, 0, 1), bx = 14, bw = W - 28, by = L.pn + L.panelH / 2 - 6;
-      F.draw(ctx, r.mv.name + '! Жми A в жёлтой зоне', W / 2, L.pn + 6, { align: 'center', color: PAL.white });
-      ctx.fillStyle = '#2a2638'; ctx.fillRect(bx, by, bw, 12);
-      ctx.fillStyle = PAL.yellow; ctx.fillRect(bx + bw * (r.zone - r.zw / 2), by, bw * r.zw, 12);
-      ctx.fillStyle = 'rgba(255,210,58,0.35)'; ctx.fillRect(bx + bw * (r.zone - r.zw * 1.6), by, bw * r.zw * 3.2, 12);
-      ctx.fillStyle = PAL.white; ctx.fillRect(bx + bw * p - 1, by - 3, 3, 18);
-    } else if (state === 'end') {
-      const win = result.win;
-      const title = win ? (result.ringout ? 'ПОБЕДА: ЗА КРАЕМ!' : 'ПОБЕДА!') : result.surrender ? 'ТЫ СДАЛСЯ' : result.timeout ? 'ВРЕМЯ ВЫШЛО' : 'ПОРАЖЕНИЕ';
-      F.draw(ctx, title, W / 2, L.pn + 10, { align: 'center', color: win ? PAL.yellow : '#ff9a7a' });
-      F.draw(ctx, `Ходов: ${pTurns} · реакций: ${stats.reacts}`, W / 2, L.pn + 24, { align: 'center', color: PAL.light, maxW: W - 8 });
-      F.draw(ctx, `Идеальных печатей: ${stats.perfect}`, W / 2, L.pn + 35, { align: 'center', color: PAL.light, maxW: W - 8 });
-      if (stT > 1.0) F.draw(ctx, 'Нажми A', W / 2, L.pn + 50, { align: 'center', color: PAL.gray });
-    } else if (state === 'intro') {
-      F.draw(ctx, A.name.toUpperCase(), W / 2, L.pn + 12, { align: 'center', color: PAL.gray });
-      F.draw(ctx, `${pName}  VS  ${E.name}`, W / 2, L.pn + 28, { align: 'center', color: PAL.yellow });
-    }
     ctx.restore();
+    drawHud(ctx, t);   // шкалы и кнопки — вне тряски и приближения
     // момент (крупный план)
     if (state === 'moment' && moment) {
       const H = G.screen.H, k = Math.min(1, moment.t * 3);
@@ -1039,8 +1067,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       ctx.fillStyle = '#3a2a2a'; ctx.fillRect(0, H / 2 - 30 * k, W, 10 * k);
       for (const ex2 of [W / 2 - 40, W / 2 + 40]) { ctx.fillStyle = '#fff'; ctx.fillRect(ex2 - 18, H / 2 - 6, 36, 14); ctx.fillStyle = '#3a5a8a'; ctx.fillRect(ex2 - 6, H / 2 - 6, 12, 14); ctx.fillStyle = '#14121c'; ctx.fillRect(ex2 - 3, H / 2 - 3, 6, 8); ctx.fillStyle = '#2a2030'; ctx.fillRect(ex2 - 20, H / 2 - 12, 40, 3); }
       ctx.fillStyle = 'rgba(232,98,26,' + (0.3 + 0.2 * Math.sin(moment.t * 10)) + ')'; ctx.fillRect(0, 0, W, H / 2 - 32); ctx.fillRect(0, H / 2 + 32, W, H / 2);
-      F.draw(ctx, G.util.fmt(moment.line, { name: pName }), W / 2, H / 2 + 44, { align: 'center', color: PAL.white });
-      F.draw(ctx, 'ВОЛЯ ОГНЯ', W / 2, H / 2 - 52, { align: 'center', color: PAL.yellow });
+      F.draw(ctx, G.util.fmt(moment.line, { name: pName }), W / 2, H / 2 + 44, { align: 'center', color: '#f8eed0', outline: '#000', maxW: W - 12 });
+      F.draw(ctx, 'ВОЛЯ ОГНЯ', W / 2, H / 2 - 52, { align: 'center', color: C.goldHi, outline: C.redDark });
     }
     if (fx.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,' + Math.min(0.8, fx.flash * 3) + ')'; ctx.fillRect(0, 0, W, G.screen.H); }
   }

@@ -85,25 +85,10 @@ G.gfx = {
     return c;
   },
 
-  // Рамка окна интерфейса в пиксельном стиле
+  // Рамка окна — совместимость со старым вызовом: рисует панель «Свитки и дерево» (gfx/ui.js).
+  // style: 'paper' — дерево с пергаментом, 'dark' — тёмное лакированное дерево.
   window(ctx, x, y, w, h, style = 'paper') {
-    // Тема «Б. Лак и сталь»: чёрная тень, стальная кромка, лаковое тело,
-    // светлая кромка сверху и тень снизу — панель читается как металл в смоле.
-    const U = G.UI;
-    const st = style === 'dark'
-      ? { bg: U.deep, hi: U.deepHi, lo: U.deepLo, edge: U.edgeDim }
-      : { bg: U.panel, hi: U.panelHi, lo: U.panelLo, edge: U.edge };
-    ctx.fillStyle = '#000';
-    ctx.fillRect(x + 1, y, w - 2, h);
-    ctx.fillRect(x, y + 1, w, h - 2);
-    ctx.fillStyle = st.edge;
-    ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-    ctx.fillStyle = st.bg;
-    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
-    ctx.fillStyle = st.hi;
-    ctx.fillRect(x + 2, y + 2, w - 4, 1);
-    ctx.fillStyle = st.lo;
-    ctx.fillRect(x + 2, y + h - 3, w - 4, 1);
+    G.ui.panel(ctx, x, y, w, h, style === 'dark' ? 'night' : 'frame');
   },
 };
 

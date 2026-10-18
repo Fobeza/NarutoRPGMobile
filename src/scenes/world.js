@@ -2,7 +2,7 @@
 // pos: { map, x, y, dir }
 G.scenes.register('world', (pos) => {
   const T = G.CONFIG.TILE;
-  const HUD_H = 20, STRIP_H = 20;
+  const HUD_H = 28, STRIP_H = 22;
   const CANON = ['naruto', 'sakura', 'sasuke', 'hinata'];
   const FADE_BEHIND = { tree: 1, pine: 1, planter: 1, lamp: 1 };
 
@@ -586,17 +586,14 @@ G.scenes.register('world', (pos) => {
       if (this.banner) {
         const a = Math.min(1, this.banner.t * 2, (2.4 - this.banner.t) * 4);
         ctx.globalAlpha = Math.max(0, a);
-        const w = G.font.measure(this.banner.text) + 16;
-        const x = Math.round((W - w) / 2), y = HUD_H + 6;
-        G.gfx.window(ctx, x, y, w, 16, 'dark');
-        G.font.draw(ctx, this.banner.text, W / 2, y + 4, { align: 'center', color: G.PAL.yellow });
+        G.ui.title(ctx, this.banner.text, W / 2, HUD_H + 6, 0);   // красная лента с названием места
         ctx.globalAlpha = 1;
       }
       if (this.toast) {
-        const w = Math.min(W - 8, G.font.measure(this.toast.text) + 12);
-        const x = Math.round((W - w) / 2), y = G.screen.H - STRIP_H - 22;
-        G.gfx.window(ctx, x, y, w, 16, 'dark');
-        G.font.draw(ctx, this.toast.text, W / 2, y + 4, { align: 'center', color: G.PAL.white });
+        const w = Math.min(W - 8, G.font.measure(this.toast.text) + 18), h = 19;
+        const x = Math.round((W - w) / 2), y = G.screen.H - STRIP_H - h - 6;
+        G.ui.panel(ctx, x, y, w, h, 'night');
+        G.font.draw(ctx, this.toast.text, W / 2, y + 5, { align: 'center', color: '#f4d46a', maxW: w - 12 });
       }
       if (G.cine) G.cine.drawBars(ctx, HUD_H, VH, W);
       this.drawArrow(ctx, W, VH);   // стрелка цели — поверх табличек и уведомлений
@@ -652,10 +649,10 @@ G.scenes.register('world', (pos) => {
       const label = (h.exit ? 'выход' : h.door ? '' : '') + '≈' + m + ' м';
       const lx = ax - Math.cos(ang) * 22, ly = ay - Math.sin(ang) * 16;
       const icon = h.exit ? '' : tgt.icon + ' ';
-      const txt = icon + label, tw = G.font.measure(txt) + 6;
-      const bx = G.util.clamp(Math.round(lx - tw / 2), 2, W - tw - 2), by = G.util.clamp(Math.round(ly - 5), HUD_H + 2, HUD_H + VH - 13);
-      ctx.globalAlpha = 0.8; ctx.fillStyle = '#14121c'; ctx.fillRect(bx, by, tw, 11); ctx.globalAlpha = 1;
-      G.font.draw(ctx, txt, bx + 3, by + 2, { color: G.PAL.white });
+      const txt = icon + label, tw = G.font.small.measure(txt) + 10;
+      const bx = G.util.clamp(Math.round(lx - tw / 2), 2, W - tw - 2), by = G.util.clamp(Math.round(ly - 5), HUD_H + 2, HUD_H + VH - 17);
+      G.ui.panel(ctx, bx, by, tw, 15, 'night');
+      G.font.small.draw(ctx, txt, bx + 5, by + 4, { color: '#f4d46a' });
     },
 
     // Кнопка ЦЕЛЬ: светящийся след (A*) до цели на этой карте
@@ -695,7 +692,7 @@ G.scenes.register('world', (pos) => {
       if (G.storage.settings.minimap === false) return;
       const S = 48, x0 = W - S - 3, y0 = HUD_H + 3;
       const m = this.map, p = this.player;
-      ctx.fillStyle = G.UI.edge; ctx.fillRect(x0 - 1, y0 - 1, S + 2, S + 2);
+      G.ui.panel(ctx, x0 - 3, y0 - 3, S + 6, S + 6, 'plank');
       ctx.fillStyle = '#14121c'; ctx.fillRect(x0, y0, S, S);
       ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, S, S); ctx.clip();
       let sc, ox, oy;
@@ -752,13 +749,13 @@ G.scenes.register('world', (pos) => {
       if (!n) return;
       const a = Math.min(1, n.t * 3, (2.6 - n.t) * 5);
       ctx.globalAlpha = Math.max(0, a);
-      const tw = Math.min(W - 8, Math.max(G.font.measure(n.title), G.font.measure(n.text)) + 14);
-      const x = Math.round((W - tw) / 2), y = HUD_H + 26;
-      G.gfx.window(ctx, x, y, tw, 26, 'dark');
-      G.font.draw(ctx, n.title, W / 2, y + 4, { align: 'center', color: n.col });
+      const F = G.font.small, tw = Math.min(W - 8, Math.max(G.font.measure(n.title), F.measure(n.text)) + 26);
+      const x = Math.round((W - tw) / 2), y = HUD_H + 28;
+      G.ui.panel(ctx, x, y, tw, 36, 'frame');
+      G.font.draw(ctx, n.title, W / 2, y + 8, { align: 'center', color: G.ui.C.redDark });
       let txt = n.text;
-      while (G.font.measure(txt) > tw - 10 && txt.length > 4) txt = txt.slice(0, -2) + '…';
-      G.font.draw(ctx, txt, W / 2, y + 14, { align: 'center', color: G.PAL.white });
+      while (F.measure(txt) > tw - 20 && txt.length > 4) txt = txt.slice(0, -2) + '…';
+      F.draw(ctx, txt, W / 2, y + 22, { align: 'center', color: G.ui.C.ink });
       ctx.globalAlpha = 1;
     },
 
@@ -815,50 +812,51 @@ G.scenes.register('world', (pos) => {
     },
 
     drawHud(ctx) {
-      const W = G.screen.W, P = G.PAL;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, HUD_H);
-      ctx.fillStyle = '#2e2a3a'; ctx.fillRect(0, HUD_H - 1, W, 1);
+      const W = G.screen.W, U = G.ui, F = G.font.small, C = U.C;
+      U.panel(ctx, 0, 0, W, HUD_H, 'night');
       const g = G.game, v = g.v;
-      G.font.draw(ctx, `${g.dayName()}, день ${v.day}`, 3, 1, { color: P.light });
+      F.draw(ctx, `${g.dayName()}, день ${v.day}`, 6, 5, { color: '#d8c8a0' });
       // часы: мигающее двоеточие, пока время идёт; значок погоды (ночью — луна)
       const wt = G.life.WEATHER[G.life.weather()];
-      const icon = g.isNight() && wt.icon === '☀' ? '🌙' : wt.icon;
+      const night = g.isNight();
       const running = G.scenes.top() === this && !G.scenes.busy;
       let clk = g.clock();
       if (running && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');
-      const cw = G.font.measure('00:00'), ix = W / 2 - cw / 2 - 10;
-      G.font.draw(ctx, icon, ix, 1, { color: g.isNight() && icon === '🌙' ? '#c8d0ff' : wt.col });
-      G.font.draw(ctx, clk, W / 2 - cw / 2, 1, { color: v.min >= 23 * 60 ? '#ff8a6a' : g.isNight() ? '#9ab0ff' : P.white });
-      G.font.draw(ctx, v.money + ' рё', W - 3, 1, { align: 'right', color: P.yellow });
-      // HP, чакра, сытость, энергия
-      const bars = [['#e04a4a', v.hp / 100], ['#4a8ae0', v.chakra / 100], ['#e8a03a', v.food / 100], ['#8ac85a', v.energy / 100]];
-      bars.forEach(([col, val], i) => {
-        const x = 3 + i * 47, y = 13, w = 44;
-        const low = i >= 2 && val < 0.2 && Math.floor(this.time * 3) % 2 === 0;   // голод/усталость мигают
-        ctx.fillStyle = low ? '#5a1a1a' : '#0c0a12'; ctx.fillRect(x, y, w, 4);
-        ctx.fillStyle = col; ctx.fillRect(x + 1, y + 1, Math.round((w - 2) * val), 2);
+      const cw = F.measure('00:00'), cx = Math.round(W / 2 - cw / 2) + 5;
+      if (night && wt.icon === '☀') U.icon(ctx, 'moon', cx - 14, 4, '#c8d0ff');
+      else F.draw(ctx, wt.icon, cx - 12, 5, { color: wt.col });
+      F.draw(ctx, clk, cx, 5, { color: v.min >= 23 * 60 ? '#ff8a6a' : night ? '#9ab0ff' : '#f8eed0' });
+      const mt = v.money + ' рё';
+      F.draw(ctx, mt, W - 6, 5, { align: 'right', color: '#f4d46a' });
+      // здоровье, чакра, сытость, энергия: значок + бамбуковая шкала
+      const bars = [['heart', C.hp, v.hp / 100], ['drop', C.chakra, v.chakra / 100], ['bowl', C.food, v.food / 100], ['bolt', C.energy, v.energy / 100]];
+      const cell = (W - 8) / 4;
+      bars.forEach(([ic, col, val], i) => {
+        const x = Math.round(4 + i * cell), low = i >= 2 && val < 0.2 && Math.floor(this.time * 3) % 2 === 0;
+        U.icon(ctx, ic, x, 15, low ? '#ff6a4a' : col);
+        U.gauge(ctx, x + 13, 18, Math.round(cell) - 17, 6, val, low ? '#e04a4a' : col);
       });
     },
 
     drawStrip(ctx) {
-      const W = G.screen.W, P = G.PAL;
+      const W = G.screen.W, U = G.ui, F = G.font.small, C = U.C;
       const y = G.screen.H - STRIP_H;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, y, W, STRIP_H);
-      ctx.fillStyle = '#2e2a3a'; ctx.fillRect(0, y, W, 1);
+      U.panel(ctx, 0, y, W, STRIP_H, 'plank');
       const mk = G.state.marker;
       const qid = !mk && G.quests.tracked(), st = qid && G.quests.curStep(qid);
+      const maxW = W - 72;
       if (st || mk) {
         const flash = this.goalFlash && Math.floor(this.goalFlash * 6) % 2 === 0;
         const ok = !st || G.quests.timeOk(st);
         const icon = st ? G.QUEST_CATS[G.QUESTS[qid].cat].icon : '📍';
-        G.font.draw(ctx, icon, 3, y + 5, { color: st ? G.QUEST_CATS[G.QUESTS[qid].cat].color : P.orange });
+        F.draw(ctx, icon, 6, y + 7, { color: st ? G.QUEST_CATS[G.QUESTS[qid].cat].color : '#ff9a4a' });
         let txt = st ? st.text : 'Метка: ' + (mk.label || 'место');
         const suffix = ok ? '' : ' ⏰ с ' + G.game.clock(st.time[0]);
-        while (G.font.measure(txt + suffix) > W - 66 && txt.length > 4) txt = txt.slice(0, -2) + '…';
-        G.font.draw(ctx, txt + suffix, 13, y + 5, { color: !ok ? P.gray : flash ? P.yellow : P.white });
+        while (F.measure(txt + suffix) > maxW - 14 && txt.length > 4) txt = txt.slice(0, -2) + '…';
+        F.draw(ctx, txt + suffix, 18, y + 7, { color: !ok ? '#9a8a76' : flash ? '#ffd23a' : '#f8eed0', shadow: '#160c06' });
       } else {
-        G.font.draw(ctx, '▶', 4, y + 5, { color: P.orange });
-        G.font.draw(ctx, this.place, 13, y + 5, { color: P.white });
+        U.icon(ctx, 'leaf', 5, y + 6, '#ff9a4a');
+        F.draw(ctx, this.place, 18, y + 7, { color: '#f8eed0', shadow: '#160c06', maxW });
       }
     },
 

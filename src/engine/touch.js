@@ -5,8 +5,8 @@
 // Сцена сама говорит, что показывать: необязательный метод scene.touch() → { joy, action: {label}, sys, back }.
 // Нет метода — «Назад» показываем только в известных меню-сценах (BACK).
 G.touch = (() => {
-  const BACK = new Set(['menu', 'settings', 'savemenu', 'bag', 'shop', 'journal', 'calendar', 'status', 'gallery', 'mapview', 'storage', 'charcreate', 'cheats', 'fonttest']);
-  const STRIP_H = 20;          // высота нижней полосы мира (scenes/world.js)
+  const BACK = new Set(['bag', 'journal', 'calendar', 'gallery', 'mapview', 'storage', 'charcreate', 'cheats']);
+  const STRIP_H = 22;          // высота нижней полосы мира (scenes/world.js)
   let hits = [];               // горячие зоны прошлого кадра: { x, y, w, h, btn }
   const anim = { action: 0, label: '' };
   let lastT = 0;
@@ -28,44 +28,41 @@ G.touch = (() => {
     return null;
   }
 
-  // ---------- рисование ----------
-  function plate(ctx, x, y, w, h, on) {
-    ctx.fillStyle = '#000'; ctx.fillRect(x + 1, y, w - 2, h); ctx.fillRect(x, y + 1, w, h - 2);
-    ctx.fillStyle = on ? '#6a6a7a' : '#46444f'; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-    ctx.fillStyle = on ? '#4a4858' : '#26242e'; ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
-  }
-  const ICONS = {
-    menu(ctx, x, y, c) { ctx.fillStyle = c; ctx.fillRect(x + 3, y + 4, 7, 1); ctx.fillRect(x + 3, y + 6, 7, 1); ctx.fillRect(x + 3, y + 8, 7, 1); },
-    map(ctx, x, y, c) { ctx.fillStyle = c; ctx.fillRect(x + 3, y + 3, 7, 7); ctx.fillStyle = '#26242e'; ctx.fillRect(x + 5, y + 3, 1, 7); ctx.fillRect(x + 8, y + 3, 1, 7); },
-    goal(ctx, x, y, c) { ctx.fillStyle = c; ctx.fillRect(x + 4, y + 3, 1, 8); ctx.fillRect(x + 5, y + 3, 5, 1); ctx.fillRect(x + 5, y + 4, 4, 1); ctx.fillRect(x + 5, y + 5, 3, 1); },
-  };
+  // ---------- рисование (стиль «Свитки и дерево», gfx/ui.js) ----------
   function sysIcons(ctx, W, H) {
-    const y = H - STRIP_H + 3, items = ['menu', 'map', 'goal'];
+    const U = G.ui, y = H - STRIP_H + 3, items = ['menu', 'map', 'goal'], bw = 20, bh = 16;
     items.forEach((b, i) => {
-      const x = W - 3 - (items.length - i) * 15, on = G.input.held(b);
-      plate(ctx, x, y, 14, 14, on);
-      ICONS[b](ctx, x, y + 0, on ? '#ffffff' : '#b8b0cc');
-      hits.push({ x, y: H - STRIP_H, w: 15, h: STRIP_H, btn: b });
+      const x = W - 4 - (items.length - i) * (bw + 2) + 2, on = G.input.held(b);
+      U.button(ctx, x, y + (on ? 1 : 0), bw, bh, '', on ? 'sel' : 'normal');
+      U.icon(ctx, b, x + 5, y + 3 + (on ? 1 : 0), on ? '#ffffff' : '#f4e4bc');
+      hits.push({ x, y: H - STRIP_H, w: bw + 2, h: STRIP_H, btn: b });
     });
   }
   function actionButton(ctx, W, H, c, now) {
     const k = anim.action; if (k <= 0.01) return;
-    const r = Math.round(15 * (0.6 + 0.4 * k)), cx = W - 24, cy = H - STRIP_H - 28, on = G.input.held('a');
+    const r = Math.round(17 * (0.6 + 0.4 * k)), cx = W - 26, cy = H - STRIP_H - 30, on = G.input.held('a');
     ctx.globalAlpha = Math.min(1, k * 1.4);
-    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx, cy + 1, r + 1.5, 0, 7); ctx.fill();
-    ctx.fillStyle = '#46341a'; ctx.beginPath(); ctx.arc(cx, cy, r + 1, 0, 7); ctx.fill();
-    ctx.fillStyle = on ? '#ff9a4a' : '#e8621a'; ctx.beginPath(); ctx.arc(cx, cy, r - 1, 0, 7); ctx.fill();
-    ctx.fillStyle = on ? '#e8621a' : '#ff9a4a'; ctx.beginPath(); ctx.arc(cx - 2, cy - 2, r - 5, 0, 7); ctx.fill();
-    ctx.fillStyle = '#e8621a'; ctx.beginPath(); ctx.arc(cx, cy, r - 5, 0, 7); ctx.fill();
-    G.font.draw(ctx, 'A', cx, cy - 4, { align: 'center', color: '#ffffff', outline: '#8a2a10' });
-    if (anim.label) G.font.draw(ctx, anim.label, cx, cy - r - 11, { align: 'center', color: '#f8f4ec', outline: '#14121c' });
+    // красная печать на деревянном основании
+    ctx.fillStyle = '#0a0604'; ctx.beginPath(); ctx.arc(cx, cy + 1.5, r + 2, 0, 7); ctx.fill();
+    ctx.fillStyle = '#3e2616'; ctx.beginPath(); ctx.arc(cx, cy, r + 1.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#6a4228'; ctx.beginPath(); ctx.arc(cx, cy - 0.5, r, 0, 7); ctx.fill();
+    ctx.fillStyle = on ? '#e0562e' : '#b8321c'; ctx.beginPath(); ctx.arc(cx, cy, r - 3, 0, 7); ctx.fill();
+    ctx.fillStyle = on ? '#b8321c' : '#e0562e'; ctx.beginPath(); ctx.arc(cx - 1.5, cy - 2, r - 8, 0, 7); ctx.fill();
+    ctx.fillStyle = on ? '#e0562e' : '#b8321c'; ctx.beginPath(); ctx.arc(cx, cy, r - 7, 0, 7); ctx.fill();
+    G.font.draw(ctx, 'A', cx, cy - 4, { align: 'center', color: '#f8eed0', shadow: '#5a1408' });
+    if (anim.label) {
+      const lw = G.font.small.measure(anim.label) + 12;
+      G.ui.panel(ctx, Math.round(cx - lw / 2), cy - r - 18, lw, 15, 'tag');
+      G.font.small.draw(ctx, anim.label, cx, cy - r - 15, { align: 'center', color: '#f4d46a', shadow: '#5a1408' });
+    }
     ctx.globalAlpha = 1;
-    if (c.action) hits.push({ x: cx - 18, y: cy - 18, w: 36, h: 36, btn: 'a' });
+    if (c.action) hits.push({ x: cx - 20, y: cy - 20, w: 40, h: 40, btn: 'a' });
   }
   function backPill(ctx) {
-    const on = G.input.held('b'), w = 41, h = 14, x = 2, y = 2;
-    plate(ctx, x, y, w, h, on);
-    G.font.draw(ctx, '< Назад', x + w / 2, y + 3, { align: 'center', color: on ? '#ffffff' : '#dcd8e8' });
+    const on = G.input.held('b'), w = 52, h = 16, x = 3, y = 3;
+    G.ui.button(ctx, x, y + (on ? 1 : 0), w, h, '', on ? 'sel' : 'normal');
+    G.ui.icon(ctx, 'back', x + 4, y + 3 + (on ? 1 : 0), '#f4e4bc');
+    G.font.small.draw(ctx, 'Назад', x + 17, y + 4 + (on ? 1 : 0), { color: '#f8eed0', shadow: '#160c06' });
     hits.push({ x, y, w, h, btn: 'b' });
   }
   function stick(ctx) {
@@ -75,9 +72,14 @@ G.touch = (() => {
     let dx = p.x - o.x, dy = p.y - o.y; const d = Math.hypot(dx, dy);
     if (d > R) { dx = dx / d * R; dy = dy / d * R; }
     const run = st.run;
-    ctx.globalAlpha = 0.28; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(o.x, o.y, R, 0, 7); ctx.fill();
-    ctx.globalAlpha = 0.5; ctx.strokeStyle = run ? '#ff9a4a' : '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(o.x, o.y, R - 0.5, 0, 7); ctx.stroke();
-    ctx.globalAlpha = 0.85; ctx.fillStyle = run ? '#e8621a' : '#f8f4ec'; ctx.beginPath(); ctx.arc(o.x + dx, o.y + dy, R * 0.36, 0, 7); ctx.fill();
+    // кольцо — свиток с красным ободом, рукоять — печать
+    ctx.globalAlpha = 0.34; ctx.fillStyle = '#ecdcb0'; ctx.beginPath(); ctx.arc(o.x, o.y, R, 0, 7); ctx.fill();
+    ctx.globalAlpha = 0.85; ctx.strokeStyle = run ? '#e0562e' : '#3e2616'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(o.x, o.y, R - 0.75, 0, 7); ctx.stroke();
+    ctx.globalAlpha = 0.5; ctx.strokeStyle = '#f4d46a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(o.x, o.y, R - 3, 0, 7); ctx.stroke();
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#3e2616'; ctx.beginPath(); ctx.arc(o.x + dx, o.y + dy + 0.5, R * 0.38, 0, 7); ctx.fill();
+    ctx.fillStyle = run ? '#e0562e' : '#b8321c'; ctx.beginPath(); ctx.arc(o.x + dx, o.y + dy, R * 0.34, 0, 7); ctx.fill();
+    ctx.fillStyle = run ? '#ff9a4a' : '#e0562e'; ctx.beginPath(); ctx.arc(o.x + dx - 1.5, o.y + dy - 1.5, R * 0.16, 0, 7); ctx.fill();
     ctx.globalAlpha = 1;
   }
 

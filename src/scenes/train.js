@@ -29,7 +29,7 @@ G.QUIZ = [
 ];
 
 G.scenes.register('train', (kind, opts, onDone) => {
-  const W = G.screen.W, F = G.font, P = G.PAL, AU = G.audio;
+  const W = G.screen.W, F = G.font, U = G.ui, C = U.C, AU = G.audio;
   const I = () => G.input;
   const pressA = () => I().pressed('a') || !!I().tapNow;
   let t = 0, phase = 'intro', score = 0, total = 1, msg = '', msgT = 0;
@@ -37,17 +37,17 @@ G.scenes.register('train', (kind, opts, onDone) => {
   const R = Math.random;
   const st = {};   // состояние игры
   const INTRO = {
-    throw: 'Мишень движется. Жми A, когда она в прицеле.',
-    log: 'Удары по ритму: жми A, когда метка на линии.',
-    meditate: 'Дыши: держи A на вдохе (круг растёт), отпускай на выдохе.',
-    tree: 'Держи A — чакра в ноги. Удерживай метку в зелёной зоне.',
+    throw: 'Мишень движется. Коснись экрана, когда она в прицеле.',
+    log: 'Удары по ритму: коснись экрана, когда метка на линии.',
+    meditate: 'Дыши: держи кнопку на вдохе (круг растёт), отпускай на выдохе.',
+    tree: 'Держи кнопку — чакра в ноги. Удерживай метку в зелёной зоне.',
     seals: 'Складывай печати как можно быстрее!',
-    run: 'Бег по крышам: жми A, чтобы перепрыгнуть препятствие.',
+    run: 'Бег по крышам: коснись экрана, чтобы перепрыгнуть препятствие.',
     quiz: 'Вопросы по книге. Выбери верный ответ.',
-    cook: 'Готовь рамен: лапша и бульон — жми A в зелёной зоне; потом повтори рецепт.',
+    cook: 'Готовь рамен: лапша и бульон — касайся в зелёной зоне; потом повтори рецепт.',
     shogi: 'Сыграй с Шикамару: собери три в ряд. Ходишь первым.',
-    cat: 'Лови кошку Тору! Жми туда, где она выглянет.',
-    sort: 'Сортируй: влево или вправо, как подсказано.',
+    cat: 'Лови кошку Тору! Касайся клетки, где она выглянет.',
+    sort: 'Сортируй: коснись левой или правой половины экрана.',
   };
   const DUR = { meditate: 16, tree: 14, seals: 16, cat: 18 };
 
@@ -92,6 +92,8 @@ G.scenes.register('train', (kind, opts, onDone) => {
     name: 'train', kind,
     finishNow(s) { score = s * total; finish(); },   // для автотеста
     enter() { init(); },
+    // кнопка удержания нужна только в играх, где значение берётся из held('a')
+    touch() { return { action: phase === 'play' && (kind === 'meditate' || kind === 'tree') ? { label: 'Держи' } : null }; },
     update(dt) {
       t += dt; if (msgT > 0) msgT -= dt;
       const In = I();
@@ -134,7 +136,7 @@ G.scenes.register('train', (kind, opts, onDone) => {
           break;
         }
         case 'seals': {
-          const rs = grid(12, 4, a.y + 34, a.h - 40);
+          const rs = grid(12, 4, a.y + 44, Math.min(a.h - 48, 150));
           if (gridNav(12, 4, rs)) {
             if (st.focus === st.seq[st.i]) { st.i++; AU.sfx.blip(); if (st.i >= 3) { st.done++; score = st.done; st.seq = newSeq(); st.i = 0; say('Готово!'); AU.sfx.confirm(); } }
             else { st.i = 0; say('Сбился!'); AU.sfx.error(); }
@@ -151,7 +153,7 @@ G.scenes.register('train', (kind, opts, onDone) => {
         }
         case 'quiz': {
           if (st.res) { st.res.t -= dt; if (st.res.t <= 0) { st.res = null; st.i++; st.focus = 0; if (st.i >= st.qs.length) finish(); } break; }
-          const q = st.qs[st.i]; const rs = grid(3, 1, a.y + 52, Math.min(90, a.h - 56));
+          const q = st.qs[st.i], qh = 34 + F.wrap(q.q, W - 40).length * 14; const rs = grid(3, 1, a.y + qh + 2, Math.min(96, a.h - qh - 2));
           if (gridNav(3, 1, rs)) { const ok = st.focus === q.ok; if (ok) { score++; AU.sfx.confirm(); } else AU.sfx.error(); st.res = { ok, t: 0.9 }; }
           break;
         }
@@ -178,7 +180,7 @@ G.scenes.register('train', (kind, opts, onDone) => {
         case 'cat': {
           st.ct -= dt;
           if (st.ct <= 0) { st.cell = st.cell < 0 ? Math.floor(R() * 12) : -1; st.ct = st.cell < 0 ? 0.35 + R() * 0.5 : Math.max(0.55, 1.1 - st.caught * 0.1); }
-          const rs = grid(12, 4, a.y + 10, a.h - 14);
+          const rs = grid(12, 4, a.y + 10, Math.min(a.h - 14, 180));
           if (gridNav(12, 4, rs)) { if (st.focus === st.cell) { st.caught++; score = st.caught; st.cell = -1; st.ct = 0.4; say('Поймал... и она вырвалась!'); AU.sfx.confirm(); if (st.caught >= 5) { say('Попалась!'); finish(); } } else { AU.sfx.cancel(); } }
           if (t >= DUR.cat) finish();
           break;
@@ -192,134 +194,177 @@ G.scenes.register('train', (kind, opts, onDone) => {
       }
     },
     draw(ctx) {
-      const h = H(), a = area();
-      ctx.fillStyle = '#1a1724'; ctx.fillRect(0, 0, W, h);
-      F.draw(ctx, opts.title || 'Тренировка', W / 2, 6, { align: 'center', color: P.orange });
-      if (opts.partner) F.draw(ctx, 'с партнёром: ' + G.chars.nameOf(opts.partner) + ' (+50%)', W / 2, 18, { align: 'center', color: '#8ae070' });
+      const h = H(), a = area(), cx = W / 2, S = F.small;
+      U.backdrop(ctx);
+      U.title(ctx, opts.title || 'Тренировка', cx, 4, 90);
+      if (opts.partner) S.draw(ctx, 'с партнёром: ' + G.chars.nameOf(opts.partner) + ' (+50%)', cx, 23, { align: 'center', color: C.goldHi, outline: C.woodEdge });
       if (phase === 'intro') {
-        F.wrap(INTRO[kind], W - 24).forEach((l, i) => F.draw(ctx, l, W / 2, h / 2 - 20 + i * 12, { align: 'center', color: P.white }));
-        if (t > 0.4) F.draw(ctx, 'Нажми A, чтобы начать', W / 2, h / 2 + 30, { align: 'center', color: Math.sin(t * 6) > 0 ? P.yellow : P.gray });
+        const lines = F.wrap(INTRO[kind], W - 48), ph = 40 + lines.length * 14, py = Math.round(h / 2 - ph / 2) - 8;
+        U.panel(ctx, 10, py, W - 20, ph, 'scroll');
+        lines.forEach((l, i) => F.draw(ctx, l, cx, py + 14 + i * 14, { align: 'center', color: C.ink }));
+        if (t > 0.4) S.draw(ctx, 'Коснись, чтобы начать', cx, py + ph - 17, { align: 'center', color: Math.sin(t * 6) > 0 ? C.red : C.inkDim });
         return;
       }
       if (phase === 'result') {
-        const s = Math.round(st.final * 100);
-        F.draw(ctx, 'Результат: ' + s + '%', W / 2, h / 2 - 16, { align: 'center', color: s >= 70 ? P.yellow : P.white });
-        F.draw(ctx, s >= 90 ? 'Превосходно!' : s >= 70 ? 'Отлично!' : s >= 40 ? 'Неплохо.' : 'Надо больше стараться...', W / 2, h / 2, { align: 'center', color: P.light });
-        if (t > 0.6) F.draw(ctx, 'Нажми A', W / 2, h / 2 + 24, { align: 'center', color: P.gray });
+        const s = Math.round(st.final * 100), py = Math.round(h / 2) - 50;
+        U.panel(ctx, 14, py, W - 28, 96, 'scroll');
+        F.draw(ctx, 'Результат', cx, py + 14, { align: 'center', color: C.inkDim });
+        F.draw(ctx, s + '%', cx, py + 28, { align: 'center', color: s >= 70 ? C.red : C.ink, shadow: s >= 70 ? '#f4d46a' : null });
+        U.gauge(ctx, 34, py + 44, W - 68, 7, st.final, s >= 70 ? C.gold : C.energy);
+        S.draw(ctx, s >= 90 ? 'Превосходно!' : s >= 70 ? 'Отлично!' : s >= 40 ? 'Неплохо.' : 'Надо больше стараться...', cx, py + 57, { align: 'center', color: C.redDark });
+        if (t > 0.6) S.draw(ctx, 'Коснись, чтобы продолжить', cx, py + 76, { align: 'center', color: C.inkFaint });
         return;
       }
-      const tm = DUR[kind]; if (tm) { ctx.fillStyle = '#3a3548'; ctx.fillRect(10, 30, W - 20, 3); ctx.fillStyle = P.orange; ctx.fillRect(10, 30, (W - 20) * Math.max(0, 1 - t / tm), 3); }
-      const cx = W / 2;
+      const tm = DUR[kind]; if (tm) U.gauge(ctx, 10, 31, W - 20, 5, Math.max(0, 1 - t / tm), C.seal);
+      // нижняя подпись счёта — на деревянной дощечке
+      const foot = (text, col) => { U.panel(ctx, 10, a.y + a.h + 3, W - 20, 17, 'plank'); S.draw(ctx, text, cx, a.y + a.h + 8, { align: 'center', color: col || '#f8eed0', maxW: W - 30 }); };
+      // игровое поле — рамка-колодец
+      const field = (fy, fh, base) => { U.panel(ctx, 4, fy - 2, W - 8, fh + 4, 'well'); if (base) { ctx.fillStyle = base; ctx.fillRect(7, fy + 1, W - 14, fh - 2); } };
+      // клетка сетки: плитка-карточка с подписью
+      const cell = (r, label, sel, mode, lcol) => {
+        U.card(ctx, r.x, r.y, r.w, r.h, sel);
+        if (mode === 'ok') { ctx.globalAlpha = 0.55; ctx.fillStyle = C.ok; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4); ctx.globalAlpha = 1; }
+        else if (mode === 'bad') { ctx.globalAlpha = 0.5; ctx.fillStyle = C.err; ctx.fillRect(r.x + 2, r.y + 2, r.w - 4, r.h - 4); ctx.globalAlpha = 1; }
+        if (label) (r.w < 60 ? S : F).draw(ctx, label, r.x + r.w / 2 + 1, r.y + Math.round(r.h / 2) - 4, { align: 'center', color: lcol || (sel ? C.redDark : C.ink), maxW: r.w - 6 });
+      };
       switch (kind) {
         case 'throw': {
           const y = a.y + a.h / 2;
-          ctx.fillStyle = '#4a7a3a'; ctx.fillRect(0, a.y, W, a.h);
+          field(a.y + 4, a.h - 8, '#4a7a3a');
+          // трава внизу поля — полосы для глубины
+          ctx.fillStyle = '#3a6a2e'; ctx.fillRect(7, y + 18, W - 14, a.h / 2 - 25);
           const tx = cx + st.x;
-          ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.arc(tx, y, 14, 0, 7); ctx.fill(); ctx.fillStyle = '#c8401c'; ctx.beginPath(); ctx.arc(tx, y, 9, 0, 7); ctx.fill(); ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.arc(tx, y, 4, 0, 7); ctx.fill();
-          ctx.fillStyle = 'rgba(255,210,58,0.8)'; ctx.fillRect(cx - st.zone, y - 22, 1, 44); ctx.fillRect(cx + st.zone, y - 22, 1, 44); ctx.fillRect(cx - 4, y, 9, 1);
-          F.draw(ctx, `Бросок ${st.n}/${st.max} · попаданий ${score}`, cx, a.y + a.h + 6, { align: 'center', color: P.white });
+          ctx.fillStyle = '#5a3a20'; ctx.fillRect(Math.round(tx) - 1, y + 14, 3, 12);               // стойка
+          ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(tx, y + 25, 12, 3, 0, 0, 7); ctx.fill();
+          ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.arc(tx, y, 14, 0, 7); ctx.fill();
+          ctx.fillStyle = '#c8401c'; ctx.beginPath(); ctx.arc(tx, y, 9, 0, 7); ctx.fill();
+          ctx.fillStyle = '#f4ecd8'; ctx.beginPath(); ctx.arc(tx, y, 4, 0, 7); ctx.fill();
+          ctx.fillStyle = 'rgba(244,212,106,0.9)'; ctx.fillRect(cx - st.zone, y - 22, 1, 44); ctx.fillRect(cx + st.zone, y - 22, 1, 44); ctx.fillRect(cx - 4, y, 9, 1);
+          foot(`Бросок ${st.n}/${st.max} · попаданий ${score}`);
           break;
         }
         case 'log': {
           const y = a.y + a.h / 2, lx = 40;
-          ctx.fillStyle = '#6a4226'; ctx.fillRect(0, y - 14, W, 28);
-          ctx.fillStyle = P.yellow; ctx.fillRect(lx - 1, y - 18, 3, 36);
-          for (const n of st.notes) { const x = lx + (n.t - t) * 120; if (x < -10 || x > W + 10) continue; ctx.fillStyle = n.done == null ? P.white : n.done === 2 ? P.yellow : n.done ? '#8ae070' : '#5a5670'; ctx.fillRect(x - 4, y - 8, 8, 16); }
-          G.chars.draw(ctx, 'hero', 'right', Math.floor(t * 4) % 2, 20, y + 30);
-          F.draw(ctx, 'Очки: ' + score.toFixed(1), cx, a.y + a.h + 6, { align: 'center', color: P.white });
+          field(a.y + 4, a.h - 8, '#2e1c10');
+          ctx.fillStyle = '#6a4228'; ctx.fillRect(7, y - 14, W - 14, 28); ctx.fillStyle = '#8a5a36'; ctx.fillRect(7, y - 14, W - 14, 2); ctx.fillStyle = '#3e2616'; ctx.fillRect(7, y + 12, W - 14, 2);
+          ctx.fillStyle = C.goldHi; ctx.fillRect(lx - 1, y - 18, 3, 36);
+          for (const n of st.notes) {
+            const x = lx + (n.t - t) * 120; if (x < -10 || x > W + 10) continue;
+            ctx.fillStyle = n.done == null ? '#f8eed0' : n.done === 2 ? C.goldHi : n.done ? '#8ae070' : '#5a4a3e';
+            ctx.fillRect(x - 4, y - 8, 8, 16);
+            ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x - 4, y + 5, 8, 3);
+          }
+          G.chars.draw(ctx, 'hero', 'right', Math.floor(t * 4) % 2, 20, y + 34);
+          foot('Очки: ' + score.toFixed(1));
           break;
         }
         case 'meditate': {
-          const cyc = t % 4, r = 18 + 22 * (cyc < 2 ? cyc / 2 : 1 - (cyc - 2) / 2);
-          const y = a.y + a.h / 2;
-          ctx.fillStyle = st.ok ? 'rgba(122,176,255,0.35)' : 'rgba(255,106,58,0.25)'; ctx.beginPath(); ctx.arc(cx, y, r, 0, 7); ctx.fill();
+          const cyc = t % 4, r = 18 + 22 * (cyc < 2 ? cyc / 2 : 1 - (cyc - 2) / 2), y = a.y + a.h / 2 + 6;
+          field(a.y + 4, a.h - 8, '#1c1a2c');
+          ctx.fillStyle = st.ok ? 'rgba(122,176,255,0.35)' : 'rgba(255,106,58,0.28)'; ctx.beginPath(); ctx.arc(cx, y, r, 0, 7); ctx.fill();
+          ctx.strokeStyle = st.ok ? '#8ac8ff' : '#ff9a6a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, y, r, 0, 7); ctx.stroke();
           G.chars.draw(ctx, 'hero', 'down', 0, cx, y + 10);
-          F.draw(ctx, st.inhale ? 'ВДОХ — держи A' : 'ВЫДОХ — отпусти', cx, a.y + 4, { align: 'center', color: st.ok ? '#8ae0ff' : '#ff9a7a' });
-          F.draw(ctx, 'Синхронность: ' + Math.round(score * 100) + '%', cx, a.y + a.h + 6, { align: 'center', color: P.white });
+          F.draw(ctx, st.inhale ? 'ВДОХ — держи кнопку' : 'ВЫДОХ — отпусти', cx, a.y + 10, { align: 'center', color: st.ok ? '#8ae0ff' : '#ffb08a', outline: '#0a0604' });
+          foot('Синхронность: ' + Math.round(score * 100) + '%');
           break;
         }
         case 'tree': {
-          const bx = W - 30, by = a.y + 6, bh = a.h - 12;
-          ctx.fillStyle = '#2a2638'; ctx.fillRect(bx, by, 12, bh);
-          ctx.fillStyle = 'rgba(138,224,112,0.6)'; ctx.fillRect(bx, by + bh * (1 - st.z - st.zw), 12, bh * st.zw * 2);
-          ctx.fillStyle = st.ok ? P.white : '#ff6a3a'; ctx.fillRect(bx - 3, by + bh * (1 - st.v) - 1, 18, 3);
-          ctx.fillStyle = P.trunk; ctx.fillRect(50, a.y, 20, a.h);
-          G.chars.draw(ctx, 'hero', 'up', Math.floor(t * 5) % 3, 60, a.y + a.h - 4 - st.h * (a.h - 30));
-          F.draw(ctx, st.ok ? 'Держишься!' : st.v > st.z ? 'Слишком много чакры — отскакиваешь!' : 'Мало чакры — соскальзываешь!', cx - 10, a.y + a.h + 6, { align: 'center', color: st.ok ? '#8ae070' : '#ff9a7a', maxW: W - 10 });
+          field(a.y + 4, a.h - 8, '#2c4a26');
+          const bx = W - 30, by = a.y + 10, bh = a.h - 20;
+          ctx.fillStyle = '#120a05'; ctx.fillRect(bx - 1, by - 1, 14, bh + 2);
+          ctx.fillStyle = 'rgba(138,224,112,0.75)'; ctx.fillRect(bx, by + bh * (1 - st.z - st.zw), 12, bh * st.zw * 2);
+          ctx.fillStyle = st.ok ? '#ffffff' : C.seal; ctx.fillRect(bx - 3, by + bh * (1 - st.v) - 1, 18, 3);
+          ctx.fillStyle = '#5a3a20'; ctx.fillRect(50, a.y + 4, 20, a.h - 8); ctx.fillStyle = '#7a5230'; ctx.fillRect(50, a.y + 4, 3, a.h - 8); ctx.fillStyle = '#3a2412'; ctx.fillRect(67, a.y + 4, 3, a.h - 8);
+          G.chars.draw(ctx, 'hero', 'up', Math.floor(t * 5) % 3, 60, a.y + a.h - 8 - st.h * (a.h - 34));
+          foot(st.ok ? 'Держишься!' : st.v > st.z ? 'Слишком много чакры — отскакиваешь!' : 'Мало чакры — соскальзываешь!', st.ok ? '#a8f090' : '#ffb08a');
           break;
         }
         case 'seals': {
-          st.seq.forEach((si, i) => F.draw(ctx, G.SEALS[si], cx - 60 + i * 60, a.y + 4, { align: 'center', color: i < st.i ? '#8ae070' : i === st.i ? P.yellow : P.white }));
-          F.draw(ctx, 'Серий: ' + st.done, cx, a.y + 18, { align: 'center', color: P.light });
-          grid(12, 4, a.y + 34, a.h - 40).forEach((r, i) => { ctx.fillStyle = i === st.focus ? '#4a3a2a' : '#2a2638'; ctx.fillRect(r.x, r.y, r.w, r.h); ctx.fillStyle = G.SEAL_COL[i]; ctx.fillRect(r.x, r.y, 3, r.h); F.draw(ctx, G.SEALS[i], r.x + r.w / 2 + 1, r.y + r.h / 2 - 5, { align: 'center', color: i === st.focus ? P.yellow : P.white, maxW: r.w - 4 }); });
+          U.panel(ctx, 20, a.y - 2, W - 40, 28, 'plank');
+          st.seq.forEach((si, i) => F.draw(ctx, G.SEALS[si], cx - 84 + i * 84, a.y + 6, { align: 'center', color: i < st.i ? '#a8f090' : i === st.i ? C.goldHi : '#f8eed0', shadow: '#160c06' }));
+          S.draw(ctx, 'Серий: ' + st.done, cx, a.y + 31, { align: 'center', color: C.goldHi, outline: C.woodEdge });
+          grid(12, 4, a.y + 44, Math.min(a.h - 48, 150)).forEach((r, i) => {
+            cell(r, null, i === st.focus);
+            ctx.fillStyle = G.SEAL_COL[i]; ctx.fillRect(r.x + 3, r.y + 3, 3, r.h - 6);
+            S.draw(ctx, G.SEALS[i], r.x + r.w / 2 + 2, r.y + Math.round(r.h / 2) - 4, { align: 'center', color: i === st.focus ? C.redDark : C.ink, maxW: r.w - 10 });
+          });
           break;
         }
         case 'run': {
+          field(a.y + 4, a.h - 8, '#3a2a48');
           const gy = a.y + a.h * 0.65;
-          ctx.fillStyle = '#b84a3a'; ctx.fillRect(0, gy, W, a.h * 0.35);
-          ctx.fillStyle = '#8a3226'; for (let x = -((t * 120) % 24); x < W; x += 24) ctx.fillRect(x, gy, 12, 3);
-          for (const o of st.obs) { const x = 40 + (o.t - t) * 120; if (x < -10 || x > W + 10) continue; ctx.fillStyle = o.hit === false ? '#5a5670' : '#7a4a2a'; ctx.fillRect(x - 5, gy - 12, 10, 12); }
+          ctx.fillStyle = '#b84a3a'; ctx.fillRect(7, gy, W - 14, a.h * 0.35 - 8);
+          ctx.fillStyle = '#8a3226'; for (let x = 7 - ((t * 120) % 24); x < W - 7; x += 24) { const x0 = Math.max(7, x), x1 = Math.min(W - 7, x + 12); if (x1 > x0) ctx.fillRect(x0, gy, x1 - x0, 3); }
+          for (const o of st.obs) { const x = 40 + (o.t - t) * 120; if (x < 12 || x > W - 12) continue; ctx.fillStyle = o.hit === false ? '#5a4a3e' : '#7a4a2a'; ctx.fillRect(x - 5, gy - 12, 10, 12); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x - 5, gy - 3, 10, 3); }
           const jy = st.jump > 0 ? Math.sin((0.55 - st.jump) / 0.55 * Math.PI) * 26 : 0;
           G.chars.draw(ctx, 'hero', 'right', Math.floor(t * 8) % 3, 40, gy - jy);
-          F.draw(ctx, `Препятствий: ${score}/${total}`, cx, a.y + a.h + 6, { align: 'center', color: P.white });
+          foot(`Препятствий: ${score}/${total}`);
           break;
         }
         case 'quiz': {
           if (st.i >= st.qs.length) break;
-          const q = st.qs[st.i];
-          F.draw(ctx, `Вопрос ${st.i + 1}/${st.qs.length}`, cx, a.y, { align: 'center', color: P.gray });
-          F.wrap(q.q, W - 16).forEach((l, i) => F.draw(ctx, l, cx, a.y + 14 + i * 11, { align: 'center', color: P.white }));
-          grid(3, 1, a.y + 52, Math.min(90, a.h - 56)).forEach((r, i) => {
-            const res = st.res; let col = '#2a2638'; if (res && i === q.ok) col = '#2a5a2a'; else if (res && i === st.focus && !res.ok) col = '#6a2a2a'; else if (i === st.focus) col = '#4a3a2a';
-            ctx.fillStyle = col; ctx.fillRect(r.x, r.y, r.w, r.h); F.draw(ctx, q.a[i], r.x + r.w / 2, r.y + r.h / 2 - 5, { align: 'center', color: i === st.focus ? P.yellow : P.white, maxW: r.w - 6 });
+          const q = st.qs[st.i], lines = F.wrap(q.q, W - 40), qh = 34 + lines.length * 14, qy = a.y - 6;
+          U.panel(ctx, 6, qy, W - 12, qh, 'scroll');
+          S.draw(ctx, `Вопрос ${st.i + 1}/${st.qs.length}`, cx, qy + 10, { align: 'center', color: C.inkFaint });
+          lines.forEach((l, i) => F.draw(ctx, l, cx, qy + 22 + i * 14, { align: 'center', color: C.ink }));
+          grid(3, 1, a.y + qh + 2, Math.min(96, a.h - qh - 2)).forEach((r, i) => {
+            const res = st.res; let mode = null;
+            if (res && i === q.ok) mode = 'ok'; else if (res && i === st.focus && !res.ok) mode = 'bad';
+            cell(r, q.a[i], i === st.focus, mode);
           });
           break;
         }
         case 'cook': {
           const names = ['Лапша', 'Бульон', 'Топпинги'];
-          F.draw(ctx, st.ph < 2 ? names[st.ph] + ': жми A в зелёной зоне' : st.show > 0 ? 'Запомни рецепт!' : 'Добавь по рецепту: ' + Math.min(3, st.pi + 1) + '/3', cx, a.y, { align: 'center', color: P.yellow });
+          F.draw(ctx, st.ph < 2 ? names[st.ph] + ': касайся в зелёной зоне' : st.show > 0 ? 'Запомни рецепт!' : 'Добавь по рецепту: ' + Math.min(3, st.pi + 1) + '/3', cx, a.y, { align: 'center', color: C.goldHi, outline: C.woodEdge });
           if (st.ph < 2) {
             const bx = 16, bw = W - 32, by = a.y + 40;
-            ctx.fillStyle = '#2a2638'; ctx.fillRect(bx, by, bw, 18); ctx.fillStyle = '#2a7a3a'; ctx.fillRect(bx + bw * st.zone[0], by, bw * (st.zone[1] - st.zone[0]), 18);
-            ctx.fillStyle = P.white; ctx.fillRect(bx + bw * st.m - 1, by - 4, 3, 26);
+            ctx.fillStyle = '#0a0604'; ctx.fillRect(bx - 2, by - 2, bw + 4, 22);
+            ctx.fillStyle = '#2a2018'; ctx.fillRect(bx, by, bw, 18);
+            ctx.fillStyle = '#4a9a3a'; ctx.fillRect(bx + bw * st.zone[0], by, bw * (st.zone[1] - st.zone[0]), 18);
+            ctx.fillStyle = '#f8eed0'; ctx.fillRect(bx + bw * st.m - 1, by - 4, 3, 26);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(cx, by + 96, 46, 14, 0, 0, 7); ctx.fill();
             ctx.fillStyle = '#e8dcc0'; ctx.beginPath(); ctx.ellipse(cx, by + 90, 44, 14, 0, 0, 7); ctx.fill(); ctx.fillStyle = st.ph ? '#c88a3a' : '#e8d8a0'; ctx.beginPath(); ctx.ellipse(cx, by + 86, 36, 9, 0, 0, 7); ctx.fill();
           } else if (st.show > 0) {
-            st.rec.forEach((r, i) => F.draw(ctx, (i + 1) + '. ' + st.top[r], cx, a.y + 50 + i * 16, { align: 'center', color: P.white }));
+            U.panel(ctx, 30, a.y + 16, W - 60, 76, 'scroll');
+            st.rec.forEach((r, i) => F.draw(ctx, (i + 1) + '. ' + st.top[r], cx, a.y + 32 + i * 18, { align: 'center', color: C.ink }));
           } else {
-            grid(6, 3, a.y + 60, Math.min(110, a.h - 70)).forEach((r, i) => { ctx.fillStyle = i === st.focus ? '#4a3a2a' : '#2a2638'; ctx.fillRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); F.draw(ctx, st.top[i], r.x + r.w / 2, r.y + r.h / 2 - 5, { align: 'center', color: i === st.focus ? P.yellow : P.white, maxW: r.w - 4 }); });
+            grid(6, 3, a.y + 60, Math.min(110, a.h - 70)).forEach((r, i) => cell(r, st.top[i], i === st.focus));
           }
           break;
         }
         case 'shogi': {
-          F.draw(ctx, st.over ? (st.over.w === 1 ? 'Ты выиграл!' : st.over.w === 3 ? 'Ничья...' : 'Шикамару выиграл. Хлопотно.') : st.turn === 0 ? 'Твой ход' : 'Шикамару думает...', cx, a.y, { align: 'center', color: P.yellow });
+          F.draw(ctx, st.over ? (st.over.w === 1 ? 'Ты выиграл!' : st.over.w === 3 ? 'Ничья...' : 'Шикамару выиграл. Хлопотно.') : st.turn === 0 ? 'Твой ход' : 'Шикамару думает...', cx, a.y, { align: 'center', color: C.goldHi, outline: C.woodEdge });
           grid(9, 3, a.y + 24, Math.min(240, a.h - 34)).forEach((r, i) => {
-            ctx.fillStyle = i === st.focus && st.turn === 0 && !st.over ? '#4a3a2a' : '#2a2638'; ctx.fillRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
-            const v = st.b[i]; if (v) F.draw(ctx, v === 1 ? 'Х' : 'О', r.x + r.w / 2, r.y + r.h / 2 - 5, { align: 'center', color: v === 1 ? '#7ad0ff' : '#ff9a7a' });
+            cell(r, null, i === st.focus && st.turn === 0 && !st.over);
+            const v = st.b[i]; if (v) F.draw(ctx, v === 1 ? 'Х' : 'О', r.x + r.w / 2 + 1, r.y + Math.round(r.h / 2) - 4, { align: 'center', color: v === 1 ? '#1e5aa8' : C.red });
           });
           break;
         }
         case 'cat': {
-          grid(12, 4, a.y + 10, a.h - 14).forEach((r, i) => {
-            ctx.fillStyle = i === st.focus ? '#5a4a3a' : '#3a5a3a'; ctx.fillRect(r.x, r.y, r.w, r.h);
-            ctx.fillStyle = '#2e6a32'; ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h - 6, 12, Math.PI, 0); ctx.fill();
+          grid(12, 4, a.y + 10, Math.min(a.h - 14, 180)).forEach((r, i) => {
+            U.card(ctx, r.x, r.y, r.w, r.h, i === st.focus);
+            ctx.fillStyle = '#3a6a32'; ctx.beginPath(); ctx.arc(r.x + r.w / 2, r.y + r.h - 6, 12, Math.PI, 0); ctx.fill();
             if (i === st.cell) { const x = r.x + r.w / 2, y = r.y + r.h / 2; ctx.fillStyle = '#8a6a4a'; ctx.fillRect(x - 7, y - 4, 14, 10); ctx.fillRect(x - 7, y - 8, 3, 4); ctx.fillRect(x + 4, y - 8, 3, 4); ctx.fillStyle = '#c8401c'; ctx.fillRect(x - 3, y - 6, 2, 2); ctx.fillRect(x + 1, y - 6, 2, 2); ctx.fillStyle = '#f0a0c0'; ctx.fillRect(x - 6, y - 1, 12, 2); }
           });
-          F.draw(ctx, `Поймано: ${st.caught}/5`, cx, a.y + a.h + 6, { align: 'center', color: P.white });
+          foot(`Поймано: ${st.caught}/5`);
           break;
         }
         case 'sort': {
+          field(a.y + 4, a.h - 8, '#2e1c10');
           if (st.i < st.items.length) {
             const it = st.items[st.i];
-            F.draw(ctx, '< ' + st.cats[0], 10, a.y + 6, { color: P.light }); F.draw(ctx, st.cats[1] + ' >', W - 10, a.y + 6, { align: 'right', color: P.light });
+            S.draw(ctx, '◀ ' + st.cats[0], 12, a.y + 10, { color: C.goldHi, outline: C.woodEdge }); S.draw(ctx, st.cats[1] + ' ▶', W - 12, a.y + 10, { align: 'right', color: C.goldHi, outline: C.woodEdge });
             ctx.fillStyle = it ? '#e8e4dc' : '#6ab04a'; ctx.fillRect(cx - 14, a.y + a.h / 2 - 14, 28, 28);
-            F.draw(ctx, st.cats[it], cx, a.y + a.h / 2 + 20, { align: 'center', color: P.white });
-            ctx.fillStyle = P.orange; ctx.fillRect(cx - 30, a.y + a.h / 2 + 36, 60 * (1 - st.it / Math.max(0.8, 1.6 - st.i * 0.05)), 3);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(cx - 14, a.y + a.h / 2 + 10, 28, 4);
+            F.draw(ctx, st.cats[it], cx, a.y + a.h / 2 + 20, { align: 'center', color: '#f8eed0', outline: '#0a0604' });
+            U.gauge(ctx, cx - 30, a.y + a.h / 2 + 38, 60, 5, 1 - st.it / Math.max(0.8, 1.6 - st.i * 0.05), C.seal);
           }
-          F.draw(ctx, `Верно: ${score}/${total}`, cx, a.y + a.h + 6, { align: 'center', color: P.white });
+          foot(`Верно: ${score}/${total}`);
           break;
         }
       }
-      if (msgT > 0) F.draw(ctx, msg, cx, a.y + a.h - 14, { align: 'center', color: P.yellow });
+      if (msgT > 0) F.draw(ctx, msg, cx, a.y + a.h - 24, { align: 'center', color: C.goldHi, outline: C.woodEdge });
     },
   };
   return S;

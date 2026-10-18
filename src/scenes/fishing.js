@@ -62,27 +62,27 @@ G.scenes.register('fishing', (opts, onCatch, onClose) => {
         ctx.fillStyle = '#e84a3a'; ctx.fillRect(fx - 2, fy - 3, 4, 3); ctx.fillStyle = '#f8f4ec'; ctx.fillRect(fx - 2, fy, 4, 2);
       }
       if (phase === 'bite') F.draw(ctx, '!', fx, fy - 18, { align: 'center', color: P.yellow, outline: P.ink });
-      // панель
-      G.gfx.window(ctx, 6, 6, W - 12, 40, 'dark');
-      F.draw(ctx, 'Рыбалка · ' + (opts.spot === 'lake' ? 'озеро' : 'река'), 12, 11, { color: P.orange });
-      F.draw(ctx, `Забросов сегодня: ${Math.max(0, opts.left())}`, W - 12, 11, { align: 'right', color: P.gray });
-      const hint = { ready: 'A — забросить · B — уйти', wait: 'Жди поклёвки... не дёргай!', bite: 'КЛЮЁТ! Жми A!', reel: 'Держи A — тяни. Отпускай, если леска звенит!', result: 'A — ещё раз · B — уйти' }[phase];
-      F.draw(ctx, msg || hint, 12, 26, { color: phase === 'bite' ? P.yellow : msg ? '#ff9a7a' : P.light, maxW: W - 24 });
+      // панель: дерево с подсказкой; на сенсорном экране — «коснись»
+      const U = G.ui, C = U.C, SF = F.small;
+      U.panel(ctx, 6, 22, W - 12, 46, 'night');
+      F.draw(ctx, 'Рыбалка · ' + (opts.spot === 'lake' ? 'озеро' : 'река'), 14, 28, { color: '#f4d46a' });
+      SF.draw(ctx, `Забросов: ${Math.max(0, opts.left())}`, W - 14, 30, { align: 'right', color: '#c8b48a' });
+      const hint = { ready: 'Коснись — забросить', wait: 'Жди поклёвки... не дёргай!', bite: 'КЛЮЁТ! Коснись!', reel: 'Держи палец — тяни. Отпусти, если леска звенит!', result: 'Коснись — ещё раз' }[phase];
+      SF.draw(ctx, msg || hint, 14, 49, { color: phase === 'bite' ? '#ffd23a' : msg ? '#ff9a7a' : '#e8d8b0', maxW: W - 28 });
       if (phase === 'reel') {
-        const bx = 14, by = 56, bw = W - 28;
-        G.gfx.window(ctx, 6, 48, W - 12, 40, 'dark');
-        F.draw(ctx, 'Натяжение', bx, by, { color: P.light });
-        ctx.fillStyle = '#14121c'; ctx.fillRect(bx + 56, by + 1, bw - 56, 7);
-        ctx.fillStyle = '#3a6a3a'; ctx.fillRect(bx + 56 + (bw - 56) * 0.12, by + 1, (bw - 56) * 0.73, 7);
-        ctx.fillStyle = '#8a2a1a'; ctx.fillRect(bx + 56 + (bw - 56) * 0.85, by + 1, (bw - 56) * 0.15, 7);
-        ctx.fillStyle = tension > 0.85 ? '#ff6a4a' : P.yellow; ctx.fillRect(bx + 56 + (bw - 56) * Math.min(1, tension) - 1, by - 1, 3, 11);
-        F.draw(ctx, 'Улов', bx, by + 14, { color: P.light });
-        ctx.fillStyle = '#14121c'; ctx.fillRect(bx + 56, by + 15, bw - 56, 7);
-        ctx.fillStyle = '#7ac0f0'; ctx.fillRect(bx + 56, by + 15, (bw - 56) * Math.max(0, Math.min(1, prog)), 7);
+        const bx = 14, by = 82, bw = W - 28, lx = bx + 64;
+        U.panel(ctx, 6, 74, W - 12, 44, 'night');
+        SF.draw(ctx, 'Натяжение', bx, by, { color: '#e8d8b0' });
+        ctx.fillStyle = '#120a05'; ctx.fillRect(lx, by + 1, bw - 64, 8);
+        ctx.fillStyle = '#3a6a3a'; ctx.fillRect(lx + (bw - 64) * 0.12, by + 1, (bw - 64) * 0.73, 8);
+        ctx.fillStyle = '#8a2a1a'; ctx.fillRect(lx + (bw - 64) * 0.85, by + 1, (bw - 64) * 0.15, 8);
+        ctx.fillStyle = tension > 0.85 ? '#ff6a4a' : '#f4d46a'; ctx.fillRect(lx + (bw - 64) * Math.min(1, tension) - 1, by - 1, 3, 12);
+        SF.draw(ctx, 'Улов', bx, by + 18, { color: '#e8d8b0' });
+        U.gauge(ctx, lx, by + 19, bw - 64, 8, Math.max(0, Math.min(1, prog)), '#7ac0f0');
       }
       if (phase === 'result' && result) {
-        G.gfx.window(ctx, 30, H * 0.4, W - 60, 34, 'dark');
-        F.draw(ctx, result, W / 2, H * 0.4 + 12, { align: 'center', color: P.yellow, maxW: W - 70 });
+        U.panel(ctx, 24, H * 0.4, W - 48, 36, 'frame');
+        F.draw(ctx, result, W / 2, H * 0.4 + 12, { align: 'center', color: C.redDark, maxW: W - 70 });
       }
     },
   };

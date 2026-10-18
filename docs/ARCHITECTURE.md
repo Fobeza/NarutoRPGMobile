@@ -83,7 +83,18 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
   на размер арены; облака с объёмом плывут поверх; предметы арены (`obj`) — спрайты со светом.
   Описание внешности — только данные в `data/characters.js`.
 - Тайлы и объекты — `gfx/tiles.js` (`obj('имя', w, h, рисование)`), здания — `world/buildgfx.js`.
-- Шрифт — свой пиксельный (`gfx/font.js`). Символа нет в шрифте → рисуется «?». Новые символы добавляются в `RAW`.
+- **Шрифт** — `gfx/font.js` + данные `gfx/font_data.js` (генерирует `tools/make_font.py`: DejaVu Serif Bold 12 px —
+  основной `G.font`, DejaVu Sans Bold 11 px — мелкий `G.font.small`; растеризуется через Chromium и порогом
+  превращается в чёткие пиксели; значки-эмодзи нарисованы вручную прямо в скрипте; DejaVu — свободная лицензия).
+  Символа нет в шрифте → рисуется «?». Новый символ: добавить в список `used_chars()` / `ICONS` в `make_font.py`
+  и запустить `python3 tools/make_font.py` (нужен Playwright), результат коммитится.
+  API обоих шрифтов одинаков: `draw(ctx, text, x, y, {color, outline, shadow, align, maxW})`, `measure`, `wrap`, `CAP`, `LINE_H`.
+- **Интерфейс «Свитки и дерево»** — `gfx/ui.js` (`G.ui`). Запекаемые панели (`frame` — пергамент в раме, `scroll` — свиток,
+  `plank` — доска, `night` — тёмное дерево, `well` — врезка, `tag` — красная лента), `row` (мазок красной кисти под
+  выбранной строкой), `button` (дощечка: normal/sel/on/dis), `gauge` (бамбуковая шкала), `title` (лента-заголовок),
+  `card` (плитка), `icon` (значки 11×11), `menu` (окно-список), `backdrop` (фон полноэкранных окон), палитра `G.ui.C`.
+  Всё, что требует `G.shade.tint`, обязано запекаться на «подробный» холст (`G.gfx.canvas`) — на живой экран тинт
+  применять нельзя (там нет флага `hi`, получится «призрак» в чужом месте). `G.gfx.window` оставлен как шим на `G.ui.panel`.
 
 ## Бой (`scenes/battle.js`, `battle_fx.js`, `battle_ai.js`)
 

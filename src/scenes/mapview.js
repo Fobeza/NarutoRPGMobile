@@ -5,7 +5,7 @@ G.scenes.register('mapview', (world) => {
   const T = G.CONFIG.TILE;
   const K = G.world.konoha();
   const FILTERS = ['Все', 'Задания', 'Лавки', 'Тренировки', 'Друзья'];
-  const TOP = 13, BOT = 27;
+  const TOP = 28, BOT = 46;
 
   // ---------- места ----------
   const placeOf = (b) => {
@@ -89,6 +89,7 @@ G.scenes.register('mapview', (world) => {
       const h = heroPos();
       this.cx = h.x; this.cy = h.y;
       this.vx = 0; this.vy = 0;
+      if (K.w * 2 <= G.screen.W && K.h * 2 <= this.vh()) this.zoom = 2;   // на широком экране вся карта влезает вдвое крупнее
       this.fitView(true);
     },
     vh() { return G.screen.H - TOP - BOT; },
@@ -181,7 +182,7 @@ G.scenes.register('mapview', (world) => {
           const r = this.cardRect();
           const t = I.tapNow;
           if (t.y >= r.y && t.y < r.y + r.h && t.x >= r.x && t.x < r.x + r.w) {
-            const i = Math.floor((t.y - r.btnY) / 12);
+            const i = Math.floor((t.y - r.btnY) / 22);
             if (i >= 0 && i < c.opts.length) { c.sel = i; c.opts[i].act(); }
           } else { this.card = null; G.audio.sfx.cancel(); }
         }
@@ -205,13 +206,12 @@ G.scenes.register('mapview', (world) => {
 
       if (I.tapNow) {
         const t = I.tapNow;
-        if (t.y >= H - BOT && t.y < H - BOT + 14) {         // фильтры
+        if (t.y >= H - BOT && t.y < H - BOT + 26) {         // фильтры
           const i = Math.floor(t.x / (W / FILTERS.length));
           if (i >= 0 && i < FILTERS.length) { this.filter = i; G.audio.sfx.select(); }
           return;
         }
         if (t.y < TOP) { this.zoom = this.zoom === 1 ? 2 : 1; this.fitView(true); return; }
-        if (t.y >= H - BOT + 14) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
         const nx = t.x / this.zoom + this.vx, ny = (t.y - TOP) / this.zoom + this.vy;
         const before = this.hover();
         const same = Math.hypot(nx - this.cx, ny - this.cy) < 3 / this.zoom + 1;
@@ -235,14 +235,14 @@ G.scenes.register('mapview', (world) => {
     cardRect() {
       const W = G.screen.W, H = G.screen.H;
       const c = this.card, lines = 3 + (c.who.length ? 1 : 0);
-      const h = 10 + lines * 10 + c.opts.length * 12 + 4;
+      const h = 22 + lines * 13 + c.opts.length * 22 + 6;
       const y = H - BOT - h - 4;
-      return { x: 6, y, w: W - 12, h, btnY: y + 8 + lines * 10 + 2 };
+      return { x: 6, y, w: W - 12, h, btnY: y + 14 + lines * 13 + 4 };
     },
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, P = G.PAL, F = G.font, z = this.zoom;
-      ctx.fillStyle = '#14121c'; ctx.fillRect(0, 0, W, H);
+      G.ui.backdrop(ctx);
       const VH = this.vh();
       ctx.save(); ctx.beginPath(); ctx.rect(0, TOP, W, VH); ctx.clip();
       // подложка
@@ -261,7 +261,7 @@ G.scenes.register('mapview', (world) => {
       }
       // места
       const bob = Math.round(Math.sin(this.t * 5) * 1.2);
-      const icon = (txt, x, y, col) => { const [sx, sy] = this.toScreen(x, y); F.draw(ctx, txt, sx, sy - 4, { color: col, outline: P.ink, align: 'center' }); };
+      const icon = (txt, x, y, col) => { const [sx, sy] = this.toScreen(x, y); F.small.draw(ctx, txt, sx, sy - 4, { color: col, outline: P.ink, align: 'center' }); };
       for (const p of this.visiblePlaces()) {
         if (p.kind === 'food') icon('🍜', p.x, p.y, isOpen(p.shop) ? '#ffb070' : '#7a7a86');
         else if (p.kind === 'shop') icon('●', p.x, p.y, isOpen(p.shop) ? '#ffd84a' : '#7a7a86');
@@ -279,11 +279,11 @@ G.scenes.register('mapview', (world) => {
       // задания
       if (f === 'Все' || f === 'Задания') {
         for (const m of this.qm) if (!m.tracked) icon(m.offer ? '!' : m.icon, m.x, m.y, m.col);
-        for (const m of this.qm) if (m.tracked && !G.state.marker) { const [sx, sy] = this.toScreen(m.x, m.y); F.draw(ctx, '▼', sx, sy - 11 + bob * 2, { color: '#ff4a3a', outline: P.ink, align: 'center' }); }
+        for (const m of this.qm) if (m.tracked && !G.state.marker) { const [sx, sy] = this.toScreen(m.x, m.y); F.small.draw(ctx, '▼', sx, sy - 11 + bob * 2, { color: '#ff4a3a', outline: P.ink, align: 'center' }); }
       }
       // метка
       const mk = G.state.marker;
-      if (mk) { const [sx, sy] = this.toScreen(mk.x + 0.5, mk.y + 0.5); F.draw(ctx, '📍', sx, sy - 7 + bob, { color: '#ff4a3a', outline: P.ink, align: 'center' }); }
+      if (mk) { const [sx, sy] = this.toScreen(mk.x + 0.5, mk.y + 0.5); F.small.draw(ctx, '📍', sx, sy - 7 + bob, { color: '#ff4a3a', outline: P.ink, align: 'center' }); }
       // герой ◉
       const h = heroPos();
       {
@@ -301,10 +301,11 @@ G.scenes.register('mapview', (world) => {
       }
       ctx.restore();
 
-      // заголовок
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, TOP);
-      F.draw(ctx, 'КАРТА КОНОХИ', 48, 3, { color: P.orange });   // слева — кнопка «Назад» сенсорного экрана
-      F.draw(ctx, (z === 1 ? '×1' : '×2') + ' ' + G.game.clock(), W - 4, 3, { align: 'right', color: P.light });
+      // заголовок: деревянная планка с красной лентой
+      const U = G.ui, C = U.C;
+      U.panel(ctx, 0, 0, W, TOP, 'plank');
+      U.title(ctx, 'КАРТА КОНОХИ', W / 2, 6, 0);
+      F.small.draw(ctx, (z === 1 ? '×1' : '×2') + ' · ' + G.game.clock(), W - 6, 9, { align: 'right', color: '#f4e4bc', shadow: C.woodEdge });
 
       // строка-подсказка о месте под курсором
       const hv = this.hover();
@@ -313,54 +314,49 @@ G.scenes.register('mapview', (world) => {
         info = hv.name;
         if (hv.shop) info += isOpen(hv.shop) ? ` · до ${G.game.clock(hv.shop.hours[1])}` : ` · закрыто (с ${G.game.clock(hv.shop.hours[0])})`;
       } else if (h.inside) info = 'Ты внутри: ' + h.inside;
-      else info = this.fogged(this.cx, this.cy) ? 'Неизведанные места' : 'A — метка, ЦЕЛЬ — масштаб';
-      ctx.globalAlpha = 0.85; ctx.fillStyle = '#14121c'; ctx.fillRect(0, TOP + VH - 11, W, 11); ctx.globalAlpha = 1;
-      F.draw(ctx, info, W / 2, TOP + VH - 9, { align: 'center', color: hv ? P.white : P.gray, max: 99 });
+      else info = this.fogged(this.cx, this.cy) ? 'Неизведанные места' : 'Коснись места — карточка';
+      U.panel(ctx, 0, TOP + VH - 17, W, 17, 'night');
+      F.small.draw(ctx, info, W / 2, TOP + VH - 14, { align: 'center', color: hv ? '#f4d46a' : '#c8b48a', maxW: W - 8 });
 
-      // фильтры
+      // фильтры: вкладки на деревянной планке
       const fy = H - BOT;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, fy, W, BOT);
-      const fw = W / FILTERS.length;
+      U.panel(ctx, 0, fy, W, BOT, 'plank');
+      const fw = (W - 8) / FILTERS.length;
       FILTERS.forEach((name, i) => {
-        const sel = i === this.filter;
-        ctx.fillStyle = sel ? '#3a3450' : '#24202e'; ctx.fillRect(Math.round(i * fw) + 1, fy + 1, Math.round(fw) - 2, 12);
-        let n = name; while (F.measure(n) > fw - 4) n = n.slice(0, -2) + '.';
-        F.draw(ctx, n, i * fw + fw / 2, fy + 3, { align: 'center', color: sel ? P.yellow : P.gray });
+        const sel = i === this.filter, x = Math.round(4 + i * fw);
+        U.button(ctx, x, fy + 6, Math.round(fw) - 3, 22, '', sel ? 'sel' : 'normal');
+        let n = name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
+        F.small.draw(ctx, n, x + (Math.round(fw) - 3) / 2, fy + 12, { align: 'center', color: sel ? '#f8eed0' : '#e4d4a8', shadow: C.woodEdge });
       });
-      F.draw(ctx, 'МЕНЮ фильтр · ЦЕЛЬ ×2 · B закрыть', W / 2, fy + 16, { align: 'center', color: '#8a8498', max: 99 });
+      F.small.draw(ctx, 'Коснись шапки — масштаб', W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
 
       // карточка места
       if (this.card) this.drawCard(ctx);
       if (this.toast) {
-        const w = F.measure(this.toast) + 12;
-        G.gfx.window(ctx, Math.round((W - w) / 2), TOP + 4, w, 16, 'dark');
-        F.draw(ctx, this.toast, W / 2, TOP + 8, { align: 'center', color: P.yellow });
+        const w = F.measure(this.toast) + 22;
+        U.panel(ctx, Math.round((W - w) / 2), TOP + 6, w, 20, 'night');
+        F.draw(ctx, this.toast, W / 2, TOP + 11, { align: 'center', color: '#f4d46a' });
       }
     },
 
     drawCard(ctx) {
-      const c = this.card, p = c.p, r = this.cardRect(), F = G.font, P = G.PAL;
-      G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
-      let y = r.y + 6;
-      F.draw(ctx, p.name, r.x + 6, y, { color: G.UI.text }); y += 10;
+      const c = this.card, p = c.p, r = this.cardRect(), F = G.font, U = G.ui, C = U.C;
+      U.panel(ctx, r.x, r.y, r.w, r.h, 'frame');
+      let y = r.y + 12;
+      F.draw(ctx, p.name, r.x + 12, y, { color: C.redDark, maxW: r.w - 80 }); y += 15;
       const cat = { food: 'Еда', shop: 'Лавка', training: 'Тренировки', place: p.b.tplDef.cat === 'clan' ? 'Клан' : 'Место' }[p.kind];
-      F.draw(ctx, cat, r.x + r.w - 6, r.y + 6, { align: 'right', color: P.gray });
+      F.small.draw(ctx, cat, r.x + r.w - 12, r.y + 14, { align: 'right', color: C.inkDim });
       if (p.shop) {
         const o = isOpen(p.shop);
-        F.draw(ctx, `${G.game.clock(p.shop.hours[0])}–${G.game.clock(p.shop.hours[1])} · ${o ? 'открыто' : 'закрыто'}`, r.x + 6, y, { color: o ? '#4a7a3a' : '#b04a3a' });
-      } else F.draw(ctx, p.b.interior ? 'Можно зайти' : 'Под открытым небом', r.x + 6, y, { color: P.gray });
-      y += 10;
+        F.small.draw(ctx, `${G.game.clock(p.shop.hours[0])}–${G.game.clock(p.shop.hours[1])} · ${o ? 'открыто' : 'закрыто'}`, r.x + 12, y, { color: o ? C.ok : C.err });
+      } else F.small.draw(ctx, p.b.interior ? 'Можно зайти' : 'Под открытым небом', r.x + 12, y, { color: C.inkDim });
+      y += 13;
       const dist = Math.round(Math.hypot(p.x - heroPos().x, p.y - heroPos().y) * 2);
-      F.draw(ctx, `≈${dist} м от тебя`, r.x + 6, y, { color: P.gray }); y += 10;
-      if (c.who.length) {
-        let s = 'Сейчас там: ' + c.who.join(', ');
-        while (F.measure(s) > r.w - 12 && s.length > 4) s = s.slice(0, -2) + '…';
-        F.draw(ctx, s, r.x + 6, y, { color: '#5a6a8a' }); y += 10;
-      }
+      F.small.draw(ctx, `≈${dist} м от тебя`, r.x + 12, y, { color: C.inkDim }); y += 13;
+      if (c.who.length) F.small.draw(ctx, 'Сейчас там: ' + c.who.join(', '), r.x + 12, y, { color: '#3a62a0', maxW: r.w - 24 });
       c.opts.forEach((o, i) => {
-        const by = r.btnY + i * 12, sel = i === c.sel;
-        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, by - 2, r.w - 8, 11); F.draw(ctx, '▶', r.x + 7, by, { color: P.orange }); }
-        F.draw(ctx, o.label, r.x + 16, by, { color: sel ? G.UI.selText : G.UI.dim });
+        const by = r.btnY + i * 22, sel = i === c.sel;
+        U.button(ctx, r.x + 10, by, r.w - 20, 20, o.label, sel ? 'sel' : 'normal');
       });
     },
   };

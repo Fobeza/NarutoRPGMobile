@@ -7,7 +7,7 @@ G.scenes.register('storage', () => {
     Object.keys(G.state.inv).filter((k) => G.ITEMS[k] && !G.ITEMS[k].quest && G.state.inv[k] > 0 && G.ITEMS[k].cat !== 'service').sort(),
     Object.keys(chest()).filter((k) => chest()[k] > 0).sort(),
   ];
-  const ROW = 11;
+  const ROW = 17, TOP = 66;
   const S = {
     name: 'storage',
     move(fromCol, id) {   // переложить одну штуку (и для автотеста)
@@ -30,38 +30,39 @@ G.scenes.register('storage', () => {
       if (In.repeat('up', dt) && n) { sel[col] = (sel[col] + n - 1) % n; AU.sfx.blip(); }
       if (In.repeat('down', dt) && n) { sel[col] = (sel[col] + 1) % n; AU.sfx.blip(); }
       if (In.tapNow) {
-        const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, i = Math.floor((tp.y - 40) / ROW) + scroll[c];
-        if (tp.y > 40 && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }
+        const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, i = Math.floor((tp.y - TOP) / ROW) + scroll[c];
+        if (tp.y > TOP - 2 && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }
       } else if (In.pressed('a') && n) this.move(col, L[col][Math.min(sel[col], n - 1)]);
       for (const c of [0, 1]) {
         const m = lists()[c].length; if (sel[c] >= m) sel[c] = Math.max(0, m - 1);
         if (sel[c] < scroll[c]) scroll[c] = sel[c]; if (sel[c] >= scroll[c] + rows) scroll[c] = sel[c] - rows + 1;
       }
     },
-    rows() { return Math.floor((G.screen.H - 80) / ROW); },
+    rows() { return Math.floor((G.screen.H - TOP - 66) / ROW); },
     draw(ctx) {
-      const H = G.screen.H, L = lists(), rows = this.rows();
-      ctx.fillStyle = '#1a1624'; ctx.fillRect(0, 0, W, H);
-      F.draw(ctx, 'Сундук-хранилище', W / 2, 6, { align: 'center', color: P.orange });
-      F.draw(ctx, `Подсумок ${G.game.pouchUsed()}/${G.game.pouchMax()}`, W / 2, 18, { align: 'center', color: P.gray });
+      const H = G.screen.H, L = lists(), rows = this.rows(), U = G.ui, C = U.C;
+      U.backdrop(ctx);
+      U.title(ctx, 'СУНДУК', W / 2, 3, 90);
+      F.small.draw(ctx, `Подсумок ${G.game.pouchUsed()}/${G.game.pouchMax()}`, W / 2, 24, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
       for (const c of [0, 1]) {
-        const x = c * (W / 2) + 3, w = W / 2 - 6;
-        G.gfx.window(ctx, x, 28, w, H - 56, c === col ? 'dark' : 'dark');
-        if (c === col) { ctx.strokeStyle = P.yellow; ctx.strokeRect(x + 0.5, 28.5, w - 1, H - 57); }
-        F.draw(ctx, c ? 'Сундук' : 'Сумка', x + w / 2, 32, { align: 'center', color: c === col ? P.yellow : P.light });
-        if (!L[c].length) F.draw(ctx, 'пусто', x + w / 2, 50, { align: 'center', color: P.gray });
+        const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - 38;
+        U.panel(ctx, x, 38, w, h, 'frame');
+        F.draw(ctx, c ? 'Сундук' : 'Сумка', x + w / 2, 45, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
+        if (!L[c].length) F.small.draw(ctx, 'пусто', x + w / 2, TOP + 6, { align: 'center', color: C.inkDim });
         for (let i = 0; i < rows; i++) {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
-          const y = 44 + i * ROW, on = c === col && k === sel[c];
-          if (on) { ctx.fillStyle = '#3a3548'; ctx.fillRect(x + 3, y - 1, w - 6, ROW - 1); }
+          const y = TOP + i * ROW, on = c === col && k === sel[c];
+          U.row(ctx, x + 5, y - 1, w - 10, ROW - 1, on);
           const cnt = c ? chest()[id] : G.state.inv[id];
-          F.draw(ctx, G.ITEMS[id].name, x + 5, y, { color: on ? P.yellow : P.white, maxW: w - 28 });
-          F.draw(ctx, 'x' + cnt, x + w - 5, y, { align: 'right', color: P.gray });
+          F.small.draw(ctx, G.ITEMS[id].name, x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
+          F.small.draw(ctx, '×' + cnt, x + w - 9, y + 2, { align: 'right', color: on ? '#f4d46a' : C.inkDim });
         }
       }
       const cur = L[col][sel[col]];
-      F.draw(ctx, msgT > 0 ? msg : cur ? (col ? 'A — взять в сумку' : 'A — положить в сундук') + ' · B — закрыть' : '←/→ — сумка/сундук · B — закрыть', W / 2, H - 22, { align: 'center', color: msgT > 0 ? '#ff9a7a' : P.light, maxW: W - 8 });
-      if (cur) F.draw(ctx, G.ITEMS[cur].desc || '', W / 2, H - 11, { align: 'center', color: P.gray, maxW: W - 8 });
+      const iy = H - 58;
+      U.panel(ctx, 4, iy, W - 8, 54, 'frame');
+      F.small.draw(ctx, msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — взять в сумку' : 'Коснись ещё раз — положить в сундук') : 'Выбери вещь в сумке или в сундуке', 12, iy + 9, { color: msgT > 0 ? C.err : C.redDark, maxW: W - 24 });
+      if (cur) F.small.wrap(G.ITEMS[cur].desc || '', W - 24).slice(0, 2).forEach((ln, i) => F.small.draw(ctx, ln, 12, iy + 24 + i * 12, { color: C.ink }));
     },
   };
   return S;

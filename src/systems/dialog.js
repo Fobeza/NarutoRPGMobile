@@ -1,7 +1,7 @@
 // Сцена диалога: окно внизу экрана, портрет, печать по буквам, выбор ответа.
 // Использование: G.dialog.start('script_id', { onEnd })
 G.dialog = (() => {
-  const BOX_H = 50;
+  const BOX_H = 60;            // окно реплик: рама 7 px + 3 строки по 14 px + 7 px
   const LINES = 3;
   const SPEEDS = [0, 30, 55, 120]; // символов/сек по настройке textSpeed (0 — мгновенно)
 
@@ -56,7 +56,7 @@ G.dialog = (() => {
         const vars = { name: G.state.hero.name };
         text = G.util.fmt(text, vars);
         const hasPortrait = who && G.chars.DEFS[who];
-        const textW = G.screen.W - 16 - (hasPortrait ? 36 : 0);
+        const textW = G.screen.W - 4 - 16 - (hasPortrait ? 44 : 0);
         const lines = G.font.wrap(text, textW);
         this.pages = [];
         for (let i = 0; i < lines.length; i += LINES) this.pages.push(lines.slice(i, i + LINES));
@@ -114,63 +114,63 @@ G.dialog = (() => {
       // геометрия окна выбора
       choiceRect() {
         const opts = this.cur.options;
-        const w = Math.min(G.screen.W - 8, Math.max(...opts.map((o) => G.font.measure(o.text))) + 22);
-        const h = opts.length * 12 + 8;
+        const w = Math.min(G.screen.W - 8, Math.max(...opts.map((o) => G.font.measure(o.text))) + 40);
+        const h = opts.length * 16 + 14;
         const x = G.screen.W - w - 4;
-        const y = G.screen.H - this.bottom - BOX_H - h - 12; // выше таблички с именем
+        const y = G.screen.H - this.bottom - BOX_H - h - 4; // выше окна реплик
         return { x, y, w, h };
       },
       choiceHit(p) {
         const r = this.choiceRect();
         if (p.x < r.x || p.x > r.x + r.w || p.y < r.y || p.y > r.y + r.h) return -1;
-        const i = Math.floor((p.y - r.y - 4) / 12);
+        const i = Math.floor((p.y - r.y - 7) / 16);
         return i >= 0 && i < this.cur.options.length ? i : -1;
       },
 
       draw(ctx) {
         if (!this.cur || !this.pages || !this.pages.length) return;   // аварийный диалог — не рисуем пустое окно
-        const W = G.screen.W, Hs = G.screen.H;
+        const W = G.screen.W, Hs = G.screen.H, U = G.ui, C = U.C;
         const x = 2, y = Hs - this.bottom - BOX_H, w = W - 4, h = BOX_H;
-        G.gfx.window(ctx, x, y, w, h, 'paper');
+        U.panel(ctx, x, y, w, h, 'frame');
 
-        let tx = x + 7;
+        let tx = x + 9;
         const who = this.who;
         if (who && G.chars.DEFS[who]) {
-          const p = G.chars.portrait(who);
-          ctx.fillStyle = G.PAL.ink;
-          ctx.fillRect(x + 4, y + 6, 34, 34);
-          ctx.drawImage(p, x + 5, y + 7);
-          tx = x + 43;
+          // портрет в деревянной рамке-углублении
+          U.panel(ctx, x + 8, y + 9, 40, 40, 'plank');
+          ctx.fillStyle = '#120a05'; ctx.fillRect(x + 10, y + 11, 36, 36);
+          ctx.drawImage(G.chars.portrait(who), x + 12, y + 13);
+          tx = x + 54;
         }
-        // табличка с именем
+        // красная лента с именем говорящего, налезает на верхнюю кромку
         if (who) {
           const nm = this.whoName || G.chars.nameOf(who);
-          const nw = G.font.measure(nm) + 10;
-          ctx.fillStyle = G.PAL.ink; ctx.fillRect(x + 4, y - 9, nw + 2, 11);
-          ctx.fillStyle = G.PAL.orange; ctx.fillRect(x + 5, y - 8, nw, 9);
-          G.font.draw(ctx, nm, x + 10, y - 8, { color: G.PAL.white });
+          const nw = G.font.measure(nm) + 22;
+          U.panel(ctx, x + 10, y - 9, nw, 16, 'tag');
+          G.font.draw(ctx, nm, x + 10 + nw / 2, y - 5, { align: 'center', color: C.goldHi, shadow: C.redDark });
         }
         // текст
         const lines = this.pages[this.page];
         let left = Math.floor(this.shown);
         lines.forEach((ln, i) => {
           const n = [...ln].length;
-          G.font.draw(ctx, ln, tx, y + 7 + i * 12, { color: G.PAL.ink, max: Math.max(0, left) });
+          G.font.draw(ctx, ln, tx, y + 11 + i * 14, { color: C.ink, max: Math.max(0, left) });
           left -= n;
         });
-        // индикатор «дальше»
+        // индикатор «дальше» — покачивающаяся красная стрелка
         const done = this.shown >= this.pageLen();
-        if (done && this.cur.op === 'say' && Math.floor(this.blink * 3) % 2 === 0) {
-          G.font.draw(ctx, '▼', x + w - 12, y + h - 13, { color: G.PAL.orange });
+        if (done && this.cur.op === 'say') {
+          const bob = Math.floor(this.blink * 3) % 2;
+          G.font.draw(ctx, '▼', x + w - 18, y + h - 17 + bob, { color: C.red });
         }
-        // выбор
+        // выбор: окно с мазком красной кисти под выбранным вариантом
         if (this.cur.op === 'choice' && done && this.page === this.pages.length - 1) {
           const r = this.choiceRect();
-          G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
+          U.panel(ctx, r.x, r.y, r.w, r.h, 'frame');
           this.cur.options.forEach((o, i) => {
-            const sel = i === this.choiceIdx;
-            if (sel) G.font.draw(ctx, '▶', r.x + 6, r.y + 5 + i * 12, { color: G.PAL.orange });
-            G.font.draw(ctx, o.text, r.x + 14, r.y + 5 + i * 12, { color: sel ? G.PAL.ink : G.PAL.gray });
+            const sel = i === this.choiceIdx, ry = r.y + 7 + i * 16;
+            U.row(ctx, r.x + 6, ry, r.w - 12, 15, sel);
+            G.font.draw(ctx, o.text, r.x + 14, ry + 3, { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: r.w - 24 });
           });
         }
       },

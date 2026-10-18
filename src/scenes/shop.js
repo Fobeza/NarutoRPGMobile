@@ -58,16 +58,17 @@ G.scenes.register('shop', (shopId, opts = {}) => {
 
     layout() {
       const W = G.screen.W, H = G.screen.H;
-      const hdr = { x: 2, y: 24, w: W - 4, h: 46 };
-      const foot = { x: 2, y: H - 20, w: W - 4, h: 18 };
-      const info = { x: 2, y: foot.y - 50, w: W - 4, h: 48 };
-      // сетка карточек под иконки 64×64
-      const cols = Math.max(2, Math.floor((W - 8) / 70));
-      const cardW = Math.floor((W - 8) / cols), cardH = 70;
-      const listY = hdr.y + hdr.h + 3;
-      const rows = Math.max(1, Math.floor((info.y - 3 - listY - 8) / cardH));
-      const list = { x: 2, y: listY, w: W - 4, h: rows * cardH + 8, rows, cols, cardW, cardH, per: rows * cols };
-      return { hdr, list, info, foot };
+      const hdr = { x: 4, y: 4, w: W - 8, h: 58 };
+      const foot = { x: 4, y: H - 30, w: W - 8, h: 26 };
+      const info = { x: 4, y: foot.y - 74, w: W - 8, h: 70 };
+      const cols = Math.max(2, Math.floor((W - 22) / 62)), cardW = Math.floor((W - 8 - 12) / cols), cardH = 56;
+      const listY = hdr.y + hdr.h + 4;
+      const rows = Math.max(1, Math.floor((info.y - 4 - listY - 12) / cardH));
+      const list = { x: 4, y: listY, w: W - 8, h: rows * cardH + 12, rows, cols, cardW, cardH, per: rows * cols };
+      const bw = Math.round((foot.w - 6) / 2);
+      const buyB = { x: foot.x, y: foot.y, w: bw, h: foot.h }, exitB = { x: foot.x + bw + 6, y: foot.y, w: bw, h: foot.h };
+      const minus = { x: info.x + 12, y: info.y + info.h - 28, w: 22, h: 20 }, plus = { x: info.x + 72, y: info.y + info.h - 28, w: 22, h: 20 };
+      return { hdr, list, info, foot, buyB, exitB, minus, plus };
     },
 
     update(dt) {
@@ -85,27 +86,24 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         if (I.repeat('left', dt)) { idx = (idx + n - 1) % n; qty = 1; G.audio.sfx.select(); }
         if (I.repeat('right', dt)) { idx = (idx + 1) % n; qty = 1; G.audio.sfx.select(); }
       }
+      const inR = (t, r) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y < r.y + r.h;
 
       if (I.tapNow) {
         const t = I.tapNow;
         // карточка в сетке
-        if (t.y > g.y + 4 && t.y < g.y + g.h - 4 && t.x > g.x && t.x < g.x + g.w) {
+        if (t.y > g.y + 6 && t.y < g.y + g.h - 6 && t.x > g.x && t.x < g.x + g.w) {
           const page = Math.floor(idx / g.per) * g.per;
-          const k = Math.floor((t.y - g.y - 4) / g.cardH) * g.cols + Math.floor((t.x - g.x - 4) / g.cardW);
+          const k = Math.floor((t.y - g.y - 6) / g.cardH) * g.cols + Math.floor((t.x - g.x - 6) / g.cardW);
           const i = page + k;
-          if (i >= 0 && i < n) {
-            if (i === idx) qmode = !qmode; else { idx = i; qty = 1; qmode = false; G.audio.sfx.select(); }
-          }
+          if (i >= 0 && i < n && (i !== idx || qmode)) { idx = i; qty = 1; qmode = false; G.audio.sfx.select(); }
           return;
         }
-        // стрелки количества
-        const qy = L.info.y + 33;
-        if (Math.abs(t.y - qy - 4) < 8) {
-          if (t.x > 54 && t.x < 70 && qty > 1) { qty--; G.audio.sfx.blip(); return; }
-          if (t.x > 84 && t.x < 100 && qty < mq) { qty++; G.audio.sfx.blip(); return; }
+        if (items[idx].cat !== 'food' && items[idx].cat !== 'service') {
+          if (inR(t, L.minus) && qty > 1) { qty--; G.audio.sfx.blip(); return; }
+          if (inR(t, L.plus) && qty < mq) { qty++; G.audio.sfx.blip(); return; }
         }
-        // кнопки внизу
-        if (t.y > L.foot.y) { if (t.x < G.screen.W / 2) buy(); else close(); return; }
+        if (inR(t, L.buyB)) { buy(); return; }
+        if (inR(t, L.exitB)) { close(); return; }
         return;
       }
       if (I.pressed('a')) { if (qmode) { buy(); qmode = false; } else { qmode = true; G.audio.sfx.select(); } }
@@ -113,75 +111,65 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, F = G.font, pal = P();
+      const W = G.screen.W, H = G.screen.H, F = G.font, U = G.ui, C = U.C;
       const L = this.layout();
-      ctx.globalAlpha = 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0, 20, W, G.screen.H - 20); ctx.globalAlpha = 1;
+      U.backdrop(ctx);
 
-      // шапка: портрет, имя, приветствие
+      // шапка: портрет в деревянной рамке, имя и приветствие
       const h = L.hdr;
-      G.gfx.window(ctx, h.x, h.y, h.w, h.h, 'paper');
+      U.panel(ctx, h.x, h.y, h.w, h.h, 'frame');
       const who = shop.keeper.who;
-      let tx = h.x + 7;
+      let tx = h.x + 12;
       if (G.chars.DEFS[who]) {
-        ctx.fillStyle = G.UI.edge; ctx.fillRect(h.x + 5, h.y + 6, 34, 34);
-        ctx.drawImage(G.chars.portrait(who), h.x + 6, h.y + 7);
-        tx = h.x + 44;
+        U.panel(ctx, h.x + 8, h.y + 8, 42, 42, 'plank');
+        ctx.fillStyle = '#120a05'; ctx.fillRect(h.x + 10, h.y + 10, 38, 38);
+        ctx.drawImage(G.chars.portrait(who), h.x + 13, h.y + 13);
+        tx = h.x + 58;
       }
-      F.draw(ctx, title, tx, h.y + 4, { color: pal.orange });
-      const greet = F.wrap('«' + shop.greet + '»', h.w - (tx - h.x) - 6).slice(0, 3);
-      greet.forEach((ln, i) => F.draw(ctx, ln, tx, h.y + 15 + i * 10, { color: G.UI.text }));
+      F.draw(ctx, title, tx, h.y + 10, { color: C.redDark, maxW: h.w - (tx - h.x) - 8 });
+      F.small.wrap('«' + shop.greet + '»', h.w - (tx - h.x) - 10).slice(0, 3).forEach((ln, i) => F.small.draw(ctx, ln, tx, h.y + 25 + i * 11, { color: C.ink }));
 
-      // список — сетка карточек с иконками 64×64
+      // список — сетка карточек с иконками
       const l = L.list;
-      G.gfx.window(ctx, l.x, l.y, l.w, l.h, 'paper');
+      U.panel(ctx, l.x, l.y, l.w, l.h, 'well');
       const page = Math.floor(idx / l.per) * l.per;
       for (let k = 0; k < l.per; k++) {
         const i = page + k;
         if (i >= items.length) break;
         const it = items[i], lk = locked(it);
-        const cx = l.x + 4 + (k % l.cols) * l.cardW, cy = l.y + 4 + Math.floor(k / l.cols) * l.cardH;
-        if (i === idx) {
-          ctx.fillStyle = G.UI.sel; ctx.fillRect(cx, cy, l.cardW - 4, l.cardH - 4);
-          ctx.fillStyle = qmode ? pal.orange : G.UI.edge;
-          ctx.fillRect(cx, cy, l.cardW - 4, 1); ctx.fillRect(cx, cy + l.cardH - 5, l.cardW - 4, 1);
-          ctx.fillRect(cx, cy, 1, l.cardH - 4); ctx.fillRect(cx + l.cardW - 5, cy, 1, l.cardH - 4);
-        }
-        G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 4 - 64) / 2), cy + 2, 64, 64);
-        if (lk) { ctx.globalAlpha = .55; ctx.fillStyle = '#000'; ctx.fillRect(cx + 1, cy + 1, l.cardW - 6, l.cardH - 6); ctx.globalAlpha = 1; }
-        F.draw(ctx, lk ? '—' : it.price + 'р', cx + l.cardW - 7, cy + l.cardH - 13,
-          { align: 'right', color: lk ? G.UI.faint : !G.game.canPay(it.price) ? G.UI.err : pal.yellow, outline: '#000' });
+        const cx = l.x + 6 + (k % l.cols) * l.cardW, cy = l.y + 6 + Math.floor(k / l.cols) * l.cardH;
+        U.card(ctx, cx, cy, l.cardW - 3, l.cardH - 3, i === idx);
+        G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - 48) / 2), cy + 1, 48, 48);
+        if (lk) { ctx.globalAlpha = .5; ctx.fillStyle = '#2a1e14'; ctx.fillRect(cx + 2, cy + 2, l.cardW - 7, l.cardH - 7); ctx.globalAlpha = 1; }
+        F.small.draw(ctx, lk ? '—' : it.price + 'р', cx + l.cardW - 7, cy + l.cardH - 17,
+          { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', outline: C.woodEdge });
       }
       const pages = Math.ceil(items.length / l.per);
-      if (pages > 1) F.draw(ctx, `${Math.floor(idx / l.per) + 1}/${pages}`, l.x + l.w - 8, l.y + l.h - 9, { align: 'right', color: pal.orange });
+      if (pages > 1) F.small.draw(ctx, `${Math.floor(idx / l.per) + 1}/${pages}`, l.x + l.w - 10, l.y + l.h - 14, { align: 'right', color: C.red });
 
-      // описание и количество
+      // описание, количество, деньги
       const inf = L.info, it = items[idx];
-      G.gfx.window(ctx, inf.x, inf.y, inf.w, inf.h, 'paper');
-      if (msg) {
-        F.wrap(msg, inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: msgErr ? G.UI.err : G.UI.ok }));
-      } else {
-        F.wrap(it.desc || '', inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: G.UI.text }));
-      }
-      const qy = inf.y + 33;
+      U.panel(ctx, inf.x, inf.y, inf.w, inf.h, 'frame');
+      const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, 2);
+      textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 10 + i * 12, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
+      const qy = inf.y + inf.h - 24;
       if (it.cat === 'food' || it.cat === 'service') {
         const v = G.state.vars;
-        F.draw(ctx, it.cat === 'food' ? `Сытость: ${Math.round(v.food)}/100` : `Энергия: ${Math.round(v.energy)}/100`, inf.x + 6, qy, { color: pal.gray });
+        F.small.draw(ctx, it.cat === 'food' ? `Сытость: ${Math.round(v.food)}/100` : `Энергия: ${Math.round(v.energy)}/100`, inf.x + 12, qy + 4, { color: C.inkDim });
+        F.draw(ctx, it.price + ' рё', inf.x + inf.w - 12, qy + 3, { align: 'right', color: '#8a5a10' });
       } else {
-        F.draw(ctx, 'Кол-во:', inf.x + 6, qy, { color: pal.gray });
-        F.draw(ctx, '<', 60, qy, { color: qmode && qty > 1 ? pal.orange : '#c8bca0' });
-        F.draw(ctx, String(qty), 77, qy, { align: 'center', color: pal.ink });
-        F.draw(ctx, '>', 90, qy, { color: qmode && qty < maxQty(it) ? pal.orange : '#c8bca0' });
-        F.draw(ctx, '= ' + it.price * qty + ' рё', 102, qy, { color: pal.ink });
-        const side = it.pouch ? `${G.game.pouchUsed()}/${G.game.pouchMax()}` : `есть ${G.game.count(it.id)}`;
-        F.draw(ctx, side, inf.x + inf.w - 6, qy, { align: 'right', color: pal.gray });
+        U.button(ctx, L.minus.x, L.minus.y, L.minus.w, L.minus.h, '−', qty > 1 ? (qmode ? 'sel' : 'normal') : 'dis');
+        F.draw(ctx, String(qty), (L.minus.x + L.plus.x + L.plus.w) / 2 + 0.5, L.minus.y + 6, { align: 'center', color: C.ink });
+        U.button(ctx, L.plus.x, L.plus.y, L.plus.w, L.plus.h, '+', qty < maxQty(it) ? (qmode ? 'sel' : 'normal') : 'dis');
+        F.draw(ctx, '= ' + it.price * qty + ' рё', L.plus.x + L.plus.w + 12, L.minus.y + 6, { color: '#8a5a10' });
+        const side = it.pouch ? `подсумок ${G.game.pouchUsed()}/${G.game.pouchMax()}` : `есть ${G.game.count(it.id)}`;
+        F.small.draw(ctx, side, inf.x + inf.w - 12, inf.y + 12 + (textLines.length > 1 ? 12 : 0) + 14, { align: 'right', color: C.inkDim });
       }
 
-      // подвал
-      const f = L.foot;
-      G.gfx.window(ctx, f.x, f.y, f.w, f.h, 'dark');
-      F.draw(ctx, '(A) Купить', f.x + 6, f.y + 5, { color: pal.white });
-      F.draw(ctx, '(B) Выйти', f.x + 70, f.y + 5, { color: pal.light });
-      F.draw(ctx, G.state.vars.money + ' рё', f.x + f.w - 6, f.y + 5, { align: 'right', color: pal.yellow });
+      // кнопки внизу + деньги
+      U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, it.cat === 'food' || it.cat === 'service' ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
+      U.button(ctx, L.exitB.x, L.exitB.y, L.exitB.w, L.exitB.h, 'Выйти', 'normal');
+      F.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + 10, { align: 'right', color: '#8a5a10' });
     },
   };
   return S;

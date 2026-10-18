@@ -115,7 +115,8 @@ G.scenes.register('title', () => {
     items.push({ label: 'Загрузить игру', act: loadByCode });
     items.push({ label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) });
   }
-  const menuY = (i) => G.screen.H - 62 - 14 * Math.max(0, items.length - 2) + i * 14;
+  const BTN_H = 22, BTN_GAP = 6, BTN_W = 168;
+  const menuY = (i) => G.screen.H - 26 - items.length * (BTN_H + BTN_GAP) + BTN_GAP + i * (BTN_H + BTN_GAP);
 
   function newGame() {
     if (G.storage.hasSave()) {
@@ -159,7 +160,7 @@ G.scenes.register('title', () => {
       if (I.repeat('up', dt)) { idx = (idx + items.length - 1) % items.length; G.audio.sfx.select(); }
       if (I.repeat('down', dt)) { idx = (idx + 1) % items.length; G.audio.sfx.select(); }
       if (I.tapNow) {
-        items.forEach((it, i) => { if (Math.abs(I.tapNow.y - (menuY(i) + 4)) < 7) { idx = i; this.choose(); } });
+        items.forEach((it, i) => { if (Math.abs(I.tapNow.y - (menuY(i) + BTN_H / 2)) <= (BTN_H + BTN_GAP) / 2 && Math.abs(I.tapNow.x - G.screen.W / 2) < BTN_W / 2 + 10) { idx = i; this.choose(); } });
         return;
       }
       if (I.pressed('a')) this.choose();
@@ -171,32 +172,24 @@ G.scenes.register('title', () => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H;
+      const W = G.screen.W, H = G.screen.H, U = G.ui, C = U.C, F = G.font;
       ctx.drawImage(bg, 0, 0);
-      // логотип
-      G.icons.draw(ctx, 'emblem', Math.round(W / 2 - 16), 0, 32, 32);   // V9: знак Листа над плашкой
-      const ly = 26 + Math.round(Math.sin(t * 1.5) * 2);
-      ctx.fillStyle = 'rgba(20,10,20,.55)';
-      ctx.fillRect(16, ly - 6, W - 32, 44);
-      G.font.draw(ctx, 'NARUTO RPG', W / 2, ly, { align: 'center', color: G.PAL.yellow, outline: G.PAL.ink });
-      // крупный заголовок ×2
+      // название на свитке: знак Листа сверху, «NARUTO RPG» и крупное «ВОЛЯ ОГНЯ»
+      const sy = 10 + Math.round(Math.sin(t * 1.5) * 1.5), sw = Math.min(W - 24, 250), sx = Math.round((W - sw) / 2);
+      U.panel(ctx, sx, sy + 12, sw, 64, 'scroll');
+      G.icons.draw(ctx, 'emblem', Math.round(W / 2 - 16), sy - 10, 32, 32);
+      F.draw(ctx, 'NARUTO RPG', W / 2, sy + 30, { align: 'center', color: C.inkDim });
       const title = 'ВОЛЯ ОГНЯ';
-      const tw = G.font.measure(title);
-      const tmp = G.gfx.canvas(tw + 4, 12);
-      G.font.draw(tmp.getContext('2d'), title, 1, 1, { color: G.PAL.orange, outline: G.PAL.ink });
-      ctx.drawImage(tmp, Math.round(W / 2 - tmp.lw), ly + 12, tmp.lw * 2, tmp.lh * 2);
-      // меню: тёмная плашка под кнопками, чтобы текст читался поверх картинки
-      const my = menuY(0);
-      ctx.fillStyle = 'rgba(20,10,20,.55)';
-      ctx.fillRect(Math.round(W / 2 - 62), my - 6, 124, items.length * 14 + 4);
+      const tw = F.measure(title);
+      const tmp = G.gfx.canvas(tw + 4, 18);
+      F.draw(tmp.getContext('2d'), title, 2, 5, { color: C.red, outline: C.ink });
+      ctx.drawImage(tmp, Math.round(W / 2 - tmp.lw), sy + 44, tmp.lw * 2, tmp.lh * 2);
+      // кнопки главного меню: деревянные дощечки, выбранная — красный лак
       items.forEach((it, i) => {
         const y = menuY(i), sel = i === idx;
-        if (sel) { ctx.fillStyle = 'rgba(232,98,26,.28)'; ctx.fillRect(Math.round(W / 2 - 58), y - 3, 116, 13); }
-        if (sel && Math.floor(t * 3) % 2 === 0) G.font.draw(ctx, '▶', W / 2 - G.font.measure(it.label) / 2 - 10, y, { color: G.PAL.orange });
-        G.font.draw(ctx, it.label, W / 2, y, { align: 'center', color: sel ? G.PAL.white : G.PAL.light, shadow: G.PAL.black });
+        U.button(ctx, Math.round((W - BTN_W) / 2), y, BTN_W, BTN_H, it.label, sel ? 'sel' : 'normal');
       });
-      G.font.draw(ctx, 'Нажми A', W / 2, H - 22, { align: 'center', color: Math.floor(t * 2) % 2 ? G.PAL.gray : G.PAL.light });
-      G.font.draw(ctx, 'v' + BUILD.release, W - 3, H - 11, { align: 'right', color: G.PAL.gray });
+      F.small.draw(ctx, 'v' + BUILD.release, W - 5, H - 14, { align: 'right', color: '#c8b48a', shadow: '#160c06' });
     },
   };
 });

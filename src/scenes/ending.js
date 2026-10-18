@@ -42,20 +42,25 @@ G.scenes.register('ending', () => {
       if (t > 0.8 && (I.pressed('a') || I.tapNow)) { G.audio.sfx.confirm(); i++; t = 0; if (i >= pages.length) G.scenes.fadeTo(G.scenes.make('title')); }
     },
     draw(ctx) {
-      const H = G.screen.H, p = pages[Math.min(i, pages.length - 1)];
+      const H = G.screen.H, p = pages[Math.min(i, pages.length - 1)], U = G.ui, C = U.C, S = F.small;
       ctx.fillStyle = '#0e0c16'; ctx.fillRect(0, 0, W, H);
       for (let k = 0; k < 50; k++) { ctx.fillStyle = (Math.sin(t * 2 + k) > 0.5) ? '#fff' : '#5a5a80'; ctx.fillRect((k * 53) % W, (k * 29) % Math.round(H * 0.4), 1, 1); }
       // протектор
-      ctx.fillStyle = '#2a3a6a'; ctx.fillRect(W / 2 - 40, 26, 80, 18); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(W / 2 - 22, 28, 44, 14);
-      ctx.strokeStyle = '#5a5a6a'; ctx.beginPath(); ctx.arc(W / 2, 35, 4, 0.5, 5.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W / 2 + 3, 33); ctx.lineTo(W / 2 + 10, 30); ctx.stroke();
-      if (kind === 'redeem' && i === 0) { ctx.fillStyle = '#a07050'; ctx.fillRect(W / 2 - 40, 44, 80, 1); }
+      ctx.fillStyle = '#2a3a6a'; ctx.fillRect(W / 2 - 40, 14, 80, 18); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(W / 2 - 22, 16, 44, 14);
+      ctx.strokeStyle = '#5a5a6a'; ctx.beginPath(); ctx.arc(W / 2, 23, 4, 0.5, 5.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W / 2 + 3, 21); ctx.lineTo(W / 2 + 10, 18); ctx.stroke();
+      if (kind === 'redeem' && i === 0) { ctx.fillStyle = '#a07050'; ctx.fillRect(W / 2 - 40, 32, 80, 1); }
       const a = Math.min(1, t * 2); ctx.globalAlpha = a;
-      F.draw(ctx, p.title, W / 2, 58, { align: 'center', color: p.col });
-      let y = 76;
-      for (const l of p.lines) for (const w of F.wrap(l, W - 20)) { F.draw(ctx, w, W / 2, y, { align: 'center', color: P.white }); y += 11; }
+      // страница-свиток: красная лента с названием, текст чернилами
+      const lines = [];
+      for (const l of p.lines) for (const w of S.wrap(l, W - 54)) lines.push(w);
+      const ph = Math.min(H - 110, 30 + lines.length * 13 + 8);
+      U.panel(ctx, 8, 56, W - 16, ph, 'scroll');
+      U.title(ctx, p.title, W / 2, 44, 0);
+      let y = 74;
+      for (const w of lines) { S.draw(ctx, w, W / 2, y, { align: 'center', color: C.ink }); y += 13; }
       ctx.globalAlpha = 1;
-      F.draw(ctx, `${i + 1}/${pages.length}`, W - 6, H - 12, { align: 'right', color: P.gray });
-      if (t > 0.8) F.draw(ctx, 'Нажми A', W / 2, H - 14, { align: 'center', color: Math.sin(t * 5) > 0 ? P.gray : '#4a4660' });
+      S.draw(ctx, `${i + 1}/${pages.length}`, W - 8, H - 14, { align: 'right', color: '#8a7a60' });
+      if (t > 0.8) S.draw(ctx, 'Коснись экрана', W / 2, H - 24, { align: 'center', color: Math.sin(t * 5) > 0 ? '#d8c8a0' : '#6a5a46' });
     },
   };
 });
