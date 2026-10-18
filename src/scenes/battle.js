@@ -951,8 +951,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (fx.bubble) {
       const lines = F.wrap(fx.bubble.text, 120).slice(0, 3), bw = 128, bh = lines.length * 10 + 6;
       const bx = clamp(ex - bw / 2, 2, W - bw - 2), by = L.ar + 2;
-      ctx.fillStyle = '#f8f4ec'; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = PAL.ink; ctx.fillRect(bx, by + bh, bw, 1);
-      lines.forEach((l, i) => F.draw(ctx, l, bx + 4, by + 3 + i * 10, { color: PAL.ink }));
+      ctx.fillStyle = G.UI.panel; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = G.UI.edge; ctx.fillRect(bx, by + bh, bw, 1);
+      lines.forEach((l, i) => F.draw(ctx, l, bx + 4, by + 3 + i * 10, { color: G.UI.text }));
     }
     if (A.dark) { ctx.fillStyle = 'rgba(10,10,40,0.25)'; ctx.fillRect(0, L.ar, W, L.arH); }
     ctx.restore();

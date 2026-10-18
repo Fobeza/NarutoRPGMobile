@@ -18,7 +18,7 @@
 html, body {
   margin: 0; padding: 0; width: 100%; height: 100%;
   overflow: hidden; overscroll-behavior: none;
-  background: #14121c; color: #f4ecd8;
+  background: #0b0a10; color: #f4ecd8;
   -webkit-user-select: none; user-select: none;
   -webkit-touch-callout: none; touch-action: none;
   font-family: -apple-system, "SF Pro Rounded", system-ui, sans-serif;
@@ -51,8 +51,8 @@ body { position: fixed; inset: 0; }
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   background: #000;
-  border-radius: 6px;
-  box-shadow: 0 0 0 2px #2a2636, 0 6px 18px rgba(0,0,0,.5);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px #6a6a7a, 0 0 0 4px #17161d, 0 10px 26px rgba(0,0,0,.65);
 }
 
 /* ===== Геймпад ===== */
@@ -65,33 +65,33 @@ body { position: fixed; inset: 0; }
   width: 112px; height: 112px; touch-action: none;
 }
 .dp-arm, .dp-center {
-  position: absolute; background: #3a3548;
-  box-shadow: inset 0 -4px 0 #24202f, 0 2px 0 #0c0a12;
+  position: absolute; background: #26242e;
+  box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 2px 0 #000;
 }
 .dp-up    { left: 37px; top: 0;     width: 38px; height: 41px; border-radius: 8px 8px 0 0; }
 .dp-down  { left: 37px; bottom: 0;  width: 38px; height: 41px; border-radius: 0 0 8px 8px; }
 .dp-left  { left: 0;    top: 37px;  width: 41px; height: 38px; border-radius: 8px 0 0 8px; }
 .dp-right { right: 0;   top: 37px;  width: 41px; height: 38px; border-radius: 0 8px 8px 0; }
-.dp-center{ left: 37px; top: 37px;  width: 38px; height: 38px; box-shadow: none; }
+.dp-center{ left: 37px; top: 37px;  width: 38px; height: 38px; box-shadow: inset 0 1px 0 #3c3a46; }
 .dp-arm.on { background: #e8621a; box-shadow: inset 0 -4px 0 #a8420c; }
 .dp-arm::after {
   content: ""; position: absolute; left: 50%; top: 50%;
   width: 0; height: 0; border: 6px solid transparent; transform: translate(-50%, -50%);
 }
-.dp-up::after    { border-bottom-color: #8c84a0; margin-top: -4px; }
-.dp-down::after  { border-top-color: #8c84a0;    margin-top: 4px; }
-.dp-left::after  { border-right-color: #8c84a0;  margin-left: -4px; }
-.dp-right::after { border-left-color: #8c84a0;   margin-left: 4px; }
+.dp-up::after    { border-bottom-color: #8a86a0; margin-top: -4px; }
+.dp-down::after  { border-top-color: #8a86a0;    margin-top: 4px; }
+.dp-left::after  { border-right-color: #8a86a0;  margin-left: -4px; }
+.dp-right::after { border-left-color: #8a86a0;   margin-left: 4px; }
 
 #ab { position: absolute; right: 18px; top: 12px; width: 118px; height: 100px; }
 .round {
   position: absolute; width: 52px; height: 52px; border-radius: 50%;
-  background: #c8401c; box-shadow: inset 0 -5px 0 #8a2a10, 0 3px 0 #0c0a12;
+  background: #26242e; box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 0 0 2px #46341a, 0 3px 0 #000;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 18px; color: #ffe9d6; touch-action: none;
+  font-weight: 800; font-size: 18px; color: #ff9a4a; touch-action: none;
 }
 #btn-a { right: 0; top: 0; }
-#btn-b { left: 0; top: 40px; background: #6a5c8a; box-shadow: inset 0 -5px 0 #463c60, 0 3px 0 #0c0a12; }
+#btn-b { left: 0; top: 40px; color: #8a86a0; box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 0 0 2px #33313c, 0 3px 0 #000; }
 .round.on { transform: translateY(3px); filter: brightness(1.25); box-shadow: inset 0 -2px 0 rgba(0,0,0,.3); }
 
 #sys-btns {
@@ -100,11 +100,11 @@ body { position: fixed; inset: 0; }
 }
 .pill {
   min-width: 46px; height: 22px; padding: 0 7px; border-radius: 11px;
-  background: #2e2a3a; color: #b8b0cc; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  background: #26242e; color: #8a86a0; font-size: 10px; font-weight: 700; letter-spacing: 1px;
   display: flex; align-items: center; justify-content: center; touch-action: none;
-  box-shadow: 0 2px 0 #0c0a12;
+  box-shadow: 0 2px 0 #000;
 }
-.pill.on { background: #4a4460; color: #fff; }
+.pill.on { background: #34313e; color: #fff; }
 
 /* ===== Ввод текста ===== */
 #text-entry {
@@ -115,18 +115,18 @@ body { position: fixed; inset: 0; }
 }
 #text-entry.hidden { display: none; }
 .te-box {
-  width: 300px; background: #f4ecd8; color: #2a2030; border-radius: 4px;
-  border: 4px solid #2a2030; box-shadow: 0 0 0 3px #e8621a; padding: 16px;
+  width: 300px; background: #201d28; color: #dcd8e8; border-radius: 4px;
+  border: 4px solid #6a6a7a; box-shadow: 0 0 0 3px #46341a; padding: 16px;
   text-align: center; -webkit-user-select: text; user-select: text;
 }
 .te-title { font-weight: 800; font-size: 18px; margin-bottom: 12px; }
 #te-input {
   width: 100%; font-size: 22px; padding: 8px 10px; text-align: center;
-  border: 3px solid #2a2030; border-radius: 3px; background: #fff; color: #2a2030;
+  border: 3px solid #46444f; border-radius: 3px; background: #17151d; color: #dcd8e8;
   outline: none; font-weight: 700; -webkit-user-select: text; user-select: text;
 }
-.te-hint { font-size: 12px; color: #7a6c80; margin: 8px 0 12px; min-height: 15px; }
-.te-hint.err { color: #c8401c; font-weight: 700; }
+.te-hint { font-size: 12px; color: #8a86a0; margin: 8px 0 12px; min-height: 15px; }
+.te-hint.err { color: #ff6a5a; font-weight: 700; }
 .te-ok {
   display: inline-block; padding: 10px 28px; background: #e8621a; color: #fff;
   font-weight: 800; border-radius: 3px; box-shadow: inset 0 -4px 0 #a8420c; letter-spacing: 1px;
@@ -140,15 +140,15 @@ body { position: fixed; inset: 0; }
 #code-box.hidden { display: none; }
 #cb-text {
   width: 100%; height: 150px; font: 11px/1.3 ui-monospace, Menlo, monospace; padding: 6px;
-  border: 3px solid #2a2030; border-radius: 3px; background: #fff; color: #2a2030; resize: none;
+  border: 3px solid #46444f; border-radius: 3px; background: #17151d; color: #dcd8e8; resize: none;
   word-break: break-all; -webkit-user-select: text; user-select: text; outline: none;
 }
 .cb-row { display: flex; gap: 10px; justify-content: center; }
-.cb-cancel { background: #7a6c80; box-shadow: inset 0 -4px 0 #4a3e50; }
+.cb-cancel { background: #34313e; color: #8a86a0; box-shadow: inset 0 -3px 0 #101016; }
 
 /* ===== Альбомная ориентация ===== */
 #rotate {
-  position: fixed; inset: 0; background: #14121c; z-index: 50;
+  position: fixed; inset: 0; background: #0b0a10; z-index: 50;
   display: none; align-items: center; justify-content: center; text-align: center;
   font-size: 18px; font-weight: 700; color: #f4ecd8;
 }
@@ -222,7 +222,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { version: '80bced05', date: '2026-10-18 12:11', debug: false };
+const BUILD = { version: '20f6c938', date: '2026-10-18 13:14', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -819,6 +819,17 @@ G.PAL = {
   brown: '#6a4226', brownDark: '#4a2a16', hairBlack: '#2a2a3a', hairBlackHi: '#46466a',
 };
 
+// Токены интерфейса «Б. Лак и сталь»: панели, кромки, текст на панелях.
+// Сцены рисуют текст на панелях только через эти токены — тема меняется в одном месте.
+G.UI = {
+  panel: '#201d28', panelHi: '#34313e', panelLo: '#14121c',   // основная панель: лак
+  deep: '#17151d', deepHi: '#26232e', deepLo: '#0b0a10',      // заглублённая (тосты, HUD)
+  edge: '#6a6a7a', edgeDim: '#46444f',                        // стальная кромка
+  text: '#dcd8e8', dim: '#8a86a0', faint: '#54506a',          // текст / приглушённый / блокированный
+  sel: '#34313e', selText: '#f8f4ec',                         // строка под курсором
+  ok: '#7ac06a', err: '#ff6a5a',                              // успех / ошибка
+};
+
 
 // ===== gfx/font.js =====
 // Пиксельный шрифт с кириллицей (заглавные + строчные), пропорциональный.
@@ -1212,19 +1223,22 @@ G.gfx = {
 
   // Рамка окна интерфейса в пиксельном стиле
   window(ctx, x, y, w, h, style = 'paper') {
-    const P = G.PAL;
-    const st = {
-      paper: { bg: P.paper, border: P.ink, inner: P.paperDark, accent: P.orange },
-      dark: { bg: '#24202f', border: P.black, inner: '#3a3548', accent: P.orange },
-    }[style];
-    ctx.fillStyle = st.border;
+    // Тема «Б. Лак и сталь»: чёрная тень, стальная кромка, лаковое тело,
+    // светлая кромка сверху и тень снизу — панель читается как металл в смоле.
+    const U = G.UI;
+    const st = style === 'dark'
+      ? { bg: U.deep, hi: U.deepHi, lo: U.deepLo, edge: U.edgeDim }
+      : { bg: U.panel, hi: U.panelHi, lo: U.panelLo, edge: U.edge };
+    ctx.fillStyle = '#000';
     ctx.fillRect(x + 1, y, w - 2, h);
     ctx.fillRect(x, y + 1, w, h - 2);
-    ctx.fillStyle = st.accent;
+    ctx.fillStyle = st.edge;
     ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
     ctx.fillStyle = st.bg;
     ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
-    ctx.fillStyle = st.inner;
+    ctx.fillStyle = st.hi;
+    ctx.fillRect(x + 2, y + 2, w - 4, 1);
+    ctx.fillStyle = st.lo;
     ctx.fillRect(x + 2, y + h - 3, w - 4, 1);
   },
 };
@@ -11093,7 +11107,7 @@ G.scenes.register('world', (pos) => {
       if (G.storage.settings.minimap === false) return;
       const S = 48, x0 = W - S - 3, y0 = HUD_H + 3;
       const m = this.map, p = this.player;
-      ctx.fillStyle = G.PAL.ink; ctx.fillRect(x0 - 1, y0 - 1, S + 2, S + 2);
+      ctx.fillStyle = G.UI.edge; ctx.fillRect(x0 - 1, y0 - 1, S + 2, S + 2);
       ctx.fillStyle = '#14121c'; ctx.fillRect(x0, y0, S, S);
       ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, S, S); ctx.clip();
       let sc, ox, oy;
@@ -11623,7 +11637,7 @@ G.scenes.register('mapview', (world) => {
       const c = this.card, p = c.p, r = this.cardRect(), F = G.font, P = G.PAL;
       G.gfx.window(ctx, r.x, r.y, r.w, r.h, 'paper');
       let y = r.y + 6;
-      F.draw(ctx, p.name, r.x + 6, y, { color: P.ink }); y += 10;
+      F.draw(ctx, p.name, r.x + 6, y, { color: G.UI.text }); y += 10;
       const cat = { food: 'Еда', shop: 'Лавка', training: 'Тренировки', place: p.b.tplDef.cat === 'clan' ? 'Клан' : 'Место' }[p.kind];
       F.draw(ctx, cat, r.x + r.w - 6, r.y + 6, { align: 'right', color: P.gray });
       if (p.shop) {
@@ -11640,8 +11654,8 @@ G.scenes.register('mapview', (world) => {
       }
       c.opts.forEach((o, i) => {
         const by = r.btnY + i * 12, sel = i === c.sel;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(r.x + 4, by - 2, r.w - 8, 11); F.draw(ctx, '▶', r.x + 7, by, { color: P.orange }); }
-        F.draw(ctx, o.label, r.x + 16, by, { color: sel ? P.ink : P.gray });
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, by - 2, r.w - 8, 11); F.draw(ctx, '▶', r.x + 7, by, { color: P.orange }); }
+        F.draw(ctx, o.label, r.x + 16, by, { color: sel ? G.UI.selText : G.UI.dim });
       });
     },
   };
@@ -11765,13 +11779,13 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const who = shop.keeper.who;
       let tx = h.x + 7;
       if (G.chars.DEFS[who]) {
-        ctx.fillStyle = pal.ink; ctx.fillRect(h.x + 5, h.y + 6, 34, 34);
+        ctx.fillStyle = G.UI.edge; ctx.fillRect(h.x + 5, h.y + 6, 34, 34);
         ctx.drawImage(G.chars.portrait(who), h.x + 6, h.y + 7);
         tx = h.x + 44;
       }
       F.draw(ctx, title, tx, h.y + 4, { color: pal.orange });
       const greet = F.wrap('«' + shop.greet + '»', h.w - (tx - h.x) - 6).slice(0, 3);
-      greet.forEach((ln, i) => F.draw(ctx, ln, tx, h.y + 15 + i * 10, { color: pal.ink }));
+      greet.forEach((ln, i) => F.draw(ctx, ln, tx, h.y + 15 + i * 10, { color: G.UI.text }));
 
       // список
       const l = L.list;
@@ -11780,11 +11794,11 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const i = top + r;
         if (i >= items.length) break;
         const it = items[i], y = l.y + 5 + r * 13, sel = i === idx, lk = locked(it);
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(l.x + 4, y - 2, l.w - 8, 12); F.draw(ctx, '▶', l.x + 6, y, { color: pal.orange }); }
-        const col = lk ? '#b0a690' : sel ? pal.ink : pal.gray;
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(l.x + 4, y - 2, l.w - 8, 12); F.draw(ctx, '▶', l.x + 6, y, { color: pal.orange }); }
+        const col = lk ? G.UI.faint : sel ? G.UI.selText : G.UI.dim;
         F.draw(ctx, it.name, l.x + 15, y, { color: col });
         const price = lk ? '—' : it.price + ' рё';
-        F.draw(ctx, price, l.x + l.w - 7, y, { align: 'right', color: lk ? '#b0a690' : !G.game.canPay(it.price) ? '#c05a4a' : col });
+        F.draw(ctx, price, l.x + l.w - 7, y, { align: 'right', color: lk ? '#b0a690' : !G.game.canPay(it.price) ? G.UI.err : col });
       }
       if (top > 0) F.draw(ctx, '▲', l.x + l.w / 2, l.y - 1, { align: 'center', color: pal.orange });
       if (top + l.rows < items.length) F.draw(ctx, '▼', l.x + l.w / 2, l.y + l.h - 9, { align: 'center', color: pal.orange });
@@ -11793,9 +11807,9 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const inf = L.info, it = items[idx];
       G.gfx.window(ctx, inf.x, inf.y, inf.w, inf.h, 'paper');
       if (msg) {
-        F.wrap(msg, inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: msgErr ? '#c03a2a' : '#2a7a3a' }));
+        F.wrap(msg, inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: msgErr ? G.UI.err : G.UI.ok }));
       } else {
-        F.wrap(it.desc || '', inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: pal.ink }));
+        F.wrap(it.desc || '', inf.w - 12).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, inf.x + 6, inf.y + 5 + i * 11, { color: G.UI.text }));
       }
       const qy = inf.y + 33;
       if (it.cat === 'food' || it.cat === 'service') {
@@ -11851,7 +11865,7 @@ G.scenes.register('bag', () => {
 
       // цель и состояние
       G.gfx.window(ctx, 2, 18, W - 4, 58, 'paper');
-      F.draw(ctx, `${g.dayNameFull()}, день ${v.day} · ${g.clock()}`, 8, 23, { color: P.ink });
+      F.draw(ctx, `${g.dayNameFull()}, день ${v.day} · ${g.clock()}`, 8, 23, { color: G.UI.text });
       F.draw(ctx, `${v.money} рё`, W - 8, 23, { align: 'right', color: '#b07a10' });
       const goal = g.goalText();
       F.wrap('Цель: ' + (goal || '—'), W - 16).slice(0, 2).forEach((ln, i) => F.draw(ctx, ln, 8, 35 + i * 11, { color: '#8a3a1a' }));
@@ -11880,15 +11894,15 @@ G.scenes.register('bag', () => {
           if (r >= rows) break;
         }
         const y = ly + 5 + r * 12, sel = i === idx;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(6, y - 2, W - 12, 12); F.draw(ctx, '▶', 8, y, { color: P.orange }); }
-        F.draw(ctx, it.name, 17, y, { color: sel ? P.ink : P.gray });
-        F.draw(ctx, '×' + it.n, W - 8, y, { align: 'right', color: P.ink });
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(6, y - 2, W - 12, 12); F.draw(ctx, '▶', 8, y, { color: P.orange }); }
+        F.draw(ctx, it.name, 17, y, { color: sel ? G.UI.selText : G.UI.dim });
+        F.draw(ctx, '×' + it.n, W - 8, y, { align: 'right', color: G.UI.text });
         r++;
       }
       // описание
       const dy = H - 20 - 44;
       G.gfx.window(ctx, 2, dy, W - 4, 42, 'paper');
-      if (L[idx]) F.wrap(L[idx].desc || '', W - 16).slice(0, 3).forEach((ln, i) => F.draw(ctx, ln, 8, dy + 5 + i * 11, { color: P.ink }));
+      if (L[idx]) F.wrap(L[idx].desc || '', W - 16).slice(0, 3).forEach((ln, i) => F.draw(ctx, ln, 8, dy + 5 + i * 11, { color: G.UI.text }));
       G.gfx.window(ctx, 2, H - 19, W - 4, 17, 'dark');
       F.draw(ctx, '(B) Назад', W / 2, H - 14, { align: 'center', color: P.light });
     },
@@ -12112,14 +12126,14 @@ G.scenes.register('journal', () => {
       G.gfx.window(ctx, 2, 15, W - 4, H - 37, 'paper');
       let y = 20;
       F.draw(ctx, cat.icon + ' ' + cat.name, 8, y, { color: cat.color }); y += 11;
-      for (const ln of F.wrap(d.title, W - 16)) { F.draw(ctx, ln, 8, y, { color: P.ink }); y += 11; }
+      for (const ln of F.wrap(d.title, W - 16)) { F.draw(ctx, ln, 8, y, { color: G.UI.text }); y += 11; }
       y += 2;
       for (const ln of F.wrap(d.desc, W - 16)) { F.draw(ctx, ln, 8, y, { color: P.gray }); y += 10; }
       y += 4;
       for (const v of stepsView(id)) {
         const txt = v.future ? '…' : v.st.text;
         const mark = v.done ? '✔' : v.cur ? '▶' : '·';
-        const col = v.done ? '#5a8a4a' : v.cur ? P.ink : '#a89a80';
+        const col = v.done ? G.UI.ok : v.cur ? G.UI.text : G.UI.dim;
         const lines = F.wrap(txt, W - 30);
         F.draw(ctx, mark, 9, y, { color: v.done ? '#5a8a4a' : P.orange });
         lines.forEach((ln) => { F.draw(ctx, ln, 19, y, { color: col }); y += 10; });
@@ -12407,11 +12421,11 @@ G.scenes.register('charcreate', (onDone) => {
         ctx.globalAlpha = 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
         const bh = 74, by = Math.round(H / 2 - bh / 2);
         G.gfx.window(ctx, 10, by, W - 20, bh, 'paper');
-        F.draw(ctx, 'Всё верно?', W / 2, by + 6, { align: 'center', color: P.ink });
+        F.draw(ctx, 'Всё верно?', W / 2, by + 6, { align: 'center', color: G.UI.text });
         const line = G.STATS.map((s) => `${s.short} ${vals[s.id]}`).join(' · ');
         F.wrap(line, W - 36).forEach((ln, i) => F.draw(ctx, ln, W / 2, by + 18 + i * 10, { align: 'center', color: P.gray }));
         F.draw(ctx, picked.map((id) => G.SKILLS.find((s) => s.id === id).name).join(', '), W / 2, by + 40, { align: 'center', color: '#8a3a1a' });
-        F.draw(ctx, '(A) Да      (B) Нет', W / 2, by + 56, { align: 'center', color: P.ink });
+        F.draw(ctx, '(A) Да      (B) Нет', W / 2, by + 56, { align: 'center', color: G.UI.text });
       }
     },
     drawDesc(ctx, text, hint) {
@@ -12440,11 +12454,11 @@ G.scenes.register('status', () => {
     },
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL, g = G.game, v = g.v;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = G.UI.deep; ctx.fillRect(0, 0, W, H);
       F.draw(ctx, 'СТАТУС', W / 2, 4, { align: 'center', color: P.orange });
       let y = 16;
       G.gfx.window(ctx, 2, y, W - 4, 34, 'paper');
-      F.draw(ctx, G.state.hero.name || 'Герой', 8, y + 5, { color: P.ink });
+      F.draw(ctx, G.state.hero.name || 'Герой', 8, y + 5, { color: G.UI.text });
       F.draw(ctx, `Неделя ${g.week()}`, W - 8, y + 5, { align: 'right', color: P.gray });
       const wt = G.life.WEATHER[G.life.weather()];
       F.draw(ctx, `${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, 8, y + 16, { color: P.gray });
@@ -12516,7 +12530,7 @@ G.scenes.register('pause', () => ({
     G.gfx.window(ctx, W / 2 - 60, H / 2 - 24, 120, 44, 'paper');
     F.draw(ctx, 'ПАУЗА', W / 2, H / 2 - 17, { align: 'center', color: P.orange });
     F.draw(ctx, `${G.game.dayName()}, ${G.game.clock()}`, W / 2, H / 2 - 5, { align: 'center', color: P.gray });
-    if (Math.floor(this.t * 2) % 2 === 0) F.draw(ctx, 'Нажми A', W / 2, H / 2 + 7, { align: 'center', color: P.ink });
+    if (Math.floor(this.t * 2) % 2 === 0) F.draw(ctx, 'Нажми A', W / 2, H / 2 + 7, { align: 'center', color: G.UI.text });
   },
 }));
 
@@ -12606,8 +12620,8 @@ G.scenes.register('savemenu', () => {
       F.draw(ctx, 'СОХРАНЕНИЕ', r.x + r.w / 2, r.y + 5, { align: 'center', color: P.orange });
       items().forEach((it, i) => {
         const y = r.y + 18 + i * 13, sel = i === idx;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); F.draw(ctx, '▶', r.x + 7, y, { color: P.orange }); }
-        F.draw(ctx, it.label, r.x + 15, y, { color: sel ? P.ink : P.gray, maxW: r.w - 20 });
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); F.draw(ctx, '▶', r.x + 7, y, { color: P.orange }); }
+        F.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.UI.selText : G.UI.dim, maxW: r.w - 20 });
       });
       if (toast) {
         const w = F.measure(toast) + 12;
@@ -13768,8 +13782,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (fx.bubble) {
       const lines = F.wrap(fx.bubble.text, 120).slice(0, 3), bw = 128, bh = lines.length * 10 + 6;
       const bx = clamp(ex - bw / 2, 2, W - bw - 2), by = L.ar + 2;
-      ctx.fillStyle = '#f8f4ec'; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = PAL.ink; ctx.fillRect(bx, by + bh, bw, 1);
-      lines.forEach((l, i) => F.draw(ctx, l, bx + 4, by + 3 + i * 10, { color: PAL.ink }));
+      ctx.fillStyle = G.UI.panel; ctx.fillRect(bx, by, bw, bh); ctx.fillStyle = G.UI.edge; ctx.fillRect(bx, by + bh, bw, 1);
+      lines.forEach((l, i) => F.draw(ctx, l, bx + 4, by + 3 + i * 10, { color: G.UI.text }));
     }
     if (A.dark) { ctx.fillStyle = 'rgba(10,10,40,0.25)'; ctx.fillRect(0, L.ar, W, L.arH); }
     ctx.restore();
@@ -14576,9 +14590,9 @@ G.scenes.register('menu', () => {
       items().forEach((it, i) => {
         const y = r.y + 18 + i * 13;
         const sel = i === idx;
-        if (sel) { ctx.fillStyle = '#ecdcb8'; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); }
+        if (sel) { ctx.fillStyle = G.UI.sel; ctx.fillRect(r.x + 4, y - 2, r.w - 8, 12); }
         if (sel) G.font.draw(ctx, '▶', r.x + 7, y, { color: G.PAL.orange });
-        G.font.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.PAL.ink : G.PAL.gray });
+        G.font.draw(ctx, it.label, r.x + 15, y, { color: sel ? G.UI.selText : G.UI.dim });
       });
       if (toast) {
         const w = G.font.measure(toast) + 12;
@@ -14622,7 +14636,7 @@ G.scenes.register('gallery', () => {
       const di = G.chars.DIRS.indexOf(dir);
       ctx.drawImage(s, frame * 16, di * 20, 16, 20, 20, 44, 64, 80);
       // портрет
-      ctx.fillStyle = P.ink; ctx.fillRect(110, 40, 36, 36);
+      ctx.fillStyle = G.UI.edge; ctx.fillRect(110, 40, 36, 36);
       ctx.drawImage(G.chars.portrait(id), 112, 42);
       G.font.draw(ctx, 'портрет', 128, 79, { align: 'center', color: P.light });
       G.font.draw(ctx, '', 128, 89, { align: 'center', color: P.gray });
@@ -14653,7 +14667,7 @@ G.scenes.register('fonttest', () => {
       const W = G.screen.W, P = G.PAL;
       ctx.fillStyle = P.paper; ctx.fillRect(0, 0, W, G.screen.H);
       let y = 4;
-      const line = (t, col = P.ink) => { G.font.wrap(t, W - 8).forEach((l) => { G.font.draw(ctx, l, 4, y, { color: col }); y += 11; }); };
+      const line = (t, col = G.UI.text) => { G.font.wrap(t, W - 8).forEach((l) => { G.font.draw(ctx, l, 4, y, { color: col }); y += 11; }); };
       line('ШРИФТ: проверка', P.orange);
       line('АБВГДЕЁЖЗИЙКЛМНОП РСТУФХЦЧШЩЪЫЬЭЮЯ');
       line('абвгдеёжзийклмноп рстуфхцчшщъыьэюя');

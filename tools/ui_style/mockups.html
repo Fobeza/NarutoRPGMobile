@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Стили интерфейса — варианты А–Г</title>
+<style>
+  /* Стенд вариантов стиля UI. Сам по себе не игра: рисует одни и те же элементы
+     (HUD, диалог, меню, тост) и геймпад четырьмя способами. */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: #101014; color: #e8e4dc;
+    font: 14px/1.5 -apple-system, system-ui, sans-serif;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .lead { color: #9a96a8; max-width: 720px; margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 28px; max-width: 1080px; }
+  .card { border: 1px solid #2c2a36; border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 2px; }
+  .card p { margin: 0 0 12px; color: #9a96a8; font-size: 13px; }
+  .phone { border-radius: 14px; padding: 10px; }
+  canvas { display: block; width: 440px; height: 560px; image-rendering: pixelated; border-radius: 6px; }
+  /* геймпад под холстом */
+  .pad { position: relative; height: 118px; margin-top: 10px; }
+  .dp { position: absolute; left: 14px; top: 4px; width: 104px; height: 104px; }
+  .dp i, .dp b { position: absolute; display: block; }
+  .dp .u { left: 35px; top: 0; width: 34px; height: 38px; border-radius: 7px 7px 0 0; }
+  .dp .d { left: 35px; bottom: 0; width: 34px; height: 38px; border-radius: 0 0 7px 7px; }
+  .dp .l { left: 0; top: 35px; width: 38px; height: 34px; border-radius: 7px 0 0 7px; }
+  .dp .r { right: 0; top: 35px; width: 38px; height: 34px; border-radius: 0 7px 7px 0; }
+  .dp .c { left: 35px; top: 35px; width: 34px; height: 34px; }
+  .ab { position: absolute; right: 16px; top: 16px; width: 150px; height: 76px; }
+  .ab span {
+    position: absolute; width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 16px/1 inherit; letter-spacing: .5px;
+  }
+  .ab .b { left: 0; top: 14px; }
+  .ab .a { right: 0; top: 0; }
+
+  /* ---- оболочки вариантов ---- */
+  .v-a .phone { background: #14121c; box-shadow: 0 0 0 2px #2a2636, 0 8px 22px rgba(0,0,0,.5); }
+  .v-a canvas { background: #000; }
+  .v-a .dp i, .v-a .dp b { background: #3a3548; box-shadow: inset 0 -4px 0 #24202f, 0 2px 0 #0c0a12; }
+  .v-a .dp .c { box-shadow: none; }
+  .v-a .ab span { background: #3a3548; box-shadow: inset 0 -4px 0 #24202f, 0 2px 0 #0c0a12; color: #b8b0cc; }
+
+  .v-b .phone { background: #0b0a10; box-shadow: 0 0 0 1px #6a6a7a, 0 0 0 4px #17161d, 0 10px 26px rgba(0,0,0,.65); }
+  .v-b canvas { background: #08070c; }
+  .v-b .dp i, .v-b .dp b { background: #26242e; box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 2px 0 #000; }
+  .v-b .dp .c { box-shadow: inset 0 1px 0 #3c3a46; }
+  .v-b .ab span { background: #26242e; box-shadow: inset 0 1px 0 #3c3a46, inset 0 -3px 0 #101016, 0 0 0 2px #46341a; color: #ff9a4a; }
+
+  .v-c .phone { background: #201611; box-shadow: 0 0 0 2px #5a321a, 0 0 0 5px #7a4626, 0 10px 24px rgba(0,0,0,.6); }
+  .v-c canvas { background: #120d09; }
+  .v-c .dp i, .v-c .dp b { background: #7a4626; box-shadow: inset 0 -4px 0 #5a321a, 0 2px 0 #241408; }
+  .v-c .dp .c { background: #d8b67a; box-shadow: inset 0 -3px 0 #b8945a; }
+  .v-c .ab span { background: #d8b67a; box-shadow: inset 0 -4px 0 #b8945a, 0 2px 0 #241408; color: #8a2a10; }
+
+  .v-d .phone { background: #171a13; box-shadow: 0 0 0 2px #26543a, 0 0 0 5px #3e5a28, 0 10px 24px rgba(0,0,0,.6); }
+  .v-d canvas { background: #0d100b; }
+  .v-d .dp i, .v-d .dp b { background: #3e5a28; box-shadow: inset 0 -4px 0 #26543a, 0 2px 0 #10140c; }
+  .v-d .dp .c { background: #9a9aa8; box-shadow: inset 0 -3px 0 #6a6a7a; }
+  .v-d .ab span { background: #9a9aa8; box-shadow: inset 0 -4px 0 #6a6a7a, 0 2px 0 #10140c; color: #1a1f16; }
+</style>
+</head>
+<body>
+<h1>Стили интерфейса: четыре варианта</h1>
+<p class="lead">Одни и те же элементы игры — HUD с полосами, диалог с портретом, меню и тост — плюс геймпад
+оболочки. Шрифт и портрет настоящие, из игры. Выберите букву; победивший стиль ляжет в
+<code>G.gfx.window()</code>, палитру оболочек и <code>style.css</code>.</p>
+<div class="grid" id="grid"></div>
+
+<script>
+  // минимальная заглушка_globals_ игры под font.js/palette.js/assets.js
+  window.G = { CONFIG: {}, util: { clamp: (v, a, b) => Math.max(a, Math.min(b, v)) }, events: { emit() {} } };
+</script>
+<script src="/src/gfx/palette.js"></script>
+<script src="/src/gfx/font.js"></script>
+<script src="/src/gfx/assets.js"></script>
+<script>
+'use strict';
+const VARIANTS = [
+  { id: 'a', name: 'А. Бумага и тушь', desc: 'Текущий курс, причёсанный: пергамент, чернильная рамка, оранжевый акцент, печати-уголки.' },
+  { id: 'b', name: 'Б. Лак и сталь', desc: 'Сэйнэн-минимализм: тёмный лак, стальная кромка, приглушённый свет, оранжевый — только сигнал.' },
+  { id: 'c', name: 'В. Свиток и печать', desc: 'Панели как свитки: деревянные валы сверху и снизу, рваный край, красная печать хокаге.' },
+  { id: 'd', name: 'Г. Жилет чунина', desc: 'Милитарь: оливковая ткань со строчкой, металлическая планка заголовка, сегментные полосы.' },
+];
+
+// ---------- мелкие помощники ----------
+const px = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+const P = G.PAL;
+
+// полосы HUD: hp/ch/st
+function bars(ctx, x, y, w, style) {
+  const rows = [
+    { v: .74, c: P.red, hi: '#e8705a' },
+    { v: .55, c: P.blue, hi: '#5a7ac0' },
+    { v: .88, c: P.grass, hi: '#8ac06a' },
+  ];
+  rows.forEach((r, i) => {
+    const yy = y + i * 8;
+    if (style === 'd') {           // сегменты
+      const n = 14, sw = Math.floor((w - (n - 1)) / n);
+      px(ctx, x - 1, yy - 1, w + 2, 7, '#26543a');
+      for (let s = 0; s < n; s++) {
+        const on = s / n < r.v;
+        px(ctx, x + s * (sw + 1), yy, sw, 5, on ? r.c : '#39423a');
+        if (on) px(ctx, x + s * (sw + 1), yy, sw, 1, r.hi);
+      }
+    } else {
+      const trough = style === 'b' ? '#101016' : style === 'c' ? P.paperDark : P.ink;
+      const edge = style === 'b' ? '#6a6a7a' : style === 'c' ? P.ink : P.black;
+      px(ctx, x - 1, yy - 1, w + 2, 7, edge);
+      px(ctx, x, yy, w, 5, trough);
+      const fw = Math.round(w * r.v);
+      px(ctx, x, yy, fw, 5, r.c);
+      px(ctx, x, yy, fw, 1, r.hi);
+      if (style === 'c') px(ctx, x, yy + 4, fw, 1, 'rgba(0,0,0,.25)');
+    }
+  });
+}
+
+// ---------- рамки панелей ----------
+function winA(ctx, x, y, w, h) {           // бумага и тушь
+  px(ctx, x + 1, y, w - 2, h, P.ink); px(ctx, x, y + 1, w, h - 2, P.ink);
+  px(ctx, x + 1, y + 1, w - 2, h - 2, P.orange);
+  px(ctx, x + 2, y + 2, w - 4, h - 4, P.paper);
+  px(ctx, x + 2, y + h - 3, w - 4, 1, P.paperDark);
+  // чернильные уголки-печати
+  px(ctx, x + 3, y + 3, 2, 2, P.ink); px(ctx, x + w - 5, y + 3, 2, 2, P.ink);
+  px(ctx, x + 3, y + h - 5, 2, 2, P.ink); px(ctx, x + w - 5, y + h - 5, 2, 2, P.ink);
+}
+function winB(ctx, x, y, w, h) {           // лак и сталь
+  px(ctx, x, y, w, h, '#000');
+  px(ctx, x + 1, y + 1, w - 2, h - 2, '#6a6a7a');
+  px(ctx, x + 2, y + 2, w - 4, h - 4, '#201d28');
+  px(ctx, x + 2, y + 2, w - 4, 1, '#34313e');
+  px(ctx, x + 2, y + h - 3, w - 4, 1, '#14121c');
+}
+function winC(ctx, x, y, w, h) {           // свиток
+  px(ctx, x + 2, y + 4, w - 4, h - 8, P.paper);
+  for (let yy = y + 4; yy < y + h - 4; yy += 6) {   // рваный край
+    px(ctx, x + 2, yy, 1, 3, P.paperDark); px(ctx, x + w - 3, yy + 3, 1, 3, P.paperDark);
+  }
+  px(ctx, x, y, w, 4, P.trunk); px(ctx, x, y + 1, w, 1, P.wood);      // вал сверху
+  px(ctx, x, y + h - 4, w, 4, P.trunk); px(ctx, x, y + h - 4, w, 1, P.wood);
+  px(ctx, x - 2, y - 1, 3, 6, P.trunkDark); px(ctx, x + w - 1, y - 1, 3, 6, P.trunkDark);
+  px(ctx, x - 2, y + h - 5, 3, 6, P.trunkDark); px(ctx, x + w - 1, y + h - 5, 3, 6, P.trunkDark);
+  // красная печать
+  px(ctx, x + w - 12, y + 7, 8, 8, P.red);
+  px(ctx, x + w - 10, y + 9, 4, 1, P.paper); px(ctx, x + w - 9, y + 8, 1, 4, P.paper);
+}
+function winD(ctx, x, y, w, h) {           // жилет чунина
+  px(ctx, x, y, w, h, '#26543a');
+  px(ctx, x + 1, y + 1, w - 2, h - 2, '#5a7a3a');
+  for (let i = x + 3; i < x + w - 3; i += 4) {      // строчка
+    px(ctx, i, y + 2, 2, 1, '#d8cbb0'); px(ctx, i, y + h - 3, 2, 1, '#d8cbb0');
+  }
+  for (let i = y + 3; i < y + h - 3; i += 4) {
+    px(ctx, x + 2, i, 1, 2, '#d8cbb0'); px(ctx, x + w - 3, i, 1, 2, '#d8cbb0');
+  }
+}
+
+// ---------- сборка экрана варианта ----------
+function drawScene(ctx, v, portrait) {
+  const W = 220, H = 280;
+  ctx.clearRect(0, 0, W, H);
+  px(ctx, 0, 0, W, H, v.id === 'b' ? '#0d0c12' : v.id === 'c' ? '#17110c' : v.id === 'd' ? '#12150f' : '#101018');
+  // намёк на мир за интерфейсом: земля и трава
+  px(ctx, 0, 200, W, 80, v.id === 'd' ? '#1c2418' : '#181420');
+  for (let i = 0; i < W; i += 7) px(ctx, i, 199 + (i % 14 ? 1 : 0), 3, 2, v.id === 'd' ? '#2a3a22' : '#221c2c');
+
+  const win = { a: winA, b: winB, c: winC, d: winD }[v.id];
+  const head = (t, x, y, w) => {
+    if (v.id === 'd') {                       // металлическая планка
+      px(ctx, x + 4, y + 3, w - 8, 9, '#c8ccd8'); px(ctx, x + 4, y + 3, w - 8, 1, '#e8e4dc');
+      G.font.draw(ctx, t, x + w / 2, y + 4, { align: 'center', color: P.ink });
+    } else if (v.id === 'b') {
+      G.font.draw(ctx, t, x + 6, y + 4, { color: P.white });
+      px(ctx, x + 6, y + 12, G.font.measure(t) + 2, 1, P.red);
+    } else if (v.id === 'c') {
+      G.font.draw(ctx, t, x + 8, y + 7, { color: P.ink });
+      px(ctx, x + 8, y + 15, G.font.measure(t), 1, P.red);
+    } else {
+      G.font.draw(ctx, t, x + w / 2, y + 4, { align: 'center', color: P.orange });
+    }
+  };
+
+  // --- HUD ---
+  win(ctx, 4, 4, 212, 30);
+  const hy = v.id === 'c' ? 9 : 7;
+  G.font.draw(ctx, 'НАРУТО', 10, hy + 2, { color: v.id === 'b' ? P.white : v.id === 'd' ? P.white : P.ink });
+  G.font.draw(ctx, 'ур12', 206, hy + 2, { align: 'right', color: v.id === 'b' ? P.gray : P.gray });
+  bars(ctx, 62, hy + 2, 110, v.id);
+
+  // --- диалог ---
+  win(ctx, 4, 42, 212, 62);
+  const dy = v.id === 'c' ? 47 : 45;
+  // портрет в рамке
+  const fx = 9, fy = dy + 3;
+  px(ctx, fx - 1, fy - 1, 42, 42, v.id === 'b' ? '#6a6a7a' : P.ink);
+  px(ctx, fx, fy, 40, 40, P.paper);
+  if (portrait) ctx.drawImage(portrait, 0, 0, 64, 64, fx, fy, 40, 40);
+  const tx = 56;
+  G.font.draw(ctx, 'ИНО', tx, dy + 2, { color: v.id === 'b' ? P.orangeLight : v.id === 'd' ? P.yellow : P.orange });
+  const lines = ['Ты опять опоздал!', 'Сенсей уже ждёт у', 'ворот, шевелись.'];
+  lines.forEach((s, i) => G.font.draw(ctx, s, tx, dy + 13 + i * 11, { color: v.id === 'b' ? P.light : P.ink }));
+  if (v.id !== 'b') G.font.draw(ctx, '▼', 206, dy + 46, { align: 'right', color: v.id === 'd' ? P.yellow : P.orange });
+  else px(ctx, 204, dy + 50, 5, 2, P.orange);
+
+  // --- меню ---
+  win(ctx, 34, 112, 152, 108);
+  head('МЕНЮ', 34, 112 + (v.id === 'c' ? 3 : 0), 152);
+  const items = ['Продолжить', 'Задания', 'Сумка', 'Настройки  ▸', 'Сохранение…'];
+  const sel = 2;
+  items.forEach((s, i) => {
+    const y = 112 + (v.id === 'c' ? 20 : 17) + i * 15;
+    if (i === sel) {
+      if (v.id === 'b') px(ctx, 38, y - 2, 144, 12, '#34313e');
+      else if (v.id === 'd') { px(ctx, 38, y - 2, 144, 12, '#3e5a28'); px(ctx, 38, y - 2, 144, 1, '#26543a'); }
+      else px(ctx, 38, y - 2, 144, 12, P.paperDark);
+    }
+    const cur = i === sel ? (v.id === 'd' ? P.yellow : v.id === 'b' ? P.orange : P.orange) : null;
+    if (cur) G.font.draw(ctx, '▶', 41, y, { color: cur });
+    const col = i === sel ? (v.id === 'b' ? P.white : P.ink) : (v.id === 'b' ? P.gray : P.gray);
+    G.font.draw(ctx, s, 51, y, { color: col });
+  });
+
+  // --- тост ---
+  const tw = G.font.measure('Получен предмет: свиток') + 12;
+  const tx0 = Math.round((W - tw) / 2);
+  if (v.id === 'b') { winB(ctx, tx0, 232, tw, 16); G.font.draw(ctx, 'Получен предмет: свиток', W / 2, 236, { align: 'center', color: P.white }); }
+  else if (v.id === 'd') { winD(ctx, tx0, 232, tw, 16); G.font.draw(ctx, 'Получен предмет: свиток', W / 2, 236, { align: 'center', color: P.white }); }
+  else if (v.id === 'c') { px(ctx, tx0, 232, tw, 16, P.paper); px(ctx, tx0, 232, tw, 1, P.trunk); px(ctx, tx0, 247, tw, 1, P.trunk); G.font.draw(ctx, 'Получен предмет: свиток', W / 2, 236, { align: 'center', color: P.ink }); }
+  else { winA(ctx, tx0, 232, tw, 16); G.font.draw(ctx, 'Получен предмет: свиток', W / 2, 236, { align: 'center', color: P.ink }); }
+
+  // --- подсказка управления ---
+  G.font.draw(ctx, 'A — подтвердить   B — назад', W / 2, 262, { align: 'center', color: v.id === 'b' ? '#54506a' : '#6c6680' });
+}
+
+// ---------- стенд ----------
+const grid = document.getElementById('grid');
+const portrait = new Image();
+portrait.src = G.assets.portrait_ino;
+portrait.onload = () => VARIANTS.forEach(paint);
+function paint(v) {
+  let card = document.getElementById('card-' + v.id);
+  if (!card) {
+    card = document.createElement('div');
+    card.id = 'card-' + v.id;
+    card.className = 'card v-' + v.id;
+    card.innerHTML =
+      '<h2>' + v.name + '</h2><p>' + v.desc + '</p>' +
+      '<div class="phone"><canvas width="440" height="560"></canvas>' +
+      '<div class="pad"><div class="dp"><i class="u"></i><i class="d"></i><i class="l"></i><i class="r"></i><b class="c"></b></div>' +
+      '<div class="ab"><span class="b">B</span><span class="a">A</span></div></div></div>';
+    grid.appendChild(card);
+  }
+  const ctx = card.querySelector('canvas').getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  drawScene(ctx, v, portrait.complete ? portrait : null);
+}
+VARIANTS.forEach(paint);   // первый проход без портрета, второй — по onload
+</script>
+</body>
+</html>

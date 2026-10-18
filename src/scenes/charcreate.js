@@ -130,11 +130,11 @@ G.scenes.register('charcreate', (onDone) => {
         ctx.globalAlpha = 0.6; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
         const bh = 74, by = Math.round(H / 2 - bh / 2);
         G.gfx.window(ctx, 10, by, W - 20, bh, 'paper');
-        F.draw(ctx, 'Всё верно?', W / 2, by + 6, { align: 'center', color: P.ink });
+        F.draw(ctx, 'Всё верно?', W / 2, by + 6, { align: 'center', color: G.UI.text });
         const line = G.STATS.map((s) => `${s.short} ${vals[s.id]}`).join(' · ');
         F.wrap(line, W - 36).forEach((ln, i) => F.draw(ctx, ln, W / 2, by + 18 + i * 10, { align: 'center', color: P.gray }));
         F.draw(ctx, picked.map((id) => G.SKILLS.find((s) => s.id === id).name).join(', '), W / 2, by + 40, { align: 'center', color: '#8a3a1a' });
-        F.draw(ctx, '(A) Да      (B) Нет', W / 2, by + 56, { align: 'center', color: P.ink });
+        F.draw(ctx, '(A) Да      (B) Нет', W / 2, by + 56, { align: 'center', color: G.UI.text });
       }
     },
     drawDesc(ctx, text, hint) {

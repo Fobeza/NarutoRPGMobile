@@ -87,19 +87,22 @@ G.gfx = {
 
   // Рамка окна интерфейса в пиксельном стиле
   window(ctx, x, y, w, h, style = 'paper') {
-    const P = G.PAL;
-    const st = {
-      paper: { bg: P.paper, border: P.ink, inner: P.paperDark, accent: P.orange },
-      dark: { bg: '#24202f', border: P.black, inner: '#3a3548', accent: P.orange },
-    }[style];
-    ctx.fillStyle = st.border;
+    // Тема «Б. Лак и сталь»: чёрная тень, стальная кромка, лаковое тело,
+    // светлая кромка сверху и тень снизу — панель читается как металл в смоле.
+    const U = G.UI;
+    const st = style === 'dark'
+      ? { bg: U.deep, hi: U.deepHi, lo: U.deepLo, edge: U.edgeDim }
+      : { bg: U.panel, hi: U.panelHi, lo: U.panelLo, edge: U.edge };
+    ctx.fillStyle = '#000';
     ctx.fillRect(x + 1, y, w - 2, h);
     ctx.fillRect(x, y + 1, w, h - 2);
-    ctx.fillStyle = st.accent;
+    ctx.fillStyle = st.edge;
     ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
     ctx.fillStyle = st.bg;
     ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
-    ctx.fillStyle = st.inner;
+    ctx.fillStyle = st.hi;
+    ctx.fillRect(x + 2, y + 2, w - 4, 1);
+    ctx.fillStyle = st.lo;
     ctx.fillRect(x + 2, y + h - 3, w - 4, 1);
   },
 };

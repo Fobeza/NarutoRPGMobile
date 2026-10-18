@@ -9,11 +9,11 @@ G.scenes.register('status', () => {
     },
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, F = G.font, P = G.PAL, g = G.game, v = g.v;
-      ctx.fillStyle = '#1e1a28'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = G.UI.deep; ctx.fillRect(0, 0, W, H);
       F.draw(ctx, 'СТАТУС', W / 2, 4, { align: 'center', color: P.orange });
       let y = 16;
       G.gfx.window(ctx, 2, y, W - 4, 34, 'paper');
-      F.draw(ctx, G.state.hero.name || 'Герой', 8, y + 5, { color: P.ink });
+      F.draw(ctx, G.state.hero.name || 'Герой', 8, y + 5, { color: G.UI.text });
       F.draw(ctx, `Неделя ${g.week()}`, W - 8, y + 5, { align: 'right', color: P.gray });
       const wt = G.life.WEATHER[G.life.weather()];
       F.draw(ctx, `${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, 8, y + 16, { color: P.gray });
@@ -85,6 +85,6 @@ G.scenes.register('pause', () => ({
     G.gfx.window(ctx, W / 2 - 60, H / 2 - 24, 120, 44, 'paper');
     F.draw(ctx, 'ПАУЗА', W / 2, H / 2 - 17, { align: 'center', color: P.orange });
     F.draw(ctx, `${G.game.dayName()}, ${G.game.clock()}`, W / 2, H / 2 - 5, { align: 'center', color: P.gray });
-    if (Math.floor(this.t * 2) % 2 === 0) F.draw(ctx, 'Нажми A', W / 2, H / 2 + 7, { align: 'center', color: P.ink });
+    if (Math.floor(this.t * 2) % 2 === 0) F.draw(ctx, 'Нажми A', W / 2, H / 2 + 7, { align: 'center', color: G.UI.text });
   },
 }));
