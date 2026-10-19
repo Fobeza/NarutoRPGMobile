@@ -148,7 +148,7 @@ G.mapgen = (() => {
     }
 
     // ---------- 2. Дороги ----------
-    const roadTile = { main: ID.MAINROAD, street: ID.PATH, path: ID.DIRT };
+    const roadTile = { main: ID.MAINROAD, street: ID.PATH, path: ID.PATH };   // главные — серый булыжник, остальные — натоптанная земля
     for (const r of layout.roads) {
       if (r.tiles || r.pts) {
         for (const [x, y] of r.tiles || (r._t = r._t || polyTiles(r.pts, G.ROADS[r.type].w))) {
@@ -288,6 +288,8 @@ G.mapgen = (() => {
           for (let y = ty; y < ty + tpl.h; y++) for (let x = tx; x < tx + tpl.w; x++) { m.set(x, y, ID.CLIFF); setO(x, y, 3); }
           const o = m.addObject('rock', cx, cy, { box: null, anim: 'waterfall', fw: tpl.w * T, fh: tpl.h * T });
           o.ox = 0; o.oy = 0; o.w = tpl.w * T; o.h = tpl.h * T; o.sortY = cy; o.img = null;
+          // у подножия лежит секретный камень: подход к нему не занимаем ни деревьями, ни ящиками
+          for (let y = ty + tpl.h; y < ty + tpl.h + 2; y++) for (let x = tx - 2; x <= tx + 1; x++) if (O(x, y) === 0 || O(x, y) === 6) { setO(x, y, 4); setK(x, y); }
           return;
         }
         case 'well': m.addObject('well', cx + 8, cy + 15, { talk: ['Старый колодец. Вода холодная и чистая.'] }); setO(tx, ty, 5); return;
@@ -508,6 +510,17 @@ G.mapgen = (() => {
       return true;
     };
 
+    // ---------- 4д. Озеленение: плитка площадей остаётся только у зданий (отмостка в 1 клетку), остальное — газон ----------
+    for (const d of layout.districts) {
+      if (d.type !== 'official' && d.type !== 'market') continue;
+      each(d, (x, y) => {
+        const g = m.get(x, y);
+        if ((g !== ID.STONE && g !== ID.BRICK) || (O(x, y) !== 0 && O(x, y) !== 6)) return;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (O(x + dx, y + dy) === 2) return;
+        m.set(x, y, noise(x, y, 95, 4) > 0.68 ? ID.CLOVER : ID.GRASS);
+      });
+    }
+
     // деревья вдоль стены деревни
     for (let y = 14; y < HH; y++) for (let x = 0; x < W; x++) {
       if (O(x, y) !== 0) continue;
@@ -561,8 +574,8 @@ G.mapgen = (() => {
           sample(0.01, (x, y) => tryObj(x, y, 'bush'));
           break;
         case 'residential':
-          sample(0.03, (x, y) => { const h = H(x, y, 6); tryTree(x, y, h > 0.8 ? 'sakura' : h > 0.65 ? 'maple' : h > 0.58 ? 'ginkgo' : h > 0.52 ? 'watertower' : 'tree'); });
-          sample(0.02, (x, y) => tryObj(x, y, H(x, y, 7) > 0.6 ? 'hedge' : 'bush'));
+          sample(0.06, (x, y) => { const h = H(x, y, 6); tryTree(x, y, h > 0.8 ? 'sakura' : h > 0.65 ? 'maple' : h > 0.58 ? 'ginkgo' : h > 0.52 ? 'watertower' : 'tree'); });
+          sample(0.045, (x, y) => tryObj(x, y, H(x, y, 7) > 0.6 ? 'hedge' : 'bush'));
           sample(0.004, (x, y) => tryObj(x, y, 'shrine', { talk: ['Маленькое святилище. Кто-то оставил рисовый колобок и свежие цветы.'] }));
           sample(0.006, (x, y) => tryObj(x, y, 'tallgrass'));
           sample(0.006, (x, y) => tryObj(x, y, H(x, y, 3) > 0.5 ? 'flowerbox' : 'barrel'));
@@ -585,6 +598,8 @@ G.mapgen = (() => {
             else if (H(x, y, 42) > 0.6) tryObj(x, y, 'stonelamp');
           }
           sample(0.004, (x, y) => tryObj(x, y, 'bench'));
+          sample(0.035, (x, y) => tryTree(x, y, H(x, y, 45) > 0.7 ? 'sakura' : H(x, y, 46) > 0.6 ? 'maple' : 'tree'));
+          sample(0.03, (x, y) => tryObj(x, y, H(x, y, 47) > 0.5 ? 'hedge' : 'bush'));
           break;
         case 'market':
           sample(0.02, (x, y) => {
@@ -593,11 +608,13 @@ G.mapgen = (() => {
           });
           sample(0.01, (x, y) => tryObj(x, y, H(x, y, 4) > 0.5 ? 'barrel' : 'crate'));
           sample(0.005, (x, y) => tryObj(x, y, H(x, y, 5) > 0.5 ? 'redlantern' : 'banner'));
+          sample(0.02, (x, y) => tryTree(x, y, H(x, y, 48) > 0.6 ? 'ginkgo' : 'tree'));
+          sample(0.02, (x, y) => tryObj(x, y, 'planter'));
           break;
         case 'clan':
           // забор по верхнему краю квартала
           if (d.fence !== false) for (let x = d.x; x < d.x + d.w; x++) if (O(x, d.y) === 0) { m.addObject('clanwall', x * T + 8, d.y * T + 15); setO(x, d.y, 5); }
-          sample(0.02, (x, y) => tryTree(x, y, H(x, y, 10) > 0.7 ? 'maple' : 'tree'));
+          sample(0.045, (x, y) => tryTree(x, y, H(x, y, 10) > 0.7 ? 'maple' : 'tree'));
           sample(0.008, (x, y) => tryObj(x, y, 'stonelamp'));
           sample(0.004, (x, y) => tryObj(x, y, 'pond', null, (o) => o === 0 && O(x - 1, y) === 0 && O(x + 1, y) === 0 && O(x, y - 1) === 0 && O(x - 1, y - 1) === 0 && O(x + 1, y - 1) === 0) && [[-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]].forEach(([a, b]) => setO(x + a, y + b, 5)));
           sample(0.006, (x, y) => tryObj(x, y, 'bamboofence'));
@@ -608,7 +625,7 @@ G.mapgen = (() => {
     // ---------- 5б. Россыпь мелкой природы: цветы (пятнами), кусты, камни, папоротники, грибы, камыш ----------
     {
       const FL = ['red', 'yellow', 'white', 'blue', 'pink', 'purple', 'orange'];
-      const FP = { park: 0.1, residential: 0.05, clan: 0.05, uchiha: 0.018, official: 0.022, market: 0, forest: 0.012, training: 0.008 };
+      const FP = { park: 0.1, residential: 0.09, clan: 0.09, uchiha: 0.03, official: 0.07, market: 0.04, forest: 0.012, training: 0.008 };
       const small = new Uint8Array(W * HH);
       const near = (x, y, f) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => f(m.get(x + a, y + b)));
       for (let y = 14; y < HH - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -628,8 +645,8 @@ G.mapgen = (() => {
         const n = noise(x, y, 91, 7), fam = FL[Math.floor(noise(x, y, 92, 11) * FL.length) % FL.length];
         const fp = (FP[dt] != null ? FP[dt] : 0.02) * (n > 0.62 ? 4.5 : 1);
         if (!small[y * W + x] && r < fp) { put('fl_' + (n > 0.62 ? fam : FL[Math.floor(r2 * FL.length)]), false); continue; }
-        if (dt === 'market') continue;
-        const q = H(x, y, 705);
+        const q = H(x, y, 705) * (dt === 'market' ? 2 : 1);   // на рынке кустов вдвое меньше
+
         if (dark && q < 0.035) { put(q < 0.012 ? 'mushroom' : 'fern', false); continue; }
         if (q < 0.012 && o === 0) { put(['bush_pink', 'bush_white', 'bush_red', 'bush_yellow'][Math.floor(r2 * 4)], true); continue; }
         if (q < 0.03 && o === 0) { put(r2 > 0.5 ? 'bush3' : 'bush', true); continue; }
@@ -660,6 +677,16 @@ G.mapgen = (() => {
         const a = horiz ? [rr.x + i, rr.y - 1] : [rr.x - 1, rr.y + i];
         const b = horiz ? [rr.x + i, rr.y + rr.h] : [rr.x + rr.w, rr.y + i];
         for (const [x, y] of [a, b]) if (!KP(x, y) && (O(x, y) === 0 || (O(x, y) === 4 && m.get(x, y) === ID.STONE && O(x, y - 1) !== 2 && O(x, y + 1) !== 2))) tryObj(x, y, 'lamp', null, () => true);
+      }
+    }
+
+    // аллея: деревья вдоль главных улиц между фонарями (клёны и сакуры, каждые ~7 клеток, по обе стороны)
+    for (const r of layout.roads) {
+      if (r.type !== 'main' || !r.pts) continue;
+      const tl = r._t || polyTiles(r.pts, 3), mid = tl.filter((_, i) => i % 3 === 1);
+      for (let i = 5; i < mid.length; i += 7) {
+        const [x, y] = mid[i];
+        for (const [lx, ly] of [[x - 3, y], [x + 3, y]]) { const h = H(lx, ly, 49); tryTree(lx, ly, h > 0.6 ? 'sakura' : h > 0.3 ? 'maple' : 'tree'); }
       }
     }
 

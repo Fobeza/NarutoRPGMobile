@@ -22,10 +22,10 @@ G.tiles = (() => {
 
   // Цвет тайла для обзорной карты
   const MAPCOL = {
-    [ID.GRASS]: '#5aa046', [ID.GRASS2]: '#5aa046', [ID.FLOWERS]: '#6aac50', [ID.PATH]: '#e0c48a',
+    [ID.GRASS]: '#5aa046', [ID.GRASS2]: '#5aa046', [ID.FLOWERS]: '#6aac50', [ID.PATH]: '#b99a68',
     [ID.WATER]: '#3a8ad0', [ID.SAND]: '#e8d4a0', [ID.PLANKS]: '#a8683a', [ID.STONE]: '#c8c0b0',
     [ID.DARKGRASS]: '#3e7a34', [ID.DIRT]: '#b8946a', [ID.CLIFF]: '#7a6a5a', [ID.CLIFFTOP]: '#2e5a2e',
-    [ID.VWALL]: '#6a5a4a', [ID.MAINROAD]: '#d8c8a0', [ID.DARKSTONE]: '#5a5468',
+    [ID.VWALL]: '#6a5a4a', [ID.MAINROAD]: '#aaa69c', [ID.DARKSTONE]: '#5a5468',
     [ID.COBBLE]: '#b8ae9c', [ID.BRICK]: '#c08a68', [ID.GRAVEL]: '#a8a090', [ID.CLOVER]: '#58a048', [ID.STEPS]: '#5aa046',
     [ID.PLAZA]: '#d8d0c0', [ID.MOSS]: '#4a8a3c',
   };
@@ -68,10 +68,12 @@ G.tiles = (() => {
     }
   }
 
+  // натоптанная земляная тропа: плотный суглинок, редкие камешки и пробивающиеся травинки
   function path(c, ox, oy) {
-    px(c, ox, oy, '#e0c48a', T, T);
-    dots(c, ox, oy, 14, 5, [P.pathDark, '#c8a46a', P.pathLight]);
-    px(c, ox + 4, oy + 9, P.pathDark, 2, 1); px(c, ox + 11, oy + 3, P.pathDark, 2, 1);
+    px(c, ox, oy, '#b99a68', T, T);
+    dots(c, ox, oy, 16, 5, ['#a68a5a', '#c8aa78', '#9a7e52']);
+    px(c, ox + 4, oy + 9, '#9a7e52', 2, 1); px(c, ox + 11, oy + 3, '#9a7e52', 2, 1);
+    px(c, ox + 8, oy + 13, '#6a9a4a', 1, 2); px(c, ox + 2, oy + 2, '#6a9a4a', 1, 1);
   }
 
   function dirt(c, ox, oy) {
@@ -111,11 +113,16 @@ G.tiles = (() => {
 
   // главная улица: крупные плиты
   function mainroad(c, ox, oy) {
-    // V9: стыки плит еле заметны — дорога читается цельной, а не лоскутами
-    px(c, ox, oy, '#d6c8a6', T, T);
-    px(c, ox, oy + 15, '#cbbd99', T, 1); px(c, ox + 15, oy, '#cbbd99', 1, T);
-    px(c, ox, oy, '#ddd0b2', T, 1); px(c, ox, oy, '#ddd0b2', 1, T);
-    dots(c, ox, oy, 6, 21, ['#cdbf9b', '#cdbf9b', '#e0d3b4']);
+    // серый булыжник: ряды камней со смещением, швы тёмные, на камнях светлая грань
+    px(c, ox, oy, '#7c786e', T, T);
+    for (let r = 0; r < 4; r++) for (let k = -1; k < 3; k++) {
+      const x = k * 8 + (r % 2 ? 4 : 0) + 1, y = r * 4;
+      const x0 = Math.max(0, x), x1 = Math.min(16, x + 7);
+      if (x1 <= x0) continue;
+      const col = H(r + 3, k, 73) > 0.72 ? '#a29e94' : H(r, k + 5, 74) > 0.5 ? '#b2aea4' : '#bab6ac';
+      px(c, ox + x0, oy + y, col, x1 - x0, 3);
+      px(c, ox + x0, oy + y, '#cfcbc0', x1 - x0, 1);
+    }
   }
 
   function darkstone(c, ox, oy) { stone(c, ox, oy, '#6a6478', '#4a4458', '#7c768a'); }
@@ -257,10 +264,10 @@ G.tiles = (() => {
     add(ID.STONE, (x, y) => { stone(c, x, y); px(c, x + 2, y + 2, '#a89e8a', 1, 3); px(c, x + 3, y + 4, '#a89e8a', 2, 1); px(c, x + 5, y + 5, '#a89e8a', 1, 2); });
     add(ID.STONE, (x, y) => { stone(c, x, y); px(c, x + 8, y + 14, '#7aa05a', 3, 1); px(c, x + 0, y + 6, '#7aa05a', 2, 1); px(c, x + 15, y + 2, '#7aa05a', 1, 2); });
     add(ID.STONE, (x, y) => stone(c, x, y, '#c8beac', '#a49a86', '#ddd4c4'));
-    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 3, y + 3, '#b89a6a', 2, 2); px(c, x + 10, y + 11, '#b89a6a', 2, 1); px(c, x + 12, y + 7, '#f0dcaa', 1, 1); });
-    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 5, y + 4, '#c8a46a', 2, 3); px(c, x + 9, y + 10, '#c8a46a', 2, 3); });
-    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 4, y + 5, '#b8a47a', 1, 4); px(c, x + 5, y + 8, '#b8a47a', 3, 1); });
-    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 3, y + 3, '#8a8478', 10, 10); px(c, x + 4, y + 4, '#a8a294', 8, 8); for (let i = 0; i < 3; i++) px(c, x + 5, y + 5 + i * 3, '#8a8478', 6, 1); });
+    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 3, y + 3, '#8e7448', 2, 2); px(c, x + 10, y + 11, '#8e7448', 2, 1); px(c, x + 12, y + 7, '#d8bc88', 1, 1); });
+    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 5, y + 4, '#8e7448', 4, 1); px(c, x + 6, y + 5, '#8e7448', 2, 1); px(c, x + 9, y + 10, '#c8aa78', 2, 2); });
+    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 4, y + 5, '#8f8b80', 1, 3); px(c, x + 9, y + 9, '#8f8b80', 2, 1); });
+    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 6, y + 13, '#7aa05a', 2, 1); px(c, x + 1, y + 6, '#cfcbc0', 2, 1); });
     add(ID.DIRT, (x, y) => { dirt(c, x, y); px(c, x + 6, y + 7, '#8a6a4a', 3, 2); px(c, x + 7, y + 6, '#c8a47a', 1, 1); });
     add(ID.COBBLE, (x, y) => cobble(c, x, y, '#a89e88', '#c4baa4', '#7e7462', '#6a9a4a'));
     add(ID.COBBLE, (x, y) => cobble(c, x, y, '#b8ae98', '#d6ccb6', '#928874'));

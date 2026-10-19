@@ -370,8 +370,8 @@ def road_pt(ax, ay):
     return [best[1], best[2]]
 start = road_pt(78, 50); cross = road_pt(78, 62)
 free_pts = [(x, y) for y in range(17, H - 4) for x in range(4, W - 4) if terr[y][x] == GROUND and not occ[y][x] and inside(x, y, 0.9) and RD[y][x] <= 9]
-def pick(ax, ay, rmin=0):
-    c = [p for p in free_pts if abs(p[0] - ax) + abs(p[1] - ay) <= 14 and math.hypot(p[0] - ax, p[1] - ay) >= rmin]
+def pick(ax, ay, rmin=0, avoid=None, ar=0):
+    c = [p for p in free_pts if abs(p[0] - ax) + abs(p[1] - ay) <= 14 and math.hypot(p[0] - ax, p[1] - ay) >= rmin and not (avoid and math.hypot(p[0] - avoid[0], p[1] - avoid[1]) < ar)]
     return list(rnd.choice(c)) if c else [ax, ay]
 herbs = []
 for _ in range(16):
@@ -390,7 +390,7 @@ def where(tpl):
         if b['tpl'] == tpl: return b
 anch = dict(
     choji=pick(46, 62), kiba=pick(28, 100), shino=pick(62, 112), lee=pick(40, 112), guy=pick(44, 112), mizuki=pick(58, 30), thief=pick(100, 72),
-    board=pick(46, 26), run=pick(80, 52), falls=pick(122, 24), water=pick(34, 102), stealth=pick(20, 38), herbs=herbs, lotus=lotus,
+    board=pick(46, 26), run=pick(80, 52), falls=pick(122, 24, 0, (126, 25), 8), water=pick(34, 102), stealth=pick(20, 38), herbs=herbs, lotus=lotus,
 )
 signs = [
     pick(78, 56) + [['▲ Академия, резиденция Хокаге, Скала Хокаге', '< Квартал Нара, Хьюга, Инузука   Квартал Учиха >', '▼ Жилые кварталы, полигоны, главные ворота']],

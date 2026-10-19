@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "1.3.1"                              # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
+RELEASE = "1.3.2"                              # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.

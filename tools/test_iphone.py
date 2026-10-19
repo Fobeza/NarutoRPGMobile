@@ -300,6 +300,8 @@ with sync_playwright() as p:
     # секрет у водопада
     rk = page.evaluate("(() => { const r = G.world.konoha().secretRock; return { x: r.x, y: r.y }; })()")
     W(page, "s.setMap({ map: 'konoha', x: %d, y: %d, dir: 'up' });" % (rk["x"], rk["y"] + 16)); time.sleep(0.4)
+    # прохожий, случайно оказавшийся у камня, перехватил бы нажатие — уводим всех жителей подальше
+    W(page, "for (const n of s.npcs) { if (Math.abs(n.x - s.player.x) < 48 && Math.abs(n.y - s.player.y) < 48) { n.x += 200; n.y += 200; } }; return 1")
     shot(page, "36_waterfall_rock")
     key(page, "KeyZ"); time.sleep(0.4); close_dialogs(page)
     check(page.evaluate("G.quests.done('waterfall_scroll')") and page.evaluate("G.state.vars.money") == m0 + 160, "секрет водопада найден: +100 рё")

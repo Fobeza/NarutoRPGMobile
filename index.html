@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '1.3.1', version: 'e40fb4b9', date: '2026-10-19 15:42', debug: false };
+const BUILD = { release: '1.3.2', version: '528cd2e1', date: '2026-10-19 16:29', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -2944,10 +2944,10 @@ G.tiles = (() => {
 
   // Цвет тайла для обзорной карты
   const MAPCOL = {
-    [ID.GRASS]: '#5aa046', [ID.GRASS2]: '#5aa046', [ID.FLOWERS]: '#6aac50', [ID.PATH]: '#e0c48a',
+    [ID.GRASS]: '#5aa046', [ID.GRASS2]: '#5aa046', [ID.FLOWERS]: '#6aac50', [ID.PATH]: '#b99a68',
     [ID.WATER]: '#3a8ad0', [ID.SAND]: '#e8d4a0', [ID.PLANKS]: '#a8683a', [ID.STONE]: '#c8c0b0',
     [ID.DARKGRASS]: '#3e7a34', [ID.DIRT]: '#b8946a', [ID.CLIFF]: '#7a6a5a', [ID.CLIFFTOP]: '#2e5a2e',
-    [ID.VWALL]: '#6a5a4a', [ID.MAINROAD]: '#d8c8a0', [ID.DARKSTONE]: '#5a5468',
+    [ID.VWALL]: '#6a5a4a', [ID.MAINROAD]: '#aaa69c', [ID.DARKSTONE]: '#5a5468',
     [ID.COBBLE]: '#b8ae9c', [ID.BRICK]: '#c08a68', [ID.GRAVEL]: '#a8a090', [ID.CLOVER]: '#58a048', [ID.STEPS]: '#5aa046',
     [ID.PLAZA]: '#d8d0c0', [ID.MOSS]: '#4a8a3c',
   };
@@ -2990,10 +2990,12 @@ G.tiles = (() => {
     }
   }
 
+  // натоптанная земляная тропа: плотный суглинок, редкие камешки и пробивающиеся травинки
   function path(c, ox, oy) {
-    px(c, ox, oy, '#e0c48a', T, T);
-    dots(c, ox, oy, 14, 5, [P.pathDark, '#c8a46a', P.pathLight]);
-    px(c, ox + 4, oy + 9, P.pathDark, 2, 1); px(c, ox + 11, oy + 3, P.pathDark, 2, 1);
+    px(c, ox, oy, '#b99a68', T, T);
+    dots(c, ox, oy, 16, 5, ['#a68a5a', '#c8aa78', '#9a7e52']);
+    px(c, ox + 4, oy + 9, '#9a7e52', 2, 1); px(c, ox + 11, oy + 3, '#9a7e52', 2, 1);
+    px(c, ox + 8, oy + 13, '#6a9a4a', 1, 2); px(c, ox + 2, oy + 2, '#6a9a4a', 1, 1);
   }
 
   function dirt(c, ox, oy) {
@@ -3033,11 +3035,16 @@ G.tiles = (() => {
 
   // главная улица: крупные плиты
   function mainroad(c, ox, oy) {
-    // V9: стыки плит еле заметны — дорога читается цельной, а не лоскутами
-    px(c, ox, oy, '#d6c8a6', T, T);
-    px(c, ox, oy + 15, '#cbbd99', T, 1); px(c, ox + 15, oy, '#cbbd99', 1, T);
-    px(c, ox, oy, '#ddd0b2', T, 1); px(c, ox, oy, '#ddd0b2', 1, T);
-    dots(c, ox, oy, 6, 21, ['#cdbf9b', '#cdbf9b', '#e0d3b4']);
+    // серый булыжник: ряды камней со смещением, швы тёмные, на камнях светлая грань
+    px(c, ox, oy, '#7c786e', T, T);
+    for (let r = 0; r < 4; r++) for (let k = -1; k < 3; k++) {
+      const x = k * 8 + (r % 2 ? 4 : 0) + 1, y = r * 4;
+      const x0 = Math.max(0, x), x1 = Math.min(16, x + 7);
+      if (x1 <= x0) continue;
+      const col = H(r + 3, k, 73) > 0.72 ? '#a29e94' : H(r, k + 5, 74) > 0.5 ? '#b2aea4' : '#bab6ac';
+      px(c, ox + x0, oy + y, col, x1 - x0, 3);
+      px(c, ox + x0, oy + y, '#cfcbc0', x1 - x0, 1);
+    }
   }
 
   function darkstone(c, ox, oy) { stone(c, ox, oy, '#6a6478', '#4a4458', '#7c768a'); }
@@ -3179,10 +3186,10 @@ G.tiles = (() => {
     add(ID.STONE, (x, y) => { stone(c, x, y); px(c, x + 2, y + 2, '#a89e8a', 1, 3); px(c, x + 3, y + 4, '#a89e8a', 2, 1); px(c, x + 5, y + 5, '#a89e8a', 1, 2); });
     add(ID.STONE, (x, y) => { stone(c, x, y); px(c, x + 8, y + 14, '#7aa05a', 3, 1); px(c, x + 0, y + 6, '#7aa05a', 2, 1); px(c, x + 15, y + 2, '#7aa05a', 1, 2); });
     add(ID.STONE, (x, y) => stone(c, x, y, '#c8beac', '#a49a86', '#ddd4c4'));
-    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 3, y + 3, '#b89a6a', 2, 2); px(c, x + 10, y + 11, '#b89a6a', 2, 1); px(c, x + 12, y + 7, '#f0dcaa', 1, 1); });
-    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 5, y + 4, '#c8a46a', 2, 3); px(c, x + 9, y + 10, '#c8a46a', 2, 3); });
-    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 4, y + 5, '#b8a47a', 1, 4); px(c, x + 5, y + 8, '#b8a47a', 3, 1); });
-    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 3, y + 3, '#8a8478', 10, 10); px(c, x + 4, y + 4, '#a8a294', 8, 8); for (let i = 0; i < 3; i++) px(c, x + 5, y + 5 + i * 3, '#8a8478', 6, 1); });
+    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 3, y + 3, '#8e7448', 2, 2); px(c, x + 10, y + 11, '#8e7448', 2, 1); px(c, x + 12, y + 7, '#d8bc88', 1, 1); });
+    add(ID.PATH, (x, y) => { path(c, x, y); px(c, x + 5, y + 4, '#8e7448', 4, 1); px(c, x + 6, y + 5, '#8e7448', 2, 1); px(c, x + 9, y + 10, '#c8aa78', 2, 2); });
+    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 4, y + 5, '#8f8b80', 1, 3); px(c, x + 9, y + 9, '#8f8b80', 2, 1); });
+    add(ID.MAINROAD, (x, y) => { mainroad(c, x, y); px(c, x + 6, y + 13, '#7aa05a', 2, 1); px(c, x + 1, y + 6, '#cfcbc0', 2, 1); });
     add(ID.DIRT, (x, y) => { dirt(c, x, y); px(c, x + 6, y + 7, '#8a6a4a', 3, 2); px(c, x + 7, y + 6, '#c8a47a', 1, 1); });
     add(ID.COBBLE, (x, y) => cobble(c, x, y, '#a89e88', '#c4baa4', '#7e7462', '#6a9a4a'));
     add(ID.COBBLE, (x, y) => cobble(c, x, y, '#b8ae98', '#d6ccb6', '#928874'));
@@ -6939,7 +6946,7 @@ G.KONOHA_DRAFT = {
     {"type": "training","x": 46,"y": 114,"w": 8,"h": 7,"label": "Полигон"},
   ],
   start: [78,50], cross: [78,62],
-  anchors: {"choji": [49,55],"kiba": [31,91],"shino": [58,112],"lee": [32,110],"guy": [44,109],"mizuki": [53,29],"thief": [93,65],"board": [49,32],"run": [73,55],"falls": [125,24],"water": [35,97],"stealth": [21,43],"herbs": [[145,79],[14,77],[69,117],[16,41],[143,96],[61,23],[139,33],[17,94],[15,60],[130,108],[104,117],[42,27],[84,22],[29,109],[85,118],[148,63]],"lotus": [[31,103],[22,96],[30,111]]},
+  anchors: {"choji": [49,55],"kiba": [31,91],"shino": [58,112],"lee": [32,110],"guy": [44,109],"mizuki": [53,29],"thief": [93,65],"board": [49,32],"run": [73,55],"falls": [113,27],"water": [35,97],"stealth": [21,43],"herbs": [[145,79],[14,77],[69,117],[16,41],[143,96],[61,23],[139,33],[17,94],[15,60],[130,108],[104,117],[42,27],[84,22],[29,109],[85,118],[148,63]],"lotus": [[31,103],[22,96],[30,111]]},
   signs: [[77,65,["▲ Академия, резиденция Хокаге, Скала Хокаге","< Квартал Нара, Хьюга, Инузука   Квартал Учиха >","▼ Жилые кварталы, полигоны, главные ворота"]],[86,88,["Жилой квартал. Дом героя — рядом, у реки.","Мимо квартиры Наруто ночью лучше не шуметь."]],[75,104,["Главные ворота Конохи. Посты стражи: Изумо и Котецу."]],[22,44,["Пруд клана Нара. Без разрешения не входить. Не кормить оленей!"]],[132,63,["Квартал Учиха. После трагедии здесь живёт только Саске."]]],
   buildings: [
     {"tpl": "hokage_tower","x": 62,"y": 18},
@@ -9766,7 +9773,7 @@ G.mapgen = (() => {
     }
 
     // ---------- 2. Дороги ----------
-    const roadTile = { main: ID.MAINROAD, street: ID.PATH, path: ID.DIRT };
+    const roadTile = { main: ID.MAINROAD, street: ID.PATH, path: ID.PATH };   // главные — серый булыжник, остальные — натоптанная земля
     for (const r of layout.roads) {
       if (r.tiles || r.pts) {
         for (const [x, y] of r.tiles || (r._t = r._t || polyTiles(r.pts, G.ROADS[r.type].w))) {
@@ -9906,6 +9913,8 @@ G.mapgen = (() => {
           for (let y = ty; y < ty + tpl.h; y++) for (let x = tx; x < tx + tpl.w; x++) { m.set(x, y, ID.CLIFF); setO(x, y, 3); }
           const o = m.addObject('rock', cx, cy, { box: null, anim: 'waterfall', fw: tpl.w * T, fh: tpl.h * T });
           o.ox = 0; o.oy = 0; o.w = tpl.w * T; o.h = tpl.h * T; o.sortY = cy; o.img = null;
+          // у подножия лежит секретный камень: подход к нему не занимаем ни деревьями, ни ящиками
+          for (let y = ty + tpl.h; y < ty + tpl.h + 2; y++) for (let x = tx - 2; x <= tx + 1; x++) if (O(x, y) === 0 || O(x, y) === 6) { setO(x, y, 4); setK(x, y); }
           return;
         }
         case 'well': m.addObject('well', cx + 8, cy + 15, { talk: ['Старый колодец. Вода холодная и чистая.'] }); setO(tx, ty, 5); return;
@@ -10126,6 +10135,17 @@ G.mapgen = (() => {
       return true;
     };
 
+    // ---------- 4д. Озеленение: плитка площадей остаётся только у зданий (отмостка в 1 клетку), остальное — газон ----------
+    for (const d of layout.districts) {
+      if (d.type !== 'official' && d.type !== 'market') continue;
+      each(d, (x, y) => {
+        const g = m.get(x, y);
+        if ((g !== ID.STONE && g !== ID.BRICK) || (O(x, y) !== 0 && O(x, y) !== 6)) return;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (O(x + dx, y + dy) === 2) return;
+        m.set(x, y, noise(x, y, 95, 4) > 0.68 ? ID.CLOVER : ID.GRASS);
+      });
+    }
+
     // деревья вдоль стены деревни
     for (let y = 14; y < HH; y++) for (let x = 0; x < W; x++) {
       if (O(x, y) !== 0) continue;
@@ -10179,8 +10199,8 @@ G.mapgen = (() => {
           sample(0.01, (x, y) => tryObj(x, y, 'bush'));
           break;
         case 'residential':
-          sample(0.03, (x, y) => { const h = H(x, y, 6); tryTree(x, y, h > 0.8 ? 'sakura' : h > 0.65 ? 'maple' : h > 0.58 ? 'ginkgo' : h > 0.52 ? 'watertower' : 'tree'); });
-          sample(0.02, (x, y) => tryObj(x, y, H(x, y, 7) > 0.6 ? 'hedge' : 'bush'));
+          sample(0.06, (x, y) => { const h = H(x, y, 6); tryTree(x, y, h > 0.8 ? 'sakura' : h > 0.65 ? 'maple' : h > 0.58 ? 'ginkgo' : h > 0.52 ? 'watertower' : 'tree'); });
+          sample(0.045, (x, y) => tryObj(x, y, H(x, y, 7) > 0.6 ? 'hedge' : 'bush'));
           sample(0.004, (x, y) => tryObj(x, y, 'shrine', { talk: ['Маленькое святилище. Кто-то оставил рисовый колобок и свежие цветы.'] }));
           sample(0.006, (x, y) => tryObj(x, y, 'tallgrass'));
           sample(0.006, (x, y) => tryObj(x, y, H(x, y, 3) > 0.5 ? 'flowerbox' : 'barrel'));
@@ -10203,6 +10223,8 @@ G.mapgen = (() => {
             else if (H(x, y, 42) > 0.6) tryObj(x, y, 'stonelamp');
           }
           sample(0.004, (x, y) => tryObj(x, y, 'bench'));
+          sample(0.035, (x, y) => tryTree(x, y, H(x, y, 45) > 0.7 ? 'sakura' : H(x, y, 46) > 0.6 ? 'maple' : 'tree'));
+          sample(0.03, (x, y) => tryObj(x, y, H(x, y, 47) > 0.5 ? 'hedge' : 'bush'));
           break;
         case 'market':
           sample(0.02, (x, y) => {
@@ -10211,11 +10233,13 @@ G.mapgen = (() => {
           });
           sample(0.01, (x, y) => tryObj(x, y, H(x, y, 4) > 0.5 ? 'barrel' : 'crate'));
           sample(0.005, (x, y) => tryObj(x, y, H(x, y, 5) > 0.5 ? 'redlantern' : 'banner'));
+          sample(0.02, (x, y) => tryTree(x, y, H(x, y, 48) > 0.6 ? 'ginkgo' : 'tree'));
+          sample(0.02, (x, y) => tryObj(x, y, 'planter'));
           break;
         case 'clan':
           // забор по верхнему краю квартала
           if (d.fence !== false) for (let x = d.x; x < d.x + d.w; x++) if (O(x, d.y) === 0) { m.addObject('clanwall', x * T + 8, d.y * T + 15); setO(x, d.y, 5); }
-          sample(0.02, (x, y) => tryTree(x, y, H(x, y, 10) > 0.7 ? 'maple' : 'tree'));
+          sample(0.045, (x, y) => tryTree(x, y, H(x, y, 10) > 0.7 ? 'maple' : 'tree'));
           sample(0.008, (x, y) => tryObj(x, y, 'stonelamp'));
           sample(0.004, (x, y) => tryObj(x, y, 'pond', null, (o) => o === 0 && O(x - 1, y) === 0 && O(x + 1, y) === 0 && O(x, y - 1) === 0 && O(x - 1, y - 1) === 0 && O(x + 1, y - 1) === 0) && [[-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]].forEach(([a, b]) => setO(x + a, y + b, 5)));
           sample(0.006, (x, y) => tryObj(x, y, 'bamboofence'));
@@ -10226,7 +10250,7 @@ G.mapgen = (() => {
     // ---------- 5б. Россыпь мелкой природы: цветы (пятнами), кусты, камни, папоротники, грибы, камыш ----------
     {
       const FL = ['red', 'yellow', 'white', 'blue', 'pink', 'purple', 'orange'];
-      const FP = { park: 0.1, residential: 0.05, clan: 0.05, uchiha: 0.018, official: 0.022, market: 0, forest: 0.012, training: 0.008 };
+      const FP = { park: 0.1, residential: 0.09, clan: 0.09, uchiha: 0.03, official: 0.07, market: 0.04, forest: 0.012, training: 0.008 };
       const small = new Uint8Array(W * HH);
       const near = (x, y, f) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => f(m.get(x + a, y + b)));
       for (let y = 14; y < HH - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -10246,8 +10270,8 @@ G.mapgen = (() => {
         const n = noise(x, y, 91, 7), fam = FL[Math.floor(noise(x, y, 92, 11) * FL.length) % FL.length];
         const fp = (FP[dt] != null ? FP[dt] : 0.02) * (n > 0.62 ? 4.5 : 1);
         if (!small[y * W + x] && r < fp) { put('fl_' + (n > 0.62 ? fam : FL[Math.floor(r2 * FL.length)]), false); continue; }
-        if (dt === 'market') continue;
-        const q = H(x, y, 705);
+        const q = H(x, y, 705) * (dt === 'market' ? 2 : 1);   // на рынке кустов вдвое меньше
+
         if (dark && q < 0.035) { put(q < 0.012 ? 'mushroom' : 'fern', false); continue; }
         if (q < 0.012 && o === 0) { put(['bush_pink', 'bush_white', 'bush_red', 'bush_yellow'][Math.floor(r2 * 4)], true); continue; }
         if (q < 0.03 && o === 0) { put(r2 > 0.5 ? 'bush3' : 'bush', true); continue; }
@@ -10278,6 +10302,16 @@ G.mapgen = (() => {
         const a = horiz ? [rr.x + i, rr.y - 1] : [rr.x - 1, rr.y + i];
         const b = horiz ? [rr.x + i, rr.y + rr.h] : [rr.x + rr.w, rr.y + i];
         for (const [x, y] of [a, b]) if (!KP(x, y) && (O(x, y) === 0 || (O(x, y) === 4 && m.get(x, y) === ID.STONE && O(x, y - 1) !== 2 && O(x, y + 1) !== 2))) tryObj(x, y, 'lamp', null, () => true);
+      }
+    }
+
+    // аллея: деревья вдоль главных улиц между фонарями (клёны и сакуры, каждые ~7 клеток, по обе стороны)
+    for (const r of layout.roads) {
+      if (r.type !== 'main' || !r.pts) continue;
+      const tl = r._t || polyTiles(r.pts, 3), mid = tl.filter((_, i) => i % 3 === 1);
+      for (let i = 5; i < mid.length; i += 7) {
+        const [x, y] = mid[i];
+        for (const [lx, ly] of [[x - 3, y], [x + 3, y]]) { const h = H(lx, ly, 49); tryTree(lx, ly, h > 0.6 ? 'sakura' : h > 0.3 ? 'maple' : 'tree'); }
       }
     }
 
