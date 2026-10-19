@@ -585,7 +585,47 @@
     cx.putImageData(img, 0, 0);
     return cv;
   }
-  function sheet(id) {
+  // Перекраска одежды (жители): вариант v сдвигает оттенок всего ниже головы, кроме кожи (светлые тёплые тона). v = 0 — как нарисовано.
+  const LOOKS = 8, HUE = [0, 45, 100, 160, 205, 255, 305, 345];
+  function rgb2hsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    if (!d) return [0, 0, l];
+    const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    const h = mx === r ? ((g - b) / d + (g < b ? 6 : 0)) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [h * 60, s, l];
+  }
+  function hsl2rgb(h, s, l) {
+    h = ((h % 360) + 360) % 360 / 360;
+    if (!s) { const v = Math.round(l * 255); return [v, v, v]; }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    const f = (t) => { t = (t + 1) % 1; return Math.round(255 * (t < 1 / 6 ? p + (q - p) * 6 * t : t < 0.5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p)); };
+    return [f(h + 1 / 3), f(h), f(h - 1 / 3)];
+  }
+  function lookSheet(id, v) {
+    const key = id + '#' + v;
+    if (SHEETS[key]) return SHEETS[key];
+    const base = sheet(id), W = base.width, H = base.height;
+    const src = document.createElement('canvas'); src.width = W; src.height = H;
+    const sx = src.getContext('2d'); sx.drawImage(base, 0, 0);
+    const img = sx.getImageData(0, 0, W, H), d = img.data, dh = HUE[v % LOOKS];
+    const rowH = FHH, headRows = 17 * (W / (FWH * 3));   // голова — верхние 17 строк кадра (масштаб листа учтён)
+    for (let y = 0; y < H; y++) {
+      if ((y % rowH) < headRows) continue;
+      for (let x = 0; x < W; x++) {
+        const o = (y * W + x) * 4; if (!d[o + 3]) continue;
+        const [h, s, l] = rgb2hsl(d[o], d[o + 1], d[o + 2]);
+        if (s < 0.1 || (h >= 8 && h <= 48 && l >= 0.58 && s >= 0.25)) continue;   // серое/тёмное и кожа не трогаем
+        const c = hsl2rgb(h + dh, s, l); d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2];
+      }
+    }
+    const out = document.createElement('canvas'); out.width = W; out.height = H;
+    out.getContext('2d').putImageData(img, 0, 0);
+    const res = G.gfx.canvas(FW * 3, FH * 4); const rc = res.getContext('2d'); rc.save(); rc.setTransform(1, 0, 0, 1, 0, 0); rc.drawImage(out, 0, 0); rc.restore();
+    return (SHEETS[key] = res);
+  }
+  function sheet(id, look) {
+    if (look) return lookSheet(id, look);
     if (SHEETS[id]) return SHEETS[id];
     if (ART[id]) {
       const c = G.gfx.canvas(FW * 3, FH * 4), ctx = c.getContext('2d');
@@ -606,8 +646,8 @@
     SHEETS[id] = c;
     return c;
   }
-  function draw(ctx, id, dir, frame, x, y) {
-    const s = sheet(id), di = DIRS.indexOf(dir);
+  function draw(ctx, id, dir, frame, x, y, look) {
+    const s = sheet(id, look), di = DIRS.indexOf(dir);
     ctx.drawImage(s, frame * FW, di * FH, FW, FH, Math.round(x - FW / 2), Math.round(y - FH + 1), FW, FH);
   }
   // портрет 32×32 (голова и плечи): рендер на удвоенной сетке и обрезка
@@ -646,5 +686,5 @@
     return c;
   }
 
-  Object.assign(G.chars, { sheet, draw, portrait, renderFrame, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
+  Object.assign(G.chars, { sheet, draw, portrait, renderFrame, LOOKS, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
 })();

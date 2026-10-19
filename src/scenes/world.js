@@ -815,7 +815,9 @@ G.scenes.register('world', (pos) => {
     drawActor(ctx, a) {
       G.shade.shadow(ctx, a.x + 1, a.y - 1, 6, 2, 0.34);   // V9: мягкая тень под ногами
       const frame = a.moving ? G.chars.WALK[Math.floor(a.anim) % 4] : 0;
-      G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y);
+      // жители: у каждого своя расцветка одежды (по номеру в списке жителей карты — одинаково между кадрами и загрузками)
+      if (a._look === undefined) a._look = (a.id === 'villager_m' || a.id === 'villager_f') ? Math.floor(G.util.hash2(this.map.npcs.indexOf(a), 7, 91) * G.chars.LOOKS) : 0;
+      G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y, a._look);
     },
 
     drawHud(ctx) {
