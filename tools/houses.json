@@ -1,0 +1,63 @@
+{
+  "_": "Настройки импорта домов (tools/import_houses.py). file — картинка в art/houses/; tpls — для каких шаблонов зданий (id из data/buildings.js), если не указано — подбирается по пропорциям; door — где дверь(и) по ширине картинки (0..1); roof — на какой доле высоты кончается главная крыша (0..1) — по ней считается, где бегать по крыше.",
+  "houses": [
+    {
+      "file": "house01.webp",
+      "door": [
+        0.5
+      ],
+      "roof": 0.66,
+      "tpls": [
+        "house_s",
+        "house_m",
+        "apartment_s"
+      ]
+    },
+    {
+      "file": "house02.webp",
+      "door": [
+        0.54
+      ],
+      "roof": 0.68,
+      "tpls": [
+        "office",
+        "shop_generic",
+        "dojo"
+      ]
+    },
+    {
+      "file": "house03.webp",
+      "door": [
+        0.5
+      ],
+      "roof": 0.53,
+      "tpls": [
+        "house_w"
+      ]
+    },
+    {
+      "file": "house04.webp",
+      "door": [
+        0.5
+      ],
+      "roof": 0.32,
+      "tpls": [
+        "tower_r",
+        "house_xs",
+        "house_n",
+        "house_t"
+      ]
+    },
+    {
+      "file": "house05.webp",
+      "door": [
+        0.27,
+        0.73
+      ],
+      "roof": 0.65,
+      "tpls": [
+        "house_w"
+      ]
+    }
+  ]
+}

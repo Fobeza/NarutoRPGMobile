@@ -4,13 +4,13 @@ G.roofs = {
   JUMP: 64,          // максимальный прыжок между крышами, px
   SPEED: 1.25,       // на крышах быстрее
   XP_DAY: 6,         // опыт Скорости за день от бега по крышам (максимум)
-  wallH(id, tpl) { return G.buildgfx.wallH(tpl, id); },
+  wallH(id, tpl, spr) { return G.buildgfx.wallH(tpl, id, spr); },
   rects(m) {
     if (m._roofs) return m._roofs;
     const T = G.CONFIG.TILE, out = [];
     for (const b of m.buildings) {
       if (b.sortY < 0 || b.tplId === 'gate' || !b.tplDef || !b.spr) continue;
-      const HF = b.th * T, OV = -b.oy, wh = this.wallH(b.tplId, b.tplDef);
+      const HF = b.th * T, OV = -b.oy, wh = this.wallH(b.tplId, b.tplDef, b.spr);
       const top = b.ty * T - OV + 7;
       let bottom = b.ty * T + HF - wh + 3;
       if (bottom - top < 14) bottom = top + 14;

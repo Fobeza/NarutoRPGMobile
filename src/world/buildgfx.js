@@ -385,6 +385,9 @@ G.buildgfx = (() => {
   function make(id, tpl, seed = 0) {
     const key = id + ':' + seed;
     if (cache[key]) return cache[key];
+    // нарисованные дома (art/houses → gfx/house_art.js) заменяют код-рисунок там, где для шаблона есть картинки
+    const art = G.houseArt.sprite(id, tpl, seed);
+    if (art) return (cache[key] = art);
     const W = tpl.w * T, HF = tpl.h * T;
     let OV = tpl.ov || 16;
     if (id === 'hokage_tower') OV = 28;
@@ -433,7 +436,8 @@ G.buildgfx = (() => {
   }
 
   // Высота фасада
-  function wallH(tpl, id) {
+  function wallH(tpl, id, spr) {
+    if (spr && spr.wh) return spr.wh;           // у нарисованного дома своя высота стены
     if (tpl.wh) return tpl.wh;
     if (id === 'apartment' || id === 'naruto_flat' || tpl.multi) return tpl.h * T - 20;
     if (tpl.floors === 2 || tpl.style === 'round') return tpl.h * T - 30;

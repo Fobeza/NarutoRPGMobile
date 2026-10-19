@@ -26,7 +26,7 @@ G.fx = (() => {
   const SH_L = 0.62;   // длина тени здания относительно высоты стены
   function buildingShadow(o) {
     if (o._shadow) return o._shadow;
-    const W = o.tw * T, FH = o.th * T, wh = G.buildgfx.wallH(o.tplDef, o.tplId);
+    const W = o.tw * T, FH = o.th * T, wh = G.buildgfx.wallH(o.tplDef, o.tplId, o.spr);
     const L = Math.max(6, Math.min(18, Math.round(wh * SH_L))), D = 7, pad = 3;
     const side = Math.round(FH * 0.55);
     const B = G.shade.box;
