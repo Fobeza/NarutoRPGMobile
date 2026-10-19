@@ -3,50 +3,27 @@
   "houses": [
     {
       "file": "house01.webp",
-      "door": [
-        0.5
-      ],
+      "door": [0.5],
       "roof": 0.66,
-      "tpls": [
-        "house_s",
-        "house_m",
-        "apartment_s"
-      ]
+      "tpls": ["house_s", "house_m", "apartment_s", "house_xs"]
     },
     {
       "file": "house02.webp",
-      "door": [
-        0.54
-      ],
+      "door": [0.54],
       "roof": 0.68,
-      "tpls": [
-        "office",
-        "shop_generic",
-        "dojo"
-      ]
+      "tpls": ["office", "shop_generic", "dojo"]
     },
     {
       "file": "house03.webp",
-      "door": [
-        0.5
-      ],
+      "door": [0.5],
       "roof": 0.53,
-      "tpls": [
-        "house_w"
-      ]
+      "tpls": ["house_w"]
     },
     {
       "file": "house04.webp",
-      "door": [
-        0.5
-      ],
+      "door": [0.5],
       "roof": 0.32,
-      "tpls": [
-        "tower_r",
-        "house_xs",
-        "house_n",
-        "house_t"
-      ]
+      "tpls": ["tower_r", "house_xs", "house_n", "house_t"]
     },
     {
       "file": "house05.webp",
@@ -55,9 +32,37 @@
         0.73
       ],
       "roof": 0.65,
-      "tpls": [
-        "house_w"
-      ]
+      "tpls": ["house_w"]
+    },
+    {
+      "file": "house06.png",
+      "door": [0.5],
+      "roof": 0.53,
+      "tpls": ["house_w"]
+    },
+    {
+      "file": "house07.png",
+      "door": [0.5],
+      "roof": 0.66,
+      "tpls": ["house_s", "house_m", "house_xs", "house_t", "tower_r", "shop_generic"]
+    },
+    {
+      "file": "house08.png",
+      "door": [0.5],
+      "roof": 0.42,
+      "tpls": ["office", "dojo", "shop_generic"]
+    },
+    {
+      "file": "house09.webp",
+      "door": [0.45],
+      "roof": 0.6,
+      "tpls": ["house_m", "house_s", "apartment_s", "house_t"]
+    },
+    {
+      "file": "house10.webp",
+      "door": [0.335],
+      "roof": 0.49,
+      "tpls": ["house_w"]
     }
   ]
 }
