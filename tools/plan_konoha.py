@@ -338,6 +338,7 @@ hard = [b for b in bld if NEEDS_DOOR(b) and not reach(b)]
 if hard: print('  без прохода (ключевые):', [(b['tpl'], b['x'], b['y']) for b in hard])
 
 # ───────────── районы ─────────────
+# порядок важен: следующий район перекрывает предыдущие (кварталы кланов → центр и торговая улица → полигоны)
 def bbox(pred, pad=2):
     xs, ys, xe, ye = [], [], [], []
     for b in bld:
@@ -346,15 +347,15 @@ def bbox(pred, pad=2):
     return (max(2, min(xs) - pad), max(15, min(ys) - pad), min(W - 2, max(xe) + pad) - max(2, min(xs) - pad), min(H - 1, max(ye) + pad) - max(15, min(ys) - pad))
 districts = [dict(type='cliff', x=0, y=0, w=160, h=14, label='Скала Хокаге'),
              dict(type='residential', x=3, y=15, w=154, h=110, label='Коноха')]
-hx = bbox(lambda b: b['tpl'] in ('hokage_tower', 'academy', 'library'), 3)
-districts.append(dict(type='official', x=hx[0], y=hx[1], w=hx[2], h=hx[3], label='Центр'))
-mx = bbox(lambda b: b['tpl'] in ('market', 'ichiraku', 'dango'), 2)
-districts.append(dict(type='market', x=mx[0], y=mx[1], w=mx[2], h=mx[3], label='Торговая улица'))
 for cid, ax, ay, k in CL:
     if cid not in clan_pos: continue
     own = lambda b, cid=cid: b['tpl'] == 'clan_' + cid or b.get('name') == 'Дом клана ' + CLAN_RU[cid]
     r = bbox(own, 2)
     districts.append(dict(type='uchiha' if cid == 'uchiha' else 'clan', x=r[0], y=r[1], w=r[2], h=r[3], label='Квартал ' + CLAN_RU[cid], **({} if cid == 'uchiha' else dict(fence=False))))
+hx = bbox(lambda b: b['tpl'] in ('hokage_tower', 'academy', 'library'), 3)
+districts.append(dict(type='official', x=hx[0], y=hx[1], w=hx[2], h=hx[3], label='Центр'))
+mx = bbox(lambda b: b['tpl'] in ('market', 'ichiraku', 'dango'), 2)
+districts.append(dict(type='market', x=mx[0], y=mx[1], w=mx[2], h=mx[3], label='Торговая улица'))
 for b in bld:
     if b['tpl'] in ('training_3', 'training_ground'):
         w, h, _ = size_of(b['tpl']); districts.append(dict(type='training', x=b['x'], y=b['y'], w=w, h=h, label='Полигон'))

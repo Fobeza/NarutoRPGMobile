@@ -96,8 +96,6 @@ G.KONOHA_DRAFT = {
   districts: [
     {"type": "cliff","x": 0,"y": 0,"w": 160,"h": 14,"label": "Скала Хокаге"},
     {"type": "residential","x": 3,"y": 15,"w": 154,"h": 110,"label": "Коноха"},
-    {"type": "official","x": 38,"y": 15,"w": 60,"h": 16,"label": "Центр"},
-    {"type": "market","x": 36,"y": 42,"w": 59,"h": 23,"label": "Торговая улица"},
     {"type": "clan","x": 17,"y": 36,"w": 38,"h": 22,"label": "Квартал Нара","fence": false},
     {"type": "clan","x": 14,"y": 57,"w": 41,"h": 29,"label": "Квартал Хьюга","fence": false},
     {"type": "clan","x": 29,"y": 81,"w": 37,"h": 28,"label": "Квартал Инузука","fence": false},
@@ -107,6 +105,8 @@ G.KONOHA_DRAFT = {
     {"type": "clan","x": 85,"y": 21,"w": 44,"h": 29,"label": "Квартал Сенджу","fence": false},
     {"type": "clan","x": 52,"y": 24,"w": 31,"h": 29,"label": "Квартал Сарутоби","fence": false},
     {"type": "clan","x": 96,"y": 43,"w": 40,"h": 27,"label": "Квартал Яманака","fence": false},
+    {"type": "official","x": 38,"y": 15,"w": 60,"h": 16,"label": "Центр"},
+    {"type": "market","x": 36,"y": 42,"w": 59,"h": 23,"label": "Торговая улица"},
     {"type": "training","x": 19,"y": 32,"w": 10,"h": 8,"label": "Полигон"},
     {"type": "training","x": 36,"y": 112,"w": 8,"h": 7,"label": "Полигон"},
     {"type": "training","x": 46,"y": 114,"w": 8,"h": 7,"label": "Полигон"},
