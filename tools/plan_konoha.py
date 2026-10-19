@@ -264,10 +264,10 @@ for cid, ax, ay, k in CL:
     print('  клан', cid, 'домов', got)
 # автоматические улицы: пока есть застраиваемые клетки дальше 6 шагов от дороги — прокладываем улицу
 for _ in range(60):
-    far = [(RD[y][x], x, y) for y in range(18, H - 6) for x in range(6, W - 6) if terr[y][x] == GROUND and not occ[y][x] and inside(x, y, 0.92) and RD[y][x] > 7]
+    far = [(RD[y][x], x, y) for y in range(18, H - 6) for x in range(6, W - 6) if terr[y][x] == GROUND and not occ[y][x] and inside(x, y, 0.92) and RD[y][x] > 8]
     if not far: break
     far.sort(reverse=True); _, fx, fy = far[0]
-    if not carve_spur(fx, fy, 2 if rnd.random() < 0.6 else 1): RD[fy][fx] = 0
+    if not carve_spur(fx, fy, 2 if rnd.random() < 0.3 else 1): RD[fy][fx] = 0
     refresh_rd()
 # квартал Учиха: дом Саске, участок полиции
 for tpl, ax, ay in (('sasuke_home', 140, 30), ('uchiha_police', 134, 44)): place_near(tpl, ax, ay, maxr=30, maxrd=4)
@@ -282,9 +282,9 @@ GEN = BY_KIND['house']
 def try_house(x, y):
     global houses
     arts = GEN[:]; rnd.shuffle(arts)
-    for art in arts[:4]:
+    for art in arts:
         w, h, dx = size_of('house_s', art)
-        if y + h < H and RD[y + h][x + dx] <= 7 and fits(x, y, w, h, dx, 7, 2):
+        if y + h < H and RD[y + h][x + dx] <= 8 and fits(x, y, w, h, dx, 8, 2):
             put('house_s', x, y, art, 'Жилой дом'); houses += 1; return True
     return False
 for _ in range(80000):

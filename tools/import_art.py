@@ -64,6 +64,40 @@ def encode(img):
     return ['#%02x%02x%02x' % tuple(pal[3 * u:3 * u + 3]) for u in used], ''.join(out)
 
 
+def components(m):
+    """Связные области маски (4-связность): списки точек (y, x)."""
+    h, w = m.shape; seen = np.zeros_like(m); res = []
+    for y0, x0 in zip(*np.nonzero(m)):
+        if seen[y0, x0]: continue
+        q, pts = [(y0, x0)], []; seen[y0, x0] = True
+        while q:
+            y, x = q.pop(); pts.append((y, x))
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < h and 0 <= nx < w and m[ny, nx] and not seen[ny, nx]: seen[ny, nx] = True; q.append((ny, nx))
+        res.append(pts)
+    return res
+
+
+def windows(img, roof, lw, dx, ox):
+    """Окна для ночного свечения: синеватое «стекло» ниже крыши, небольшие компактные пятна → прямоугольники [x, y, w, h] в px ×2.
+    Нашлось меньше двух окон (круглые, шторы, красочные фасады) — светится только щель двери."""
+    r, g, b, a = [img[:, :, i].astype(np.float32) for i in range(4)]
+    glass = (b > r + 22) & (b >= g - 8) & (b > 55) & (a > 0)
+    h, w = glass.shape
+    glass[:int(max(0, roof * h * 0.9)), :] = False
+    out = []
+    for pts in components(glass):
+        ys = [p[0] for p in pts]; xs = [p[1] for p in pts]
+        hh, ww = max(ys) - min(ys) + 1, max(xs) - min(xs) + 1
+        if 14 <= len(pts) <= h * w * 0.02 and len(pts) / (hh * ww) > 0.35 and 0.3 < ww / hh < 3.2 and hh <= w * 0.2 and ww <= w * 0.2 and hh >= 3:
+            sh = 0 if len(pts) / (hh * ww) > 0.85 else max(1, round(min(hh, ww) * 0.12))
+            out.append([int(min(xs)) + sh, int(min(ys)) + sh, int(ww - 2 * sh), int(hh - 2 * sh)])
+    if len(out) < 2:
+        cx = (dx * T + T // 2 - ox) * HI
+        out = [[int(cx - 5), int(h - 24), 10, 18]]
+    return out[:40]
+
+
 def width_tiles(e, aspect):
     """Ширина пятна в тайлах: задана в каталоге или по пропорциям (плоские и длинные — шире)."""
     if e.get('w'): return int(e['w'])
@@ -90,6 +124,7 @@ def specs(with_pixels=False):
         if with_pixels:
             colors, rle = encode(scale(a, lw * HI, lh * HI))
             s['pal'], s['rle'] = colors, rle
+            s['g'] = windows(scale(a, lw * HI, lh * HI), e.get('roof', 0.5), lw, dx, ox)
         out.append(s)
     return out
 
@@ -99,14 +134,14 @@ def main():
     bitmaps, art = [], {}
     for s in ss:
         art[s['name']] = {k: s[k] for k in ('kind', 'tpl', 'clan', 'w', 'h', 'dx', 'ox', 'wall', 'lw', 'lh') if k in s}
-        art[s['name']]['b'] = len(bitmaps)
+        art[s['name']]['b'] = len(bitmaps); art[s['name']]['g'] = s['g']
         bitmaps.append(dict(src=s['name'], lw=s['lw'], lh=s['lh'], pal=s['pal'], rle=s['rle']))
     js = ['// Нарисованные здания — СГЕНЕРИРОВАНО tools/import_art.py из art/ и tools/art_catalog.json, руками не править.',
           '// Раскодирует gfx/house_art.js: bitmaps — картинки палитрой и строками повторов, art — размеры пятна, дверь, стена.',
           'G.HOUSE_ART = ' + json.dumps({'bitmaps': bitmaps, 'art': art}, ensure_ascii=False, separators=(',', ':')) + ';', '']
     path = os.path.join(ROOT, 'src', 'gfx', 'house_art_data.js')
     open(path, 'w', encoding='utf-8').write('\n'.join(js))
-    meta = [{k: v for k, v in s.items() if k not in ('pal', 'rle')} for s in ss]
+    meta = [{k: v for k, v in s.items() if k not in ('pal', 'rle', 'g')} for s in ss]
     json.dump(meta, open(os.path.join(ROOT, 'tools', 'art_specs.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
     kinds = {}
     for s in ss: kinds[s['kind']] = kinds.get(s['kind'], 0) + 1

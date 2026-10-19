@@ -2,7 +2,7 @@
 // Картинки хранятся палитрой и строкой повторов («a12.b3»: знак — цвет, число — сколько подряд, точка — прозрачность)
 // и раскодируются при первом обращении — без ожидания загрузки файлов.
 //   G.houseArt.spec(name)           → размеры пятна и дверь картинки { w, h, dx, ox, wall, kind, ... } или null
-//   G.houseArt.sprite(name, tpl)    → спрайт здания { img, ox, oy, w, h, wh, art }; tpl — шаблон (даёт высоту пятна)
+//   G.houseArt.sprite(name, tpl)    → спрайт здания { img, glow, ox, oy, w, h, wh, art }; tpl — шаблон (даёт высоту пятна)
 // У «уникальных» шаблонов (kind unique) размеры в G.BUILDINGS подменяются размерами картинки при загрузке.
 G.houseArt = (() => {
   const SYM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/:;<=>?@^_';
@@ -51,6 +51,12 @@ G.houseArt = (() => {
       const bm = data.bitmaps[a.b], HF = (tpl ? tpl.h : a.h) * G.CONFIG.TILE;
       // низ картинки — по низу пятна здания; вверх она выступает как крыша
       const s = { img: decode(bm), ox: a.ox, oy: HF - bm.lh, w: bm.lw, h: bm.lh, wh: a.wall, art: name };
+      if (a.g && a.g.length) {   // окна ночью: прямоугольники из import_art.py (px ×2), тёплый цвет + блик сверху
+        const g = G.gfx.canvas(bm.lw, bm.lh), gc = g.getContext('2d');
+        gc.fillStyle = '#ffb860'; for (const [x, y, w, h] of a.g) gc.fillRect(x / 2, y / 2, w / 2, h / 2);
+        gc.fillStyle = '#ffe8a8'; for (const [x, y, w] of a.g) gc.fillRect(x / 2 + 0.5, y / 2 + 0.5, Math.max(0.5, w / 2 - 1), 1);
+        s.glow = g;
+      }
       sprites.set(key, s);
       return s;
     },
