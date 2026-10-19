@@ -567,8 +567,31 @@
     else u.set(B.c);
     ctx.putImageData(img, ox, oy);
   }
+  // нарисованные персонажи (gfx/char_art_data.js ← tools/import_chars.py): палитра + строки повторов → canvas
+  const ART = G.CHAR_ART || {};
+  function decodeArt(v) {
+    const SYM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/:;<=>?@^_';
+    const pal = v.pal.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    const cv = document.createElement('canvas'); cv.width = v.w; cv.height = v.h;
+    const cx = cv.getContext('2d'), img = cx.createImageData(v.w, v.h), d = img.data, s = v.rle;
+    let i = 0, p = 0;
+    while (i < s.length) {
+      const ch = s[i++]; let n = 0;
+      while (i < s.length) { const k = s.charCodeAt(i); if (k < 48 || k > 57) break; n = n * 10 + k - 48; i++; }
+      if (!n) n = 1;
+      if (ch !== '.') { const col = pal[SYM.indexOf(ch)]; for (let k = 0; k < n; k++) { const o = (p + k) * 4; d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255; } }
+      p += n;
+    }
+    cx.putImageData(img, 0, 0);
+    return cv;
+  }
   function sheet(id) {
     if (SHEETS[id]) return SHEETS[id];
+    if (ART[id]) {
+      const c = G.gfx.canvas(FW * 3, FH * 4), ctx = c.getContext('2d');
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(decodeArt(ART[id]), 0, 0); ctx.restore();
+      return (SHEETS[id] = c);
+    }
     const def = G.chars.DEFS[id];
     const c = G.gfx.canvas(FW * 3, FH * 4), ctx = c.getContext('2d');
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -590,6 +613,16 @@
   // портрет 32×32 (голова и плечи): рендер на удвоенной сетке и обрезка
   function portrait(id) {
     if (PORTRAITS[id]) return PORTRAITS[id];
+    if (ART[id]) {
+      const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d'), por = decodeArt(ART[id].por);
+      G.shade.grad(c, 0, 0, 32, 32, ['#fbf2dc', '#eadcbc', '#cdb890', '#b09a74'], { dir: 'r', cx: 9, cy: 7, r: 36, steps: 3 });
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const sil = G.gfx.silhouette(por, '#3a2c3a');
+      ctx.globalAlpha = 0.22; ctx.drawImage(sil, 5, 5, c.width - 4, c.height - 4); ctx.globalAlpha = 1;
+      ctx.drawImage(por, 2, 2, c.width - 4, c.height - 4);
+      ctx.restore();
+      return (PORTRAITS[id] = c);
+    }
     const def = G.chars.DEFS[id], k = 3;
     const B = renderFrame(def, id, 'down', 0, k);
     const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d');

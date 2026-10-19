@@ -22,7 +22,7 @@ JS_FILES = [
     "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
-    "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",
+    "gfx/chars.js", "data/characters.js", "gfx/char_art_data.js", "gfx/chars_render.js",
     "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
