@@ -8,7 +8,7 @@ G.audio = {
   // iOS: запускать только по жесту пользователя
   unlock() {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') this.ctx.resume();
+      this.wake();
       return;
     }
     try {
@@ -27,6 +27,15 @@ G.audio = {
     s.buffer = b; s.connect(this.master); s.start(0);
   },
 
+  // iOS переводит контекст в suspended/interrupted (звонок, сворачивание) — без resume звуки копятся и выходят пачкой или молчат
+  wake() {
+    const c = this.ctx;
+    if (c && c.state !== 'running' && c.state !== 'closed') { try { const r = c.resume(); if (r && r.catch) r.catch(() => {}); } catch (_) {} }
+  },
+
+  // звуки играем только в рабочем контексте: в остановленном они бы накопились и «зависли»
+  ready() { return !!this.ctx && this.enabled && this.ctx.state === 'running'; },
+
   setEnabled(on) {
     this.enabled = on;
     if (this.master) this.master.gain.value = on ? this.volume : 0;
@@ -34,7 +43,7 @@ G.audio = {
 
   // Базовый тон: частота, длительность, форма волны, громкость, сдвиг частоты
   tone(freq, dur = 0.08, type = 'square', vol = 0.15, slideTo = null, delay = 0) {
-    if (!this.ctx || !this.enabled) return;
+    if (!this.ready()) { this.wake(); return; }
     const t = this.ctx.currentTime + delay;
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
@@ -48,12 +57,17 @@ G.audio = {
   },
 
   noise(dur = 0.1, vol = 0.15, delay = 0) {
-    if (!this.ctx || !this.enabled) return;
+    if (!this.ready()) { this.wake(); return; }
     const t = this.ctx.currentTime + delay;
-    const len = Math.floor(this.ctx.sampleRate * dur);
-    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    // буфер шума кэшируется по длительности: шаги идут по 4–6 раз в секунду
+    const cache = this._noise || (this._noise = {});
+    let buf = cache[dur];
+    if (!buf) {
+      const len = Math.floor(this.ctx.sampleRate * dur);
+      buf = cache[dur] = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
     const s = this.ctx.createBufferSource();
     const g = this.ctx.createGain();
     g.gain.value = vol;

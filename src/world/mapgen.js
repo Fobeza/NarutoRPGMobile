@@ -198,7 +198,13 @@ G.mapgen = (() => {
     function addBuildingTiles(id, tpl, tx, ty, opts = {}) {
       const spr = G.buildgfx.make(id, tpl, opts.seed != null ? opts.seed : ++bseed, opts.art);
       const b = m.addBuilding({ tplId: id, tplDef: tpl, tx, ty, tw: tpl.w, th: tpl.h, spr, name: opts.name || nameOf(id, tpl, tx * 7 + ty * 13) });
-      for (let y = ty; y < ty + tpl.h; y++) for (let x = tx; x < tx + tpl.w; x++) { m.setBlock(x, y, 1); setO(x, y, 2); if (m.inside(x, y)) bAt[y * W + x] = m.buildings.length; }
+      // клетки, где на картинке пусто (картинка сдвинута от пятна), не блокируем — иначе там невидимая стена
+      const an = opts.art || (tpl.unique && G.houseArt.has(id) ? id : null);
+      const hole = new Set(an ? G.houseArt.free(an).map(([cx, cy]) => cy * tpl.w + cx) : []);
+      for (let y = ty; y < ty + tpl.h; y++) for (let x = tx; x < tx + tpl.w; x++) {
+        if (!hole.has((y - ty) * tpl.w + (x - tx))) m.setBlock(x, y, 1);
+        setO(x, y, 2); if (m.inside(x, y)) bAt[y * W + x] = m.buildings.length;
+      }
       // кольцо вокруг: у ключевых зданий — резерв (4), у автодомов — мягкое (6), к ним можно пристроиться вплотную
       const ring = opts.soft ? 6 : 4;
       for (let y = ty - 1; y <= ty + tpl.h; y++) for (let x = tx - 1; x <= tx + tpl.w; x++) if (O(x, y) === 0 || (ring === 4 && O(x, y) === 6)) setO(x, y, ring);

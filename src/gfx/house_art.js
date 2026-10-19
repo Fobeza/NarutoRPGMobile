@@ -3,6 +3,7 @@
 // и раскодируются при первом обращении — без ожидания загрузки файлов.
 //   G.houseArt.spec(name)           → размеры пятна и дверь картинки { w, h, dx, ox, wall, kind, ... } или null
 //   G.houseArt.sprite(name, tpl)    → спрайт здания { img, glow, ox, oy, w, h, wh, art }; tpl — шаблон (даёт высоту пятна)
+//   G.houseArt.free(name)           → [[cx, cy], …] клетки пятна без стены (картинка там прозрачная)
 // У «уникальных» шаблонов (kind unique) размеры в G.BUILDINGS подменяются размерами картинки при загрузке.
 G.houseArt = (() => {
   const SYM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/:;<=>?@^_';
@@ -41,6 +42,7 @@ G.houseArt = (() => {
 
   return {
     has: (name) => !!data.art[name],
+    free: (name) => (data.art[name] && data.art[name].fr) || [],   // клетки пятна, где картинка пуста: там не стена
     spec: (name) => data.art[name] || null,
     names: (kind, clan) => Object.keys(data.art).filter((n) => data.art[n].kind === kind && (!clan || data.art[n].clan === clan)),
     sprite(name, tpl) {

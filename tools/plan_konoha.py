@@ -264,7 +264,7 @@ for cid, ax, ay, k in CL:
     print('  клан', cid, 'домов', got)
 # автоматические улицы: пока есть застраиваемые клетки дальше 6 шагов от дороги — прокладываем улицу
 for _ in range(60):
-    far = [(RD[y][x], x, y) for y in range(18, H - 6) for x in range(6, W - 6) if terr[y][x] == GROUND and not occ[y][x] and inside(x, y, 0.92) and RD[y][x] > 8]
+    far = [(RD[y][x], x, y) for y in range(18, H - 6) for x in range(6, W - 6) if terr[y][x] == GROUND and not occ[y][x] and inside(x, y, 0.92) and RD[y][x] > 13]
     if not far: break
     far.sort(reverse=True); _, fx, fy = far[0]
     if not carve_spur(fx, fy, 2 if rnd.random() < 0.3 else 1): RD[fy][fx] = 0
@@ -282,9 +282,10 @@ GEN = BY_KIND['house']
 def try_house(x, y):
     global houses
     arts = GEN[:]; rnd.shuffle(arts)
+    if rnd.random() < 0.3: arts.sort(key=lambda a: not a.endswith('_big'))   # большие дома пробуем первыми в каждом третьем месте
     for art in arts:
         w, h, dx = size_of('house_s', art)
-        if y + h < H and RD[y + h][x + dx] <= 8 and fits(x, y, w, h, dx, 8, 2):
+        if y + h < H and RD[y + h][x + dx] <= 13 and fits(x, y, w, h, dx, 13, 2):
             put('house_s', x, y, art, 'Жилой дом'); houses += 1; return True
     return False
 for _ in range(80000):
@@ -374,10 +375,10 @@ def pick(ax, ay, rmin=0):
     return list(rnd.choice(c)) if c else [ax, ay]
 herbs = []
 for _ in range(16):
-    for t in range(200):
+    for t in range(600):
         p = rnd.choice(free_pts)
         edge = min(abs(p[0] - cx) / ea, 1) ** 3 + min(abs(p[1] - cy) / eb, 1) ** 3
-        if edge > 0.55 and all(math.hypot(p[0] - q[0], p[1] - q[1]) > 18 for q in herbs): herbs.append(list(p)); break
+        if edge > 0.55 and all(math.hypot(p[0] - q[0], p[1] - q[1]) > 14 for q in herbs): herbs.append(list(p)); break
 lotus = []
 for lk in LAKES[:1]:
     for _ in range(300):

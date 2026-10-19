@@ -69,6 +69,7 @@
   // При возвращении в игру — пауза (время в мире не идёт, пока игрок не нажмёт A)
   const resume = () => {
     last = performance.now();
+    G.audio.wake();
     const top = G.scenes.top();
     if (G.state.started && top && top.name === 'world') G.scenes.push(G.scenes.make('pause'));
   };

@@ -98,6 +98,25 @@ def windows(img, roof, lw, dx, ox):
     return out[:40]
 
 
+def free_cells(img, w, h, lw, lh, ox, dx):
+    """Клетки пятна, где на картинке пусто (скруглённые углы круглых домов): ходить можно, невидимых стен нет.
+    Клетка свободна, если закрашено меньше 45 % клетки и меньше 60 % там, где стоят ноги героя (x 3–13, y 7–12): картинка сдвинута от пятна до 11 px — остаются невидимые полосы. Дверь — не трогаем."""
+    a = img[:, :, 3] > 0
+    oy = h * T - lh
+    out = []
+    for cy in range(h):
+        for cx in range(w):
+            if cy == h - 1 and cx == dx: continue
+            x0, y0 = (cx * T - ox) * HI, (cy * T - oy) * HI
+            def cut(xa, ya, xb, yb):
+                xa, xb = max(0, xa), min(a.shape[1], xb); ya, yb = max(0, ya), min(a.shape[0], yb)
+                return a[ya:yb, xa:xb] if xb > xa and yb > ya else np.zeros((0, 0), bool)
+            cell = cut(x0, y0, x0 + T * HI, y0 + T * HI)
+            feet = cut(x0 + 3 * HI, y0 + 7 * HI, x0 + 13 * HI, y0 + 12 * HI)
+            if (cell.mean() if cell.size else 0) < 0.45 and (feet.mean() if feet.size else 0) < 0.6: out.append([cx, cy])
+    return out
+
+
 def width_tiles(e, aspect):
     """Ширина пятна в тайлах: задана в каталоге или по пропорциям (плоские и длинные — шире)."""
     if e.get('w'): return int(e['w'])
@@ -124,6 +143,7 @@ def specs(with_pixels=False):
         if with_pixels:
             colors, rle = encode(scale(a, lw * HI, lh * HI))
             s['pal'], s['rle'] = colors, rle
+            s['fr'] = free_cells(scale(a, lw * HI, lh * HI), w, th, lw, lh, ox, dx)
             s['g'] = windows(scale(a, lw * HI, lh * HI), e.get('roof', 0.5), lw, dx, ox)
         out.append(s)
     return out
@@ -135,13 +155,14 @@ def main():
     for s in ss:
         art[s['name']] = {k: s[k] for k in ('kind', 'tpl', 'clan', 'w', 'h', 'dx', 'ox', 'wall', 'lw', 'lh') if k in s}
         art[s['name']]['b'] = len(bitmaps); art[s['name']]['g'] = s['g']
+        if s['fr']: art[s['name']]['fr'] = s['fr']
         bitmaps.append(dict(src=s['name'], lw=s['lw'], lh=s['lh'], pal=s['pal'], rle=s['rle']))
     js = ['// Нарисованные здания — СГЕНЕРИРОВАНО tools/import_art.py из art/ и tools/art_catalog.json, руками не править.',
           '// Раскодирует gfx/house_art.js: bitmaps — картинки палитрой и строками повторов, art — размеры пятна, дверь, стена.',
           'G.HOUSE_ART = ' + json.dumps({'bitmaps': bitmaps, 'art': art}, ensure_ascii=False, separators=(',', ':')) + ';', '']
     path = os.path.join(ROOT, 'src', 'gfx', 'house_art_data.js')
     open(path, 'w', encoding='utf-8').write('\n'.join(js))
-    meta = [{k: v for k, v in s.items() if k not in ('pal', 'rle', 'g')} for s in ss]
+    meta = [{k: v for k, v in s.items() if k not in ('pal', 'rle', 'g', 'fr')} for s in ss]
     json.dump(meta, open(os.path.join(ROOT, 'tools', 'art_specs.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
     kinds = {}
     for s in ss: kinds[s['kind']] = kinds.get(s['kind'], 0) + 1

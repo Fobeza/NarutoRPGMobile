@@ -176,11 +176,16 @@ G.scenes.register('world', (pos) => {
           const h = ax.x > 0 ? 'right' : 'left', v = ax.y > 0 ? 'down' : 'up';
           if (p.dir !== h && p.dir !== v) p.dir = Math.abs(ax.x) >= Math.abs(ax.y) ? h : v;
         } else p.dir = ax.x > 0 ? 'right' : ax.x < 0 ? 'left' : ax.y > 0 ? 'down' : 'up';
+        const px = p.x, py = p.y;
         if (!(G.roofs && G.roofs.move(this, p, ax, speed))) G.actors.move(m, p, ax.x * speed, ax.y * speed, this.others);
-        p.anim += dt * (run ? 12 : 8);
-        p.stepT -= dt;
-        if (p.stepT <= 0) { G.audio.sfx.step(); p.stepT = run ? 0.18 : 0.28; }
-      } else { p.anim = 0; p.vx = p.vy = 0; }
+        // упёрся в стену или в человека — стоим на месте: без шагов и без анимации ходьбы
+        const shifted = Math.abs(p.x - px) + Math.abs(p.y - py) > speed * 0.25;
+        if (shifted) {
+          p.anim += dt * (run ? 12 : 8);
+          p.stepT -= dt;
+          if (p.stepT <= 0) { G.audio.sfx.step(); p.stepT = run ? 0.18 : 0.28; }
+        } else { p.anim = 0; p.stepT = 0.06; }
+      } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
 
       // двери и выходы
       if (!G.scenes.busy && !p.roof && !p.jump) {
