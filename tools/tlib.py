@@ -68,3 +68,6 @@ def report():
     print("Проверок: %d, провалено: %d, ошибок JS: %d" % (len(oks) + len(fails), len(fails), len(errors)))
     for e in errors[:10]: print("  JS:", e)
     for f in fails: print("  FAIL:", f)
+    if fails or errors:
+        import sys
+        sys.exit(1)   # ошибки JS тоже валят набор (раньше они только печатались)

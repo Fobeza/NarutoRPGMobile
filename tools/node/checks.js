@@ -455,6 +455,37 @@ check(G.storage.load().vars.day === 40, 'восстановление из ре�
 const fixed = G.game.fix({ started: true, hero: { name: 'Старое' }, flags: {}, vars: { day: 5, min: 600 }, inv: {}, quests: {}, log: [] });
 check(fixed.vars.money != null && fixed.fog != null && fixed.daily != null, 'G.game.fix() дополняет старое сохранение');
 
+// аудит B03–B05: структура кода, независимые снимки в памяти, свежее состояние при отказе записи
+check(G.storage.importCode('WOF1:' + Buffer.from(JSON.stringify({ v: 2, state: { vars: 'broken', hero: {} } })).toString('base64')) === false, 'импорт с неверными типами отклоняется');
+check(G.storage.importCode('WOF1:' + Buffer.from(JSON.stringify({ v: 99, state: loaded })).toString('base64')) === false, 'импорт будущей версии отклоняется');
+{
+  G.storage.wipe();
+  const st = JSON.parse(JSON.stringify(loaded));
+  G.storage.save(st, { backup: true });
+  st.vars.day = 50; st.vars.money = 1;
+  check(G.storage.backupInfo().day === 40 && G.storage.load().vars.day === 40, 'снимок в памяти не меняется вместе с живым состоянием');
+  G.storage.wipe();
+}
+
+// аудит B09/B10: награды дружбы за все пересечённые уровни, каждая один раз
+{
+  h.seed((st) => { st.vars.friend_naruto = 14; });
+  G.state.frQueue = []; G.state.flags = {};
+  G.friends.add('naruto', 8);
+  const q1 = G.state.frQueue.filter((x) => x.startsWith('fr_naruto_')).length;
+  G.state.vars.friend_naruto = 14; G.friends.add('naruto', 1); G.state.vars.friend_naruto = 14; G.friends.add('naruto', 1);
+  const q2 = G.state.frQueue.filter((x) => x.startsWith('fr_naruto_')).length;
+  check(G.state.frQueue.includes('fr_naruto_3') && q2 === q1, `дружба 14→22: награда пропущенного уровня 3 выдана, повторов нет (${q1}/${q2})`);
+}
+
+// аудит B08: сон на учебный день без урока — прогул
+{
+  h.seed((st) => { st.vars.day = 8; st.vars.min = 9 * 60; });
+  G.state.started = true; G.state.daily = {}; G.state.vars.miss = 0;
+  G.game.sleep();
+  check(G.state.vars.miss === 1, 'сон вместо урока засчитывается как прогул');
+}
+
 // ─────────── итог ───────────
 say('');
 say(`ИТОГ: ✔ ${oks}  ✘ ${fails}`);

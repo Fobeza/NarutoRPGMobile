@@ -90,9 +90,10 @@ G.academy = {
     _dlg(G.script.library[p.intro] ? p.intro : 'les_generic', lecture);
   },
   // проверка прогула (раз в день в 9:30)
-  checkSkip() {
+  // force — конец дня (сон): урок не посещён → прогул, даже если время прыгнуло мимо окна 9:30
+  checkSkip(force) {
     const v = G.state.vars, d = G.state.daily;
-    if (this.isSchoolDay() && v.min >= 9 * _H + 30 && v.min < 13 * _H && !d.lesson && !d.missed) {
+    if (this.isSchoolDay() && (force || v.min >= 9 * _H + 30) && !d.lesson && !d.missed) {
       d.missed = 1; v.miss = (v.miss || 0) + 1; G.friends.add('iruka', -1);
       const w = _world(); w && w.showToast && w.showToast('Ты прогулял урок! Ирука недоволен.');
       G.game.note('Прогул урока');
@@ -137,6 +138,8 @@ G.story = {
     if (f.st_bells && !f.bells_done && v.day <= 47) undo('st_bells', 'колокольчики');
     // экзамен оценён, но диалог с результатом не дошёл до «выпускник»
     if (v.exam != null && v.exam_pass && !f.graduated) { f.graduated = 1; if (v.exam >= 80) f.best = 1; fixes.push('результат экзамена'); }
+    // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
+    if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
     if (d.lessonRun) { delete d.lesson; delete d.lessonRun; fixes.push('урок'); }
     if (fixes.length) console.info('Восстановлено после прерывания:', fixes.join(', '));
     return fixes;
@@ -148,6 +151,8 @@ G.story = {
     while (st.frQueue && st.frQueue.length && !G.script.library[st.frQueue[0]]) st.frQueue.shift();
     if (st.frQueue && st.frQueue.length) { _dlg(st.frQueue.shift()); return true; }
     const m = world.map;
+    // Мизуки побеждён, а титры не показаны (закрыли игру посреди эпилога) — показываем их
+    if (f.st_night && f.mizuki_beaten && !f.game_clear) { G.scenes.fadeTo(G.scenes.make('ending')); return true; }
     // урок
     if (G.academy.lessonNow() && G.academy.inClass()) { G.academy.start(world); return true; }
     if (v.makeup) { (st.makeupQ = st.makeupQ || []).push(v.makeup); v.makeup = 0; }   // старые сохранения

@@ -12,7 +12,13 @@ G.scenes.register('menu', () => {
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение', act: () => G.scenes.push(G.scenes.make('savemenu')) },
-    { label: 'В главное меню', act: () => G.scenes.fadeTo(G.scenes.make('title')) },
+    { label: 'В главное меню', act: () => {
+      // «Продолжить» грузит слот — без сохранения тут пропали бы последние награды и позиция
+      const w = G.scenes.stack.find((q) => q.name === 'world');
+      if (w && w.savePos) w.savePos();
+      if (G.state.started) G.storage.save(G.state);
+      G.scenes.fadeTo(G.scenes.make('title'));
+    } },
   ];
 
   return {

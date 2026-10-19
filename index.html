@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '1.4', version: 'd5ea36d8', date: '2026-10-19 16:50', debug: false };
+const BUILD = { release: '1.4', version: '237ea254', date: '2026-10-19 18:28', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -750,33 +750,60 @@ G.storage = {
 
   // Если браузер не даёт localStorage (файл в Safari, приватный режим, запрет cookies), держим копию в памяти
   // и в window.name — так игра переживёт перезагрузку страницы в этой вкладке; для надёжности есть «Код сохранения».
+  // В памяти лежат СТРОКИ (независимые снимки), а не ссылки на живой state.
+  // _fresh[key] — запись в localStorage не удалась: актуальная копия только в памяти и она важнее старой из localStorage.
   _mem: {},
+  _fresh: {},
   persistent: true,
   _wn() { try { return JSON.parse(window.name || '{}') || {}; } catch (_) { return {}; } },
-  _get(key) {
-    try { const s = localStorage.getItem(key); if (s) return JSON.parse(s); } catch (_) {}
+  _text(key) {
+    if (this._fresh[key] && this._mem[key]) return this._mem[key];
+    try { const s = localStorage.getItem(key); if (s) return s; } catch (_) {}
     if (this._mem[key]) return this._mem[key];
-    const w = this._wn(); return w[key] || null;
+    const w = this._wn(); return w[key] ? JSON.stringify(w[key]) : null;
+  },
+  _get(key) {
+    const s = this._text(key);
+    if (!s) return null;
+    try { return JSON.parse(s); } catch (_) { return null; }
   },
   _set(key, obj) {
-    try { localStorage.setItem(key, JSON.stringify(obj)); this._mem[key] = obj; this.persistent = true; return true; } catch (_) {}
-    this._mem[key] = obj; this.persistent = false;
+    const s = JSON.stringify(obj);
+    this._mem[key] = s;
+    try { localStorage.setItem(key, s); delete this._fresh[key]; this.persistent = true; return true; } catch (_) {}
+    this._fresh[key] = true; this.persistent = false;
     try { const w = this._wn(); w[key] = obj; window.name = JSON.stringify(w); } catch (_) {}
     return false;
   },
-  // текст сохранения для экспорта: из localStorage или из памяти
-  _raw(key) {
-    try { const s = localStorage.getItem(key); if (s) return s; } catch (_) {}
-    const o = this._get(key); return o ? JSON.stringify(o) : null;
-  },
+  // текст сохранения для экспорта
+  _raw(key) { return this._text(key); },
 
-  hasSave() { return !!(this._get(this.KEY_SAVE) || this._get(this.KEY_BACKUP)); },
+  // Проверка структуры: числа там, где числа, объекты там, где объекты; версия не новее нашей
+  valid(d) {
+    const obj = (o) => o && typeof o === 'object' && !Array.isArray(o);
+    if (!obj(d) || !obj(d.state)) return false;
+    if (d.v != null && (typeof d.v !== 'number' || d.v > this.SAVE_VERSION)) return false;
+    const st = d.state;
+    if (!obj(st.vars) || !obj(st.hero)) return false;
+    for (const k of ['day', 'min', 'money']) if (st.vars[k] != null && !Number.isFinite(st.vars[k])) return false;
+    if (st.vars.day != null && (st.vars.day < 1 || st.vars.day > 9999)) return false;
+    for (const k of ['flags', 'inv', 'quests', 'daily']) if (st[k] != null && !obj(st[k])) return false;
+    if (st.hero.name != null && typeof st.hero.name !== 'string') return false;
+    if (st.hero.skills != null && !Array.isArray(st.hero.skills)) return false;
+    if (st.hero.stats != null && !obj(st.hero.stats)) return false;
+    // пробная починка на копии: если fix() падает — сохранение непригодно
+    try { if (G.game && G.game.fix) G.game.fix(JSON.parse(JSON.stringify(st))); } catch (_) { return false; }
+    return true;
+  },
+  _good(key) { const d = this._get(key); return d && this.valid(d) ? d : null; },
+
+  hasSave() { return !!(this._good(this.KEY_SAVE) || this._good(this.KEY_BACKUP)); },
 
   // opts.backup — ещё и резервная копия (утро нового дня)
   save(state, opts = {}) {
     const data = { v: this.SAVE_VERSION, t: Date.now(), build: BUILD.version, state };
     const ok = this._set(this.KEY_SAVE, data);
-    if (opts.backup || !this._get(this.KEY_BACKUP)) this._set(this.KEY_BACKUP, data);
+    if (opts.backup || !this._good(this.KEY_BACKUP)) this._set(this.KEY_BACKUP, data);
     if (!ok && !this._warned) {
       this._warned = true;
       const w = G.scenes && G.scenes.stack && G.scenes.stack.find((q) => q.name === 'world');
@@ -785,19 +812,20 @@ G.storage = {
     return ok;
   },
   backupInfo() {
-    const d = this._get(this.KEY_BACKUP);
-    return d && d.state ? { day: d.state.vars.day, min: d.state.vars.min, t: d.t } : null;
+    const d = this._good(this.KEY_BACKUP);
+    return d ? { day: d.state.vars.day, min: d.state.vars.min, t: d.t } : null;
   },
   restoreBackup() {
-    const d = this._get(this.KEY_BACKUP);
-    if (!d || !d.state) return false;
-    return this._set(this.KEY_SAVE, d);
+    const d = this._good(this.KEY_BACKUP);
+    if (!d) return false;
+    this._set(this.KEY_SAVE, d);   // не удалась постоянная запись — копия всё равно в памяти и загрузится
+    return true;
   },
 
   load() {
-    let d = this._get(this.KEY_SAVE);
-    if (!d || !d.state) d = this._get(this.KEY_BACKUP); // основная копия повреждена → резервная
-    if (!d || !d.state) return null;
+    let d = this._good(this.KEY_SAVE);
+    if (!d) d = this._good(this.KEY_BACKUP); // основная копия повреждена → резервная
+    if (!d) return null;
     return this.migrate(d).state;
   },
 
@@ -810,7 +838,7 @@ G.storage = {
 
   wipe() {
     try { localStorage.removeItem(this.KEY_SAVE); localStorage.removeItem(this.KEY_BACKUP); } catch (_) {}
-    delete this._mem[this.KEY_SAVE]; delete this._mem[this.KEY_BACKUP];
+    delete this._mem[this.KEY_SAVE]; delete this._mem[this.KEY_BACKUP]; this._fresh = {};
     try { const w = this._wn(); delete w[this.KEY_SAVE]; delete w[this.KEY_BACKUP]; window.name = JSON.stringify(w); } catch (_) {}
   },
 
@@ -826,9 +854,9 @@ G.storage = {
       if (!code.startsWith('WOF1:')) return false;
       const s = decodeURIComponent(escape(atob(code.slice(5))));
       const d = JSON.parse(s);
-      if (!d.state || !d.state.vars || !d.state.hero) return false;
+      if (!this.valid(d)) return false;
       // текущую игру — в резервную копию, чтобы импорт можно было откатить
-      const cur = this._raw(this.KEY_SAVE); if (cur) this._set(this.KEY_BACKUP, JSON.parse(cur));
+      const cur = this._good(this.KEY_SAVE); if (cur) this._set(this.KEY_BACKUP, cur);
       this._set(this.KEY_SAVE, d);
       return true;
     } catch (_) { return false; }
@@ -4569,6 +4597,11 @@ G.game = (() => {
         st.quests.day1 = { st: f.day2_intro ? 'done' : 'active', step, day: 1 };
         if (!f.day2_intro) st.tracked = 'day1';
       }
+      // старые сохранения: награды дружбы за уже достигнутые уровни считаем выданными (иначе выдадутся повторно)
+      if (st.started && !st.flags.frd_init && G.FRIENDS) {
+        st.flags.frd_init = 1;
+        for (const id of Object.keys(G.FRIENDS)) for (let l = 1; l <= Math.min(5, Math.floor((st.vars['friend_' + id] || 0) / 5)); l++) st.flags['frd_' + id + '_' + l] = 1;
+      }
       if (st.started && G.story && G.story.recover) G.story.recover(st);
       return st;
     },
@@ -4682,6 +4715,7 @@ G.game = (() => {
     // Отбой до 23:00 — энергия 100; каждый час позже −10 (Ранняя пташка: −5), но не меньше 50.
     sleep(opts = {}) {
       const v = this.v, H = G.hero;
+      if (G.academy && G.state.started) G.academy.checkSkip(true);   // сон не отменяет прогул
       const bed = v.min;
       const lateH = Math.max(0, bed - 23 * 60) / 60;
       const wakeEnergy = opts.faint ? 50 : Math.round(G.util.clamp(100 - lateH * (H.has('early_bird') ? 5 : 10), 50, 100));
@@ -5330,7 +5364,10 @@ G.quests = (() => {
       G.state.flags['q_' + id] = 1;
       const r = d.reward || {};
       if (r.money) G.game.earn(r.money);
-      for (const [k, v] of Object.entries(r.vars || {})) G.state.vars[k] = (G.state.vars[k] || 0) + v;
+      for (const [k, v] of Object.entries(r.vars || {})) {
+        if (k.startsWith('friend_')) G.friends.add(k.slice(7), v, 'quest');   // через общую систему: бонусы и награды уровней
+        else G.state.vars[k] = (G.state.vars[k] || 0) + v;
+      }
       G.game.note(`${G.QUEST_CATS[d.cat].icon} ${d.title}`);
       if (G.state.tracked === id) G.state.tracked = this.activeList()[0] || null;
       emit('done', id);
@@ -5710,7 +5747,7 @@ G.script.actions.home = () => { G.game.pending = 'home'; };
 G.script.actions.charcreate = () => { G.game.pending = 'charcreate'; };
 // пролог: ввод имени героя (сцена nameinput) и начало игры (с этого момента работают автосохранения)
 G.script.actions.askname = () => { G.game.pending = 'askname'; };
-G.script.actions.begin = () => { G.state.started = true; G.storage.save(G.state); };
+G.script.actions.begin = () => { G.state.started = true; G.state.flags.frd_init = 1; G.storage.save(G.state); };
 (() => {
   const prev = G.script.extraTest;
   G.script.extraTest = (cond) => {
@@ -5816,7 +5853,7 @@ G.train = {
       v.energy = Math.max(0, v.energy - t.energy * (opts.partner ? 0.8 : 1)); v.food = Math.max(0, v.food - 4);
       G.game.mood(score >= 0.7 ? 3 : 0);
       v.trainings = (v.trainings || 0) + 1;
-      if (opts.partner) G.friends && G.friends.add(opts.partner, 2, 'train');
+      if (opts.partner) { d['trw_' + opts.partner] = 1; G.friends && G.friends.add(opts.partner, 2, 'train'); }   // попытка дня тратится только на состоявшуюся тренировку
       const rate = Math.round(score * 100);
       const lines = gained.map(([st, x]) => { const S = G.STATS.find((q) => q.id === st); return `${S.name} +${x} опыта (${G.state.vars['xp_' + st] | 0}/${this.need(st)})`; });
       const tip = (d['tr_' + id] >= 3) ? ' Одно и то же надоедает — чередуй тренировки!' : '';
@@ -5872,25 +5909,30 @@ G.friends = {
   KEY_ITEMS: ['parcel', 'fishing_rod', 'book_history', 'book_traps', 'map_secrets'],
   pts(id) { return G.state.vars['friend_' + id] || 0; },
   level(id) { return Math.min(5, Math.floor(this.pts(id) / 5)); },
+  // Возвращает фактическую прибавку (с учётом «Обаяния» и нижней границы 0)
   add(id, n, why) {
-    if (!G.FRIENDS[id] || !n) return;
+    if (!G.FRIENDS[id] || !n) return 0;
     if (n > 0 && G.hero.has('charm')) n = Math.round(n * 1.25 * 10) / 10;
-    const before = this.level(id);
-    G.state.vars['friend_' + id] = Math.max(0, Math.round((this.pts(id) + n) * 10) / 10);
+    const before = this.level(id), p0 = this.pts(id);
+    G.state.vars['friend_' + id] = Math.max(0, Math.round((p0 + n) * 10) / 10);
     const after = this.level(id);
     if (after > before) {
       G.game.note(`Дружба с ${G.chars.nameOf(id)}: уровень ${after}`);
       const w = G.scenes.stack.find((s) => s.name === 'world'); w && w.showToast && w.showToast(`♥ ${G.chars.nameOf(id)}: дружба ${after}`);
-      const sc = 'fr_' + id + '_' + after;
-      if (G.script.library[sc]) { G.state.vars.fr_pending = 1; (G.state.frQueue = G.state.frQueue || []).push(sc); }
     }
+    // награды за ВСЕ достигнутые уровни, каждая — один раз (флаг frd_), даже если дружба потом падала и росла снова
+    for (let l = 1; l <= after; l++) {
+      const sc = 'fr_' + id + '_' + l, fl = 'frd_' + id + '_' + l;
+      if (G.script.library[sc] && !G.state.flags[fl]) { G.state.flags[fl] = 1; G.state.vars.fr_pending = 1; (G.state.frQueue = G.state.frQueue || []).push(sc); }
+    }
+    return Math.round((this.pts(id) - p0) * 10) / 10;
   },
   gift(id, item) {
     const f = G.FRIENDS[id], bday = G.calendar && G.calendar.birthday() === id;
     let n = 1, react = 'Спасибо.';
     if (f.love.includes(item)) { n = 4; react = 'love'; } else if ((f.like || []).includes(item)) { n = 2; react = 'like'; } else if ((f.hate || []).includes(item)) { n = -1; react = 'hate'; } else react = 'ok';
     if (bday && n > 0) n *= 2;
-    G.game.give(item, -1); this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1;
+    G.game.give(item, -1); n = this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1;
     return { react, n, bday };
   },
   // командный путь для эпилога
@@ -5930,7 +5972,7 @@ G.friends = {
           const txt = { love: 'Это же... именно то, что я хотел(а)! Спасибо огромное!', like: 'О, здорово! Спасибо!', ok: 'Спасибо, приятно.', hate: 'Э-э... ну... спасибо, наверное.' }[r.react];
           world.talk([{ who: id, text: txt }, { text: `${r.bday ? 'День рождения — подарок ценится вдвойне! ' : ''}Дружба ${r.n > 0 ? '+' + r.n : r.n}.` }]);
         }));
-      } else if (a === 'train') { d['trw_' + id] = 1; G.train.start(f.train, world, { partner: id }); }
+      } else if (a === 'train') { G.train.start(f.train, world, { partner: id }); }
       else if (a === 'spar') {
         d['spar_' + id] = 1;
         G.flow.battle({ enemy: f.spar, mode: 'spar', terrain: 'field', onEnd: (res) => {
@@ -6038,9 +6080,10 @@ G.academy = {
     _dlg(G.script.library[p.intro] ? p.intro : 'les_generic', lecture);
   },
   // проверка прогула (раз в день в 9:30)
-  checkSkip() {
+  // force — конец дня (сон): урок не посещён → прогул, даже если время прыгнуло мимо окна 9:30
+  checkSkip(force) {
     const v = G.state.vars, d = G.state.daily;
-    if (this.isSchoolDay() && v.min >= 9 * _H + 30 && v.min < 13 * _H && !d.lesson && !d.missed) {
+    if (this.isSchoolDay() && (force || v.min >= 9 * _H + 30) && !d.lesson && !d.missed) {
       d.missed = 1; v.miss = (v.miss || 0) + 1; G.friends.add('iruka', -1);
       const w = _world(); w && w.showToast && w.showToast('Ты прогулял урок! Ирука недоволен.');
       G.game.note('Прогул урока');
@@ -6085,6 +6128,8 @@ G.story = {
     if (f.st_bells && !f.bells_done && v.day <= 47) undo('st_bells', 'колокольчики');
     // экзамен оценён, но диалог с результатом не дошёл до «выпускник»
     if (v.exam != null && v.exam_pass && !f.graduated) { f.graduated = 1; if (v.exam >= 80) f.best = 1; fixes.push('результат экзамена'); }
+    // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
+    if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
     if (d.lessonRun) { delete d.lesson; delete d.lessonRun; fixes.push('урок'); }
     if (fixes.length) console.info('Восстановлено после прерывания:', fixes.join(', '));
     return fixes;
@@ -6096,6 +6141,8 @@ G.story = {
     while (st.frQueue && st.frQueue.length && !G.script.library[st.frQueue[0]]) st.frQueue.shift();
     if (st.frQueue && st.frQueue.length) { _dlg(st.frQueue.shift()); return true; }
     const m = world.map;
+    // Мизуки побеждён, а титры не показаны (закрыли игру посреди эпилога) — показываем их
+    if (f.st_night && f.mizuki_beaten && !f.game_clear) { G.scenes.fadeTo(G.scenes.make('ending')); return true; }
     // урок
     if (G.academy.lessonNow() && G.academy.inClass()) { G.academy.start(world); return true; }
     if (v.makeup) { (st.makeupQ = st.makeupQ || []).push(v.makeup); v.makeup = 0; }   // старые сохранения
@@ -6777,7 +6824,7 @@ G.sim = {
         else if (s === 'rhythm') { const x = R(); S.sim.rhythm(x < 0.05 + 0.5 * sk ? 'crit' : x < 0.45 + 0.45 * sk ? 'ok' : 'weak'); }
         else if (s === 'seals') { const x = R(), c = S.P.ctrl * 0.02; S.sim.seals(x < 0.08 + 0.55 * sk + c ? 'perfect' : x < 0.7 + 0.28 * sk + c ? 'ok' : 'fail'); }
         else if (s === 'react') this.react(S, sk);
-        else if (s === 'target') S.sim.target(R() < (cfg.skills || []).includes('analyst') ? 0.6 : 0.34);
+        else if (s === 'target') S.sim.target(R() < ((cfg.skills || []).includes('analyst') ? 0.6 : 0.34));
         else if (s === 'moment') S.sim.moment();
         S.update(0.1);
       }
@@ -15098,7 +15145,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (f === E && Math.random() < E.know * 0.06) { say(`${E.name} замечает ловушку и обходит её!`, PAL.light); traps.splice(i, 1); return false; }
     if (f === P && P.know >= 6 && !t.seen && Math.random() < 0.5) { say('Ты замечаешь ловушку под ногами!', PAL.light); t.seen = true; return false; }
     traps.splice(i, 1);
-    if (t.kind === 'tag') { const d = 22; f.hp -= d; pop(f, '-' + d, '#ff6a3a', true); say('БАБАХ! Взрывная печать!', PAL.orange); fx.shake = 0.4; fx.flash = 0.2; sfx.big(); puff(f.pos, 16); burst(f.pos, '#ff9030', 40); impact(f, 22, '#ffb040'); }
+    if (t.kind === 'tag') { const d = 22; f.hp -= d; pop(f, '-' + d, '#ff6a3a', true); say('БАБАХ! Взрывная печать!', PAL.orange); fx.shake = 0.4; fx.flash = 0.2; sfx.big(); puff(f.pos, 16); burst(f.pos, '#ff9030', 40); impact(f, 22, '#ffb040');
+      if (f === P && P.hp <= 0 && Hh.has('tough') && !usedTough) { usedTough = true; P.hp = 1; say('Крепкий орешек! Ты устоял на ногах с 1 HP!', PAL.yellow); } }
     else { f.s.bound = 2; say(`${f === P ? 'Ты попал' : f.name + ' попадает'} в проволочную ловушку!`, PAL.light); sfx.clang(); }
     return true;
   }
@@ -16737,7 +16785,13 @@ G.scenes.register('menu', () => {
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение', act: () => G.scenes.push(G.scenes.make('savemenu')) },
-    { label: 'В главное меню', act: () => G.scenes.fadeTo(G.scenes.make('title')) },
+    { label: 'В главное меню', act: () => {
+      // «Продолжить» грузит слот — без сохранения тут пропали бы последние награды и позиция
+      const w = G.scenes.stack.find((q) => q.name === 'world');
+      if (w && w.savePos) w.savePos();
+      if (G.state.started) G.storage.save(G.state);
+      G.scenes.fadeTo(G.scenes.make('title'));
+    } },
   ];
 
   return {

@@ -32,25 +32,30 @@ G.friends = {
   KEY_ITEMS: ['parcel', 'fishing_rod', 'book_history', 'book_traps', 'map_secrets'],
   pts(id) { return G.state.vars['friend_' + id] || 0; },
   level(id) { return Math.min(5, Math.floor(this.pts(id) / 5)); },
+  // Возвращает фактическую прибавку (с учётом «Обаяния» и нижней границы 0)
   add(id, n, why) {
-    if (!G.FRIENDS[id] || !n) return;
+    if (!G.FRIENDS[id] || !n) return 0;
     if (n > 0 && G.hero.has('charm')) n = Math.round(n * 1.25 * 10) / 10;
-    const before = this.level(id);
-    G.state.vars['friend_' + id] = Math.max(0, Math.round((this.pts(id) + n) * 10) / 10);
+    const before = this.level(id), p0 = this.pts(id);
+    G.state.vars['friend_' + id] = Math.max(0, Math.round((p0 + n) * 10) / 10);
     const after = this.level(id);
     if (after > before) {
       G.game.note(`Дружба с ${G.chars.nameOf(id)}: уровень ${after}`);
       const w = G.scenes.stack.find((s) => s.name === 'world'); w && w.showToast && w.showToast(`♥ ${G.chars.nameOf(id)}: дружба ${after}`);
-      const sc = 'fr_' + id + '_' + after;
-      if (G.script.library[sc]) { G.state.vars.fr_pending = 1; (G.state.frQueue = G.state.frQueue || []).push(sc); }
     }
+    // награды за ВСЕ достигнутые уровни, каждая — один раз (флаг frd_), даже если дружба потом падала и росла снова
+    for (let l = 1; l <= after; l++) {
+      const sc = 'fr_' + id + '_' + l, fl = 'frd_' + id + '_' + l;
+      if (G.script.library[sc] && !G.state.flags[fl]) { G.state.flags[fl] = 1; G.state.vars.fr_pending = 1; (G.state.frQueue = G.state.frQueue || []).push(sc); }
+    }
+    return Math.round((this.pts(id) - p0) * 10) / 10;
   },
   gift(id, item) {
     const f = G.FRIENDS[id], bday = G.calendar && G.calendar.birthday() === id;
     let n = 1, react = 'Спасибо.';
     if (f.love.includes(item)) { n = 4; react = 'love'; } else if ((f.like || []).includes(item)) { n = 2; react = 'like'; } else if ((f.hate || []).includes(item)) { n = -1; react = 'hate'; } else react = 'ok';
     if (bday && n > 0) n *= 2;
-    G.game.give(item, -1); this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1;
+    G.game.give(item, -1); n = this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1;
     return { react, n, bday };
   },
   // командный путь для эпилога
@@ -90,7 +95,7 @@ G.friends = {
           const txt = { love: 'Это же... именно то, что я хотел(а)! Спасибо огромное!', like: 'О, здорово! Спасибо!', ok: 'Спасибо, приятно.', hate: 'Э-э... ну... спасибо, наверное.' }[r.react];
           world.talk([{ who: id, text: txt }, { text: `${r.bday ? 'День рождения — подарок ценится вдвойне! ' : ''}Дружба ${r.n > 0 ? '+' + r.n : r.n}.` }]);
         }));
-      } else if (a === 'train') { d['trw_' + id] = 1; G.train.start(f.train, world, { partner: id }); }
+      } else if (a === 'train') { G.train.start(f.train, world, { partner: id }); }
       else if (a === 'spar') {
         d['spar_' + id] = 1;
         G.flow.battle({ enemy: f.spar, mode: 'spar', terrain: 'field', onEnd: (res) => {

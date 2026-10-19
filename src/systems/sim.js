@@ -63,7 +63,7 @@ G.sim = {
         else if (s === 'rhythm') { const x = R(); S.sim.rhythm(x < 0.05 + 0.5 * sk ? 'crit' : x < 0.45 + 0.45 * sk ? 'ok' : 'weak'); }
         else if (s === 'seals') { const x = R(), c = S.P.ctrl * 0.02; S.sim.seals(x < 0.08 + 0.55 * sk + c ? 'perfect' : x < 0.7 + 0.28 * sk + c ? 'ok' : 'fail'); }
         else if (s === 'react') this.react(S, sk);
-        else if (s === 'target') S.sim.target(R() < (cfg.skills || []).includes('analyst') ? 0.6 : 0.34);
+        else if (s === 'target') S.sim.target(R() < ((cfg.skills || []).includes('analyst') ? 0.6 : 0.34));
         else if (s === 'moment') S.sim.moment();
         S.update(0.1);
       }

@@ -132,7 +132,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (f === E && Math.random() < E.know * 0.06) { say(`${E.name} замечает ловушку и обходит её!`, PAL.light); traps.splice(i, 1); return false; }
     if (f === P && P.know >= 6 && !t.seen && Math.random() < 0.5) { say('Ты замечаешь ловушку под ногами!', PAL.light); t.seen = true; return false; }
     traps.splice(i, 1);
-    if (t.kind === 'tag') { const d = 22; f.hp -= d; pop(f, '-' + d, '#ff6a3a', true); say('БАБАХ! Взрывная печать!', PAL.orange); fx.shake = 0.4; fx.flash = 0.2; sfx.big(); puff(f.pos, 16); burst(f.pos, '#ff9030', 40); impact(f, 22, '#ffb040'); }
+    if (t.kind === 'tag') { const d = 22; f.hp -= d; pop(f, '-' + d, '#ff6a3a', true); say('БАБАХ! Взрывная печать!', PAL.orange); fx.shake = 0.4; fx.flash = 0.2; sfx.big(); puff(f.pos, 16); burst(f.pos, '#ff9030', 40); impact(f, 22, '#ffb040');
+      if (f === P && P.hp <= 0 && Hh.has('tough') && !usedTough) { usedTough = true; P.hp = 1; say('Крепкий орешек! Ты устоял на ногах с 1 HP!', PAL.yellow); } }
     else { f.s.bound = 2; say(`${f === P ? 'Ты попал' : f.name + ' попадает'} в проволочную ловушку!`, PAL.light); sfx.clang(); }
     return true;
   }

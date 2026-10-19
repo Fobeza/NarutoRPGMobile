@@ -52,6 +52,11 @@ G.game = (() => {
         st.quests.day1 = { st: f.day2_intro ? 'done' : 'active', step, day: 1 };
         if (!f.day2_intro) st.tracked = 'day1';
       }
+      // старые сохранения: награды дружбы за уже достигнутые уровни считаем выданными (иначе выдадутся повторно)
+      if (st.started && !st.flags.frd_init && G.FRIENDS) {
+        st.flags.frd_init = 1;
+        for (const id of Object.keys(G.FRIENDS)) for (let l = 1; l <= Math.min(5, Math.floor((st.vars['friend_' + id] || 0) / 5)); l++) st.flags['frd_' + id + '_' + l] = 1;
+      }
       if (st.started && G.story && G.story.recover) G.story.recover(st);
       return st;
     },
@@ -165,6 +170,7 @@ G.game = (() => {
     // Отбой до 23:00 — энергия 100; каждый час позже −10 (Ранняя пташка: −5), но не меньше 50.
     sleep(opts = {}) {
       const v = this.v, H = G.hero;
+      if (G.academy && G.state.started) G.academy.checkSkip(true);   // сон не отменяет прогул
       const bed = v.min;
       const lateH = Math.max(0, bed - 23 * 60) / 60;
       const wakeEnergy = opts.faint ? 50 : Math.round(G.util.clamp(100 - lateH * (H.has('early_bird') ? 5 : 10), 50, 100));

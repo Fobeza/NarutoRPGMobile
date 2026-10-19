@@ -8,7 +8,7 @@
 Сам поднимает локальный сервер на порту 8765 (если он ещё не запущен) из корня репозитория.
 В конце печатает сводку: что прошло, что упало. Код выхода 0 — всё зелёное.
 """
-import os, subprocess, sys, time, urllib.request
+import os, subprocess, sys, tempfile, time, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(ROOT, "tools")
@@ -78,12 +78,12 @@ def main():
             r = subprocess.run([sys.executable, os.path.join(TOOLS, t)], capture_output=True, text=True, timeout=1200)
             out = r.stdout + r.stderr
             bad = [l.strip() for l in out.splitlines()
-                   if ("✘" in l and not l.strip().startswith("ИТОГ")) or "Traceback" in l or "Error:" in l]
+                   if ("✘" in l and not l.strip().startswith("ИТОГ")) or "Traceback" in l or "Error:" in l or l.strip().startswith("JS:")]
             for l in bad[:8]:
                 print("   " + l)
             results.append((t, not bad and r.returncode == 0))
         if not QUICK:
-            for t, args in [("render_map.py", ["/tmp/konoha_map.png"]), ("audit_rooms.py", [])]:
+            for t, args in [("render_map.py", [os.path.join(tempfile.gettempdir(), "konoha_map.png")]), ("audit_rooms.py", [])]:
                 if not browser:
                     results.append((t + " (пропущено: нет Playwright)", True))
                     continue
@@ -92,6 +92,8 @@ def main():
                 tail = r.stdout.strip().splitlines()[-3:]
                 for l in tail:
                     print("   " + l)
+                if r.returncode != 0:
+                    for l in (r.stderr or "").strip().splitlines()[-6:]: print("   ! " + l)   # причина падения
                 results.append((t, r.returncode == 0))
     finally:
         if srv:

@@ -70,7 +70,7 @@ G.script.actions.home = () => { G.game.pending = 'home'; };
 G.script.actions.charcreate = () => { G.game.pending = 'charcreate'; };
 // пролог: ввод имени героя (сцена nameinput) и начало игры (с этого момента работают автосохранения)
 G.script.actions.askname = () => { G.game.pending = 'askname'; };
-G.script.actions.begin = () => { G.state.started = true; G.storage.save(G.state); };
+G.script.actions.begin = () => { G.state.started = true; G.state.flags.frd_init = 1; G.storage.save(G.state); };
 (() => {
   const prev = G.script.extraTest;
   G.script.extraTest = (cond) => {

@@ -51,7 +51,10 @@ G.quests = (() => {
       G.state.flags['q_' + id] = 1;
       const r = d.reward || {};
       if (r.money) G.game.earn(r.money);
-      for (const [k, v] of Object.entries(r.vars || {})) G.state.vars[k] = (G.state.vars[k] || 0) + v;
+      for (const [k, v] of Object.entries(r.vars || {})) {
+        if (k.startsWith('friend_')) G.friends.add(k.slice(7), v, 'quest');   // через общую систему: бонусы и награды уровней
+        else G.state.vars[k] = (G.state.vars[k] || 0) + v;
+      }
       G.game.note(`${G.QUEST_CATS[d.cat].icon} ${d.title}`);
       if (G.state.tracked === id) G.state.tracked = this.activeList()[0] || null;
       emit('done', id);
