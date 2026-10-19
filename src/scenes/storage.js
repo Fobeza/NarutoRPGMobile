@@ -30,8 +30,11 @@ G.scenes.register('storage', () => {
       if (In.repeat('up', dt) && n) { sel[col] = (sel[col] + n - 1) % n; AU.sfx.blip(); }
       if (In.repeat('down', dt) && n) { sel[col] = (sel[col] + 1) % n; AU.sfx.blip(); }
       if (In.tapNow) {
-        const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, i = Math.floor((tp.y - TOP) / ROW) + scroll[c];
-        if (tp.y > TOP - 2 && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }
+        const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, li = Math.floor((tp.y - TOP) / ROW), i = li + scroll[c];
+        const px = c * (W / 2) + 4 + (W / 2 - 7) - 18, bot = TOP + rows * ROW;   // стрелки ▲/▼ в правом углу колонки
+        if (tp.x >= px && tp.y >= 38 && tp.y < 52 && scroll[c] > 0) { col = c; sel[c] = Math.max(0, sel[c] - rows); AU.sfx.blip(); }
+        else if (tp.x >= px && tp.y >= bot - 6 && tp.y < bot + 8 && scroll[c] + rows < L[c].length) { col = c; sel[c] = Math.min(L[c].length - 1, sel[c] + rows); AU.sfx.blip(); }
+        else if (tp.y > TOP - 2 && li >= 0 && li < rows && tp.y < bot && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }   // только по видимой строке
       } else if (In.pressed('a') && n) this.move(col, L[col][Math.min(sel[col], n - 1)]);
       for (const c of [0, 1]) {
         const m = lists()[c].length; if (sel[c] >= m) sel[c] = Math.max(0, m - 1);
@@ -49,6 +52,8 @@ G.scenes.register('storage', () => {
         U.panel(ctx, x, 38, w, h, 'frame');
         F.draw(ctx, c ? 'Сундук' : 'Сумка', x + w / 2, 45, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
         if (!L[c].length) F.small.draw(ctx, 'пусто', x + w / 2, TOP + 6, { align: 'center', color: C.inkDim });
+        if (scroll[c] > 0) F.small.draw(ctx, '▲', x + w - 12, 42, { color: C.red });
+        if (scroll[c] + rows < L[c].length) F.small.draw(ctx, '▼', x + w - 12, TOP + rows * ROW - 2, { color: C.red });
         for (let i = 0; i < rows; i++) {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
           const y = TOP + i * ROW, on = c === col && k === sel[c];

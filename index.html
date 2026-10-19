@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '1.4', version: '237ea254', date: '2026-10-19 18:28', debug: false };
+const BUILD = { release: '1.4', version: 'f00eee7e', date: '2026-10-19 18:38', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -13635,9 +13635,13 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         if (I.repeat('right', dt)) { idx = (idx + 1) % n; qty = 1; G.audio.sfx.select(); }
       }
       const inR = (t, r) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y < r.y + r.h;
+      const pageBtn = (d) => ({ x: g.x + g.w - (d > 0 ? 24 : 62), y: g.y + g.h - 13, w: 22, h: 12 });
+      const pages = Math.ceil(n / g.per), pg = Math.floor(idx / g.per);
 
       if (I.tapNow) {
         const t = I.tapNow;
+        // кнопки страниц ◀ ▶ под сеткой (без них товары на дальних страницах недоступны пальцем)
+        if (pages > 1) for (const d of [-1, 1]) if (inR(t, pageBtn(d))) { const np = (pg + d + pages) % pages; idx = Math.min(n - 1, np * g.per); qty = 1; qmode = false; G.audio.sfx.select(); return; }
         // карточка в сетке
         if (t.y > g.y + 6 && t.y < g.y + g.h - 6 && t.x > g.x && t.x < g.x + g.w) {
           const page = Math.floor(idx / g.per) * g.per;
@@ -13693,13 +13697,19 @@ G.scenes.register('shop', (shopId, opts = {}) => {
           { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', outline: C.woodEdge });
       }
       const pages = Math.ceil(items.length / l.per);
-      if (pages > 1) F.small.draw(ctx, `${Math.floor(idx / l.per) + 1}/${pages}`, l.x + l.w - 10, l.y + l.h - 14, { align: 'right', color: C.red });
+      if (pages > 1) {
+        const pb = (d) => ({ x: l.x + l.w - (d > 0 ? 24 : 62), y: l.y + l.h - 13, w: 22, h: 12 });
+        U.button(ctx, pb(-1).x, pb(-1).y, 22, 12, '<', 'normal'); U.button(ctx, pb(1).x, pb(1).y, 22, 12, '>', 'normal');
+        F.small.draw(ctx, `${Math.floor(idx / l.per) + 1}/${pages}`, l.x + l.w - 66, l.y + l.h - 11, { align: 'right', color: C.red });
+      }
 
       // описание, количество, деньги
       const inf = L.info, it = items[idx];
       U.panel(ctx, inf.x, inf.y, inf.w, inf.h, 'frame');
+      // название выбранного товара — до покупки (B24)
+      F.small.draw(ctx, it.name, inf.x + 12, inf.y + 8, { color: C.redDark, maxW: inf.w - 110 });
       const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, 2);
-      textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 10 + i * 12, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
+      textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 20 + i * 11, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
       const qy = inf.y + inf.h - 24;
       if (it.cat === 'food' || it.cat === 'service') {
         const v = G.state.vars;
@@ -13711,7 +13721,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         U.button(ctx, L.plus.x, L.plus.y, L.plus.w, L.plus.h, '+', qty < maxQty(it) ? (qmode ? 'sel' : 'normal') : 'dis');
         F.draw(ctx, '= ' + it.price * qty + ' рё', L.plus.x + L.plus.w + 12, L.minus.y + 6, { color: '#8a5a10' });
         const side = it.pouch ? `подсумок ${G.game.pouchUsed()}/${G.game.pouchMax()}` : `есть ${G.game.count(it.id)}`;
-        F.small.draw(ctx, side, inf.x + inf.w - 12, inf.y + 12 + (textLines.length > 1 ? 12 : 0) + 14, { align: 'right', color: C.inkDim });
+        F.small.draw(ctx, side, inf.x + inf.w - 12, inf.y + 8, { align: 'right', color: C.inkDim });
       }
 
       // кнопки внизу + деньги
@@ -13756,6 +13766,9 @@ G.scenes.register('bag', () => {
       idx = Math.min(idx, L.length - 1);
       if (I.tapNow) {
         const g = this.grid(), t = I.tapNow, per = g.per;
+        const pg = Math.floor(idx / per), pages = Math.ceil(L.length / per);
+        if (t.x >= g.x + g.w - 22 && t.y >= g.y && t.y < g.y + 16 && pg > 0) { idx = (pg - 1) * per; G.audio.sfx.select(); return; }            // ▲ страница назад
+        if (t.x >= g.x + g.w - 22 && t.y >= g.y + g.h - 18 && t.y < g.y + g.h && pg + 1 < pages) { idx = (pg + 1) * per; G.audio.sfx.select(); return; }   // ▼ вперёд
         if (t.x > g.x && t.x < g.x + g.w && t.y > g.y && t.y < g.y + g.h) {
           const k = Math.floor((t.y - g.y - 6) / g.cardH) * g.cols + Math.floor((t.x - g.x - 6) / g.cardW);
           const i = Math.floor(idx / per) * per + k;
@@ -14198,11 +14211,16 @@ G.scenes.register('charcreate', (onDone) => {
   const picked = [];
   let page = 0, idx = 0, msg = null, msgT = 0, confirm = false;
   const left = () => G.STAT_POINTS - G.STATS.reduce((a, s) => a + vals[s.id] - B, 0);
-  const ROW = 20, TOP = 46;
+  let ROW = 20;
+  const TOP = 46;
+  // высота строки подстраивается под экран: 10 строк + описание внизу должны поместиться и в «КРУПНО» на коротком экране
+  const fit = () => { ROW = Math.max(15, Math.min(20, Math.floor((G.screen.H - TOP - 60) / Math.max(G.STATS.length + 2, G.SKILLS.length + 1)))); };
   const say = (t) => { msg = t; msgT = 1.6; };
 
   const S = {
     name: 'charcreate',
+    // «Назад» есть только на втором шаге (на первом ему некуда возвращаться)
+    touch() { return { back: page === 1 }; },
     // для автотеста и кнопки «Случайно»
     finish(stats, skills) {
       G.state.hero.stats = Object.assign({}, vals, stats || {});
@@ -14244,6 +14262,7 @@ G.scenes.register('charcreate', (onDone) => {
     },
 
     update(dt) {
+      fit();
       const I = G.input;
       if (msgT > 0) { msgT -= dt; if (msgT <= 0) msg = null; }
       if (confirm) {
@@ -14269,8 +14288,10 @@ G.scenes.register('charcreate', (onDone) => {
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, F = G.font, S = G.font.small, U = G.ui, C = U.C;
+      fit();
+      const narrow = W < 240;   // кружки и подписи уплотняются, чтобы не налезать на кнопки ±
       U.backdrop(ctx);
-      U.title(ctx, 'ВСТУПИТЕЛЬНЫЙ ТЕСТ', W / 2, 3, 150);
+      if (narrow) U.title(ctx, 'ТЕСТ', W / 2, 3, 70); else U.title(ctx, 'ВСТУПИТЕЛЬНЫЙ ТЕСТ', W / 2, 3, 150);
       const bar = (txt, right, rcol) => { U.panel(ctx, 4, 22, W - 8, 20, 'frame'); S.draw(ctx, txt, 14, 28, { color: C.inkDim }); right && S.draw(ctx, right, W - 14, 28, { align: 'right', color: rcol }); };
       const rowBg = (y, sel) => { U.row(ctx, 6, y, W - 12, ROW - 3, sel); };
       if (page === 0) {
@@ -14280,12 +14301,13 @@ G.scenes.register('charcreate', (onDone) => {
         G.STATS.forEach((s, i) => {
           const y = TOP + 3 + i * ROW, sel = i === idx, v = vals[s.id];
           rowBg(y, sel);
-          F.draw(ctx, s.name, 14, y + 2, { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: 90 });
+          const step = narrow ? 4.5 : 9, x0 = W - 74 - MAX * step + step / 2;
+          (narrow ? S : F).draw(ctx, s.name, 14, y + (narrow ? 4 : 2), { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: x0 - 18 });
           // кружки: база — тёмные, добавленные — красные, свободные — пустые
           for (let k = 0; k < MAX; k++) {
-            const cx = 112 + k * 9, cy = y + 7;
+            const cx = x0 + k * step, cy = y + 7, rr = narrow ? 2 : 3;
             ctx.fillStyle = k < B ? '#6a5238' : k < v ? C.red : 'rgba(46,30,20,.28)';
-            ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 7); ctx.fill();
             if (k < v && k >= B) { ctx.fillStyle = C.redHi; ctx.fillRect(cx - 1, cy - 2, 1, 1); }
           }
           U.button(ctx, W - 68, y - 1, 20, 16, '−', v > B ? 'normal' : 'dis');
@@ -16496,6 +16518,8 @@ G.scenes.register('pick', (o, cb) => {
       let go = I.pressed('a');
       if (I.tapNow) {
         const t = I.tapNow; const i = Math.floor((t.y - g.ly) / ROW);
+        if (t.x >= g.x + g.w - 26 && t.y >= g.y && t.y < g.y + 16 && scroll > 0) { focus = Math.max(0, focus - g.n); G.audio.sfx.blip(); return; }    // ▲
+        if (t.x >= g.x + g.w - 26 && t.y >= g.y + g.h - 14 && t.y < g.y + g.h && scroll + g.n < opts.length) { focus = Math.min(opts.length - 1, focus + g.n); G.audio.sfx.blip(); return; }   // ▼
         if (t.y >= g.ly && i >= 0 && i < g.n && scroll + i < opts.length) { focus = scroll + i; go = true; }
         else if (t.y < g.y - 8) { G.audio.sfx.cancel(); return this.choose(-1); }
       }
@@ -16662,8 +16686,11 @@ G.scenes.register('storage', () => {
       if (In.repeat('up', dt) && n) { sel[col] = (sel[col] + n - 1) % n; AU.sfx.blip(); }
       if (In.repeat('down', dt) && n) { sel[col] = (sel[col] + 1) % n; AU.sfx.blip(); }
       if (In.tapNow) {
-        const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, i = Math.floor((tp.y - TOP) / ROW) + scroll[c];
-        if (tp.y > TOP - 2 && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }
+        const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, li = Math.floor((tp.y - TOP) / ROW), i = li + scroll[c];
+        const px = c * (W / 2) + 4 + (W / 2 - 7) - 18, bot = TOP + rows * ROW;   // стрелки ▲/▼ в правом углу колонки
+        if (tp.x >= px && tp.y >= 38 && tp.y < 52 && scroll[c] > 0) { col = c; sel[c] = Math.max(0, sel[c] - rows); AU.sfx.blip(); }
+        else if (tp.x >= px && tp.y >= bot - 6 && tp.y < bot + 8 && scroll[c] + rows < L[c].length) { col = c; sel[c] = Math.min(L[c].length - 1, sel[c] + rows); AU.sfx.blip(); }
+        else if (tp.y > TOP - 2 && li >= 0 && li < rows && tp.y < bot && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }   // только по видимой строке
       } else if (In.pressed('a') && n) this.move(col, L[col][Math.min(sel[col], n - 1)]);
       for (const c of [0, 1]) {
         const m = lists()[c].length; if (sel[c] >= m) sel[c] = Math.max(0, m - 1);
@@ -16681,6 +16708,8 @@ G.scenes.register('storage', () => {
         U.panel(ctx, x, 38, w, h, 'frame');
         F.draw(ctx, c ? 'Сундук' : 'Сумка', x + w / 2, 45, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
         if (!L[c].length) F.small.draw(ctx, 'пусто', x + w / 2, TOP + 6, { align: 'center', color: C.inkDim });
+        if (scroll[c] > 0) F.small.draw(ctx, '▲', x + w - 12, 42, { color: C.red });
+        if (scroll[c] + rows < L[c].length) F.small.draw(ctx, '▼', x + w - 12, TOP + rows * ROW - 2, { color: C.red });
         for (let i = 0; i < rows; i++) {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
           const y = TOP + i * ROW, on = c === col && k === sel[c];

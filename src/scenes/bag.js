@@ -29,6 +29,9 @@ G.scenes.register('bag', () => {
       idx = Math.min(idx, L.length - 1);
       if (I.tapNow) {
         const g = this.grid(), t = I.tapNow, per = g.per;
+        const pg = Math.floor(idx / per), pages = Math.ceil(L.length / per);
+        if (t.x >= g.x + g.w - 22 && t.y >= g.y && t.y < g.y + 16 && pg > 0) { idx = (pg - 1) * per; G.audio.sfx.select(); return; }            // ▲ страница назад
+        if (t.x >= g.x + g.w - 22 && t.y >= g.y + g.h - 18 && t.y < g.y + g.h && pg + 1 < pages) { idx = (pg + 1) * per; G.audio.sfx.select(); return; }   // ▼ вперёд
         if (t.x > g.x && t.x < g.x + g.w && t.y > g.y && t.y < g.y + g.h) {
           const k = Math.floor((t.y - g.y - 6) / g.cardH) * g.cols + Math.floor((t.x - g.x - 6) / g.cardW);
           const i = Math.floor(idx / per) * per + k;

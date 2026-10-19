@@ -6,11 +6,16 @@ G.scenes.register('charcreate', (onDone) => {
   const picked = [];
   let page = 0, idx = 0, msg = null, msgT = 0, confirm = false;
   const left = () => G.STAT_POINTS - G.STATS.reduce((a, s) => a + vals[s.id] - B, 0);
-  const ROW = 20, TOP = 46;
+  let ROW = 20;
+  const TOP = 46;
+  // высота строки подстраивается под экран: 10 строк + описание внизу должны поместиться и в «КРУПНО» на коротком экране
+  const fit = () => { ROW = Math.max(15, Math.min(20, Math.floor((G.screen.H - TOP - 60) / Math.max(G.STATS.length + 2, G.SKILLS.length + 1)))); };
   const say = (t) => { msg = t; msgT = 1.6; };
 
   const S = {
     name: 'charcreate',
+    // «Назад» есть только на втором шаге (на первом ему некуда возвращаться)
+    touch() { return { back: page === 1 }; },
     // для автотеста и кнопки «Случайно»
     finish(stats, skills) {
       G.state.hero.stats = Object.assign({}, vals, stats || {});
@@ -52,6 +57,7 @@ G.scenes.register('charcreate', (onDone) => {
     },
 
     update(dt) {
+      fit();
       const I = G.input;
       if (msgT > 0) { msgT -= dt; if (msgT <= 0) msg = null; }
       if (confirm) {
@@ -77,8 +83,10 @@ G.scenes.register('charcreate', (onDone) => {
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, F = G.font, S = G.font.small, U = G.ui, C = U.C;
+      fit();
+      const narrow = W < 240;   // кружки и подписи уплотняются, чтобы не налезать на кнопки ±
       U.backdrop(ctx);
-      U.title(ctx, 'ВСТУПИТЕЛЬНЫЙ ТЕСТ', W / 2, 3, 150);
+      if (narrow) U.title(ctx, 'ТЕСТ', W / 2, 3, 70); else U.title(ctx, 'ВСТУПИТЕЛЬНЫЙ ТЕСТ', W / 2, 3, 150);
       const bar = (txt, right, rcol) => { U.panel(ctx, 4, 22, W - 8, 20, 'frame'); S.draw(ctx, txt, 14, 28, { color: C.inkDim }); right && S.draw(ctx, right, W - 14, 28, { align: 'right', color: rcol }); };
       const rowBg = (y, sel) => { U.row(ctx, 6, y, W - 12, ROW - 3, sel); };
       if (page === 0) {
@@ -88,12 +96,13 @@ G.scenes.register('charcreate', (onDone) => {
         G.STATS.forEach((s, i) => {
           const y = TOP + 3 + i * ROW, sel = i === idx, v = vals[s.id];
           rowBg(y, sel);
-          F.draw(ctx, s.name, 14, y + 2, { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: 90 });
+          const step = narrow ? 4.5 : 9, x0 = W - 74 - MAX * step + step / 2;
+          (narrow ? S : F).draw(ctx, s.name, 14, y + (narrow ? 4 : 2), { color: sel ? '#f8eed0' : C.ink, shadow: sel ? '#5a1408' : null, maxW: x0 - 18 });
           // кружки: база — тёмные, добавленные — красные, свободные — пустые
           for (let k = 0; k < MAX; k++) {
-            const cx = 112 + k * 9, cy = y + 7;
+            const cx = x0 + k * step, cy = y + 7, rr = narrow ? 2 : 3;
             ctx.fillStyle = k < B ? '#6a5238' : k < v ? C.red : 'rgba(46,30,20,.28)';
-            ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 7); ctx.fill();
+            ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 7); ctx.fill();
             if (k < v && k >= B) { ctx.fillStyle = C.redHi; ctx.fillRect(cx - 1, cy - 2, 1, 1); }
           }
           U.button(ctx, W - 68, y - 1, 20, 16, '−', v > B ? 'normal' : 'dis');

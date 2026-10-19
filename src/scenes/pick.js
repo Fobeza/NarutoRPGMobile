@@ -23,6 +23,8 @@ G.scenes.register('pick', (o, cb) => {
       let go = I.pressed('a');
       if (I.tapNow) {
         const t = I.tapNow; const i = Math.floor((t.y - g.ly) / ROW);
+        if (t.x >= g.x + g.w - 26 && t.y >= g.y && t.y < g.y + 16 && scroll > 0) { focus = Math.max(0, focus - g.n); G.audio.sfx.blip(); return; }    // ▲
+        if (t.x >= g.x + g.w - 26 && t.y >= g.y + g.h - 14 && t.y < g.y + g.h && scroll + g.n < opts.length) { focus = Math.min(opts.length - 1, focus + g.n); G.audio.sfx.blip(); return; }   // ▼
         if (t.y >= g.ly && i >= 0 && i < g.n && scroll + i < opts.length) { focus = scroll + i; go = true; }
         else if (t.y < g.y - 8) { G.audio.sfx.cancel(); return this.choose(-1); }
       }

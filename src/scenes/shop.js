@@ -87,9 +87,13 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         if (I.repeat('right', dt)) { idx = (idx + 1) % n; qty = 1; G.audio.sfx.select(); }
       }
       const inR = (t, r) => t.x >= r.x && t.x < r.x + r.w && t.y >= r.y && t.y < r.y + r.h;
+      const pageBtn = (d) => ({ x: g.x + g.w - (d > 0 ? 24 : 62), y: g.y + g.h - 13, w: 22, h: 12 });
+      const pages = Math.ceil(n / g.per), pg = Math.floor(idx / g.per);
 
       if (I.tapNow) {
         const t = I.tapNow;
+        // кнопки страниц ◀ ▶ под сеткой (без них товары на дальних страницах недоступны пальцем)
+        if (pages > 1) for (const d of [-1, 1]) if (inR(t, pageBtn(d))) { const np = (pg + d + pages) % pages; idx = Math.min(n - 1, np * g.per); qty = 1; qmode = false; G.audio.sfx.select(); return; }
         // карточка в сетке
         if (t.y > g.y + 6 && t.y < g.y + g.h - 6 && t.x > g.x && t.x < g.x + g.w) {
           const page = Math.floor(idx / g.per) * g.per;
@@ -145,13 +149,19 @@ G.scenes.register('shop', (shopId, opts = {}) => {
           { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', outline: C.woodEdge });
       }
       const pages = Math.ceil(items.length / l.per);
-      if (pages > 1) F.small.draw(ctx, `${Math.floor(idx / l.per) + 1}/${pages}`, l.x + l.w - 10, l.y + l.h - 14, { align: 'right', color: C.red });
+      if (pages > 1) {
+        const pb = (d) => ({ x: l.x + l.w - (d > 0 ? 24 : 62), y: l.y + l.h - 13, w: 22, h: 12 });
+        U.button(ctx, pb(-1).x, pb(-1).y, 22, 12, '<', 'normal'); U.button(ctx, pb(1).x, pb(1).y, 22, 12, '>', 'normal');
+        F.small.draw(ctx, `${Math.floor(idx / l.per) + 1}/${pages}`, l.x + l.w - 66, l.y + l.h - 11, { align: 'right', color: C.red });
+      }
 
       // описание, количество, деньги
       const inf = L.info, it = items[idx];
       U.panel(ctx, inf.x, inf.y, inf.w, inf.h, 'frame');
+      // название выбранного товара — до покупки (B24)
+      F.small.draw(ctx, it.name, inf.x + 12, inf.y + 8, { color: C.redDark, maxW: inf.w - 110 });
       const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, 2);
-      textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 10 + i * 12, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
+      textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 20 + i * 11, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
       const qy = inf.y + inf.h - 24;
       if (it.cat === 'food' || it.cat === 'service') {
         const v = G.state.vars;
@@ -163,7 +173,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         U.button(ctx, L.plus.x, L.plus.y, L.plus.w, L.plus.h, '+', qty < maxQty(it) ? (qmode ? 'sel' : 'normal') : 'dis');
         F.draw(ctx, '= ' + it.price * qty + ' рё', L.plus.x + L.plus.w + 12, L.minus.y + 6, { color: '#8a5a10' });
         const side = it.pouch ? `подсумок ${G.game.pouchUsed()}/${G.game.pouchMax()}` : `есть ${G.game.count(it.id)}`;
-        F.small.draw(ctx, side, inf.x + inf.w - 12, inf.y + 12 + (textLines.length > 1 ? 12 : 0) + 14, { align: 'right', color: C.inkDim });
+        F.small.draw(ctx, side, inf.x + inf.w - 12, inf.y + 8, { align: 'right', color: C.inkDim });
       }
 
       // кнопки внизу + деньги
