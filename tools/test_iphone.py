@@ -248,7 +248,7 @@ with sync_playwright() as p:
     time.sleep(0.2); key(page, "KeyZ"); time.sleep(0.5)
     check(top(page) == "shop", "открылась лавка Теучи")
     shot(page, "23_shop")
-    key(page, "KeyZ"); time.sleep(0.5)
+    key(page, "KeyZ", 2, 0.4); time.sleep(0.5)      # первое A — режим количества, второе — покупка
     shot(page, "24_shop_bought")
     money1 = page.evaluate("G.state.vars.money")
     check(money1 == 260, "мисо-рамен куплен за 40 рё (осталось %s)" % money1)
@@ -267,7 +267,7 @@ with sync_playwright() as p:
     kp = W(page, "const n = s.npcs.find(n => n.shop); return { x: n.x, y: n.y };")
     W(page, "s.player.x = %f; s.player.y = %f; s.player.dir = 'up';" % (kp["x"], kp["y"] + 34))
     time.sleep(0.2); key(page, "KeyZ"); time.sleep(0.5)
-    key(page, "ArrowRight", 2, 0.15); key(page, "KeyZ"); time.sleep(0.4)
+    key(page, "KeyZ", 1, 0.3); key(page, "ArrowRight", 2, 0.15); key(page, "KeyZ"); time.sleep(0.4)   # количество 3 → купить
     shot(page, "26_weapons")
     key(page, "KeyX"); time.sleep(0.4)
     check(page.evaluate("G.game.count('kunai')") == 3, "куплено 3 куная")
