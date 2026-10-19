@@ -1,13 +1,13 @@
 // Пиксельный шрифт интерфейса V10 (кириллица + латиница + значки), пропорциональный.
-// Данные глифов — gfx/font_data.js (генерирует tools/make_font.py из DejaVu Serif Bold 12 px; значки нарисованы вручную).
-//   G.font       — основной шрифт: заглавная буква 9 px, строка 14 px
-//   G.font.small — мелкий (DejaVu Sans Bold 11 px): заглавная 8 px, строка 12 px — для плотных мест (шапка, подписи)
+// Данные глифов — gfx/font_data.js (генерирует tools/make_font.py из растрового шрифта Terminus; значки нарисованы вручную).
+//   G.font       — основной шрифт (Terminus 8×16 жирный): заглавная 10 px, строка 14 px
+//   G.font.small — мелкий (Terminus 6×12 жирный): заглавная 8 px, строка 12 px — для плотных мест (шапка, подписи)
 //   draw(ctx, text, x, y, { color, outline, shadow, align: 'left'|'center'|'right', maxW, max })
 //   y — верх заглавной буквы (значки и «Й», «Ё» могут выступать выше), measure(text), wrap(text, maxW) → строки
 G.font = (() => {
   function makeFace(data, o) {
     const SPACE_W = o.space, GAP = 1;
-    const H = data.h, BASE = data.base, CAP = o.cap, TOP = BASE - CAP;   // TOP — сколько строк глифа выше заглавной
+    const H = data.h, BASE = data.base, CAP = data.cap, TOP = BASE - CAP;   // TOP — сколько строк глифа выше заглавной
     const glyphs = {};
     let atlas = null;
     const tinted = {};
@@ -93,7 +93,7 @@ G.font = (() => {
     return { draw, measure, wrap, LINE_H: o.line, CAP, chars: () => { if (!atlas) build(); return Object.keys(glyphs); } };
   }
 
-  const body = makeFace(G.FONT_DATA.body, { cap: 9, line: 14, space: 4 });
-  body.small = makeFace(G.FONT_DATA.small, { cap: 8, line: 12, space: 3 });
+  const body = makeFace(G.FONT_DATA.body, { line: 14, space: 5 });
+  body.small = makeFace(G.FONT_DATA.small, { line: 12, space: 4 });
   return body;
 })();

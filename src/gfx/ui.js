@@ -18,7 +18,7 @@ G.ui = (() => {
   const C = {
     wood: '#6a4228', woodHi: '#8a5a36', woodLo: '#3e2616', woodDeep: '#241408', woodEdge: '#160c06',
     paper: '#ecdcb0', paperHi: '#f8eed0', paperLo: '#d4bf8a', paperEdge: '#a8885a', fiber: '#c8b078',
-    ink: '#2e1e14', inkDim: '#6a5238', inkFaint: '#9c8662',
+    ink: '#2e1e14', inkDim: '#4e3a26', inkFaint: '#7c6648',
     red: '#b8321c', redDark: '#7a1e10', redHi: '#e0562e', seal: '#e8621a', gold: '#d8a020', goldHi: '#f4d46a',
     ok: '#4a8a3a', err: '#c8281c', hp: '#c8401c', chakra: '#3a7ad0', food: '#e8a020', energy: '#5aa046',
     night: '#201510', nightHi: '#34231a',

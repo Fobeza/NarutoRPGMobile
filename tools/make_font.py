@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """Генератор пиксельного шрифта интерфейса: python3 tools/make_font.py
-Растеризует глифы системным шрифтом DejaVu (Serif Bold 12 px — основной, Sans Bold 11 px — мелкий) через Chromium,
-порогом превращает в чёткие пиксели и пишет src/gfx/font_data.js. Значки вместо эмодзи нарисованы здесь вручную.
-Шрифт DejaVu — свободная лицензия (Bitstream Vera + общественное достояние), разрешает встраивание производных.
-Запускать нужно только при смене шрифта или набора символов; результат коммитится."""
-import os, re, glob, json, base64
-from playwright.sync_api import sync_playwright
+Берёт растровые глифы Terminus (PCF из tools/fonts/, читает tools/pcf.py), обрезает пустые поля по краям каждого глифа
+(шрифт получается пропорциональным) и пишет src/gfx/font_data.js. Значки вместо эмодзи нарисованы здесь вручную.
+Terminus Font — SIL Open Font License 1.1 (текст — tools/fonts/terminus-copyright.txt), встраивание разрешено.
+Запускать нужно только при смене шрифта или набора символов; результат коммитится. Браузер не нужен."""
+import os, re, glob, json, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pcf
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# что рисуем: имя → (css-шрифт, порог яркости)
+# что берём: имя → файл PCF
 FACES = {
-    'body': ('bold 12px "DejaVu Serif"', 150),
-    'small': ('bold 11px "DejaVu Sans"', 150),
+    'body': 'ter-u16b_unicode.pcf.gz',     # 8×16 жирный
+    'small': 'ter-u12b_unicode.pcf.gz',    # 6×12 жирный
 }
 
-# символы из DejaVu (всё, что встречается в тексте игры, кроме эмодзи)
+# символы текста игры (всё, что встречается в коде, кроме эмодзи)
 def used_chars():
     cnt = set()
     for f in glob.glob(os.path.join(ROOT, 'src', '**', '*.js'), recursive=True):
@@ -29,6 +30,12 @@ def used_chars():
 
 # значки, нарисованные вручную (эмодзи DejaVu не знает); 9 строк по 10 столбцов
 ICONS = {
+    '☀': ['....#.....', '.#..#..#..', '..#####...', '..#####...', '#.#####.#.', '..#####...', '..#####...', '.#..#..#..', '....#.....'],
+    '☁': ['..........', '...###....', '..#####.#.', '.#########', '##########', '##########', '.########.', '..........', '..........'],
+    '☂': ['...####...', '.########.', '##########', '#..#.#..#.', '....#.....', '....#.....', '....#.....', '..###.....', '..........'],
+    '★': ['....#.....', '....#.....', '...###....', '#########.', '.#######..', '..#####...', '..##.##...', '.##...##..', '..........'],
+    '□': ['..........', '.########.', '.#......#.', '.#......#.', '.#......#.', '.#......#.', '.#......#.', '.########.', '..........'],
+    '▸': ['..#.......', '..##......', '..###.....', '..####....', '..###.....', '..##......', '..#.......', '..........', '..........'],
     '📍': ['...####...', '..######..', '.###..###.', '.###..###.', '.########.', '..######..', '...####...', '....##....', '....#.....'],
     '🌙': ['...####...', '..###.....', '.###......', '.###......', '.###......', '.####.....', '..#######.', '...#####..', '..........'],
     '⏰': ['.##....##.', '#.######.#', '..#.##.#..', '.#..##..#.', '.#..###.#.', '.#......#.', '..#....#..', '..######..', '.##....##.'],
@@ -43,70 +50,51 @@ ICONS = {
 }
 
 
+def face(path, chars):
+    g = pcf.load(os.path.join(ROOT, 'tools', 'fonts', path))
+    asc = max(v[1] for v in g.values() if any(any(r) for r in v[4]))
+    desc = max(v[2] for v in g.values() if any(any(r) for r in v[4]))
+    h = asc + desc
+    glyphs, missing = {}, []
+    for ch in chars:
+        if ch not in g: missing.append(ch); continue
+        w, a, d, l, rows = g[ch]
+        full = [[0] * len(rows[0]) if rows else [] for _ in range(asc - a)] + rows + [[0] * len(rows[0]) if rows else [] for _ in range(desc - d)]
+        if not rows or not any(any(r) for r in rows): continue
+        cols = [i for i in range(len(rows[0])) if any(r[i] for r in rows)]
+        lo, hi = min(cols), max(cols)
+        glyphs[ch] = '|'.join(''.join('#' if r[i] else '.' for i in range(lo, hi + 1)) for r in full)
+    hn = [j for j, r in enumerate(g['Н'][4]) if any(r)]
+    cap = len(hn)
+    return {'h': h, 'base': asc, 'cap': cap, 'glyphs': glyphs}, missing
+
+
 def main():
     chars = used_chars()
-    with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_page(); pg.set_content('<canvas id=c width=64 height=40></canvas>')
-        out = {}
-        for name, (font, thr) in FACES.items():
-            data = pg.evaluate("""([chars, font, thr]) => {
-              const c = document.getElementById('c'), x = c.getContext('2d', { willReadFrequently: true });
-              const res = {};
-              for (const ch of chars) {
-                x.clearRect(0, 0, 64, 40); x.fillStyle = '#fff'; x.fillRect(0, 0, 64, 40);
-                x.font = font; x.fillStyle = '#000'; x.textBaseline = 'alphabetic';
-                x.fillText(ch, 8, 24);
-                const im = x.getImageData(0, 0, 64, 40).data, rows = [];
-                for (let j = 0; j < 40; j++) { let r = ''; for (let i = 0; i < 64; i++) r += im[(j * 64 + i) * 4] < thr ? '#' : '.'; rows.push(r); }
-                res[ch] = { rows, adv: x.measureText(ch).width };
-              }
-              return res;
-            }""", [chars, font, thr])
-            out[name] = data
-        b.close()
-
     faces = {}
-    for name, data in out.items():
-        # общие границы по строкам (чтобы все глифы лежали в одной сетке) и колонки каждого глифа по отдельности
-        top, bot = 99, -1
-        for ch, g in data.items():
-            for j, r in enumerate(g['rows']):
-                if '#' in r:
-                    top = min(top, j); bot = max(bot, j)
-        base = 24 - top                               # строка базовой линии внутри глифа (0 — верх)
-        glyphs = {}
-        for ch, g in data.items():
-            cols = [i for i in range(64) if any(g['rows'][j][i] == '#' for j in range(top, bot + 1))]
-            if not cols: continue
-            lo, hi = min(cols), max(cols)
-            rows = [g['rows'][j][lo:hi + 1] for j in range(top, bot + 1)]
-            glyphs[ch] = '|'.join(rows)
-        h = bot - top + 1
-        # символ-пробел и «?» на случай неизвестного
-        faces[name] = {'h': h, 'base': base, 'glyphs': glyphs}
-        # значки вручную — только в основной шрифт (в мелком масштабируются обрезкой)
-    body = faces['body']
-    for ch, rows in ICONS.items():
-        pad_top = max(0, body['base'] - 9 - 0)       # значок стоит на базовой линии
-        full = ['.' * 10] * pad_top + rows
-        full += ['.' * 10] * (body['h'] - len(full))
-        body['glyphs'][ch] = '|'.join(full[:body['h']])
-    small = faces['small']
-    for ch, rows in ICONS.items():
-        r7 = rows[0:8]                               # 8 строк из 9 и сужаем до 9 столбцов
-        r7 = [r[0:9] for r in r7]
-        pad_top = max(0, small['base'] - 8)
-        full = ['.' * 9] * pad_top + r7
-        full += ['.' * 9] * (small['h'] - len(full))
-        small['glyphs'][ch] = '|'.join(full[:small['h']])
+    for name, path in FACES.items():
+        faces[name], missing = face(path, chars)
+        if missing: print(name, 'нет в шрифте:', ''.join(missing))
+    # значки (эмодзи шрифты не знают) — рисуем вручную: на базовой линии, высотой в заглавную + 1
+    for name, f in faces.items():
+        w = 10 if name == 'body' else 8
+        for ch, rows in ICONS.items():
+            r = [x[:w] for x in rows]
+            if name != 'body': r = [r[i] for i in (0, 1, 2, 3, 5, 6, 7)]      # 7 строк
+            r = r[:f['cap'] + 1]
+            pad_top = max(0, f['base'] - len(r))
+            full = ['.' * w] * pad_top + r
+            full += ['.' * w] * (f['h'] - len(full))
+            f['glyphs'][ch] = '|'.join(full[:f['h']])
 
     js = ['// Данные пиксельного шрифта — СГЕНЕРИРОВАНО tools/make_font.py, руками не править.',
-          '// Шрифт DejaVu (свободная лицензия) растеризован в пиксели; значки вместо эмодзи нарисованы вручную.',
+          '// Terminus Font (SIL OFL 1.1) без пустых полей; значки нарисованы вручную.',
           'G.FONT_DATA = ' + json.dumps(faces, ensure_ascii=False, indent=1) + ';', '']
     path = os.path.join(ROOT, 'src', 'gfx', 'font_data.js')
     open(path, 'w', encoding='utf-8').write('\n'.join(js))
-    print('глифов: body', len(faces['body']['glyphs']), 'small', len(faces['small']['glyphs']),
-          '| высота', faces['body']['h'], 'база', faces['body']['base'], '|', os.path.getsize(path) // 1024, 'КБ')
+    for n, f in faces.items():
+        print(n, 'глифов', len(f['glyphs']), '| высота', f['h'], 'база', f['base'], 'заглавная', f['cap'])
+    print(os.path.getsize(path) // 1024, 'КБ')
 
 
 if __name__ == '__main__':

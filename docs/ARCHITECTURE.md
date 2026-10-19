@@ -83,11 +83,11 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
   на размер арены; облака с объёмом плывут поверх; предметы арены (`obj`) — спрайты со светом.
   Описание внешности — только данные в `data/characters.js`.
 - Тайлы и объекты — `gfx/tiles.js` (`obj('имя', w, h, рисование)`), здания — `world/buildgfx.js`.
-- **Шрифт** — `gfx/font.js` + данные `gfx/font_data.js` (генерирует `tools/make_font.py`: DejaVu Serif Bold 12 px —
-  основной `G.font`, DejaVu Sans Bold 11 px — мелкий `G.font.small`; растеризуется через Chromium и порогом
-  превращается в чёткие пиксели; значки-эмодзи нарисованы вручную прямо в скрипте; DejaVu — свободная лицензия).
-  Символа нет в шрифте → рисуется «?». Новый символ: добавить в список `used_chars()` / `ICONS` в `make_font.py`
-  и запустить `python3 tools/make_font.py` (нужен Playwright), результат коммитится.
+- **Шрифт** — `gfx/font.js` + данные `gfx/font_data.js` (генерирует `tools/make_font.py` из растровых глифов Terminus Font,
+  SIL OFL 1.1: `tools/fonts/*.pcf.gz`, читает `tools/pcf.py`; основной `G.font` — 8×16 жирный, мелкий `G.font.small` — 6×12
+  жирный; пустые поля глифов обрезаны, шрифт пропорциональный; значки-эмодзи и погода нарисованы вручную в скрипте).
+  Символа нет в шрифте → рисуется «?». Новый символ: `tools/make_font.py` подхватывает всё, что встречается в `src/**/*.js`
+  (или добавить в `ICONS`), затем `python3 tools/make_font.py` (браузер не нужен), результат коммитится.
   API обоих шрифтов одинаков: `draw(ctx, text, x, y, {color, outline, shadow, align, maxW})`, `measure`, `wrap`, `CAP`, `LINE_H`.
 - **Интерфейс «Свитки и дерево»** — `gfx/ui.js` (`G.ui`). Запекаемые панели (`frame` — пергамент в раме, `scroll` — свиток,
   `plank` — доска, `night` — тёмное дерево, `well` — врезка, `tag` — красная лента), `row` (мазок красной кисти под
