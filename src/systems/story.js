@@ -111,6 +111,7 @@ G.academy = {
 G.STORY = [
   { id: 'kiba', day: 3, from: 13 * _H, to: 21 * _H, where: 'out', script: 'st_kiba' },
   { id: 'roofs', day: 4, from: 14 * _H, to: 20 * _H, where: 'out', script: 'st_roofs', must: true },
+  { id: 'memory', day: 14, from: 17 * _H, to: 22 * _H, where: 'out', script: 'st_memory' },
   { id: 'prank', day: 10, from: 17 * _H, to: 22 * _H, where: 'out', script: 'st_prank' },
   { id: 'lee', day: 18, from: 15 * _H, to: 21 * _H, where: 'out', script: 'st_lee' },
   { id: 'festival', day: 21, from: 18 * _H, to: 23 * _H, where: 'out', script: 'st_festival' },

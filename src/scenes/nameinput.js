@@ -1,9 +1,10 @@
-// Ввод имени героя: Ирука спрашивает, игрок вводит имя (реальный <input> → клавиатура iOS).
-G.scenes.register('nameinput', () => {
+// Ввод имени героя: в больнице Хокаге спрашивает, как зовут очнувшегося (скрипт hosp_wake → `call askname`);
+// игрок вводит имя (реальный <input> → клавиатура iOS). onDone() — продолжение разговора.
+G.scenes.register('nameinput', (onDone) => {
   const el = () => document.getElementById('text-entry');
   const inp = () => document.getElementById('te-input');
   const hint = () => document.getElementById('te-hint');
-  let stage = 'ask'; // ask → typing → confirm
+  let stage = 'typing';
   let onOk = null, onKey = null;
   let t = 0;
 
@@ -20,10 +21,7 @@ G.scenes.register('nameinput', () => {
 
   return {
     name: 'nameinput',
-    enter() {
-      stage = 'ask';
-      G.dialog.start('ask_name_tmp', { bottom: 30, onEnd: () => this.openEntry() });
-    },
+    enter() { this.openEntry(); },
     resume() {},
 
     openEntry() {
@@ -42,17 +40,9 @@ G.scenes.register('nameinput', () => {
         box.classList.add('hidden');
         G.state.hero.name = r.ok;
         G.audio.sfx.confirm();
-        stage = 'confirm';
-        G.dialog.start('intro_name_confirm', {
-          bottom: 30,
-          onEnd: () => {
-            if (G.state.flags.name_ok) {
-              G.state.started = true;
-              G.storage.save(G.state);
-              G.scenes.fadeTo(G.scenes.make('world', Object.assign(G.world.startPos(), { intro: 'home_wake' })));
-            } else this.openEntry();
-          },
-        });
+        stage = 'done';
+        G.scenes.pop();
+        onDone && onDone();
       };
       onOk = (e) => { e.preventDefault(); submit(); };
       onKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
@@ -66,24 +56,16 @@ G.scenes.register('nameinput', () => {
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, U = G.ui;
-      // класс Академии: деревянный пол, доска в раме
+      // палата: светлый пол, табличка с вопросом, Хокаге ждёт ответа
       U.backdrop(ctx);
-      U.wood(ctx, 0, 90, W, H - 90, '#8a5a36', false, 11);
+      U.wood(ctx, 0, 90, W, H - 90, '#c8c0a8', false, 11);
       U.panel(ctx, 14, 12, W - 28, 64, 'plank');
       ctx.fillStyle = '#1f3a2e'; ctx.fillRect(18, 16, W - 36, 56);
       G.shade.tint(ctx, 18, 16, W - 36, 56, (u, v) => 0.1 - 0.25 * v, { keepInk: false, steps: 10 });
-      G.font.draw(ctx, 'Вступительный тест', W / 2, 26, { align: 'center', color: '#e8f0e0' });
-      G.font.small.draw(ctx, 'Академия Конохи', W / 2, 48, { align: 'center', color: '#b8d0b8' });
-      // Ирука у доски
+      G.font.draw(ctx, 'Как тебя зовут?', W / 2, 26, { align: 'center', color: '#e8f0e0' });
+      G.font.small.draw(ctx, 'Больница Конохи', W / 2, 48, { align: 'center', color: '#b8d0b8' });
       G.shade.shadow(ctx, W / 2 + 1, 100, 8, 2, 0.35);
-      G.chars.draw(ctx, 'iruka', 'down', 0, W / 2, 100);
+      G.chars.draw(ctx, 'hokage', 'down', 0, W / 2, 100);
     },
   };
 });
-
-G.script.parse(`
-=== ask_name_tmp
-iruka: Так-так, новенький! Я Умино Ирука, твой учитель.
-iruka: Для начала — как тебя зовут?
-end
-`);

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Автотест в эмуляции iPhone 15 Pro (Playwright + Chromium).
-Сценарий: титул → ввод имени → дом героя (задание, стрелка) → вступительный тест → улица (след A*) → Квартира Наруто → карта →
+Сценарий: титул → пролог → больница, имя, решение Хокаге (задание, стрелка) → вступительный тест → улица (след A*) → Квартира Наруто → карта →
 Наруто у качелей → Академия (Ирука) → Наруто зовёт в Ичираку → лавка Теучи, рамен,
 угостить Наруто → оружейная → поручение Ино → секрет водопада → журнал → большая карта/метка → сумка → сон → «Итоги дня» → утро дня 2 → часы, расписание, голод, обморок, рис, патруль, дождь, статус, 2:00 ночи, код сохранения, пауза → меню →
 «Продолжить» после перезагрузки.
@@ -92,35 +92,46 @@ with sync_playwright() as p:
     print("Экран:", page.evaluate("G.screen.W + 'x' + G.screen.H + ' x' + G.screen.scale"))
     shot(page, "01_title")
 
-    # ── новая игра ─────────────────────────────────────────────
+    # ── новая игра: пролог (голоса в темноте) → палата больницы → имя → решение Хокаге ──
     key(page, "Enter"); time.sleep(0.8)
-    key(page, "Enter", 6, 0.35); time.sleep(0.4)
-    shot(page, "02_name_entry")
+    key(page, "Enter"); time.sleep(1.2)           # «Новая игра»
+    check(top(page) == "dialog:prologue_voices", "пролог: голоса в темноте (%s)" % top(page))
+    shot(page, "02_prologue")
+    for _ in range(20):
+        if top(page) == "world": break
+        key(page, "KeyZ", 1, 0.5)
+    time.sleep(2.2)
+    check(top(page) == "dialog:hosp_wake" and pos(page)["name"] == "Больница", "очнулся в палате больницы (%s / %s)" % (top(page), pos(page)["name"]))
+    shot(page, "04_wake_dialog")
+    for _ in range(20):
+        if top(page) == "nameinput": break
+        key(page, "KeyZ", 1, 0.5)
+    check(top(page) == "nameinput", "Хокаге спрашивает имя: открылся ввод")
+    time.sleep(0.4)
+    shot(page, "03_name_entry")
     page.fill("#te-input", "Кайто")
     page.dispatch_event("#te-ok", "pointerdown")
-    time.sleep(1.2)
-    key(page, "Enter", 3, 0.4); time.sleep(0.3)
-    shot(page, "03_confirm")
-    key(page, "Enter", 1, 0.5)                    # «Да»
-    key(page, "Enter", 3, 0.5)
-    time.sleep(1.4)
-    shot(page, "04_wake_dialog")
-    close_dialogs(page)
+    time.sleep(1.0)
+    for _ in range(60):
+        if top(page) == "world" and not page.evaluate("G.scenes.busy"): break
+        key(page, "KeyZ", 1, 0.5)                 # на вопросах — первый вариант
+    time.sleep(0.5)
     p0 = pos(page)
-    check(p0["name"] == "Дом героя", "старт в доме героя (%s)" % p0["name"])
+    check(p0["name"] == "Больница" and page.evaluate("G.state.started && G.state.hero.name") == "Кайто", "имя сохранено, игра началась (%s)" % p0["name"])
+    check(page.evaluate("!!G.state.flags.hosp_done"), "Хокаге, Ирука и Сидзуне вышли из палаты")
     time.sleep(2.8)   # дождаться, пока уйдёт уведомление «Новое задание»
-    shot(page, "05_hero_home")
+    shot(page, "05_hospital")
     # ── Этап 3.5: задание «Первый день», стрелка ведёт к выходу ──
     q = page.evaluate("[G.quests.tracked(), (G.quests.curStep('day1')||{}).id]")
     check(q == ["day1", "academy"], "задание «Первый день» отслеживается, шаг «Дойти до Академии» (%s)" % q)
     h = W(page, "const t = G.nav.current(); const h = G.nav.hop(s.map, t); return { label: t && t.label, exit: !!(h && h.exit) };")
-    check(h["exit"] and h["label"] == "Академия", "дома навигация ведёт к выходу, цель — Академия (%s)" % h)
+    check(h["exit"] and h["label"] == "Академия", "в больнице навигация ведёт к выходу, цель — Академия (%s)" % h)
 
     # ── выход на улицу: вниз вдоль левой стены, к коврику, вниз ─
     mat = W(page, "const w = s.map.warps[0].rect; return { x: w.x + w.w / 2, y: w.y + w.h / 2 };")
-    walk_path(page, [("y", mat["y"] - 14), ("x", mat["x"]), ("y", mat["y"] + 8)])
+    walk_path(page, [("x", mat["x"]), ("y", mat["y"] + 8)])   # из палаты: вправо вдоль коек и вниз к коврику
     ok = wait_map(page, "konoha")
-    check(ok, "вышел из дома на улицу Конохи")
+    check(ok, "вышел из больницы на улицу Конохи")
     if not ok:
         W(page, "s.goTo({ map: 'konoha', x: 87*16+8, y: 70*16+12, dir: 'down' });"); wait_map(page, "konoha")
     time.sleep(0.6)

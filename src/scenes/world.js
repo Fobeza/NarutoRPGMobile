@@ -105,6 +105,7 @@ G.scenes.register('world', (pos) => {
 
     enterBuilding(b) {
       if (!b.interior) { this.showToast('Заперто.'); G.audio.sfx.error(); return; }
+      if (b.tplId === 'hero_home' && !G.state.flags.home_seen) { G.state.flags.home_seen = 1; this.pendingTalk = 'home_first'; }   // первый раз в новом доме
       this.goTo({ map: b.interior.id, entry: true });
     },
 
@@ -147,6 +148,7 @@ G.scenes.register('world', (pos) => {
         else if (a === 'home') this.goHome();
         else if (typeof a === 'object' && G.flow[a.type]) G.flow[a.type](a, this);
         else if (a === 'charcreate') G.scenes.push(G.scenes.make('charcreate', () => this.talk('iruka_after_test')));
+        else if (a === 'askname') G.scenes.push(G.scenes.make('nameinput', () => this.talk('hosp_after_name')));
         return;
       }
       if (G.story && G.story.poll(this)) return;

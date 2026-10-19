@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "1.3.2"                              # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
+RELEASE = "1.4"                              # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -41,7 +41,7 @@ JS_FILES = [
     "world/roofs.js", "world/fx.js",
     "engine/debug.js",
     # ── экраны (сцены) ──
-    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
+    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",

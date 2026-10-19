@@ -98,10 +98,11 @@ G.world = {
   },
 
   heroHome() { return this.konoha().landmarks.hero_home; },
+  // Старт новой игры: палата больницы, герой у койки (сюжет — скрипт hosp_wake)
   startPos() {
-    const b = this.heroHome();
+    const b = this.konoha().landmarks.hospital;
     const m = this.get(b.interior.id);
-    return { map: m.id, x: 3 * 16 + 8, y: 4 * 16 + 4, dir: 'down' };
+    return { map: m.id, x: 4 * 16 + 8, y: 4 * 16 + 4, dir: 'down' };
   },
 
   makeNpc(s) {

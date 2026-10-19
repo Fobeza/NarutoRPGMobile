@@ -89,6 +89,8 @@ end
 | `courier` | `call courier` | выдать курьерское поручение |
 | `sfx` | `call sfx puff` | звук |
 | `charcreate` | `call charcreate` | экран вступительного теста |
+| `askname` | `call askname` | ввод имени героя (после него идёт сценарий `hosp_after_name`) |
+| `begin` | `call begin` | начало игры: включает автосохранение и сохраняет (конец пролога) |
 
 Своё действие: `G.script.actions.имя = (args) => { ... }` в любом модуле (после `systems/script.js`).
 Своё условие: обернуть `G.script.extraTest` (пример — `systems/life.js`).

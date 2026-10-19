@@ -61,13 +61,16 @@ G.life = (() => {
 })();
 
 // ---------- Действия и условия для сценариев ----------
-// call eat 25 | call rest 20 | call mood 5 | call cooldown rice 240 | call home | call charcreate
+// call eat 25 | call rest 20 | call mood 5 | call cooldown rice 240 | call home | call charcreate | call askname | call begin
 G.script.actions.eat = (a) => G.game.eat(Number(a[0]) || 0);
 G.script.actions.rest = (a) => G.game.rest(Number(a[0]) || 0);
 G.script.actions.mood = (a) => G.game.mood(Number(a[0]) || 0);
 G.script.actions.cooldown = (a) => { G.state.vars['cd_' + a[0]] = G.life.absMin() + (Number(a[1]) || 60); };
 G.script.actions.home = () => { G.game.pending = 'home'; };
 G.script.actions.charcreate = () => { G.game.pending = 'charcreate'; };
+// пролог: ввод имени героя (сцена nameinput) и начало игры (с этого момента работают автосохранения)
+G.script.actions.askname = () => { G.game.pending = 'askname'; };
+G.script.actions.begin = () => { G.state.started = true; G.storage.save(G.state); };
 (() => {
   const prev = G.script.extraTest;
   G.script.extraTest = (cond) => {

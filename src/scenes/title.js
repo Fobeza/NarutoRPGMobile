@@ -122,12 +122,12 @@ G.scenes.register('title', () => {
     if (G.storage.hasSave()) {
       // перезапись сохранения — только после подтверждения
       G.dialog.start('confirm_new', { bottom: 30, onEnd: () => {
-        if (G.state.flags._confirm) { G.game.newState(); G.scenes.fadeTo(G.scenes.make('nameinput')); }
+        if (G.state.flags._confirm) { G.game.newState(); G.scenes.fadeTo(G.scenes.make('prologue')); }
         delete G.state.flags._confirm;
       } });
     } else {
       G.game.newState();
-      G.scenes.fadeTo(G.scenes.make('nameinput'));
+      G.scenes.fadeTo(G.scenes.make('prologue'));
     }
   }
 
