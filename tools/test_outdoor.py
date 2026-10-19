@@ -99,18 +99,21 @@ with sync_playwright() as p:
         key(page, "KeyZ", wait=0.25)
     close_dialogs(page)
     check(page.evaluate("G.state.flags.roofs") == 1, "Наруто научил бегать по крышам (день 4)")
-    # встать к южной стене оружейной лавки, не у двери
-    st = W(page, """const m = s.map, b = m.buildings.find((b) => b.tplId === 'weapons'), T = 16;
-      const x = b.tx * T + 10, y = (b.ty + b.th) * T + 6;
-      s.setMap({ map: 'konoha', x, y, dir: 'up' }); return [b.tx, b.ty, b.tw, b.th];""")
+    # жилой дом, у которого справа в пределах прыжка есть другая крыша; встать к его южной стене (не у двери)
+    st = W(page, """const m = s.map, T = 16, R = G.roofs.rects(m);
+      const ok = (a) => a.b.tplId === 'house_s' && a.b.door && R.some((b) => b !== a && b.x >= a.x + a.w - 4 && b.x - (a.x + a.w) <= 40 && Math.abs((b.y + b.h / 2) - (a.y + a.h / 2)) < 14);
+      const spotOf = (b) => ({ x: (b.tx + (b.door.tx - b.tx === 0 ? b.tw - 1 : 0)) * T + 10, y: (b.ty + b.th) * T + 6 });
+      const a = R.find((a) => ok(a) && !m.blockedRect(G.actors.feet(spotOf(a.b))) && Math.abs(a.b.door.tx - (a.b.tx + (a.b.door.tx - a.b.tx === 0 ? a.b.tw - 1 : 0))) > 1);
+      const b = a.b, p = spotOf(b);
+      s.setMap({ map: 'konoha', x: p.x, y: p.y, dir: 'up' }); return [b.tx, b.ty, b.tw, b.th];""")
     time.sleep(0.5)
     key(page, "KeyZ"); time.sleep(1.0)
     check(P(page, "return !!p.roof"), "A у стены — герой на крыше (%s)" % st)
     shot(page, "out_roof")
-    r0 = P(page, "return G.roofs.at(m, p.x, p.y).b.tplId")
+    r0 = P(page, "const b = G.roofs.at(m, p.x, p.y).b; return b.tplId + ':' + b.tx + ',' + b.ty")
     x0 = P(page, "return p.x")
     page.keyboard.down("ArrowRight"); time.sleep(2.2); page.keyboard.up("ArrowRight"); time.sleep(0.8)
-    r1 = P(page, "const r = G.roofs.at(m, p.x, p.y); return r ? r.b.tplId : null")
+    r1 = P(page, "const r = G.roofs.at(m, p.x, p.y); return r ? r.b.tplId + ':' + r.b.tx + ',' + r.b.ty : null")
     check(P(page, "return !!p.roof") and P(page, "return p.x") > x0 + 30, "бег по крышам вправо (%s → %s)" % (r0, r1))
     check(r1 is not None and r1 != r0, "перепрыгнул на соседнюю крышу")
     shot(page, "out_roof_jump")
