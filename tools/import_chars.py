@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import import_art as ia
 
 ROOT = ia.ROOT
-CHARS = ['asuma', 'ayame', 'kiba', 'akamaru', 'anko', 'izumo', 'teuchi', 'cart', 'choji', 'choza', 'danzo', 'ebisu', 'fisher', 'sasuke', 'courier', 'grandma', 'hanabi', 'hinata', 'kotetsu', 'ibiki', 'ino', 'inoichi', 'hokage', 'homura', 'genma', 'jiraiya', 'kakashi', 'iruka', 'itachi', 'konohamaru', 'chunin', 'kurenai', 'bully', 'koharu', 'lee', 'mikoto', 'mizuki', 'naruto', 'fugaku']
+CHARS = ['asuma', 'ayame', 'kiba', 'akamaru', 'anko', 'izumo', 'teuchi', 'cart', 'choji', 'choza', 'danzo', 'ebisu', 'fisher', 'sasuke', 'courier', 'grandma', 'hanabi', 'hinata', 'kotetsu', 'ibiki', 'ino', 'inoichi', 'hokage', 'homura', 'genma', 'jiraiya', 'kakashi', 'iruka', 'itachi', 'konohamaru', 'chunin', 'kurenai', 'bully', 'koharu', 'lee', 'mikoto', 'mizuki', 'naruto', 'fugaku', 'guy', 'kid_m', 'orochimaru', 'sakura', 'neji']
 ROWH, COLW = 2000 / 14, 571 / 4
 SC = 0.4                      # масштаб исходник → px кадра (ширина кадра 32, высота 40)
 BASE = 132                    # «земля» внутри клетки (исходные px)
