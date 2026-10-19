@@ -8,15 +8,16 @@
     const at = (p) => ({ x: p[0] * T + 8, y: p[1] * T + 12 });
     const add = (tx, ty, def) => { const p = this.freeTile(m, tx, ty); if (p) m.npcs.push(this.makeNpc(Object.assign({}, def, at(p)))); };
     const day = () => G.state.vars.day;
+    const AN = G.KONOHA_DRAFT.anchors || {}, an = (k, d) => AN[k] || d;   // опорные точки из раскладки (tools/plan_konoha.py)
     // одноклассники и знакомые
-    add(46, 55, { id: 'choji', dir: 'down', talk: 'choji_talk', sched: [[14 * H, 20 * H, 'wd'], [11 * H, 20 * H, 'we']] });
-    add(14, 104, { id: 'kiba', dir: 'right', talk: 'kiba_talk', ai: 'wander', wanderR: 24, sched: [[14 * H, 19 * H, 'wd'], [8 * H, 18 * H, 'we']] });
-    add(100, 118, { id: 'shino', dir: 'down', talk: 'shino_talk', sched: [[14 * H, 18 * H, 'wd'], [10 * H, 17 * H, 'we']], dryOnly: true });
-    add(38, 115, { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 18 || G.state.flags.met_lee });
-    add(40, 115, { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => G.state.flags.met_lee });
-    add(58, 27, { id: 'mizuki', dir: 'down', talk: 'mizuki_talk', sched: [[13 * H, 17 * H, 'wd']], cond: () => day() >= 8 && day() < 54 });
+    add(...an('choji', [46, 55]), { id: 'choji', dir: 'down', talk: 'choji_talk', sched: [[14 * H, 20 * H, 'wd'], [11 * H, 20 * H, 'we']] });
+    add(...an('kiba', [14, 104]), { id: 'kiba', dir: 'right', talk: 'kiba_talk', ai: 'wander', wanderR: 24, sched: [[14 * H, 19 * H, 'wd'], [8 * H, 18 * H, 'we']] });
+    add(...an('shino', [100, 118]), { id: 'shino', dir: 'down', talk: 'shino_talk', sched: [[14 * H, 18 * H, 'wd'], [10 * H, 17 * H, 'we']], dryOnly: true });
+    add(...an('lee', [38, 115]), { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 18 || G.state.flags.met_lee });
+    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => G.state.flags.met_lee });
+    add(...an('mizuki', [58, 27]), { id: 'mizuki', dir: 'down', talk: 'mizuki_talk', sched: [[13 * H, 17 * H, 'wd']], cond: () => day() >= 8 && day() < 54 });
     // ночной торговец в переулке (каждую третью ночь)
-    add(104, 68, { id: 'thief', name: 'Ночной торговец', dir: 'down', shop: 'night', reach: 20, sched: [[21 * H, 26 * H]], cond: () => day() % 3 === 0 });
+    add(...an('thief', [104, 68]), { id: 'thief', name: 'Ночной торговец', dir: 'down', shop: 'night', reach: 20, sched: [[21 * H, 26 * H]], cond: () => day() % 3 === 0 });
     // объекты тренировок на полигонах
     for (const o of m.objects) {
       if (o.kind === 'target') o.talk = 'train_throw';
@@ -25,11 +26,11 @@
       else if (o.kind === 'log' || o.kind === 'stump') o.talk = 'train_log';
     }
     const obj = (kind, tx, ty, talk) => { const p = this.freeTile(m, tx, ty, true); if (p) return m.addObject(kind, p[0] * T + 8, p[1] * T + 15, { talk }); };
-    obj('sign', 44, 28, 'board');
-    obj('sign', 81, 46, 'train_run');
-    obj('stump', 123, 112, 'train_falls');
-    obj('stump', 138, 104, 'train_water');
-    obj('stump', 16, 30, 'train_stealth');
+    obj('sign', ...an('board', [44, 28]), 'board');
+    obj('sign', ...an('run', [81, 46]), 'train_run');
+    obj('stump', ...an('falls', [123, 112]), 'train_falls');
+    obj('stump', ...an('water', [138, 104]), 'train_water');
+    obj('stump', ...an('stealth', [16, 30]), 'train_stealth');
     // 20 секретных свитков (план §5.9): спрятаны по всей деревне
     const rnd = G.util.rng(2024), pts = m.spawnPoints.slice();
     const kinds = ['barrel', 'crate', 'stump', 'rock'];
@@ -59,7 +60,7 @@
       if (o.kind === 'chest') o.talk = 'home_chest';
     }
   });
-  for (const k of ['nara_hall', 'akimichi_hall', 'hyuga_hall', 'inuzuka_hall']) {
+  for (const k of ['nara_hall', 'akimichi_hall', 'hyuga_hall', 'inuzuka_hall', 'aburame_hall', 'senju_hall', 'sarutobi_hall', 'yamanaka_hall', 'uchiha_hall']) {
     const base = K[k];
     K[k] = (info) => { const m = base(info); return m; };
   }

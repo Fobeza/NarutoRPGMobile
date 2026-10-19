@@ -382,12 +382,13 @@ G.buildgfx = (() => {
 
   // ---------- Основная функция ----------
   // tpl — объект шаблона, id — ключ, seed — для вариаций.
-  function make(id, tpl, seed = 0) {
-    const key = id + ':' + seed;
+  // art — имя нарисованной картинки (gfx/house_art.js); у уникальных зданий — по id; нет картинки — рисуем кодом
+  function make(id, tpl, seed = 0, art = null) {
+    const key = id + ':' + seed + ':' + (art || '');
     if (cache[key]) return cache[key];
-    // нарисованные дома (art/houses → gfx/house_art.js) заменяют код-рисунок там, где для шаблона есть картинки
-    const art = G.houseArt.sprite(id, tpl, seed);
-    if (art) return (cache[key] = art);
+    const an = art || (tpl.unique && G.houseArt.has(id) ? id : null);
+    const sp = an && G.houseArt.sprite(an, tpl);
+    if (sp) return (cache[key] = sp);
     const W = tpl.w * T, HF = tpl.h * T;
     let OV = tpl.ov || 16;
     if (id === 'hokage_tower') OV = 28;

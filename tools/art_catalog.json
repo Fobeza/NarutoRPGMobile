@@ -1,0 +1,171 @@
+{
+ "_": "Каталог картинок зданий для tools/import_art.py. name — имя; file — путь в art/; kind: house | clan | office | dojo | unique | shop | guard; w — ширина пятна в тайлах (если нет — по пропорциям); door — где дверь по ширине (0..1); roof — доля высоты над стеной (для теней и бега по крышам); tpl — шаблон здания в data/buildings.js (у unique); clan — клан (у clan).",
+ "art": [
+  { "name": "house01", "file": "houses/house01.webp", "door": 0.5, "roof": 0.66, "kind": "house"
+  },
+  { "name": "house02", "file": "houses/house02.webp", "door": 0.54, "roof": 0.68, "kind": "office"
+  },
+  { "name": "house03", "file": "houses/house03.webp", "door": 0.5, "roof": 0.53, "kind": "house"
+  },
+  { "name": "house04", "file": "houses/house04.webp", "door": 0.5, "roof": 0.32, "kind": "house"
+  },
+  { "name": "house05", "file": "houses/house05.webp", "door": 0.27, "roof": 0.65, "kind": "house"
+  },
+  { "name": "house06", "file": "houses/house06.png", "door": 0.5, "roof": 0.53, "kind": "house"
+  },
+  { "name": "house07", "file": "houses/house07.png", "door": 0.5, "roof": 0.66, "kind": "house"
+  },
+  { "name": "house08", "file": "houses/house08.png", "door": 0.5, "roof": 0.42, "kind": "house"
+  },
+  { "name": "house09", "file": "houses/house09.webp", "door": 0.45, "roof": 0.6, "kind": "house"
+  },
+  { "name": "house10", "file": "houses/house10.webp", "door": 0.335, "roof": 0.49, "kind": "house"
+  },
+  { "name": "house11", "file": "houses/house11.webp", "door": 0.51, "roof": 0.4, "kind": "house"
+  },
+  { "name": "house12", "file": "houses/house12.webp", "door": 0.5, "roof": 0.68, "kind": "house"
+  },
+  { "name": "house13", "file": "houses/house13.webp", "door": 0.5, "roof": 0.36, "kind": "dojo"
+  },
+  { "name": "house14", "file": "houses/house14.webp", "door": 0.49, "roof": 0.7, "kind": "clan", "clan": "uchiha"
+  },
+  { "name": "house15", "file": "houses/house15.webp", "door": 0.3, "roof": 0.56, "kind": "house"
+  },
+  { "name": "house16", "file": "houses/house16.webp", "door": 0.5, "roof": 0.26, "kind": "house"
+  },
+  { "name": "house17", "file": "houses/house17.webp", "door": 0.49, "roof": 0.7, "kind": "house"
+  },
+  { "name": "house18", "file": "houses/house18.webp", "door": 0.5, "roof": 0.67, "kind": "house"
+  },
+  { "name": "house19", "file": "houses/house19.webp", "door": 0.5, "roof": 0.43, "kind": "house"
+  },
+  { "name": "house20", "file": "houses/house20.webp", "door": 0.55, "roof": 0.52, "kind": "house"
+  },
+  { "name": "aburame01", "file": "houses/aburame01.webp", "kind": "clan", "clan": "aburame", "door": 0.5, "roof": 0.55
+  },
+  { "name": "aburame02", "file": "houses/aburame02.webp", "kind": "clan", "clan": "aburame", "door": 0.5, "roof": 0.55
+  },
+  { "name": "aburame03", "file": "houses/aburame03.webp", "kind": "clan", "clan": "aburame", "door": 0.5, "roof": 0.5
+  },
+  { "name": "akimichi01", "file": "houses/akimichi01.webp", "kind": "clan", "clan": "akimichi", "door": 0.5, "roof": 0.55
+  },
+  { "name": "akimichi02", "file": "houses/akimichi02.webp", "kind": "clan", "clan": "akimichi", "door": 0.5, "roof": 0.6
+  },
+  { "name": "akimichi03", "file": "houses/akimichi03.webp", "kind": "clan", "clan": "akimichi", "door": 0.5, "roof": 0.55
+  },
+  { "name": "inuzuka01", "file": "houses/inuzuka01.webp", "kind": "clan", "clan": "inuzuka", "door": 0.5, "roof": 0.55
+  },
+  { "name": "inuzuka02", "file": "houses/inuzuka02.webp", "kind": "clan", "clan": "inuzuka", "door": 0.5, "roof": 0.6
+  },
+  { "name": "inuzuka03", "file": "houses/inuzuka03.webp", "kind": "clan", "clan": "inuzuka", "door": 0.5, "roof": 0.55
+  },
+  { "name": "nara01", "file": "houses/nara01.webp", "kind": "clan", "clan": "nara", "door": 0.5, "roof": 0.55
+  },
+  { "name": "nara02", "file": "houses/nara02.webp", "kind": "clan", "clan": "nara", "door": 0.5, "roof": 0.6
+  },
+  { "name": "nara03", "file": "houses/nara03.webp", "kind": "clan", "clan": "nara", "door": 0.5, "roof": 0.55
+  },
+  { "name": "sarutobi01", "file": "houses/sarutobi01.webp", "kind": "clan", "clan": "sarutobi", "door": 0.5, "roof": 0.55
+  },
+  { "name": "sarutobi02", "file": "houses/sarutobi02.webp", "kind": "clan", "clan": "sarutobi", "door": 0.5, "roof": 0.6
+  },
+  { "name": "sarutobi03", "file": "houses/sarutobi03.webp", "kind": "clan", "clan": "sarutobi", "door": 0.5, "roof": 0.55
+  },
+  { "name": "senju01", "file": "houses/senju01.webp", "kind": "clan", "clan": "senju", "door": 0.5, "roof": 0.55
+  },
+  { "name": "senju02", "file": "houses/senju02.webp", "kind": "clan", "clan": "senju", "door": 0.5, "roof": 0.6
+  },
+  { "name": "senju03", "file": "houses/senju03.webp", "kind": "clan", "clan": "senju", "door": 0.5, "roof": 0.55
+  },
+  { "name": "uchiha01", "file": "houses/uchiha01.webp", "kind": "clan", "clan": "uchiha", "door": 0.5, "roof": 0.55
+  },
+  { "name": "uchiha02", "file": "houses/uchiha02.webp", "kind": "clan", "clan": "uchiha", "door": 0.5, "roof": 0.6
+  },
+  { "name": "uchiha03", "file": "houses/uchiha03.webp", "kind": "clan", "clan": "uchiha", "door": 0.5, "roof": 0.55
+  },
+  { "name": "hyuga01", "file": "houses/hyuga01.webp", "kind": "clan", "clan": "hyuga", "door": 0.5, "roof": 0.55
+  },
+  { "name": "hyuga02", "file": "houses/hyuga02.webp", "kind": "clan", "clan": "hyuga", "door": 0.5, "roof": 0.6
+  },
+  { "name": "hyuga03", "file": "houses/hyuga03.webp", "kind": "clan", "clan": "hyuga", "door": 0.5, "roof": 0.55
+  },
+  { "name": "yamanaka01", "file": "houses/yamanaka01.webp", "kind": "clan", "clan": "yamanaka", "door": 0.5, "roof": 0.55
+  },
+  { "name": "yamanaka02", "file": "houses/yamanaka02.webp", "kind": "clan", "clan": "yamanaka", "door": 0.5, "roof": 0.6
+  },
+  { "name": "yamanaka03", "file": "houses/yamanaka03.webp", "kind": "clan", "clan": "yamanaka", "door": 0.5, "roof": 0.55
+  },
+  { "name": "hokage_tower", "file": "buildings/hokage_tower.webp", "kind": "unique", "tpl": "hokage_tower", "w": 10, "door": 0.5, "roof": 0.7
+  },
+  { "name": "academy", "file": "buildings/academy.webp", "kind": "unique", "tpl": "academy", "w": 15, "door": 0.5, "roof": 0.45
+  },
+  { "name": "hospital", "file": "buildings/hospital.webp", "kind": "unique", "tpl": "hospital", "w": 10, "door": 0.5, "roof": 0.25
+  },
+  { "name": "onsen", "file": "buildings/onsen.webp", "kind": "unique", "tpl": "onsen", "w": 9, "door": 0.5, "roof": 0.55
+  },
+  { "name": "library", "file": "buildings/library.webp", "kind": "unique", "tpl": "library", "w": 8, "door": 0.5, "roof": 0.55
+  },
+  { "name": "gate", "file": "buildings/gate.webp", "kind": "unique", "tpl": "gate", "w": 10, "door": 0.5, "roof": 0.3
+  },
+  { "name": "clan_hyuga", "file": "buildings/clan_hyuga.webp", "kind": "unique", "tpl": "clan_hyuga", "w": 11, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_nara", "file": "buildings/clan_nara.webp", "kind": "unique", "tpl": "clan_nara", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_akimichi", "file": "buildings/clan_akimichi.webp", "kind": "unique", "tpl": "clan_akimichi", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_inuzuka", "file": "buildings/clan_inuzuka.webp", "kind": "unique", "tpl": "clan_inuzuka", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_aburame", "file": "buildings/clan_aburame.webp", "kind": "unique", "tpl": "clan_aburame", "w": 10, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_senju", "file": "buildings/clan_senju.webp", "kind": "unique", "tpl": "clan_senju", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_sarutobi", "file": "buildings/clan_sarutobi.webp", "kind": "unique", "tpl": "clan_sarutobi", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_yamanaka", "file": "buildings/clan_yamanaka.webp", "kind": "unique", "tpl": "clan_yamanaka", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "clan_uchiha", "file": "buildings/clan_uchiha.webp", "kind": "unique", "tpl": "clan_uchiha", "w": 9, "door": 0.5, "roof": 0.58
+  },
+  { "name": "teahouse", "file": "buildings/teahouse.webp", "kind": "unique", "tpl": "teahouse", "w": 6, "door": 0.5, "roof": 0.55
+  },
+  { "name": "yakiniku", "file": "buildings/yakiniku.webp", "kind": "unique", "tpl": "yakiniku", "w": 7, "door": 0.5, "roof": 0.52
+  },
+  { "name": "market", "file": "buildings/market.webp", "kind": "unique", "tpl": "market", "w": 12, "door": 0.5, "roof": 0.45
+  },
+  { "name": "ichiraku", "file": "buildings/ichiraku.webp", "kind": "unique", "tpl": "ichiraku", "w": 5, "door": 0.5, "roof": 0.52
+  },
+  { "name": "dango", "file": "buildings/dango.webp", "kind": "unique", "tpl": "dango", "w": 5, "door": 0.5, "roof": 0.52
+  },
+  { "name": "books", "file": "buildings/books.webp", "kind": "unique", "tpl": "books", "w": 5, "door": 0.5, "roof": 0.5
+  },
+  { "name": "flowers", "file": "buildings/flowers.webp", "kind": "unique", "tpl": "flowers", "w": 5, "door": 0.5, "roof": 0.52
+  },
+  { "name": "souvenir", "file": "buildings/souvenir.webp", "kind": "unique", "tpl": "souvenir", "w": 5, "door": 0.5, "roof": 0.52
+  },
+  { "name": "weapons", "file": "buildings/weapons.webp", "kind": "unique", "tpl": "weapons", "w": 6, "door": 0.5, "roof": 0.52
+  },
+  { "name": "pharmacy", "file": "buildings/pharmacy.webp", "kind": "unique", "tpl": "pharmacy", "w": 5, "door": 0.5, "roof": 0.5
+  },
+  { "name": "inuzuka_shop", "file": "buildings/inuzuka_shop.webp", "kind": "unique", "tpl": "inuzuka_shop", "w": 5, "door": 0.5, "roof": 0.5
+  },
+  { "name": "hero_home", "file": "buildings/hero_home.webp", "kind": "unique", "tpl": "hero_home", "w": 5, "door": 0.5, "roof": 0.62
+  },
+  { "name": "naruto_flat", "file": "buildings/naruto_flat.webp", "kind": "unique", "tpl": "naruto_flat", "w": 6, "door": 0.5, "roof": 0.2
+  },
+  { "name": "sasuke_home", "file": "buildings/sasuke_home.webp", "kind": "unique", "tpl": "sasuke_home", "w": 7, "door": 0.5, "roof": 0.55
+  },
+  { "name": "uchiha_police", "file": "buildings/uchiha_police.webp", "kind": "unique", "tpl": "uchiha_police", "w": 7, "door": 0.5, "roof": 0.55
+  },
+  { "name": "hokage_rock", "file": "buildings/hokage_rock.webp", "kind": "unique", "tpl": "hokage_rock", "w": 30, "door": 0.5, "roof": 0.3
+  },
+  { "name": "shop_red", "file": "buildings/shop_red.webp", "kind": "shop", "w": 5, "door": 0.31, "roof": 0.5
+  },
+  { "name": "shop_green", "file": "buildings/shop_green.webp", "kind": "shop", "w": 5, "door": 0.38, "roof": 0.5
+  },
+  { "name": "shop_blue", "file": "buildings/shop_blue.webp", "kind": "shop", "w": 5, "door": 0.38, "roof": 0.5
+  },
+  { "name": "guard_post01", "file": "buildings/guard_post01.webp", "kind": "guard", "w": 4, "door": 0.26, "roof": 0.5
+  },
+  { "name": "guard_post02", "file": "buildings/guard_post02.webp", "kind": "guard", "w": 4, "door": 0.76, "roof": 0.5
+  }
+ ]
+}

@@ -1,10 +1,13 @@
-// Нарисованные дома (данные — gfx/house_art_data.js, его делает tools/import_houses.py из art/houses/).
+// Нарисованные здания (данные — gfx/house_art_data.js, его делает tools/import_art.py из art/ и tools/art_catalog.json).
 // Картинки хранятся палитрой и строкой повторов («a12.b3»: знак — цвет, число — сколько подряд, точка — прозрачность)
-// и раскодируются сразу при первом обращении — без ожидания загрузки файлов.
-//   G.houseArt.sprite(id, tpl, seed) → спрайт здания { img, ox, oy, w, h, wh } или null (тогда дом рисует buildgfx кодом)
+// и раскодируются при первом обращении — без ожидания загрузки файлов.
+//   G.houseArt.spec(name)           → размеры пятна и дверь картинки { w, h, dx, ox, wall, kind, ... } или null
+//   G.houseArt.sprite(name, tpl)    → спрайт здания { img, ox, oy, w, h, wh, art }; tpl — шаблон (даёт высоту пятна)
+// У «уникальных» шаблонов (kind unique) размеры в G.BUILDINGS подменяются размерами картинки при загрузке.
 G.houseArt = (() => {
   const SYM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/:;<=>?@^_';
-  const decoded = new Map();
+  const data = G.HOUSE_ART || { bitmaps: [], art: {} };
+  const decoded = new Map(), sprites = new Map();
 
   function decode(v) {
     if (decoded.has(v)) return decoded.get(v);
@@ -30,15 +33,26 @@ G.houseArt = (() => {
     return c;
   }
 
+  // уникальные здания: пятно и дверь — по картинке
+  for (const [name, a] of Object.entries(data.art)) {
+    const tpl = a.kind === 'unique' && G.BUILDINGS[a.tpl];
+    if (tpl) { tpl.w = a.w; tpl.h = a.h; tpl.door = tpl.door ? [a.dx, a.h - 1] : tpl.door; }
+  }
+
   return {
-    has: (id) => !!(G.HOUSE_ART && G.HOUSE_ART.tpl[id]),
-    sprite(id, tpl, seed) {
-      const list = G.HOUSE_ART && G.HOUSE_ART.tpl[id];
-      if (!list || !list.length || tpl.unique) return null;
-      const v = list[Math.floor(G.util.hash2(seed, 29, 7) * list.length) % list.length], bm = G.HOUSE_ART.bitmaps[v.b];
-      const HF = tpl.h * G.CONFIG.TILE;
+    has: (name) => !!data.art[name],
+    spec: (name) => data.art[name] || null,
+    names: (kind, clan) => Object.keys(data.art).filter((n) => data.art[n].kind === kind && (!clan || data.art[n].clan === clan)),
+    sprite(name, tpl) {
+      const a = data.art[name];
+      if (!a) return null;
+      const key = name + ':' + (tpl ? tpl.h : a.h);
+      if (sprites.has(key)) return sprites.get(key);
+      const bm = data.bitmaps[a.b], HF = (tpl ? tpl.h : a.h) * G.CONFIG.TILE;
       // низ картинки — по низу пятна здания; вверх она выступает как крыша
-      return { img: decode(bm), ox: v.ox, oy: HF - bm.lh, w: bm.lw, h: bm.lh, wh: v.wall, art: bm.src };
+      const s = { img: decode(bm), ox: a.ox, oy: HF - bm.lh, w: bm.lw, h: bm.lh, wh: a.wall, art: name };
+      sprites.set(key, s);
+      return s;
     },
   };
 })();

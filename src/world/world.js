@@ -137,7 +137,7 @@ G.world = {
         sched: [[13 * H, 18 * H, 'wd'], [10 * H, 18 * H, 'we']], dryOnly: true });
     }
     // Ночной патруль чунинов на перекрёстке главных улиц (комендантский час для учеников — с 23:00)
-    const cross = this.freeTile(m, 78, 45);
+    const cr = G.KONOHA_DRAFT.cross || [78, 45], cross = this.freeTile(m, cr[0], cr[1]);
     if (cross) list.push({ id: 'villager_m', ...at(cross[0], cross[1]), dir: 'down', name: 'Чунин-патрульный', talk: 'patrol_warn',
       ai: 'wander', wanderR: 40, sched: [[22 * H, 30 * H]] });
     // массовка

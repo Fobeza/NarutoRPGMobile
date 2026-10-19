@@ -15,7 +15,8 @@ G.outdoor = {
       const o = m.addObject(rare ? 'herb_blue' : 'herb', p[0] * T + 8, p[1] * T + 13, { talk: 'herb_' + i });
       o.herb = i; o.rare = rare;
     });
-    put(this.HERBS, false, 0); put(this.LOTUS, true, 100);
+    const AN = G.KONOHA_DRAFT.anchors || {};
+    put(AN.herbs || this.HERBS, false, 0); put(AN.lotus || this.LOTUS, true, 100);
     this.refresh(m);
   },
   ready(i) { const d = G.state.vars['herb_' + i]; return !d || G.state.vars.day - d >= this.REGROW; },
@@ -45,7 +46,8 @@ G.outdoor = {
   spotKind(m, x, y) {
     const T = G.CONFIG.TILE, d = m.districtAt(Math.floor(x / T), Math.floor(y / T));
     if (d && /lake|озер/i.test((d.type || '') + (d.name || ''))) return 'lake';
-    return Math.hypot(x / T - 142, y / T - 100) < 14 ? 'lake' : 'river';
+    const lakes = (G.KONOHA_DRAFT.shape && G.KONOHA_DRAFT.shape.lakes) || [{ cx: 142, cy: 100, rx: 14, ry: 14 }];
+    return lakes.some((l) => Math.hypot((x / T - l.cx) / (l.rx + 3), (y / T - l.cy) / (l.ry + 3)) < 1) ? 'lake' : 'river';
   },
   TABLE: {
     lake:  [['fish', 58], ['eel', 12], ['carp', 7], ['boot', 18], ['herb_blue', 5]],

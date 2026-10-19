@@ -238,6 +238,11 @@ G.interiors = (() => {
         akimichi_hall: ['Дом клана Акимичи. С кухни доносится запах жареного мяса.', 'Чоджи где-то здесь — точно у холодильника.'],
         hyuga_hall: ['Главный дом клана Хьюга. Строго, чисто и очень тихо.', 'Во дворе слышны удары — кто-то тренирует Мягкий кулак.'],
         inuzuka_hall: ['Дом клана Инузука. Отовсюду лают собаки.', 'Киба и Акамару опять убежали гулять.'],
+        aburame_hall: ['Дом клана Абураме. В стенах тихо жужжат жуки.', 'Шино учил: жуки не любят шума. Говори тише.'],
+        senju_hall: ['Дом клана Сенджу. На стенах висят старые свитки и портреты основателей.', 'Говорят, первый Хокагэ строил деревню именно из таких брёвен.'],
+        sarutobi_hall: ['Дом клана Сарутоби. Здесь пахнет чаем и табаком.', 'Хокаге-сама иногда заходит сюда отдохнуть от бумаг.'],
+        yamanaka_hall: ['Дом клана Яманака. Повсюду свежие цветы.', 'Иноичи говорит: сначала цветы, потом дело.'],
+        uchiha_hall: ['Главный дом клана Учиха. Тихо. Очень тихо.', 'На стенах знак веера. Когда-то здесь было людно.'],
       }[info.kind] || ['Зал клана.'];
       const extra = {
         nara_hall: () => { put(m, 'deer', 4, 7, { talk: ['Олень клана Нара. Смотрит на тебя спокойно и немного лениво.'] }); put(m, 'herb', 8, 7, { box: null }); put(m, 'herb_blue', 7, 7, { box: null }); },
@@ -283,7 +288,7 @@ G.interiors = (() => {
     },
   };
   // залы кланов → общий вид
-  for (const k of ['nara_hall', 'akimichi_hall', 'hyuga_hall', 'inuzuka_hall']) KINDS[k] = (info) => KINDS.hall(Object.assign({}, info, { kind: k }));
+  for (const k of ['nara_hall', 'akimichi_hall', 'hyuga_hall', 'inuzuka_hall', 'aburame_hall', 'senju_hall', 'sarutobi_hall', 'yamanaka_hall', 'uchiha_hall']) KINDS[k] = (info) => KINDS.hall(Object.assign({}, info, { kind: k }));
   for (const k of ['weapons', 'pharmacy', 'books', 'flowers', 'inuzuka_shop', 'souvenir', 'market']) KINDS[k] = KINDS.shop;
   for (const k of ['ichiraku', 'yakiniku', 'dango', 'teahouse']) KINDS[k] = KINDS.food;
 

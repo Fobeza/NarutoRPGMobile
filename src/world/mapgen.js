@@ -22,7 +22,28 @@ G.mapgen = (() => {
     return tpl.name;
   }
 
+  // Клетки дороги-ломаной (сглаженная кривая, ширина w); те же формулы использует tools/plan_konoha.py
+  function polyTiles(pts, w) {
+    const cr = (a, b, c, d, t) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (-a + 3 * b - 3 * c + d) * t * t * t);
+    const out = [], seen = new Set();
+    const add = (sx, sy) => {
+      const x0 = Math.floor(sx - w / 2 + 0.5), y0 = Math.floor(sy - w / 2 + 0.5);
+      for (let y = y0; y < y0 + w; y++) for (let x = x0; x < x0 + w; x++) { const k = y * 4096 + x; if (!seen.has(k)) { seen.add(k); out.push([x, y]); } }
+    };
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[i], c = pts[i + 1], d = pts[Math.min(pts.length - 1, i + 2)];
+      for (let t = 0; t < 1 - 1e-9; t += 0.04) add(cr(a[0], b[0], c[0], d[0], t), cr(a[1], b[1], c[1], d[1], t));
+    }
+    add(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+    return out;
+  }
   function roadRect(r) {
+    if (r.tiles || r.pts) {
+      const t = r.tiles || (r._t = r._t || polyTiles(r.pts, G.ROADS[r.type].w));
+      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+      for (const [x, y] of t) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+      return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+    }
     const w = G.ROADS[r.type].w;
     const x = Math.min(r.x1, r.x2), y = Math.min(r.y1, r.y2);
     if (r.y1 === r.y2) return { x, y: r.y1, w: Math.abs(r.x2 - r.x1) + 1, h: w };
@@ -43,6 +64,7 @@ G.mapgen = (() => {
   function konoha(layout, seed = 7) {
     const ID = G.tiles.ID;
     const W = layout.size.w, HH = layout.size.h;
+    const EXPL = !!layout.explicit;   // здания заданы списком (tools/plan_konoha.py): автозастройка и переулки не нужны
     const m = new G.WorldMap('konoha', W, HH, { outdoor: true, name: 'Коноха', bg: '#2e5a2e' });
     const rnd = G.util.rng(seed);
     // занятость клеток: 0 свободно, 1 дорога, 2 здание, 3 непроходимая местность, 4 резерв (двор/крыльцо), 5 декор
@@ -128,6 +150,13 @@ G.mapgen = (() => {
     // ---------- 2. Дороги ----------
     const roadTile = { main: ID.MAINROAD, street: ID.PATH, path: ID.DIRT };
     for (const r of layout.roads) {
+      if (r.tiles || r.pts) {
+        for (const [x, y] of r.tiles || (r._t = r._t || polyTiles(r.pts, G.ROADS[r.type].w))) {
+          if (!m.inside(x, y) || O(x, y) === 3) continue;
+          m.set(x, y, roadTile[r.type]); setO(x, y, 1);
+        }
+        continue;
+      }
       const rr = roadRect(r);
       for (let y = rr.y; y < rr.y + rr.h; y++) for (let x = rr.x; x < rr.x + rr.w; x++) {
         if (!m.inside(x, y) || O(x, y) === 3) continue;
@@ -167,8 +196,8 @@ G.mapgen = (() => {
     const isRoad = (x, y) => O(x, y) === 1 || G.tiles.ROADY.has(m.get(x, y));
 
     function addBuildingTiles(id, tpl, tx, ty, opts = {}) {
-      const spr = G.buildgfx.make(id, tpl, opts.seed != null ? opts.seed : ++bseed);
-      const b = m.addBuilding({ tplId: id, tplDef: tpl, tx, ty, tw: tpl.w, th: tpl.h, spr, name: nameOf(id, tpl, tx * 7 + ty * 13) });
+      const spr = G.buildgfx.make(id, tpl, opts.seed != null ? opts.seed : ++bseed, opts.art);
+      const b = m.addBuilding({ tplId: id, tplDef: tpl, tx, ty, tw: tpl.w, th: tpl.h, spr, name: opts.name || nameOf(id, tpl, tx * 7 + ty * 13) });
       for (let y = ty; y < ty + tpl.h; y++) for (let x = tx; x < tx + tpl.w; x++) { m.setBlock(x, y, 1); setO(x, y, 2); if (m.inside(x, y)) bAt[y * W + x] = m.buildings.length; }
       // кольцо вокруг: у ключевых зданий — резерв (4), у автодомов — мягкое (6), к ним можно пристроиться вплотную
       const ring = opts.soft ? 6 : 4;
@@ -204,9 +233,13 @@ G.mapgen = (() => {
       for (const yy of path) { if (grassy(x, yy)) m.set(x, yy, ID.PATH); if (O(x, yy) !== 1) setO(x, yy, 4); }
     }
 
-    function place(id, tx, ty) {
-      const tpl = G.BUILDINGS[id];
+    function place(id, tx, ty, ent = {}) {
+      let tpl = G.BUILDINGS[id];
       if (!tpl) return;
+      // у здания с нарисованной картинкой свои размеры пятна и дверь (gfx/house_art.js)
+      const sp = ent.art && G.houseArt.spec(ent.art);
+      if (sp) tpl = Object.assign({}, tpl, { w: sp.w, h: sp.h, door: tpl.door ? [sp.dx, sp.h - 1] : tpl.door });
+      const bo = { art: ent.art, name: ent.name, soft: !!ent.art && !tpl.unique };
       const cx = tx * T, cy = ty * T;
       // ориентиры без зданий (водопад, пристань, колодец…) — для карты и заданий
       if (tpl.cat === 'landmark' || tpl.cat === 'training') (m.spots || (m.spots = {}))[id] = { tplId: id, tplDef: tpl, tx, ty, tw: tpl.w, th: tpl.h, name: tpl.name, spot: true };
@@ -265,10 +298,10 @@ G.mapgen = (() => {
           b.talk = ['Главные ворота «А» и «УН» закрыты.', 'Ученикам Академии выходить из деревни нельзя.'];
           return;
         }
-        default: addBuildingTiles(id, tpl, tx, ty);
+        default: addBuildingTiles(id, tpl, tx, ty, bo);
       }
     }
-    for (const b of layout.buildings) place(b.tpl, b.x, b.y);
+    for (const b of layout.buildings) place(b.tpl, b.x, b.y, b);
 
     // ---------- 4. Плотная застройка (как в аниме: дома почти вплотную, узкие переулки) ----------
     // Дорожка от клетки (sx, sy) до ближайшей дороги поиском в ширину. foot — будущее пятно здания.
@@ -326,12 +359,20 @@ G.mapgen = (() => {
       }
     }
     for (const b of keyB) { const p = findPath(b.door.tx, b.door.ty + 1, 40, null); if (p) markPath(p, 'key'); }
+    // явная раскладка: проход от двери каждого дома до дороги (tools/plan_konoha.py проверял его теми же правилами)
+    if (EXPL) {
+      for (const b of m.buildings) {
+        if (!b.door || b.tplDef.unique || b.tplId === 'gate') continue;
+        const d = m.districtAt(b.door.tx, b.door.ty), p = findPath(b.door.tx, b.door.ty + 1, 34, null);
+        if (p) { markPath(p, d && d.type === 'uchiha' ? 'uchiha' : 'residential'); } else b.noPath = true;
+      }
+    }
 
     // 4b. Переулки: горизонтальные ряды через каждые STEP клеток от дороги сверху + поперечные проходы
     const lane = new Uint8Array(W * HH);
     const laneOk = (x, y) => { const o = O(x, y); return (o === 0 || o === 4 || o === 6) && m.get(x, y) !== ID.WATER; };
     const LANES = { residential: [7, 13], uchiha: [9, 0], clan: [0, 0] };
-    for (const d of layout.districts) {
+    for (const d of EXPL ? [] : layout.districts) {
       const L = LANES[d.type]; if (!L || !L[0]) continue;
       for (let x = d.x; x < d.x + d.w; x++) {
         let last = null;
@@ -378,7 +419,7 @@ G.mapgen = (() => {
     }
 
     // садики с деревьями между домами (резерв до застройки)
-    for (const d of layout.districts) {
+    for (const d of EXPL ? [] : layout.districts) {
       if (d.type !== 'residential' && d.type !== 'market') continue;
       const n = Math.floor(d.w * d.h * (d.type === 'market' ? 0.002 : 0.005));
       for (let k = 0, got = 0; k < n * 6 && got < n; k++) {
@@ -425,7 +466,7 @@ G.mapgen = (() => {
       return arr.sort((a, b) => a[1] - b[1]).map((a) => a[0]);
     };
     for (const pass of [1, 9]) {
-      for (const d of layout.districts) {
+      for (const d of EXPL ? [] : layout.districts) {
         const rule = FILL[d.type]; if (!rule) continue;
         let placed = m.buildings.filter((b) => b.auto && b.district === d).length;
         for (let ty = d.y; ty < d.y + d.h; ty++) for (let tx = d.x; tx < d.x + d.w; tx++) {
@@ -549,7 +590,7 @@ G.mapgen = (() => {
           break;
         case 'clan':
           // забор по верхнему краю квартала
-          for (let x = d.x; x < d.x + d.w; x++) if (O(x, d.y) === 0) { m.addObject('clanwall', x * T + 8, d.y * T + 15); setO(x, d.y, 5); }
+          if (d.fence !== false) for (let x = d.x; x < d.x + d.w; x++) if (O(x, d.y) === 0) { m.addObject('clanwall', x * T + 8, d.y * T + 15); setO(x, d.y, 5); }
           sample(0.02, (x, y) => tryTree(x, y, H(x, y, 10) > 0.7 ? 'maple' : 'tree'));
           sample(0.008, (x, y) => tryObj(x, y, 'stonelamp'));
           sample(0.004, (x, y) => tryObj(x, y, 'pond', null, (o) => o === 0 && O(x - 1, y) === 0 && O(x + 1, y) === 0 && O(x, y - 1) === 0 && O(x - 1, y - 1) === 0 && O(x + 1, y - 1) === 0) && [[-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1]].forEach(([a, b]) => setO(x + a, y + b, 5)));
@@ -598,6 +639,14 @@ G.mapgen = (() => {
     // фонари вдоль главных улиц
     for (const r of layout.roads) {
       if (r.type !== 'main') continue;
+      if (r.pts) {   // ломаная: фонарь через каждые ~7 клеток по обе стороны
+        const tl = r._t || polyTiles(r.pts, 3), mid = tl.filter((_, i) => i % 3 === 1);
+        for (let i = 2; i < mid.length; i += 7) {
+          const [x, y] = mid[i];
+          for (const [lx, ly] of [[x - 2, y], [x + 2, y]]) if (!KP(lx, ly) && (O(lx, ly) === 0 || (O(lx, ly) === 4 && m.get(lx, ly) === ID.STONE && O(lx, ly - 1) !== 2 && O(lx, ly + 1) !== 2))) tryObj(lx, ly, 'lamp', null, () => true);
+        }
+        continue;
+      }
       const rr = roadRect(r);
       const horiz = r.y1 === r.y2;
       const len = horiz ? rr.w : rr.h;
@@ -609,7 +658,7 @@ G.mapgen = (() => {
     }
 
     // таблички-указатели
-    const signs = [
+    const signs = layout.signs || [
       [77, 47, ['▲ Академия, резиденция Хокаге, Скала Хокаге', '< Квартал кланов   Квартал Учиха >', '▼ Жилые кварталы, полигоны, главные ворота']],
       [81, 61, ['Жилой квартал. Дом героя — к востоку отсюда.', 'Мимо квартиры Наруто ночью лучше не шуметь.']],
       [74, 119, ['Главные ворота Конохи. Посты стражи: Изумо и Котецу.']],
@@ -625,11 +674,27 @@ G.mapgen = (() => {
 
     // недостижимые «карманы» (дворы за домами без прохода) делаем непроходимыми
     m.finalize();
-    pockets(m);
+    pockets(m, ...(layout.start || [78, 50]));
+    // декор с репликами (святилища, колодцы), оказавшийся в недоступном дворе, убираем: до него не дойти
+    if (EXPL) {
+      const near = (o) => { const tx = Math.floor(o.x / T), ty = Math.floor((o.y - 1) / T); return [[0, 1], [1, 0], [-1, 0], [0, -1], [1, 1], [-1, 1]].some(([a, b]) => m.reach[(ty + b) * W + tx + a]); };
+      m.objects = m.objects.filter((o) => !(o.talk && (o.kind === 'shrine' || o.kind === 'well') && !near(o)));
+    }
 
     // ---------- 6. Точки появления ----------
     m.spawnPoints = [];
-    for (const d of layout.districts) {
+    if (EXPL) {   // явная раскладка: равномерная россыпь по достижимым клеткам у дорог и дорожек
+      const crowd = layout.crowd || 96, sp = [];
+      for (let k = 0; k < 9000 && sp.length < crowd; k++) {
+        const x = 4 + Math.floor(rnd() * (W - 8)), y = 16 + Math.floor(rnd() * (HH - 20));
+        if (!m.inside(x, y) || !m.reach || !m.reach[y * W + x] || m.solidTile(x, y) || O(x, y) === 5 || O(x, y) === 2 || O(x, y) === 3) continue;
+        if (O(x, y) !== 1 && !(KP(x, y) || O(x + 1, y) === 1 || O(x - 1, y) === 1 || O(x, y + 1) === 1 || O(x, y - 1) === 1)) continue;
+        if (sp.some((q) => Math.abs(q[0] - x) + Math.abs(q[1] - y) < 5)) continue;
+        sp.push([x, y]);
+      }
+      for (const [x, y] of sp) { const d = m.districtAt(x, y); m.spawnPoints.push({ x: x * T + 8, y: y * T + 12, district: d ? d.type : 'residential' }); }
+    }
+    for (const d of EXPL ? [] : layout.districts) {
       if (!['residential', 'market', 'official', 'park', 'clan', 'training'].includes(d.type)) continue;
       const n = { market: 8, official: 6, residential: 7, park: 3, clan: 2, training: 2 }[d.type];
       let tries = 0, got = 0;
