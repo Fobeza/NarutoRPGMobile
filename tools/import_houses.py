@@ -86,8 +86,7 @@ def encode(img):
 def main():
     cfg = json.load(open(os.path.join(ROOT, 'tools', 'houses.json'), encoding='utf-8'))
     tpls = templates()
-    variants = {}
-    total = 0
+    bitmaps, bkey, variants = [], {}, {}
     for item in cfg['houses']:
         path = os.path.join(ROOT, 'art', 'houses', item['file'])
         if not os.path.exists(path): print('нет файла', path); continue
@@ -106,22 +105,24 @@ def main():
             t = tpls[tid]
             lw = t['w'] * T + 2 * EX                       # ширина в логических px (с карнизами)
             lh = max(8, round(lw * ch / cw))
-            img = scale(a, lw * HI, lh * HI)
-            colors, rle = encode(img)
+            # одинаковые по ширине шаблоны делят одну картинку: хранится один раз
+            if (item['file'], lw) not in bkey:
+                colors, rle = encode(scale(a, lw * HI, lh * HI))
+                bkey[(item['file'], lw)] = len(bitmaps)
+                bitmaps.append(dict(src=os.path.splitext(item['file'])[0], lw=lw, lh=lh, pal=colors, rle=rle))
             # дверь картинки ставим над дверной клеткой шаблона (сдвиг не больше 10 px от центра)
             target = t['door'] * T + T / 2
             best = min(item.get('door', [0.5]), key=lambda f: abs(target - (-EX + f * lw)))
             ox = round(target - best * lw)
             ox = max(-EX - 10, min(-EX + 10, ox))
             wall = max(14, round((1 - item.get('roof', 0.5)) * lh))
-            variants.setdefault(tid, []).append(dict(src=os.path.splitext(item['file'])[0], lw=lw, lh=lh, ox=ox, wall=wall, pal=colors, rle=rle))
-            total += len(rle) + len(colors) * 8
+            variants.setdefault(tid, []).append(dict(b=bkey[(item['file'], lw)], ox=ox, wall=wall))
     js = ['// Нарисованные дома — СГЕНЕРИРОВАНО tools/import_houses.py из art/houses/, руками не править.',
           '// Раскодирует gfx/house_art.js. Для каждого шаблона здания — свой набор картинок (по seed здания).',
-          'G.HOUSE_ART = ' + json.dumps(variants, ensure_ascii=False, separators=(',', ':')) + ';', '']
+          'G.HOUSE_ART = ' + json.dumps({'bitmaps': bitmaps, 'tpl': variants}, ensure_ascii=False, separators=(',', ':')) + ';', '']
     path = os.path.join(ROOT, 'src', 'gfx', 'house_art_data.js')
     open(path, 'w', encoding='utf-8').write('\n'.join(js))
-    print('вариантов: %d, шаблонов: %d, файл %d КБ' % (sum(len(v) for v in variants.values()), len(variants), os.path.getsize(path) // 1024))
+    print('картинок: %d, привязок к шаблонам: %d (шаблонов %d), файл %d КБ' % (len(bitmaps), sum(len(v) for v in variants.values()), len(variants), os.path.getsize(path) // 1024))
 
 
 if __name__ == '__main__':

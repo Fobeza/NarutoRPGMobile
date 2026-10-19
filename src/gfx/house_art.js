@@ -31,14 +31,14 @@ G.houseArt = (() => {
   }
 
   return {
-    has: (id) => !!(G.HOUSE_ART && G.HOUSE_ART[id]),
+    has: (id) => !!(G.HOUSE_ART && G.HOUSE_ART.tpl[id]),
     sprite(id, tpl, seed) {
-      const list = G.HOUSE_ART && G.HOUSE_ART[id];
+      const list = G.HOUSE_ART && G.HOUSE_ART.tpl[id];
       if (!list || !list.length || tpl.unique) return null;
-      const v = list[Math.floor(G.util.hash2(seed, 29, 7) * list.length) % list.length];
+      const v = list[Math.floor(G.util.hash2(seed, 29, 7) * list.length) % list.length], bm = G.HOUSE_ART.bitmaps[v.b];
       const HF = tpl.h * G.CONFIG.TILE;
       // низ картинки — по низу пятна здания; вверх она выступает как крыша
-      return { img: decode(v), ox: v.ox, oy: HF - v.lh, w: v.lw, h: v.lh, wh: v.wall, art: v.src };
+      return { img: decode(bm), ox: v.ox, oy: HF - bm.lh, w: bm.lw, h: bm.lh, wh: v.wall, art: bm.src };
     },
   };
 })();

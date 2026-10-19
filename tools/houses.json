@@ -96,6 +96,36 @@
       ],
       "roof": 0.56,
       "tpls": ["house_w"]
+    },
+    {
+      "file": "house16.webp",
+      "door": [0.5],
+      "roof": 0.26,
+      "tpls": ["apartment_s", "house_m", "house_s", "house_t"]
+    },
+    {
+      "file": "house17.webp",
+      "door": [0.49],
+      "roof": 0.7,
+      "tpls": ["house_m", "house_s", "office", "shop_generic", "dojo"]
+    },
+    {
+      "file": "house18.webp",
+      "door": [0.5],
+      "roof": 0.67,
+      "tpls": ["house_m", "house_s", "house_t", "tower_r", "shop_generic"]
+    },
+    {
+      "file": "house19.webp",
+      "door": [0.5],
+      "roof": 0.43,
+      "tpls": ["house_w", "office"]
+    },
+    {
+      "file": "house20.webp",
+      "door": [0.55],
+      "roof": 0.52,
+      "tpls": ["house_w"]
     }
   ]
 }
