@@ -27,6 +27,7 @@ G.scenes.register('menu', () => {
   return {
     name: 'menu',
     transparent: true,
+    labels: () => items().map((q) => q.label), // подписи пунктов — тесты выбирают пункт по названию
     update(dt) {
       const I = G.input;
       const list = items();
