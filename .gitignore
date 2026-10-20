@@ -6,3 +6,6 @@ __pycache__/
 *.zip
 .DS_Store
 assets/src/
+
+# снимок карты из tools/render_map.py
+/map.png
