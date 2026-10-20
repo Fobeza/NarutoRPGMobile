@@ -53,10 +53,25 @@ G.houseArt = (() => {
       const bm = data.bitmaps[a.b], HF = (tpl ? tpl.h : a.h) * G.CONFIG.TILE;
       // низ картинки — по низу пятна здания; вверх она выступает как крыша
       const s = { img: decode(bm), ox: a.ox, oy: HF - bm.lh, w: bm.lw, h: bm.lh, wh: a.wall, art: name };
-      if (a.g && a.g.length) {   // окна ночью: прямоугольники из import_art.py (px ×2), тёплый цвет + блик сверху
+      if (a.g && a.g.length) {   // проверенные области стекла, координаты в px ×2
         const g = G.gfx.canvas(bm.lw, bm.lh), gc = g.getContext('2d');
-        gc.fillStyle = '#ffb860'; for (const [x, y, w, h] of a.g) gc.fillRect(x / 2, y / 2, w / 2, h / 2);
-        gc.fillStyle = '#ffe8a8'; for (const [x, y, w] of a.g) gc.fillRect(x / 2 + 0.5, y / 2 + 0.5, Math.max(0.5, w / 2 - 1), 1);
+        gc.fillStyle = '#ffb860';
+        for (const [x, y, w, h, shape] of a.g) {
+          if (shape === 'ellipse') { gc.beginPath(); gc.ellipse((x + w / 2) / 2, (y + h / 2) / 2, w / 4, h / 4, 0, 0, Math.PI * 2); gc.fill(); }
+          else gc.fillRect(x / 2, y / 2, w / 2, h / 2);
+        }
+        // Оставляем контур здания и деревянные переплёты: прямоугольник сам по себе заливает карниз и пустой фон.
+        const mask = gc.getImageData(0, 0, g.width, g.height);
+        const src = s.img.getContext('2d').getImageData(0, 0, g.width, g.height).data;
+        const dst = mask.data;
+        for (let i = 0; i < dst.length; i += 4) {
+          if (!dst[i + 3]) continue;
+          const r = src[i], green = src[i + 1], b = src[i + 2], lum = (r + green + b) / 3;
+          const wood = r > green + 9 && green > b + 8 && lum < 125;
+          if (!src[i + 3] || wood || lum < 12) dst[i + 3] = 0;
+          else { dst[i] = 255; dst[i + 1] = lum > 140 ? 224 : 184; dst[i + 2] = lum > 140 ? 155 : 96; dst[i + 3] = Math.min(dst[i + 3], src[i + 3]); }
+        }
+        gc.putImageData(mask, 0, 0);
         s.glow = g;
       }
       sprites.set(key, s);

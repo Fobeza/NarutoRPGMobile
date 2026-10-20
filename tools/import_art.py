@@ -6,7 +6,7 @@ art/**.webp|png (прозрачный фон) + tools/art_catalog.json → src/g
 Пятно (клетки, где нельзя ходить) считается по высоте картинки: всё, кроме верхних ~20 px карниза; дверь — по доле ширины.
 tools/art_specs.json — те же размеры без пикселей: по ним планировщик (tools/plan_konoha.py) расставляет здания.
 Нужны Pillow и numpy. Запускать при добавлении или замене картинок; результат коммитится."""
-import os, json, sys
+import os, json, sys, re
 import numpy as np
 from PIL import Image
 
@@ -78,24 +78,58 @@ def components(m):
     return res
 
 
-def windows(img, roof, lw, dx, ox):
+def windows(img, roof, reference=None):
     """Окна для ночного свечения: синеватое «стекло» ниже крыши, небольшие компактные пятна → прямоугольники [x, y, w, h] в px ×2.
-    Нашлось меньше двух окон (круглые, шторы, красочные фасады) — светится только щель двери."""
+    Для сложных фасадов используются проверенные области из tools/art_windows.json.
+    Если стекло не найдено, свечение не выдумывается у двери или на крыше."""
+    h, w = img.shape[:2]
+    if reference is not None:
+        rw, rh = reference['size']
+        return [[round(x * w / rw), round(y * h / rh), max(1, round(ww * w / rw)), max(1, round(hh * h / rh)), *shape]
+                for x, y, ww, hh, *shape in reference['rects']]
     r, g, b, a = [img[:, :, i].astype(np.float32) for i in range(4)]
     glass = (b > r + 22) & (b >= g - 8) & (b > 55) & (a > 0)
-    h, w = glass.shape
-    glass[:int(max(0, roof * h * 0.9)), :] = False
+    glass[:int(max(0, roof * h)), :] = False
+    # Синие концы карнизов не должны приниматься за стекло.
+    margin = max(2, round(w * .09))
+    glass[:, :margin] = False; glass[:, w - margin:] = False
     out = []
     for pts in components(glass):
         ys = [p[0] for p in pts]; xs = [p[1] for p in pts]
         hh, ww = max(ys) - min(ys) + 1, max(xs) - min(xs) + 1
-        if 14 <= len(pts) <= h * w * 0.02 and len(pts) / (hh * ww) > 0.35 and 0.3 < ww / hh < 3.2 and hh <= w * 0.2 and ww <= w * 0.2 and hh >= 3:
+        opaque = (a[min(ys):max(ys)+1, min(xs):max(xs)+1] > 0).mean()
+        if 14 <= len(pts) <= h * w * 0.02 and len(pts) / (hh * ww) > 0.5 and 0.55 < ww / hh < 1.9 and hh <= w * 0.2 and ww <= w * 0.2 and min(hh, ww) >= 4 and opaque >= .98:
             sh = 0 if len(pts) / (hh * ww) > 0.85 else max(1, round(min(hh, ww) * 0.12))
             out.append([int(min(xs)) + sh, int(min(ys)) + sh, int(ww - 2 * sh), int(hh - 2 * sh)])
-    if len(out) < 2:
-        cx = (dx * T + T // 2 - ox) * HI
-        out = [[int(cx - 5), int(h - 24), 10, 18]]
     return out[:40]
+
+
+def window_references():
+    with open(os.path.join(ROOT, 'tools', 'art_windows.json'), encoding='utf-8') as f:
+        return json.load(f)
+
+
+def update_windows():
+    """Обновить только маски в уже импортированных данных, сохранив пиксели, геометрию и коллизии."""
+    path = os.path.join(ROOT, 'src', 'gfx', 'house_art_data.js')
+    with open(path, encoding='utf-8') as f:
+        source = f.read()
+    prefix, encoded = source.split('G.HOUSE_ART = ', 1)
+    data = json.JSONDecoder().raw_decode(encoded)[0]
+    with open(os.path.join(ROOT, 'tools', 'art_catalog.json'), encoding='utf-8') as f:
+        catalog = {e['name']: e for e in json.load(f)['art']}
+    refs = window_references()
+    for name, a in data['art'].items():
+        bm = data['bitmaps'][a['b']]
+        pal = [tuple(bytes.fromhex(c[1:])) + (255,) for c in bm['pal']]
+        pixels = []
+        for ch, count in re.findall(r'([^0-9])([0-9]*)', bm['rle']):
+            pixels.extend([(0, 0, 0, 0) if ch == '.' else pal[SYM.index(ch)]] * int(count or 1))
+        img = np.array(pixels, dtype=np.uint8).reshape(bm['lh'] * HI, bm['lw'] * HI, 4)
+        a['g'] = windows(img, catalog[name].get('roof', .5), refs.get(name.removesuffix('_big')))
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(prefix + 'G.HOUSE_ART = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    print('масок окон обновлено:', len(data['art']))
 
 
 def free_cells(img, w, h, lw, lh, ox, dx):
@@ -125,6 +159,7 @@ def width_tiles(e, aspect):
 
 def specs(with_pixels=False):
     cat = json.load(open(os.path.join(ROOT, 'tools', 'art_catalog.json'), encoding='utf-8'))['art']
+    refs = window_references()
     out = []
     for e in cat:
         path = os.path.join(ROOT, 'art', e['file'])
@@ -144,7 +179,7 @@ def specs(with_pixels=False):
             colors, rle = encode(scale(a, lw * HI, lh * HI))
             s['pal'], s['rle'] = colors, rle
             s['fr'] = free_cells(scale(a, lw * HI, lh * HI), w, th, lw, lh, ox, dx)
-            s['g'] = windows(scale(a, lw * HI, lh * HI), e.get('roof', 0.5), lw, dx, ox)
+            s['g'] = windows(scale(a, lw * HI, lh * HI), e.get('roof', 0.5), refs.get(e['name'].removesuffix('_big')))
         out.append(s)
     return out
 
@@ -170,4 +205,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if '--windows-only' in sys.argv: update_windows()
+    else: main()

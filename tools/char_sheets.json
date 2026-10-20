@@ -1,0 +1,12 @@
+{
+  "hero": {
+    "file": "hero.webp",
+    "columns": 4,
+    "row_edges": [0, 154, 302, 445, 579, 717, 855, 994, 1133]
+  },
+  "fugaku": {
+    "file": "fugaku.png",
+    "columns": 3,
+    "rows": 4
+  }
+}
