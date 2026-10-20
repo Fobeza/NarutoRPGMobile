@@ -129,7 +129,7 @@ G.sim = {
     { id: 'thief_d30', day: 30, enemy: 'thief', mode: 'ko', terrain: 'night', label: 'Ночной вор (д.30)' },
     { id: 'senior_d38', day: 38, enemy: 'senior', mode: 'scroll', terrain: 'forest', turns: 12, label: 'Полевой выход: свиток (д.38)' },
     { id: 'iruka_d47', day: 47, enemy: 'iruka', mode: 'bells', terrain: 'yard', turns: 10, label: 'Колокольчики Ируки (д.47)' },
-    { id: 'mizuki_d54', day: 54, enemy: 'mizuki', mode: 'ko', terrain: 'night', story: true, allies: ['iruka', 'naruto'], will: 30, label: 'ФИНАЛ: Мизуки (д.54)' },
+    { id: 'mizuki_d54', day: 54, enemy: 'gendo', mode: 'ko', terrain: 'night', story: true, allies: ['iruka', 'naruto'], will: 30, label: 'ФИНАЛ: Гэндо (д.54)' },
   ],
   run(scId, build, skill, n = 20, statsDay = null) {
     const sc = this.SCEN.find((x) => x.id === scId), B = this.BUILDS[build];

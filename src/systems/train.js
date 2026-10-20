@@ -73,6 +73,7 @@ G.train = {
       v.energy = Math.max(0, v.energy - t.energy * (opts.partner ? 0.8 : 1)); v.food = Math.max(0, v.food - 4);
       G.game.mood(score >= 0.7 ? 3 : 0);
       v.trainings = (v.trainings || 0) + 1;
+      G.events.emit('training', id, score, opts.partner || null);
       if (opts.partner) { d['trw_' + opts.partner] = 1; G.friends && G.friends.add(opts.partner, 2, 'train'); }   // попытка дня тратится только на состоявшуюся тренировку
       const rate = Math.round(score * 100);
       const lines = gained.map(([st, x]) => { const S = G.STATS.find((q) => q.id === st); return `${S.name} +${x} опыта (${G.state.vars['xp_' + st] | 0}/${this.need(st)})`; });

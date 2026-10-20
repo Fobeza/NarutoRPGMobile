@@ -153,8 +153,8 @@ G.adventure = (() => {
     G.game.advance(35);V().energy=Math.max(0,V().energy-8);
     if(score<.5){save();say('Попытка завершена. Для зачёта нужна половина верных действий. Можно повторить занятие.');return false;}
     G.state.daily['adv_lesson_'+m.id]=1;V()['adv_lessons_'+m.id]=(V()['adv_lessons_'+m.id]||0)+1;G.train.addXp(m.stat,4);
-    const learned=V()['adv_lessons_'+m.id]>=2;if(learned){F()[m.flag]=1;if(i===0){F().roofs=1;F().tech_suiton=1;}if(i===1)F().tech_fuuton=1;if(i===2)F().tech_raiton=1;}
-    save();say(learned?'Программа освоена. Открыт навык: '+m.lesson+'. Стихийная техника добавлена в список.':'Занятие зачтено. Ещё одна тренировка в другой день — и навык твой.');return true;
+    const learned=V()['adv_lessons_'+m.id]>=2;if(learned){F()[m.flag]=1;if(m.id==='iruka')F().roofs=1;if(m.tech)F()['tech_'+m.tech]=1;if(m.grant)F()[m.grant]=1;}
+    save();say(learned?'Программа освоена: '+m.lesson+'. Приём доступен в бою.':'Занятие зачтено. Ещё одна тренировка в другой день — и навык твой.');return true;
   }
   function clansMenu(){choose('КЛАНЫ','Доверие 6/10 открывает семейный навык. Без выполненной экспедиции подарки дают максимум 4.',D.clans.map(c=>({label:c.name,sub:(V()['adv_clan_'+c.id]||0)+'/10',desc:c.perk,act:()=>choose('КЛАН '+c.name.toUpperCase(),c.perk,[
     {label:'Передать подарок',desc:G.ITEMS[c.gift].name+' · доверие +1',off:!G.game.count(c.gift)?'Нужно: '+G.ITEMS[c.gift].name:G.state.daily['adv_gift_'+c.id]?'Один подарок клану в день':!F().adv_service&&(V()['adv_clan_'+c.id]||0)>=4?'Сначала помоги в экспедиции':null,act:()=>{if(!spend({[c.gift]:1}))return;G.state.daily['adv_gift_'+c.id]=1;trust(c.id,1);save();say('Семья благодарит за подарок. Доверие: '+V()['adv_clan_'+c.id]+'/10.');}},

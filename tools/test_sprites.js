@@ -47,11 +47,12 @@ const shots=process.env.SPRITE_SHOTS||path.join(__dirname,'shots','sprites');fs.
     for(const [x,y,w,h]of areas){const d=ctx.getImageData(x,y,w,h).data;if(d.some((v,i)=>i%4===3&&v))failures.push(id+': светится карниз');}
    }
    for(const id of ['gate','hokage_rock'])if(G.houseArt.sprite(id).glow)failures.push(id+': свет у объекта без окон');
-   return {failures,frames,portraits,lights};
+   return {failures,frames,portraits,lights,characters:Object.keys(G.chars.DEFS).length};
   });
   fs.writeFileSync(path.join(shots,'metrics.json'),JSON.stringify(result,null,2));
-  assert.deepEqual(result.failures,[]);assert.equal(result.frames.length,684);assert.equal(result.portraits,57);
-  console.log('✔ Все 684 кадра и 57 портретов непустые; герой и Фугаку без чужих фрагментов, масштаб и земля верны');
+  assert.deepEqual(result.failures,[]);assert.equal(result.frames.length,result.characters*12);assert.equal(result.portraits,result.characters);
+  for(const id of ['hero','fugaku','yuta','gendo'])assert.ok(result.frames.some(f=>f.id===id),id+' отсутствует в проверке');
+  console.log('✔ Все '+result.frames.length+' кадров и '+result.portraits+' портретов непустые; герой и Фугаку без чужих фрагментов, масштаб и земля верны');
   console.log('✔ Окна не выходят за непрозрачный контур; карнизы и объекты без окон не светятся');
   const atlas=await page.evaluate(()=>{
    const ids=['hero','fugaku','iruka','itachi'],c=document.createElement('canvas');c.width=1400;c.height=500;const x=c.getContext('2d');x.imageSmoothingEnabled=false;x.fillStyle='#17252c';x.fillRect(0,0,c.width,c.height);

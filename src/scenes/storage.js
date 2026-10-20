@@ -20,7 +20,7 @@ G.scenes.register('storage', () => {
         if (G.ITEMS[id].pouch && G.game.pouchUsed() >= G.game.pouchMax()) { msg = 'Подсумок полон!'; msgT = 1.5; AU.sfx.error(); return false; }
         chest()[id]--; if (chest()[id] <= 0) delete chest()[id]; G.game.give(id, 1);
       }
-      AU.sfx.select(); return true;
+      G.events.emit('storage', id, fromCol); AU.sfx.select(); return true;
     },
     update(dt) {
       W = G.screen.W;

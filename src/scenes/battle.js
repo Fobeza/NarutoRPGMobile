@@ -87,7 +87,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     W = G.screen.W;
     const H = G.screen.H;
     layout.tl = 0; layout.eb = 13; layout.ar = 40;
-    const panelH = clamp(Math.round(H * 0.3), 74, 124);
+    const panelH = opts.tacticalUI && G.tacticalGeometry ? G.tacticalGeometry().area - 56 : clamp(Math.round(H * 0.3), 74, 124);
     layout.pn = H - panelH; layout.ms = layout.pn - 27; layout.pb = layout.ms - 29;
     layout.arH = layout.pb - layout.ar; layout.groundY = layout.ar + layout.arH - 10;
     layout.panelH = panelH;
@@ -544,7 +544,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (E.hp <= 0 && ed.phase2 && E.phase === 1) {
       E.phase = 2; E.hp = Math.round(E.hpMax * 0.6); E.focus = E.focusMax; bubble('low'); fx.flash = 0.4; fx.shake = 0.5;
       say(`${E.name} в ярости! Вторая фаза!`, '#ff6a3a');
-      if (opts.allies && opts.allies.includes('naruto')) { E.hp -= 20; say('Наруто: «Теневое клонирование!» Сотня клонов колотит Мизуки! (−20)', PAL.yellow); }
+      if (opts.allies && opts.allies.includes('naruto')) { E.hp -= 20; say(`Наруто: «Теневое клонирование!» Клоны атакуют: ${E.name}! (−20)`, PAL.yellow); }
       return false;
     }
     const sp = mode === 'spar' || mode === 'ringout';
@@ -668,6 +668,12 @@ G.scenes.register('battle', (opts, onEnd) => {
   // ── сцена ──
   const S = {
     name: 'battle', P, E, opts, timeline: () => timeline(),
+    // Те же проверенные действия доступны новому сенсорному планировщику.
+    tactical: {
+      commands(group) { const old = menu; menu = group; const out = subButtons().filter(b => !/^▶/.test(b.label)).map(b => ({ label: b.label, sub: b.sub || '', desc: b.desc || '', off: b.off || null })); menu = old; return out; },
+      intent() { const a = G.EACTS[E.shown] || G.EACTS[E.plan] || G.EACTS.stand; return { name: a.name || 'Наблюдает', kind: a.kind, range: a.range, weight: a.w, truePlan: P.s.analyzed ? E.plan : null }; },
+      layout: () => Object.assign({}, layout), distance: dist, object: objAt,
+    },
     touch: () => ({ back: state === 'menu' && menu !== 'main' && menu !== 'momentPick' }),   // «Назад» в подменю на сенсорном экране
     get state() { return state; },
     // для автотеста

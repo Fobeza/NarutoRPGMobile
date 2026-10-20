@@ -9,9 +9,12 @@ G.ADVENTURES = {
     { id:'akimichi', name:'Акимичи', gift:'chips', perk:'Секретный рецепт походных онигири' },
   ],
   mentors: [
-    { id:'iruka', name:'Ирука', stat:'ctrl', mg:'tree', lesson:'Контроль чакры на стене', flag:'adv_wallrun' },
-    { id:'lee', name:'Рок Ли', stat:'spd', mg:'run', lesson:'Ритм прыжков', flag:'adv_runner' },
-    { id:'shikamaru', name:'Шикамару', stat:'know', mg:'quiz', lesson:'Чтение намерений', flag:'adv_tactician' },
+    { id:'iruka', name:'Ирука', stat:'ctrl', mg:'tree', lesson:'Контроль чакры и водная техника', flag:'adv_wallrun', tech:'suiton' },
+    { id:'lee', name:'Рок Ли', stat:'spd', mg:'run', lesson:'Ритм прыжков и Вихрь Листа', flag:'adv_runner', grant:'combo_whirl' },
+    { id:'shikamaru', name:'Шикамару', stat:'know', mg:'quiz', lesson:'Чтение намерений', flag:'adv_tactician', grant:'tactic' },
+    { id:'asuma', name:'Асума', stat:'nin', mg:'seals', lesson:'Футон: Порыв', flag:'adv_wind', tech:'fuuton' },
+    { id:'anko', name:'Анко', stat:'nin', mg:'seals', lesson:'Катон: Огненный шар', flag:'adv_fire', tech:'katon' },
+    { id:'kakashi', name:'Какаши', stat:'ctrl', mg:'seals', lesson:'Райтон: Разряд', flag:'adv_lightning', tech:'raiton' },
   ],
   books: [
     { id:'watch', title:'Дневник дозорного', text:'Мост смыло весенним паводком. Мы привязали проволоку к двум столбам: так можно перебраться даже без водной техники. Запас оставили у лесного поста.', map:'adv:forest', x:9, y:8 },
