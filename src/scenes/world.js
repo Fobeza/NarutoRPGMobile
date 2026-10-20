@@ -928,7 +928,7 @@ G.scenes.register('world', (pos) => {
       U.panel(ctx, 0, y, W, STRIP_H, 'plank');
       const mk = G.state.marker;
       const qid = !mk && G.quests.tracked(), st = qid && G.quests.curStep(qid);
-      const maxW = W - 72;
+      const maxW = W - G.touch.sysWidth() - 6;
       if (st || mk) {
         const flash = this.goalFlash && Math.floor(this.goalFlash * 6) % 2 === 0;
         const ok = !st || G.quests.timeOk(st);

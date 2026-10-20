@@ -29,14 +29,21 @@ G.touch = (() => {
   }
 
   // ---------- рисование (стиль «Свитки и дерево», gfx/ui.js) ----------
+  // значки нижней полосы: кнопка не уже 20 точек, зона касания — не меньше 44 CSS-пикселей (вверх — за полосу)
+  const SYS = ['menu', 'map', 'goal'];
+  function sysLayout() {
+    const mn = Math.ceil(44 / (G.screen.scale || 1)), bw = Math.max(20, mn - 2);
+    return { bw, bh: 16, cell: bw + 2, zoneH: Math.max(STRIP_H, mn), width: SYS.length * (bw + 2) + 2 };
+  }
   function sysIcons(ctx, W, H) {
-    const U = G.ui, y = H - STRIP_H + 3, items = ['menu', 'map', 'goal'], bw = 20, bh = 16;
-    items.forEach((b, i) => {
-      const x = W - 4 - (items.length - i) * (bw + 2) + 2, on = G.input.held(b);
-      U.button(ctx, x, y + (on ? 1 : 0), bw, bh, '', on ? 'sel' : 'normal');
-      U.icon(ctx, b, x + 5, y + 3 + (on ? 1 : 0), on ? '#ffffff' : '#f4e4bc');
-      hits.push({ x, y: H - STRIP_H, w: bw + 2, h: STRIP_H, btn: b });
+    const U = G.ui, y = H - STRIP_H + 3, L = sysLayout(), out = [];
+    SYS.forEach((b, i) => {
+      const x = W - 4 - (SYS.length - i) * L.cell + 2, on = G.input.held(b);
+      U.button(ctx, x, y + (on ? 1 : 0), L.bw, L.bh, '', on ? 'sel' : 'normal');
+      U.icon(ctx, b, x + Math.round(L.bw / 2) - 5, y + 3 + (on ? 1 : 0), on ? '#ffffff' : '#f4e4bc');
+      out.push({ x: x - 1, y: H - L.zoneH, w: L.cell, h: L.zoneH, btn: b });
     });
+    return out;
   }
   function actionButton(ctx, W, H, c, now) {
     const k = anim.action; if (k <= 0.01) return;
@@ -96,11 +103,12 @@ G.touch = (() => {
     const want = c.action ? 1 : 0;
     anim.action += (want - anim.action) * Math.min(1, dt * 14);
     if (c.action && c.action.label) anim.label = c.action.label;
-    if (c.sys) sysIcons(ctx, W, H);
+    const sys = c.sys ? sysIcons(ctx, W, H) : [];
     if (c.back) backPill(ctx);
     actionButton(ctx, W, H, c, now);
+    hits.push(...sys);   // после кнопки A: где зоны пересекаются, касание достаётся ей
     stick(ctx);
   }
 
-  return { draw, hit, joyAllowed, cfg, BACK };
+  return { draw, hit, joyAllowed, cfg, BACK, sysWidth: () => sysLayout().width };
 })();
