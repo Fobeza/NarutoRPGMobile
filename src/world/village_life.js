@@ -39,6 +39,7 @@ G.life2 = (() => {
   function villagerTalk(n) {
     const V = G.state.vars, lines = [];
     const pool = GEN.slice();
+    if (G.villageStories) pool.push(...G.villageStories.rumors());
     const h = V.min / 60;
     if (G.life.raining()) pool.push(...RAIN, ...RAIN);
     if (h < 10) pool.push(...MORNING, ...MORNING);

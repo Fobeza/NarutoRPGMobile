@@ -81,6 +81,7 @@ G.WorldMap = class {
       } else add(o, r);
     }
     this.chunks.clear();
+    delete this._atlas;
   }
 
   // Объекты, чей прямоугольник может пересекать r

@@ -8,6 +8,7 @@ G.scenes.register('calendar', () => {
   let tab = 0, sel = G.state.vars.day, ci = 0, wk = true, scroll = 0;
   const ids = G.schedule.who();
   const page = () => Math.floor((sel - 1) / 28);
+  const limit = () => Math.min(9999,Math.max(112,Math.ceil((G.state.vars.day+28)/28)*28));
 
   function dayItems(d) {
     const out = [];
@@ -15,6 +16,10 @@ G.scenes.register('calendar', () => {
     if (ev) out.push({ c: '#c8581a', t: ev });
     for (const e of G.STORY) if (e.day === d && STORY_NAMES[e.id] && ev !== STORY_NAMES[e.id]) out.push({ c: '#c8581a', t: STORY_NAMES[e.id] });
     if (G.calendar.BDAY[d]) out.push({ c: '#c89010', t: 'День рождения: ' + G.chars.nameOf(G.calendar.BDAY[d]) });
+    if(d>112&&G.calendar.birthday(d))out.push({c:'#c89010',t:'День рождения: '+G.chars.nameOf(G.calendar.birthday(d))});
+    const ap=G.adventure.meeting();if(ap&&ap.day===d)out.push({c:'#6c5aa8',t:G.adventure.appointmentText()});
+    if(d>=55&&G.state.flags.game_clear)out.push({c:'#34836c',t:G.state.flags.adv_chunin_entry?'Допуск к экзамену чунина получен':'Командные миссии доступны на посту'});
+    out.push({c:'#7a8458',t:'Сезон: '+G.adventure.season(d).name});
     if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00. Вход 7:30–9:30' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
     else if (d < 54) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
     const Q = G.state.quests || {};
@@ -26,6 +31,7 @@ G.scenes.register('calendar', () => {
     const m = [];
     if (G.calendar.EVENTS[d] || G.STORY.some((e) => e.day === d && STORY_NAMES[e.id])) m.push('#c8581a');
     if (G.calendar.BDAY[d]) m.push('#c89010');
+    if(G.adventure.meeting()?.day===d)m.push('#6c5aa8');
     const Q = G.state.quests || {};
     if (Object.keys(Q).some((id) => Q[id].st === 'active' && Q[id].due === d)) m.push('#b8321c');
     return m;
@@ -44,7 +50,7 @@ G.scenes.register('calendar', () => {
         if (tab === 0) {
           const cw = (W - 14) / 7, col = Math.floor((t.x - 7) / cw), row = Math.floor((t.y - GY) / CH);
           if (col >= 0 && col < 7 && row >= 0 && row < 4) { sel = page() * 28 + row * 7 + col + 1; G.audio.sfx.select(); }
-          else if (t.y >= 42 && t.y < GY) { sel = t.x < W / 2 ? Math.max(1, sel - 28) : Math.min(56, sel + 28); G.audio.sfx.select(); }
+          else if (t.y >= 42 && t.y < GY) { sel = t.x < W / 2 ? Math.max(1, sel - 28) : Math.min(limit(), sel + 28); G.audio.sfx.select(); }
         } else {
           if (t.y < 68) { ci = (ci + (t.x < W / 2 ? ids.length - 1 : 1)) % ids.length; scroll = 0; G.audio.sfx.select(); }
           else if (t.y < 90) { wk = !wk; scroll = 0; G.audio.sfx.select(); }
@@ -54,9 +60,9 @@ G.scenes.register('calendar', () => {
       if (I.pressed('a')) { tab = 1 - tab; G.audio.sfx.select(); return; }
       if (tab === 0) {
         if (I.repeat('left', dt)) { sel = Math.max(1, sel - 1); G.audio.sfx.select(); }
-        if (I.repeat('right', dt)) { sel = Math.min(56, sel + 1); G.audio.sfx.select(); }
+        if (I.repeat('right', dt)) { sel = Math.min(limit(), sel + 1); G.audio.sfx.select(); }
         if (I.repeat('up', dt)) { sel = Math.max(1, sel - 7); G.audio.sfx.select(); }
-        if (I.repeat('down', dt)) { sel = Math.min(56, sel + 7); G.audio.sfx.select(); }
+        if (I.repeat('down', dt)) { sel = Math.min(limit(), sel + 7); G.audio.sfx.select(); }
       } else {
         if (I.repeat('left', dt)) { ci = (ci + ids.length - 1) % ids.length; scroll = 0; G.audio.sfx.select(); }
         if (I.repeat('right', dt)) { ci = (ci + 1) % ids.length; scroll = 0; G.audio.sfx.select(); }
@@ -76,7 +82,7 @@ G.scenes.register('calendar', () => {
       for (let c = 0; c < 7; c++) F.small.draw(ctx, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][c], 7 + c * cw + cw / 2, 49, { align: 'center', color: c > 4 ? C.red : C.inkDim });
       for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) {
         const d = pg * 28 + r * 7 + c + 1;
-        if (d > 56) continue;
+        if (d > limit()) continue;
         const x = Math.round(7 + c * cw), y = GY + r * CH, w = Math.round(cw) - 2;
         U.card(ctx, x, y, w, CH - 3, d === sel);
         if (d === V.day) { ctx.fillStyle = C.ok; ctx.fillRect(x + 3, y + 3, 5, 5); }

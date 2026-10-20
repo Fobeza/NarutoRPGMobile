@@ -40,7 +40,8 @@ G.touch = (() => {
   }
   function actionButton(ctx, W, H, c, now) {
     const k = anim.action; if (k <= 0.01) return;
-    const r = Math.round(17 * (0.6 + 0.4 * k)), cx = W - 26, cy = H - STRIP_H - 30, on = G.input.held('a');
+    const sizeMul=G.storage.settings.buttonSize||1;
+    const r = Math.round(17 * sizeMul * (0.6 + 0.4 * k)), cx = W - 10 - 17*sizeMul, cy = H - STRIP_H - 12 - 17*sizeMul, on = G.input.held('a');
     ctx.globalAlpha = Math.min(1, k * 1.4);
     // красная печать на деревянном основании
     ctx.fillStyle = '#0a0604'; ctx.beginPath(); ctx.arc(cx, cy + 1.5, r + 2, 0, 7); ctx.fill();
@@ -52,11 +53,15 @@ G.touch = (() => {
     G.font.draw(ctx, 'A', cx, cy - 4, { align: 'center', color: '#f8eed0', shadow: '#5a1408' });
     if (anim.label) {
       const lw = G.font.small.measure(anim.label) + 12;
-      G.ui.panel(ctx, Math.round(cx - lw / 2), cy - r - 18, lw, 15, 'tag');
-      G.font.small.draw(ctx, anim.label, cx, cy - r - 15, { align: 'center', color: '#f4d46a', shadow: '#5a1408' });
+      const labelW=Math.min(W-6,lw),labelX=G.util.clamp(Math.round(cx-lw/2),3,W-labelW-3);
+      G.ui.panel(ctx,labelX,cy-r-18,labelW,15,'tag');
+      G.font.small.draw(ctx, anim.label,labelX+labelW/2,cy-r-15,{align:'center',maxW:labelW-8,color:'#f4d46a',shadow:'#5a1408'});
     }
     ctx.globalAlpha = 1;
-    if (c.action) hits.push({ x: cx - 20, y: cy - 20, w: 40, h: 40, btn: 'a' });
+    if (c.action) {
+      const size=Math.max(40*sizeMul,44/G.screen.scale);
+      hits.push({x:cx-size/2,y:cy-size/2,w:size,h:size,btn:'a'});
+    }
   }
   function backPill(ctx) {
     const on = G.input.held('b'), w = 52, h = 16, x = 3, y = 3;

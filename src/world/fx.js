@@ -64,6 +64,38 @@ G.fx = (() => {
     ctx.globalAlpha = 1;
   }
 
+  // Солнечные пятна от настоящих окон комнаты. Маска запекается один раз,
+  // яркость зависит от времени и дождя; мебель и персонажи рисуются поверх.
+  function roomSunlight(ctx, map, min) {
+    if (!enabled() || map.outdoor) return;
+    const daylight = sun(min).sun * (G.life.raining() ? 0.28 : 1);
+    if (daylight <= 0) return;
+    if (!map._sunlight) {
+      const c = G.gfx.canvas(map.w * T, map.h * T), cc = c.getContext('2d'), ID = G.tiles.ID;
+      cc.save(); cc.beginPath();
+      for (let y = 2; y < map.h - 1; y++) for (let x = 1; x < map.w - 1; x++) {
+        const id = map.get(x, y);
+        if (!G.tiles.SOLID[id]) cc.rect(x * T, y * T, T, T);
+      }
+      cc.clip();
+      for (const o of map.objects) {
+        if (o.kind !== 'window' || o.y > 2 * T) continue;
+        const left = o.x - 7, top = 2 * T;
+        // Четыре стекла, между ними остаётся тень оконной решётки.
+        for (let row = 0; row < 2; row++) for (let col = 0; col < 2; col++) {
+          const near = row * 21 + 2, far = near + 18, u = left + col * 8;
+          cc.fillStyle = row ? 'rgba(255,231,162,0.13)' : 'rgba(255,237,180,0.22)';
+          cc.beginPath();cc.moveTo(u + near * 0.48, top + near);
+          cc.lineTo(u + 6 + near * 0.48, top + near);
+          cc.lineTo(u + 6 + far * 0.48, top + far);
+          cc.lineTo(u + far * 0.48, top + far);cc.closePath();cc.fill();
+        }
+      }
+      cc.restore(); map._sunlight = c;
+    }
+    ctx.save(); ctx.globalAlpha *= daylight; ctx.drawImage(map._sunlight, 0, 0); ctx.restore();
+  }
+
   // Окна светятся тёплым светом ночью (карта окон хранится в спрайте здания: spr.glow)
   function windows(ctx, vis, map, k, time) {
     if (!enabled() || !map.outdoor || k <= 0.02) return;
@@ -122,5 +154,5 @@ G.fx = (() => {
     ctx.drawImage(vig, 0, y0);
   }
 
-  return { sun, shadows, windows, particles, vignette, enabled };
+  return { sun, shadows, roomSunlight, windows, particles, vignette, enabled };
 })();

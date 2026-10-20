@@ -38,7 +38,19 @@ def main():
         return 1
     regressions = subprocess.run([node, os.path.join(ROOT, "tools", "node", "regressions.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
     print((regressions.stdout or "") + (regressions.stderr or ""))
-    return 1 if (bad or r.returncode or regressions.returncode) else 0
+    village = subprocess.run([node, os.path.join(ROOT, "tools", "node", "village.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((village.stdout or "") + (village.stderr or ""))
+    adventures = subprocess.run([node, os.path.join(ROOT, "tools", "node", "adventures.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((adventures.stdout or "") + (adventures.stderr or ""))
+    daily = subprocess.run([node, os.path.join(ROOT, "tools", "node", "daily.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((daily.stdout or "") + (daily.stderr or ""))
+    motion = subprocess.run([node, os.path.join(ROOT, "tools", "node", "motion.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((motion.stdout or "") + (motion.stderr or ""))
+    entries = subprocess.run([node, os.path.join(ROOT, "tools", "node", "entries.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((entries.stdout or "") + (entries.stderr or ""))
+    cartography = subprocess.run([node, os.path.join(ROOT, "tools", "node", "cartography.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((cartography.stdout or "") + (cartography.stderr or ""))
+    return 1 if (bad or r.returncode or regressions.returncode or village.returncode or adventures.returncode or daily.returncode or motion.returncode or entries.returncode or cartography.returncode) else 0
 
 
 if __name__ == "__main__":

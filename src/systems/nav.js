@@ -66,6 +66,10 @@ G.nav = (() => {
         return null;
       }
       if (t.obj) {
+        if (t.map === 'konoha') {
+          const o=K().objects.find(o=>o.kind===t.obj);
+          return o?{map:'konoha',x:o.x,y:o.y,label:t.label||'Фонарь у чайной',icon}:null;
+        }
         const b = bld(t.in); if (!b || !b.interior) return null;
         const m = G.world.get(b.interior.id);
         const o = m.objects.find((o) => o.kind === t.obj);

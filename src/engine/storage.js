@@ -148,10 +148,16 @@ G.storage = {
     } catch (_) { return false; }
   },
 
-  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false },
+  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true },
   loadSettings() {
     const s = this._get(this.KEY_SETTINGS);
     if (s) Object.assign(this.settings, s);
+    if(![1,1.2,1.4].includes(this.settings.buttonSize))this.settings.buttonSize=1;
+    if(![0.75,1,1.3].includes(this.settings.stickSensitivity))this.settings.stickSensitivity=1;
+    this.settings.vibration=this.settings.vibration===true;
+    if(!['simple','detailed'].includes(this.settings.mapDetail))this.settings.mapDetail='detailed';
+    if(![1,1.3].includes(this.settings.mapMarkerSize))this.settings.mapMarkerSize=1;
+    this.settings.mapLabels=this.settings.mapLabels!==false;
     return this.settings;
   },
   saveSettings() { this._set(this.KEY_SETTINGS, this.settings); },

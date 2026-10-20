@@ -85,6 +85,15 @@ G.scenes.register('world', (pos) => {
       pl.vx = pl.vy = 0; pl.moving = false;
       pl.jump = null; pl.roof = !!(p.roof && m.outdoor && G.roofs && G.roofs.at(m, pl.x, pl.y));
       this.map = m;
+      if (G.adventure) { G.adventure.syncSeason(m); this._appointment=null; if(m.id!=='adv:parkour')this._course=null; }
+      if (G.villageStories) G.villageStories.sync(m);
+      // Сохранение могло остаться на месте передвинутой мебели.
+      if (!pl.roof && m.blockedRect(G.actors.feet(pl))) {
+        const free=G.nav.nearestWalkable(m,G.nav.walkGrid(m),Math.floor(pl.x/T),Math.floor(pl.y/T));
+        if(free){pl.x=free[0]*T+8;pl.y=free[1]*T+12;}
+      }
+      this._actionKey=null; this._streetScene=null;
+      if(G.villageDaily)G.villageDaily.clear(this);
       this.refreshNpcs();
       this.lastDistrict = null;
       this.updatePlace(true);
@@ -92,7 +101,7 @@ G.scenes.register('world', (pos) => {
       this.savePos();
       this.trail = null;
       G.quests.onEnterMap(m);
-      if (m.outdoor) G.nav.reveal(pl.x, pl.y);
+      if (m.id==='konoha') G.nav.reveal(pl.x, pl.y);
       if (G.state.started) G.storage.save(G.state); // автосейв при входе/выходе из зданий
     },
 
@@ -150,11 +159,11 @@ G.scenes.register('world', (pos) => {
         else if (a === 'askname') G.scenes.push(G.scenes.make('nameinput', () => this.talk('hosp_after_name')));
         return;
       }
-      if (G.story && G.story.poll(this)) return;
+      if (!m.adv && G.story && G.story.poll(this)) return;
       if (this.goalFlash) this.goalFlash = Math.max(0, this.goalFlash - dt);
 
       if (I.pressed('menu')) { G.audio.sfx.select(); G.scenes.push(G.scenes.make('menu')); return; }
-      if (I.pressed('map')) { G.audio.sfx.select(); G.scenes.push(G.scenes.make('mapview', this)); return; }
+      if (I.pressed('map')) { G.audio.sfx.select(); if(m.adv)G.adventure.territories();else G.scenes.push(G.scenes.make('mapview', this)); return; }
       if (I.pressed('goal')) this.showTrail();
       if (this.trail) { this.trail.t += dt; if (this.trail.t > this.trail.dur) this.trail = null; }
 
@@ -170,7 +179,7 @@ G.scenes.register('world', (pos) => {
       const tired = v.energy < 10 || v.food <= 0;
       if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast(v.food <= 0 ? 'Голодный — не до бега' : 'Нет сил бежать'); }
       const run = I.held('b') && !tired;
-      const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * dt;
+      const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * (G.state.flags.adv_runner?1.08:1) * dt;
       p.moving = !!(ax.x || ax.y);
       if (p.moving) {
         if (ax.x && ax.y) {
@@ -188,24 +197,12 @@ G.scenes.register('world', (pos) => {
         } else { p.anim = 0; p.stepT = 0.06; }
       } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
 
-      // двери и выходы
-      if (!G.scenes.busy && !p.roof && !p.jump) {
-        const f = G.actors.feet(p);
-        for (const w of m.warps) {
-          if (!G.util.rectsOverlap(f, w.rect)) continue;
-          const pushing = (w.dir === 'up' && ax.y < 0) || (w.dir === 'down' && ax.y > 0) || (I.pressed('a') && p.dir === w.dir);
-          if (!pushing) continue;
-          if (w.to.back) this.exitBuilding(); else this.enterBuilding(w.building);
-          return;
-        }
-      }
-
       // NPC: обновляем только тех, кто рядом
       for (const n of this.npcs) {
         if (!m.outdoor || (Math.abs(n.x - p.x) < 260 && Math.abs(n.y - p.y) < 260)) this.updateNpc(n, dt);
       }
 
-      if (I.pressed('a')) this.interact();
+      if (I.pressed('a')) {this.interact();if(G.scenes.busy||G.scenes.top()!==this)return;}
 
       // Скорость часов задаётся G.life.RATE.
       if (G.state.started && !G.scenes.busy && G.scenes.top() === this) {
@@ -213,11 +210,15 @@ G.scenes.register('world', (pos) => {
         if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
       }
 
-      if (G.life2) G.life2.poll(this, dt);
+      if (G.life2 && !m.adv) G.life2.poll(this, dt);
+      if (G.adventure) G.adventure.update(this,dt);
+      if (G.villageStories) G.villageStories.update(this,dt);
+      if (G.villageDaily) G.villageDaily.update(this,dt);
+      if (G.roofPatrol) G.roofPatrol.update(this,dt);
       this.updateCamera();
       this.updatePlace(false);
       this.savePos();
-      if (m.outdoor) G.nav.reveal(p.x, p.y);
+      if (m.id==='konoha') G.nav.reveal(p.x, p.y);
       // своя метка достигнута
       const mk = G.state.marker;
       if (mk && m.outdoor && Math.hypot(mk.x * T + 8 - p.x, mk.y * T + 8 - p.y) < 24) {
@@ -270,7 +271,8 @@ G.scenes.register('world', (pos) => {
     },
 
     updateNpc(n, dt) {
-      if (G.residents && G.residents.tick(this, n, dt)) return;
+      if (G.residents && G.residents.tick(this, n, dt)) {if(G.villageDaily)G.villageDaily.travelling(n);return;}
+      if (G.villageDaily && G.villageDaily.tickNpc(this,n,dt)) return;
       n.aiT -= dt;
       if (G.life2) G.life2.npcTick(this, n, dt);
       if (n.ai === 'wander') {
@@ -305,31 +307,54 @@ G.scenes.register('world', (pos) => {
     },
 
     // ---------- Взаимодействие (A) ----------
+    doorAction() {
+      const p=this.player,m=this.map;if(p.roof||p.jump)return null;
+      const v=G.actors.DIRV[p.dir],fx=p.x+v[0]*12,fy=p.y-3+v[1]*12,feet=G.actors.feet(p);
+      for(const w of m.warps){
+        if(w.dir!==p.dir||(!w.to.back&&!w.building))continue;
+        const r=w.rect,near=fx>=r.x-3&&fx<=r.x+r.w+3&&fy>=r.y-8&&fy<=r.y+r.h+8;
+        if(!near&&!G.util.rectsOverlap(feet,r))continue;
+        const b=w.building;
+        return {show:true,label:w.to.back?'Выйти':'Войти',title:w.to.back?'На улицу':b.name,
+          targetRect:b?.door?{x:b.door.tx*T+1,y:b.door.ty*T,w:14,h:16}:r,
+          run:()=>w.to.back?this.exitBuilding():this.enterBuilding(b)};
+      }
+      return null;
+    },
     // probeAction() ничего не делает, а только ищет, что случится по A: { run, label, show } или null.
     // show — «заметное» действие (разговор, дверь, рыбалка…): для него на сенсорном экране всплывает кнопка.
     // Табличка с названием здания тоже действие, но кнопку ради неё не показываем.
     probeAction() {
       const p = this.player, m = this.map;
       if (p.jump) return null;
-      if (G.roofs && p.roof) return { show: true, label: 'Спрыгнуть', run: () => G.roofs.interact(this) };
+      const door=this.doorAction();if(door)return door;
+      if(G.adventure){const a=G.adventure.probe(this);if(a)return a;}
+      if (G.roofs && p.roof) {
+        const a=G.roofs.action(this);
+        return a?{show:true,label:a.label,title:a.kind==='jump'?'Следующая крыша':'Место приземления',targetRect:{x:a.point.x-6,y:a.point.y-5,w:12,h:8},run:()=>G.roofs.interact(this)}:null;
+      }
       const v = G.actors.DIRV[p.dir];
       const fx = p.x + v[0] * 12, fy = p.y - 3 + v[1] * 12;
 
       // NPC
       let best = null, bd = 99;
-      for (const n of this.npcs) {
+      for (const n of [...this.npcs,...(G.villageStories?G.villageStories.actors(this):[])]) {
         const d = Math.hypot(n.x - fx, n.y - 3 - fy);
         const reach = n.reach || 15;
         if (d < reach && d < bd) { bd = d; best = n; }
       }
       if (best) {
         const shop = !G.quests.scriptFor(best.id) && best.shop;
-        return { show: true, label: shop ? 'Лавка' : 'Говорить', run: () => {
+        return { show: true, label: best._street?'Послушать':shop?'Торговать':G.villageDaily?.label(best)||'Говорить', title:best.name||G.chars.nameOf(best.id),
+          targetRect:{x:best.x-8,y:best.y-23,w:16,h:24},run: () => {
           if (!best.reach) best.dir = G.actors.OPP[p.dir];
           best.moving = false; best.anim = 0;
           G.audio.sfx.select();
+          if(best._street){this.talk(best.talk);return;}
           const qs = G.quests.scriptFor(best.id);
           if (qs) this.talk(qs);
+          else if (G.villageStories && G.villageStories.greet(best,this)) return;
+          else if (G.villageDaily && G.villageDaily.talk(best,this)) return;
           else if (best.shop) this.openShop(best);
           else if (G.FRIENDS[best.id] && G.state.flags.day2_intro && !best.name) G.friends.menu(best, this);
           else this.talk(best.talk);
@@ -347,33 +372,48 @@ G.scenes.register('world', (pos) => {
           if (d < bdist) { bdist = d; bo = o; }
         }
       }
-      if (bo) return { show: true, label: 'Осмотреть', run: () => { G.audio.sfx.select(); this.talk(bo.talk); } };
+      if (bo) {
+        const verbs={home_bed:'Отдохнуть',home_chest:'Сундук',home_desk:'Учиться',home_kitchen:'Готовить',board:'Поручения',train_throw:'Тренировка',train_dummy:'Тренировка'};
+        const titles={futon:'Постель',chest:'Сундук',desk:'Письменный стол',shelf:'Книжная полка',window:'Окно',table:'Чайный столик',vase:'Цветы'};
+        return {show:true,label:bo.actionLabel||verbs[bo.talk]||'Осмотреть',title:bo.title||titles[bo.kind]||'Предмет',targetRect:m.drawRect(bo),
+          run:()=>{G.audio.sfx.select();this.talk(bo.talk);}};
+      }
       // здания
       for (const o of near) {
         if (!o.isBuilding) continue;
         const r = { x: o.tx * T, y: o.ty * T, w: o.tw * T, h: o.th * T };
         if (fx < r.x || fx > r.x + r.w || fy < r.y || fy > r.y + r.h + 2) continue;
-        if (o.talk) return { show: true, label: 'Осмотреть', run: () => this.talk(o.talk) };
-        if (o.door && o.door.tx === Math.floor(fx / T) && p.dir === 'up') return { show: true, label: 'Войти', run: () => this.enterBuilding(o) };
-        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: 'Залезть', run: () => G.roofs.climb(this, o) };
+        if (o.talk) return { show: true, label: 'Осмотреть', title:o.name,targetRect:{x:o.x+o.ox,y:o.y+o.oy,w:o.w,h:o.h},run: () => this.talk(o.talk) };
+        if (o.door && o.door.tx === Math.floor(fx / T) && p.dir === 'up') return { show: true, label: 'Войти', title:o.name,
+          targetRect:{x:o.door.tx*T+1,y:o.door.ty*T,w:14,h:16},run: () => this.enterBuilding(o) };
+        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: G.state.flags.adv_wallrun?'Бежать вверх':'На крышу',title:o.name,
+          targetRect:{x:p.x+v[0]*12-6,y:p.y+v[1]*12-10,w:12,h:10},run: () => G.roofs.climb(this, o) };
         return { show: false, run: () => { this.showToast(o.locked ? o.name + ' — заперто' : o.name); G.audio.sfx.blip(); } };
       }
+      // Домашние животные уступают предметам, дверям и заданиям.
+      if(G.villageDaily){const action=G.villageDaily.probe(this);if(action)return action;}
       // вода: рыбалка
       for (const k of [1, 1.8]) {
         const wx = p.x + v[0] * 12 * k, wy = p.y - 3 + v[1] * 12 * k;
-        if (G.outdoor && G.outdoor.isWater(m, wx, wy)) return { show: true, label: 'Рыбалка', run: () => { G.audio.sfx.select(); G.outdoor.fish(this, G.outdoor.spotKind(m, wx, wy)); } };
+        if (G.outdoor && G.outdoor.isWater(m, wx, wy)) return { show: true, label: 'Рыбалка', title:'Место для ловли',targetRect:{x:wx-6,y:wy-4,w:12,h:8},run: () => { G.audio.sfx.select(); G.outdoor.fish(this, G.outdoor.spotKind(m, wx, wy)); } };
       }
       return null;
     },
+    currentAction() {
+      const p=this.player,key=[this.time,this.map.id,p.x,p.y,p.dir,p.roof,!!p.jump].join(':');
+      if(key!==this._actionKey){this._actionKey=key;this._action=this.probeAction();}
+      return this._action;
+    },
     interact() {
-      const act = this.probeAction();
+      const act = this.currentAction();
+      this._actionKey=null;
       if (act) act.run();
     },
 
     // что показывать на сенсорном экране (engine/touch.js)
     touch() {
       if (this.cine || this.player.jump) return { sys: true };
-      const act = this.probeAction();
+      const act = this.currentAction();
       return { joy: true, sys: true, action: act && act.show ? { label: act.label } : null };
     },
 
@@ -523,6 +563,8 @@ G.scenes.register('world', (pos) => {
       else ctx.translate(-cx, HUD_H - cy);
 
       m.drawGround(ctx, cx, cy, W, VH, this.time);
+      if(G.villageDaily)G.villageDaily.drawUnder(ctx,this);
+      G.fx.roomSunlight(ctx, m, G.state.vars.min);
 
       const vis = m.query({ x: cx, y: cy, w: W, h: VH });
       this.visCount = vis.length;
@@ -532,6 +574,8 @@ G.scenes.register('world', (pos) => {
         if (o.layer === 'floor') { ctx.drawImage(o.img, o.x + o.ox, o.y + o.oy); continue; }
         list.push(o);
       }
+      if(G.villageStories)list.push(...G.villageStories.actors(this));
+      if(G.villageDaily)list.push(...G.villageDaily.actors(this));
       for (const a of this.others) {
         if (a.x < cx - 16 || a.x > cx + W + 16 || a.y < cy - 4 || a.y > cy + VH + 24) continue;
         list.push(a);
@@ -541,7 +585,12 @@ G.scenes.register('world', (pos) => {
       const pr = { x: p.x - 7, y: p.y - 19, w: 14, h: 19 };
       for (const it of list) {
         if (it === p && (p.roof || p.jump)) continue;   // на крыше героя рисуем поверх всего
-        if (it.id && it.dir) { this.drawActor(ctx, it); continue; }
+        if(it._dailyAnimal){G.villageDaily.drawAnimal(ctx,this,it);continue;}
+        if (it.id && it.dir) {
+          if(it._street){ctx.save();ctx.globalAlpha*=this._streetScene.alpha;this.drawActor(ctx,it);ctx.restore();}
+          else this.drawActor(ctx, it);
+          continue;
+        }
         if (it.anim) { G.world.drawAnim(ctx, it, this.time); continue; }
         let alpha = 1;
         if ((it.isBuilding || FADE_BEHIND[it.kind]) && it.sortY > p.y && it.sortY >= 0 && !p.roof && !p.jump) {
@@ -549,11 +598,17 @@ G.scenes.register('world', (pos) => {
           if (G.util.rectsOverlap(pr, { x: it.x + it.ox + 2, y: it.y + it.oy + pad, w: it.w - 4, h: it.h - pad })) alpha = 0.45;
         }
         if (alpha < 1) ctx.globalAlpha = alpha;
-        ctx.drawImage(it.img, it.x + it.ox, it.y + it.oy);
+        const img=G.adventure?G.adventure.seasonalImage(it,m):it.img;
+        if(!G.villageDaily||!G.villageDaily.drawObject(ctx,this,it,img))ctx.drawImage(img, it.x + it.ox, it.y + it.oy);
         if (alpha < 1) ctx.globalAlpha = 1;
       }
 
+      if(G.roofPatrol)G.roofPatrol.draw(ctx,this,cx,cy,W,VH);
+      if(G.adventure)G.adventure.draw(ctx,this);
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
+      if(G.villageStories)G.villageStories.draw(ctx,this);
+      if(G.villageDaily)G.villageDaily.draw(ctx,this,vis);
+      this.drawActionHint(ctx);
 
       // значки над NPC: ! — новое задание, ? — можно сдать, 💬 — новое знакомство
       const bob = Math.round(Math.sin(this.time * 5) * 1.5);
@@ -589,6 +644,7 @@ G.scenes.register('world', (pos) => {
       this.drawHud(ctx);
       this.drawStrip(ctx);
       this.drawNotes(ctx, W);
+      if(G.adventure)G.adventure.drawHud(ctx,this);
 
       if (this.banner) {
         const a = Math.min(1, this.banner.t * 2, (2.4 - this.banner.t) * 4);
@@ -618,6 +674,18 @@ G.scenes.register('world', (pos) => {
     },
 
     // ▼ над целью (или над дверью/выходом), если она на экране
+    // Рамка показывает ровно ту цель, которую использует кнопка A.
+    drawActionHint(ctx) {
+      if(G.scenes.top()!==this||G.scenes.busy||this.cine)return;
+      const action=this.currentAction();if(!action||!action.show||!action.targetRect)return;
+      const r=action.targetRect,x=Math.round(r.x-2),y=Math.round(r.y-2),w=Math.round(r.w+4),h=Math.round(r.h+4);
+      const col=this.player.roof?'#b6e2d0':'#f0cc79';
+      ctx.save();ctx.fillStyle=col;ctx.globalAlpha=0.8+Math.sin(this.time*5)*0.15;
+      for(const [a,b,sx,sy] of [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]]){
+        ctx.fillRect(a+(sx<0?-4:0),b,5,1);ctx.fillRect(a,b+(sy<0?-4:0),1,5);
+      }
+      ctx.restore();
+    },
     drawTargetMark(ctx, cx, cy, W, VH, bob) {
       if (!this.hintsOn()) return;
       const r = this.navHop();
@@ -642,7 +710,8 @@ G.scenes.register('world', (pos) => {
       const ccx = W / 2, ccy = HUD_H + VH / 2;
       const dx = sx - ccx, dy = sy - ccy;
       const k = Math.min((W / 2 - 12) / Math.abs(dx || 1e-6), (VH / 2 - 12) / Math.abs(dy || 1e-6));
-      const ax = ccx + dx * k, ay = ccy + dy * k, ang = Math.atan2(dy, dx);
+      const ax = ccx + dx * k, ang = Math.atan2(dy, dx);let ay = ccy + dy * k;
+      if(G.storage.settings.minimap!==false&&ax>W-70&&ay<HUD_H+70)ay=HUD_H+76;
       const pulse = 1 + Math.sin(this.time * 6) * 0.12;
       ctx.save();
       ctx.translate(Math.round(ax), Math.round(ay)); ctx.rotate(ang); ctx.scale(pulse, pulse);
@@ -657,7 +726,8 @@ G.scenes.register('world', (pos) => {
       const lx = ax - Math.cos(ang) * 22, ly = ay - Math.sin(ang) * 16;
       const icon = h.exit ? '' : tgt.icon + ' ';
       const txt = icon + label, tw = G.font.small.measure(txt) + 10;
-      const bx = G.util.clamp(Math.round(lx - tw / 2), 2, W - tw - 2), by = G.util.clamp(Math.round(ly - 5), HUD_H + 2, HUD_H + VH - 17);
+      const bx = G.util.clamp(Math.round(lx - tw / 2), 2, W - tw - 2);let by = G.util.clamp(Math.round(ly - 5), HUD_H + 2, HUD_H + VH - 17);
+      if(G.storage.settings.minimap!==false&&bx+tw>W-63&&by<HUD_H+64)by=HUD_H+68;
       G.ui.panel(ctx, bx, by, tw, 15, 'night');
       G.font.small.draw(ctx, txt, bx + 5, by + 4, { color: '#f4d46a' });
     },
@@ -696,6 +766,7 @@ G.scenes.register('world', (pos) => {
 
     // ---------- Мини-карта ----------
     drawMinimap(ctx, W) {
+      if(G.cartography){G.cartography.minimap(ctx,this,W);return;}
       if (G.storage.settings.minimap === false) return;
       const S = 48, x0 = W - S - 3, y0 = HUD_H + 3;
       const m = this.map, p = this.player;
@@ -817,7 +888,9 @@ G.scenes.register('world', (pos) => {
       const frame = a.moving ? G.chars.WALK[Math.floor(a.anim) % 4] : 0;
       // жители: у каждого своя расцветка одежды (по номеру в списке жителей карты — одинаково между кадрами и загрузками)
       if (a._look === undefined) a._look = (a.id === 'villager_m' || a.id === 'villager_f') ? Math.floor(G.util.hash2(this.map.npcs.indexOf(a), 7, 91) * G.chars.LOOKS) : 0;
-      G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y, a._look);
+      const lift=G.villageDaily?G.villageDaily.lift(a,this.time):0;
+      if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
+      if(G.villageDaily)G.villageDaily.drawActorExtras(ctx,this,a);
     },
 
     drawHud(ctx) {

@@ -300,6 +300,7 @@ G.interiors = (() => {
 
   // Дополнительный декор: настенные украшения, мебель вдоль стен, коврики и мелочи на полу
   function decorate(m, info) {
+    if (m.authored) return;
     const ID = G.tiles.ID, w = m.w, h = m.h, r = G.util.rng((info.seed || 1) * 7 + 13);
     const kind = info.kind || '';
     if (kind === 'abandoned' || kind === 'dojo' || kind === 'academy_hall') return;

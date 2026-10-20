@@ -104,6 +104,7 @@ G.tiles = (() => {
 
   // мощёная площадь: плитка 8×8 со смещением
   function stone(c, ox, oy, base = '#cfc6b4', line = '#b8ae9a', hi = '#dad2c3') {
+    if (base === '#cfc6b4') { G.environment.stone(c, ox, oy); return; }
     px(c, ox, oy, base, T, T);
     px(c, ox, oy + 7, line, T, 1); px(c, ox, oy + 15, line, T, 1);
     px(c, ox + 7, oy, line, 1, 7); px(c, ox + 15, oy, line, 1, 7);
@@ -113,16 +114,7 @@ G.tiles = (() => {
 
   // главная улица: крупные плиты
   function mainroad(c, ox, oy) {
-    // серый булыжник: ряды камней со смещением, швы тёмные, на камнях светлая грань
-    px(c, ox, oy, '#7c786e', T, T);
-    for (let r = 0; r < 4; r++) for (let k = -1; k < 3; k++) {
-      const x = k * 8 + (r % 2 ? 4 : 0) + 1, y = r * 4;
-      const x0 = Math.max(0, x), x1 = Math.min(16, x + 7);
-      if (x1 <= x0) continue;
-      const col = H(r + 3, k, 73) > 0.72 ? '#a29e94' : H(r, k + 5, 74) > 0.5 ? '#b2aea4' : '#bab6ac';
-      px(c, ox + x0, oy + y, col, x1 - x0, 3);
-      px(c, ox + x0, oy + y, '#cfcbc0', x1 - x0, 1);
-    }
+    G.environment.stone(c, ox, oy, 0, true);
   }
 
   function darkstone(c, ox, oy) { stone(c, ox, oy, '#6a6478', '#4a4458', '#7c768a'); }
@@ -160,38 +152,31 @@ G.tiles = (() => {
   }
 
   function floor(c, ox, oy) {
-    px(c, ox, oy, '#b8804a', T, T);
-    for (let y = 0; y < 16; y += 4) px(c, ox, oy + y + 3, '#8e5e34', T, 1);
-    px(c, ox + 6, oy, '#8e5e34', 1, 3); px(c, ox + 13, oy + 4, '#8e5e34', 1, 3);
-    px(c, ox + 2, oy + 8, '#8e5e34', 1, 3); px(c, ox + 10, oy + 12, '#8e5e34', 1, 3);
-    px(c, ox + 1, oy + 1, '#c8925a', 4, 1); px(c, ox + 8, oy + 9, '#c8925a', 4, 1);
+    G.environment.floor(c, ox, oy);
   }
 
   function tatami(c, ox, oy) {
-    px(c, ox, oy, '#c8c070', T, T);
-    for (let y = 1; y < 16; y += 2) px(c, ox, oy + y, '#b8b062', T, 1);
-    px(c, ox, oy, '#8c9658', T, 1); px(c, ox, oy + 15, '#8c9658', T, 1);   // V9: швы татами мягче — пол без «клеток»
-    px(c, ox, oy, '#8c9658', 1, T);
+    G.environment.tatami(c, ox, oy);
   }
 
   function iwall(c, ox, oy) {
     px(c, ox, oy, '#e8dcc0', T, T);
-    px(c, ox, oy, '#cfc0a0', T, 1);
-    px(c, ox + 7, oy, '#d8caa8', 1, T);
   }
 
-  function voidT(c, ox, oy) { px(c, ox, oy, '#2a1e18', T, T); px(c, ox, oy, '#3a2a20', T, 2); }
+  function voidT(c, ox, oy) { px(c, ox, oy, '#252922', T, T); }
 
   function mat(c, ox, oy) {
     floor(c, ox, oy);
-    px(c, ox + 1, oy + 3, '#7a3a2a', 14, 12); px(c, ox + 2, oy + 4, '#a84a3a', 12, 10);
-    px(c, ox + 3, oy + 6, '#c86a4a', 10, 1); px(c, ox + 3, oy + 11, '#c86a4a', 10, 1);
+    px(c, ox + 1, oy + 2, '#685645', 14, 13); px(c, ox + 2, oy + 3, '#b18962', 12, 11);
+    for (let y = 4; y < 14; y += 2) px(c, ox + 3, oy + y, '#c5a378', 10, 0.5);
+    px(c, ox + 2, oy + 3, '#6b8475', 1, 11); px(c, ox + 13, oy + 3, '#6b8475', 1, 11);
   }
 
   function tilefloor(c, ox, oy) {
-    px(c, ox, oy, '#e8eef0', T, T);
-    px(c, ox, oy + 7, '#d6dce2', T, 1); px(c, ox, oy + 15, '#d6dce2', T, 1);
-    px(c, ox + 7, oy, '#d6dce2', 1, T); px(c, ox + 15, oy, '#d6dce2', 1, T);
+    px(c, ox, oy, '#d3dfd2', T, T);
+    px(c, ox, oy, '#f0edda', T, 0.5); px(c, ox, oy, '#f0edda', 0.5, T);
+    px(c, ox, oy + 15.5, '#a5bcb1', T, 0.5); px(c, ox + 15.5, oy, '#a5bcb1', 0.5, T);
+    px(c, ox + 2, oy + 2, '#e2e8d6', 5, 0.5); px(c, ox + 12, oy + 12, '#c9d7ca', 2, 0.5);
   }
 
   function dustfloor(c, ox, oy) {
@@ -201,9 +186,9 @@ G.tiles = (() => {
   }
 
   function rug(c, ox, oy) {
-    px(c, ox, oy, '#a83a2a', T, T);
-    px(c, ox + 1, oy, '#d8a83a', 1, T); px(c, ox + 14, oy, '#d8a83a', 1, T);
-    px(c, ox + 3, oy, '#8a2a1e', 1, T); px(c, ox + 12, oy, '#8a2a1e', 1, T);
+    px(c, ox, oy, '#8f544c', T, T);
+    for (let y = 1; y < 16; y += 2) px(c, ox, oy + y, '#995f53', T, 0.5);
+    px(c, ox + 7, oy + 6, '#bd9a6e', 2, 4); px(c, ox + 6, oy + 7, '#bd9a6e', 4, 2);
   }
 
   // булыжная мостовая переулков
@@ -278,7 +263,7 @@ G.tiles = (() => {
   }
 
   function build() {
-    atlas = G.gfx.canvas(T * COUNT, T * 2, true);   // lo: 1× — drawImage(atlas, …) берёт источник в логических px
+    atlas = G.gfx.canvas(T * COUNT, T * 2);   // ×2: тонкие швы и фактуры, источник drawImage — в логических px
     const c = atlas.getContext('2d');
     const fns = [
       (x) => grass(c, x, 0, 1, false), (x) => grass(c, x, 0, 2, true), (x) => flowers(c, x, 0), (x) => path(c, x, 0),
@@ -364,10 +349,20 @@ G.tiles = (() => {
     const id = map.get(tx, ty);
     if (id < 0) return;
     const vs = map.outdoor ? VAR[id] : null, hv = vs ? H(tx, ty, 555) : 1;
-    if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
+    if (id === ID.FLOOR || id === ID.DUSTFLOOR) G.environment.floor(ctx, x, y, tx, ty, id === ID.DUSTFLOOR);
+    else if (id === ID.TATAMI) G.environment.tatami(ctx, x, y, tx, ty);
+    else if (id === ID.MAINROAD) G.environment.stone(ctx, x, y, Math.floor(tx / 2) + ty * 3, true);
+    else if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
     else ctx.drawImage(atlas, id * T, 0, T, T, x, y, T, T);
     const up = map.get(tx, ty - 1), dn = map.get(tx, ty + 1), lf = map.get(tx - 1, ty), rt = map.get(tx + 1, ty);
     const hh = (i, s) => H(tx * 16 + i, ty, s);
+    // Окантовка ковра только по внешнему периметру, без полос на каждом тайле.
+    if (id === ID.RUG) {
+      if (up !== id) { px(ctx, x, y, '#59483d', 16, 1); px(ctx, x, y + 2, '#c0a579', 16, 1); }
+      if (dn !== id) { px(ctx, x, y + 15, '#59483d', 16, 1); px(ctx, x, y + 13, '#c0a579', 16, 1); }
+      if (lf !== id) { px(ctx, x, y, '#59483d', 1, 16); px(ctx, x + 2, y, '#c0a579', 1, 16); }
+      if (rt !== id) { px(ctx, x + 15, y, '#59483d', 1, 16); px(ctx, x + 13, y, '#c0a579', 1, 16); }
+    }
 
     // крупные пятна света и тени теперь — один плавный проход по всему чанку (map.groundLight), а не квадраты 4×4
     if (map.outdoor && G.mapgen && (GRASSY.has(id) || ROADY.has(id))) {
@@ -398,10 +393,15 @@ G.tiles = (() => {
       else { px(ctx, x, y, '#a8987e', 16, 3); px(ctx, x, y + 3, '#5a4a3a', 16, 1); px(ctx, x, y + 14, '#4a3a2e', 16, 2); }
       if (up !== ID.VWALL && up >= 0 && dn === ID.VWALL) px(ctx, x, y, '#5a4a3a', 16, 1);
     }
-    // стена интерьера: верхняя часть — балка, нижняя — панель
+    // Штукатурка, деревянная обшивка и редкие несущие стойки; палитра зависит от комнаты.
     if (id === ID.IWALL) {
-      if (up !== ID.IWALL) { px(ctx, x, y, '#5a3a24', 16, 4); px(ctx, x, y + 4, '#3a2416', 16, 1); }
-      else { px(ctx, x, y + 9, '#8e5e34', 16, 7); px(ctx, x, y + 9, '#a8703e', 16, 1); px(ctx, x, y + 15, '#5a3a24', 16, 1); }
+      G.environment.wall(ctx, map, tx, ty, x, y);
+    }
+    if (id === ID.VOID && !map.outdoor) {
+      const open = (v) => v >= 0 && !SOLID[v];
+      if (open(rt)) { px(ctx, x + 13, y, '#725640', 3, 16); px(ctx, x + 13, y, '#b59567', 0.5, 16); }
+      if (open(lf)) { px(ctx, x, y, '#725640', 3, 16); px(ctx, x + 2, y, '#a58a60', 0.5, 16); }
+      if (open(up)) { px(ctx, x, y, '#6d533e', 16, 4); px(ctx, x, y, '#b2986c', 16, 0.5); }
     }
     // тени у подножия скалы, стен и стен комнат
     if (!SOLID[id] && (up === ID.CLIFF || up === ID.VWALL || up === ID.IWALL)) {
@@ -442,6 +442,7 @@ G.tiles = (() => {
   const outline = (c, x, y, w, h, fill, line = P.ink) => { px(c, x, y, line, w, h); px(c, x + 1, y + 1, fill, w - 2, h - 2); };
 
   function buildObjects() {
+    for (const [name, spec] of Object.entries(G.environment.details)) obj(name, ...spec);
     // ---------- Природа ----------
     // V9: крона — гроздья листвы, каждая со сферическим светом (свет сверху-слева) и шумом листьев
     const crown = (c, cols, seed) => {
@@ -499,79 +500,30 @@ G.tiles = (() => {
     }, -9, -17, { x: -7, y: -4, w: 14, h: 4 });
 
     // ---------- Улица ----------
-    obj('sign', 16, 18, (c) => {
-      px(c, 7, 9, P.trunkDark, 2, 9);
-      px(c, 1, 1, P.woodDark, 14, 9); px(c, 2, 2, P.wood, 12, 7);
-      px(c, 4, 4, P.woodDark, 8, 1); px(c, 4, 6, P.woodDark, 6, 1);
-    }, -8, -17, { x: -6, y: -4, w: 12, h: 4 });
+    obj('sign', 16, 18, G.environment.props.sign, -8, -17, { x: -6, y: -4, w: 12, h: 4 });
 
-    obj('fence', 16, 14, (c) => {
-      px(c, 0, 4, P.woodDark, 16, 3); px(c, 0, 9, P.woodDark, 16, 3);
-      px(c, 0, 4, P.wood, 16, 2); px(c, 0, 9, P.wood, 16, 2);
-      px(c, 2, 1, P.woodDark, 3, 13); px(c, 11, 1, P.woodDark, 3, 13);
-      px(c, 2, 1, P.wood, 2, 12); px(c, 11, 1, P.wood, 2, 12);
-    }, -8, -13, { x: -8, y: -5, w: 16, h: 5 });
+    obj('fence', 16, 14, G.environment.props.fence, -8, -13, { x: -8, y: -5, w: 16, h: 5 });
 
     // Забор клана (белая штукатурка, тёмная черепица) — горизонтальный сегмент
-    obj('clanwall', 16, 20, (c) => {
-      px(c, 0, 6, '#e8e0d0', 16, 14); px(c, 0, 18, '#a89e8a', 16, 2);
-      px(c, 0, 2, '#3a3a4a', 16, 5); px(c, 0, 2, '#5a5a6a', 16, 1); px(c, 0, 6, '#2a2a3a', 16, 1);
-      px(c, 0, 9, '#d0c8b8', 16, 1);
-    }, -8, -19, { x: -8, y: -6, w: 16, h: 6 });
+    obj('clanwall', 16, 20, G.environment.props.clanwall, -8, -19, { x: -8, y: -6, w: 16, h: 6 });
 
-    obj('lamp', 12, 30, (c) => { // фонарь на столбе с бумажным абажуром
-      px(c, 5, 10, '#3a2a20', 2, 19); px(c, 3, 28, '#3a2a20', 6, 2);
-      px(c, 2, 1, P.ink, 8, 10); px(c, 3, 2, '#f0e0b0', 6, 8); px(c, 3, 4, '#e8c878', 6, 1); px(c, 3, 7, '#e8c878', 6, 1);
-      px(c, 4, 0, '#3a2a20', 4, 1); px(c, 4, 10, '#3a2a20', 4, 1);
-    }, -6, -29, { x: -3, y: -3, w: 6, h: 3 });
+    obj('lamp', 12, 30, G.environment.props.lamp, -6, -29, { x: -3, y: -3, w: 6, h: 3 });
 
-    obj('stonelamp', 14, 22, (c) => { // каменный фонарь торо
-      px(c, 2, 20, '#6a6a7a', 10, 2); px(c, 5, 12, '#8a8a98', 4, 8);
-      px(c, 3, 7, '#8a8a98', 8, 5); px(c, 5, 8, '#f0d070', 4, 3);
-      px(c, 1, 4, '#6a6a7a', 12, 3); px(c, 4, 1, '#6a6a7a', 6, 3); px(c, 6, 0, '#6a6a7a', 2, 1);
-    }, -7, -21, { x: -5, y: -4, w: 10, h: 4 });
+    obj('stonelamp', 14, 22, G.environment.props.stonelamp, -7, -21, { x: -5, y: -4, w: 10, h: 4 });
 
-    obj('barrel', 12, 16, (c) => {
-      outline(c, 1, 2, 10, 14, P.wood); px(c, 1, 5, P.woodDark, 10, 1); px(c, 1, 11, P.woodDark, 10, 1);
-      px(c, 2, 0, P.ink, 8, 3); px(c, 3, 1, '#7a5a3a', 6, 1);
-    }, -6, -15, { x: -5, y: -4, w: 10, h: 4 });
+    obj('barrel', 12, 16, G.environment.props.barrel, -6, -15, { x: -5, y: -4, w: 10, h: 4 });
 
-    obj('crate', 14, 14, (c) => {
-      outline(c, 0, 0, 14, 14, '#c8945a'); px(c, 1, 6, '#8e5e34', 12, 1); px(c, 6, 1, '#8e5e34', 1, 12);
-      px(c, 2, 2, '#e0b07a', 3, 1);
-    }, -7, -13, { x: -7, y: -6, w: 14, h: 6 });
+    obj('crate', 14, 14, G.environment.props.crate, -7, -13, { x: -7, y: -6, w: 14, h: 6 });
 
-    obj('stall', 32, 28, (c) => { // уличный лоток с полосатым навесом
-      px(c, 2, 8, '#3a2a20', 2, 20); px(c, 28, 8, '#3a2a20', 2, 20);
-      outline(c, 1, 16, 30, 10, P.wood); px(c, 2, 17, '#c8945a', 28, 2);
-      // товар
-      for (let i = 0; i < 6; i++) { px(c, 4 + i * 4, 14, ['#e84a3a', '#f0c040', '#7ac04a'][i % 3], 3, 3); }
-      for (let i = 0; i < 8; i++) px(c, i * 4, 2, i % 2 ? '#f4ecd8' : '#d84a3a', 4, 7);
-      px(c, 0, 1, P.ink, 32, 1); px(c, 0, 9, P.ink, 32, 1);
-      for (let i = 0; i < 8; i++) px(c, i * 4 + 1, 10, i % 2 ? '#f4ecd8' : '#d84a3a', 2, 1);
-    }, -16, -27, { x: -15, y: -6, w: 30, h: 6 });
+    obj('stall', 32, 28, G.environment.props.stall, -16, -27, { x: -15, y: -6, w: 30, h: 6 });
 
-    obj('well', 18, 22, (c) => {
-      outline(c, 1, 12, 16, 10, '#8a8a98'); px(c, 3, 13, '#2a3a5a', 12, 3);
-      px(c, 2, 2, '#5a3a24', 2, 12); px(c, 14, 2, '#5a3a24', 2, 12);
-      px(c, 0, 0, '#8a3226', 18, 3); px(c, 8, 3, P.ink, 1, 7); px(c, 7, 9, '#a8683a', 3, 3);
-    }, -9, -21, { x: -8, y: -7, w: 16, h: 7 });
+    obj('well', 18, 22, G.environment.props.well, -9, -21, { x: -8, y: -7, w: 16, h: 7 });
 
-    obj('bench', 26, 12, (c) => {
-      px(c, 2, 7, '#3a2a20', 2, 5); px(c, 22, 7, '#3a2a20', 2, 5);
-      outline(c, 0, 3, 26, 5, P.wood); px(c, 1, 0, P.woodDark, 24, 3);
-    }, -13, -11, { x: -12, y: -4, w: 24, h: 4 });
+    obj('bench', 26, 12, G.environment.props.bench, -13, -11, { x: -12, y: -4, w: 24, h: 4 });
 
-    obj('planter', 20, 30, (c) => { // дерево в каменной кадке (площадь)
-      outline(c, 2, 22, 16, 8, '#b8b0a0'); px(c, 3, 23, '#5a3a24', 14, 2);
-      px(c, 9, 14, P.trunk, 2, 9);
-      blob(c, 10, 10, 8, P.leafDark); blob(c, 10, 9, 7, P.leaf); blob(c, 7, 6, 3, '#3e8a42'); px(c, 6, 5, '#5aaa5a', 2, 1);
-    }, -10, -29, { x: -8, y: -7, w: 16, h: 7 });
+    obj('planter', 20, 30, G.environment.props.planter, -10, -29, { x: -8, y: -7, w: 16, h: 7 });
 
-    obj('flowerbox', 16, 10, (c) => {
-      outline(c, 0, 4, 16, 6, P.woodDark);
-      for (let i = 0; i < 5; i++) { px(c, 1 + i * 3, 1 + (i % 2), ['#e84a6a', '#f0d040', '#f4ecd8'][i % 3], 2, 2); px(c, 2 + i * 3, 3, P.leaf, 1, 2); }
-    }, -8, -9, { x: -8, y: -4, w: 16, h: 4 });
+    obj('flowerbox', 16, 10, G.environment.props.flowerbox, -8, -9, { x: -8, y: -4, w: 16, h: 4 });
 
     obj('swing', 32, 30, (c) => { // качели у Академии (место Наруто)
       px(c, 2, 0, P.trunkDark, 28, 3); px(c, 2, 0, P.trunk, 28, 2);
@@ -615,43 +567,17 @@ G.tiles = (() => {
     }, -13, -25, { x: -10, y: -6, w: 20, h: 6 });
 
     // ---------- Мебель ----------
-    obj('futon', 18, 30, (c) => {
-      outline(c, 0, 0, 18, 30, '#f4ecd8'); px(c, 1, 9, '#5a7ac8', 16, 20); px(c, 1, 9, '#7a9ae0', 16, 2);
-      outline(c, 3, 2, 12, 6, '#ffffff'); for (let y = 13; y < 29; y += 4) px(c, 1, y, '#4a64a8', 16, 1);
-    }, -9, -29, { x: -9, y: -28, w: 18, h: 28 });
+    obj('futon', 18, 30, G.environment.props.futon, -9, -29, { x: -9, y: -28, w: 18, h: 28 });
 
-    obj('table', 32, 22, (c) => { // низкий столик + подушки
-      px(c, 2, 0, '#c86a4a', 8, 5); px(c, 22, 0, '#c86a4a', 8, 5);
-      outline(c, 2, 5, 28, 12, '#8e5e34'); px(c, 3, 6, '#a8703e', 26, 2);
-      px(c, 4, 17, '#5a3a24', 2, 3); px(c, 26, 17, '#5a3a24', 2, 3);
-      px(c, 12, 7, '#f4ecd8', 4, 3); px(c, 18, 8, '#7ac0f0', 3, 2);
-    }, -16, -21, { x: -14, y: -14, w: 28, h: 12 });
+    obj('table', 32, 22, G.environment.props.table, -16, -21, { x: -14, y: -14, w: 28, h: 12 });
 
-    obj('shelf', 16, 28, (c) => { // книжный шкаф у стены
-      outline(c, 0, 0, 16, 28, '#7a4a2a');
-      for (let r = 0; r < 3; r++) {
-        px(c, 1, 8 + r * 9, '#5a3a24', 14, 1);
-        for (let i = 0; i < 6; i++) px(c, 2 + i * 2, 2 + r * 9, ['#c84a3a', '#4a7ac8', '#e8c040', '#5aa05a', '#a85ac8', '#f4ecd8'][(i + r) % 6], 2, 6);
-      }
-    }, -8, -27, { x: -8, y: -6, w: 16, h: 6 });
+    obj('shelf', 16, 28, G.environment.props.shelf, -8, -27, { x: -8, y: -6, w: 16, h: 6 });
 
-    obj('kitchen', 32, 28, (c) => {
-      outline(c, 0, 8, 32, 20, '#d8cbb0'); px(c, 1, 9, '#e8dcc0', 30, 3);
-      px(c, 4, 9, '#3a3a4a', 8, 3); blob(c, 8, 6, 3, '#5a5a6a'); px(c, 6, 3, '#7a7a8a', 5, 1);
-      px(c, 18, 9, '#8ab0c8', 10, 3); px(c, 2, 15, '#a89e8a', 28, 1);
-      px(c, 6, 18, '#8a7a6a', 1, 4); px(c, 22, 18, '#8a7a6a', 1, 4);
-    }, -16, -27, { x: -16, y: -8, w: 32, h: 8 });
+    obj('kitchen', 32, 28, G.environment.props.kitchen, -16, -27, { x: -16, y: -8, w: 32, h: 8 });
 
-    obj('chest', 16, 14, (c) => {
-      outline(c, 0, 2, 16, 12, '#a8683a'); px(c, 1, 3, '#c88a4a', 14, 3); px(c, 0, 6, P.ink, 16, 1);
-      px(c, 7, 6, '#f0d040', 2, 3);
-    }, -8, -13, { x: -8, y: -6, w: 16, h: 6 });
+    obj('chest', 16, 14, G.environment.props.chest, -8, -13, { x: -8, y: -6, w: 16, h: 6 });
 
-    obj('desk', 26, 18, (c) => { // письменный стол / парта
-      outline(c, 0, 2, 26, 10, '#a8703e'); px(c, 1, 3, '#c88a4a', 24, 2);
-      px(c, 2, 12, '#5a3a24', 2, 6); px(c, 22, 12, '#5a3a24', 2, 6);
-      px(c, 5, 4, '#f4ecd8', 6, 4); px(c, 15, 4, '#c84a3a', 3, 5);
-    }, -13, -17, { x: -12, y: -8, w: 24, h: 8 });
+    obj('desk', 26, 18, G.environment.props.desk, -13, -17, { x: -12, y: -8, w: 24, h: 8 });
 
     obj('bigdesk', 48, 22, (c) => { // стол Хокаге с бумагами
       outline(c, 0, 4, 48, 14, '#7a4a2a'); px(c, 1, 5, '#9a5e34', 46, 3);
@@ -659,47 +585,25 @@ G.tiles = (() => {
       px(c, 34, 2, '#c84a3a', 6, 5); px(c, 2, 18, '#5a3a24', 3, 4); px(c, 43, 18, '#5a3a24', 3, 4);
     }, -24, -21, { x: -24, y: -10, w: 48, h: 10 });
 
-    obj('stool', 10, 10, (c) => {
-      blob(c, 5, 3, 3, P.ink); blob(c, 5, 3, 2, '#c84a3a'); px(c, 4, 6, '#3a3a4a', 2, 4);
-    }, -5, -9, { x: -3, y: -2, w: 6, h: 2 });
+    obj('stool', 10, 10, G.environment.props.stool, -5, -9, { x: -3, y: -2, w: 6, h: 2 });
 
-    obj('counter', 16, 20, (c) => { // сегмент прилавка
-      px(c, 0, 4, P.ink, 16, 16); px(c, 0, 5, '#8e5e34', 16, 14); px(c, 0, 4, '#c8945a', 16, 4); px(c, 0, 8, '#5a3a24', 16, 1);
-      px(c, 0, 12, '#7a4a2a', 16, 1);
-    }, -8, -19, { x: -8, y: -12, w: 16, h: 12 });
+    obj('counter', 16, 20, G.environment.props.counter, -8, -19, { x: -8, y: -12, w: 16, h: 12 });
 
-    obj('bed', 18, 30, (c) => { // больничная койка
-      outline(c, 0, 0, 18, 30, '#c8d0d8'); px(c, 1, 9, '#f4f8fa', 16, 20); px(c, 1, 9, '#d8e0e8', 16, 1);
-      outline(c, 3, 2, 12, 6, '#ffffff'); px(c, 0, 28, '#8a9aa8', 18, 2);
-    }, -9, -29, { x: -9, y: -28, w: 18, h: 28 });
+    obj('bed', 18, 30, G.environment.props.bed, -9, -29, { x: -9, y: -28, w: 18, h: 28 });
 
     obj('pillar', 14, 36, (c) => {
       outline(c, 2, 0, 10, 36, '#a8402a'); px(c, 3, 1, '#c85a3a', 3, 34); px(c, 0, 32, '#5a3a24', 14, 4);
     }, -7, -35, { x: -6, y: -5, w: 12, h: 5 });
 
-    obj('plant', 14, 22, (c) => {
-      outline(c, 3, 14, 8, 8, '#c86a4a');
-      blob(c, 7, 8, 5, P.leafDark); blob(c, 7, 7, 4, P.leaf); px(c, 5, 5, '#5aaa5a', 2, 1);
-    }, -7, -21, { x: -4, y: -4, w: 8, h: 4 });
+    obj('plant', 14, 22, G.environment.props.plant, -7, -21, { x: -4, y: -4, w: 8, h: 4 });
 
-    obj('flowerpot', 12, 16, (c) => { // цветок в горшке (дом героя)
-      outline(c, 2, 9, 8, 7, '#c86a4a'); px(c, 5, 4, P.leaf, 2, 6); px(c, 3, 6, P.leaf, 2, 2); px(c, 7, 5, P.leaf, 2, 2);
-      blob(c, 6, 2, 2, '#f0d040'); px(c, 6, 2, '#e8621a', 1, 1);
-    }, -6, -15, { x: -4, y: -3, w: 8, h: 3 });
+    obj('flowerpot', 12, 16, G.environment.props.flowerpot, -6, -15, { x: -4, y: -3, w: 8, h: 3 });
 
-    obj('rack', 26, 26, (c) => { // стойка с оружием
-      px(c, 1, 2, '#5a3a24', 2, 24); px(c, 23, 2, '#5a3a24', 2, 24); px(c, 1, 2, '#7a4a2a', 24, 2); px(c, 1, 14, '#7a4a2a', 24, 2);
-      for (let i = 0; i < 4; i++) { px(c, 6 + i * 4, 4, '#b8c0c8', 1, 9); px(c, 5 + i * 4, 12, '#3a3a4a', 3, 2); }
-      for (let i = 0; i < 3; i++) { blob(c, 8 + i * 5, 20, 2, '#8a8a9a'); px(c, 8 + i * 5, 20, '#3a3a4a', 1, 1); }
-    }, -13, -25, { x: -13, y: -5, w: 26, h: 5 });
+    obj('rack', 26, 26, G.environment.props.rack, -13, -25, { x: -13, y: -5, w: 26, h: 5 });
 
-    obj('screen', 24, 26, (c) => { // ширма
-      for (let i = 0; i < 3; i++) { outline(c, i * 8, 0, 8, 26, '#f4ecd8', '#5a3a24'); px(c, i * 8 + 2, 6, '#c8b898', 4, 1); px(c, i * 8 + 2, 14, '#c8b898', 4, 1); }
-    }, -12, -25, { x: -12, y: -4, w: 24, h: 4 });
+    obj('screen', 24, 26, G.environment.props.screen, -12, -25, { x: -12, y: -4, w: 24, h: 4 });
 
-    obj('cups', 16, 8, (c) => { // пустые стаканчики рамена (квартира Наруто)
-      for (let i = 0; i < 3; i++) { px(c, 1 + i * 5, 2 + (i % 2), '#f4ecd8', 4, 5); px(c, 1 + i * 5, 3 + (i % 2), '#e84a3a', 4, 1); }
-    }, -8, -7, null, 'floor');
+    obj('cups', 16, 8, G.environment.props.cups, -8, -7, null, 'floor');
 
     // вещи на стене (рисуются под всеми, без коллизий)
     obj('blackboard', 64, 22, (c) => {
@@ -709,10 +613,7 @@ G.tiles = (() => {
       px(c, 2, 20, '#7a4a2a', 60, 2); px(c, 50, 19, '#f4ecd8', 4, 1);
     }, -32, -21, null, 'floor');
 
-    obj('window', 16, 12, (c) => {
-      outline(c, 0, 0, 16, 12, '#9ad0f0', '#5a3a24'); px(c, 7, 1, '#5a3a24', 2, 10); px(c, 1, 5, '#5a3a24', 14, 1);
-      px(c, 2, 2, '#d8f0ff', 3, 1);
-    }, -8, -11, null, 'floor');
+    obj('window', 16, 12, G.environment.props.window, -8, -11, null, 'floor');
 
     obj('scroll', 10, 18, (c) => {
       px(c, 0, 0, '#5a3a24', 10, 2); px(c, 1, 2, '#f4ecd8', 8, 14); px(c, 0, 16, '#5a3a24', 10, 2);
@@ -825,22 +726,13 @@ G.tiles = (() => {
     obj('leafpile', 12, 6, (c) => { for (let i = 0; i < 9; i++) px(c, 1 + Math.floor(H(i, 5, 81) * 9), 1 + Math.floor(H(5, i, 82) * 4), ['#d8783a', '#e8a83a', '#b84a2a', '#c8601a'][i % 4], 2, 1); }, -6, -5, null);
 
     // ---------- Больше мебели и декора для интерьеров ----------
-    obj('cushion', 14, 8, (c) => { outline(c, 1, 1, 12, 6, '#c8402a'); px(c, 2, 2, '#e8705a', 10, 1); px(c, 6, 3, '#f0c040', 2, 2); }, -7, -7, null, 'floor');
-    obj('cushion_b', 14, 8, (c) => { outline(c, 1, 1, 12, 6, '#3a6ac8'); px(c, 2, 2, '#6a9ae8', 10, 1); px(c, 6, 3, '#f4ecd8', 2, 2); }, -7, -7, null, 'floor');
-    obj('lowtable', 28, 16, (c) => { // низкий столик с чайным набором
-      outline(c, 0, 3, 28, 9, '#8a5a34'); px(c, 1, 4, '#b0804a', 26, 2); px(c, 2, 12, '#5a3a24', 2, 4); px(c, 24, 12, '#5a3a24', 2, 4);
-      px(c, 5, 1, '#f4ecd8', 4, 3); px(c, 6, 0, '#7ac07a', 2, 1); px(c, 12, 2, '#f4ecd8', 3, 2); px(c, 17, 2, '#f4ecd8', 3, 2); px(c, 21, 1, '#c8402a', 3, 3);
-    }, -14, -15, { x: -13, y: -7, w: 26, h: 7 });
-    obj('tansu', 20, 30, (c) => { // комод-тансу
-      outline(c, 0, 0, 20, 30, '#8a5a34');
-      for (let r = 0; r < 4; r++) { px(c, 2, 2 + r * 7, '#a87a48', 16, 5); px(c, 2, 6 + r * 7, '#5a3a24', 16, 1); px(c, 8, 4 + r * 7, '#f0d040', 4, 1); }
-      px(c, 1, 28, '#5a3a24', 18, 2);
-    }, -10, -29, { x: -10, y: -6, w: 20, h: 6 });
-    obj('andon', 12, 22, (c) => { // бумажный напольный фонарь
-      px(c, 5, 16, '#5a3a24', 2, 6); px(c, 2, 20, '#5a3a24', 8, 2); outline(c, 1, 2, 10, 14, '#f4e0a0', '#5a3a24'); px(c, 2, 3, '#fff6cc', 8, 12); px(c, 6, 3, '#8a6a3a', 1, 12); px(c, 1, 8, '#8a6a3a', 10, 1);
-    }, -6, -21, { x: -4, y: -3, w: 8, h: 3 });
-    obj('vase', 10, 18, (c) => { outline(c, 2, 9, 6, 8, '#4a7ac8'); px(c, 3, 10, '#8ab0f0', 1, 5); px(c, 5, 3, '#6a4a2a', 1, 7); px(c, 3, 5, '#6a4a2a', 1, 5); blob(c, 5, 2, 2, '#f4a0c0'); blob(c, 2, 4, 1, '#f4a0c0'); blob(c, 8, 5, 1, '#f4a0c0'); }, -5, -17, { x: -3, y: -3, w: 6, h: 3 });
-    obj('bonsai', 14, 18, (c) => { outline(c, 3, 12, 8, 6, '#a8683a'); px(c, 7, 6, '#5a3a24', 1, 7); px(c, 5, 8, '#5a3a24', 2, 1); blob(c, 7, 4, 3, P.leafDark); blob(c, 7, 3, 2, P.leaf); blob(c, 3, 7, 2, P.leaf); blob(c, 11, 8, 2, P.leaf); }, -7, -17, { x: -4, y: -3, w: 8, h: 3 });
+    obj('cushion', 14, 8, G.environment.props.cushion, -7, -7, null, 'floor');
+    obj('cushion_b', 14, 8, G.environment.props.cushion_b, -7, -7, null, 'floor');
+    obj('lowtable', 28, 16, G.environment.props.lowtable, -14, -15, { x: -13, y: -7, w: 26, h: 7 });
+    obj('tansu', 20, 30, G.environment.props.tansu, -10, -29, { x: -10, y: -6, w: 20, h: 6 });
+    obj('andon', 12, 22, G.environment.props.andon, -6, -21, { x: -4, y: -3, w: 8, h: 3 });
+    obj('vase', 10, 18, G.environment.props.vase, -5, -17, { x: -3, y: -3, w: 6, h: 3 });
+    obj('bonsai', 14, 18, G.environment.props.bonsai, -7, -17, { x: -4, y: -3, w: 8, h: 3 });
     obj('cat', 14, 12, (c) => { // кошка (сидит)
       blob(c, 7, 8, 3, '#e8a860'); px(c, 4, 9, '#e8a860', 7, 3); blob(c, 7, 4, 3, '#e8a860'); px(c, 4, 1, '#e8a860', 2, 2); px(c, 9, 1, '#e8a860', 2, 2);
       px(c, 5, 4, '#2a1e18'); px(c, 9, 4, '#2a1e18'); px(c, 7, 5, '#f08a8a'); px(c, 3, 9, '#c8803a', 1, 3); px(c, 11, 9, '#e8a860', 3, 1); px(c, 6, 7, '#c8803a', 2, 1);
@@ -849,9 +741,9 @@ G.tiles = (() => {
     obj('basket', 12, 12, (c) => { outline(c, 1, 5, 10, 7, '#c8a050'); for (let i = 0; i < 4; i++) px(c, 2, 6 + i * 2, '#a07830', 8, 1); px(c, 2, 2, '#c8a050', 1, 4); px(c, 9, 2, '#c8a050', 1, 4); px(c, 2, 2, '#c8a050', 8, 1); px(c, 4, 4, '#d84a3a', 3, 2); px(c, 7, 4, '#7ac04a', 2, 2); }, -6, -11, { x: -5, y: -3, w: 10, h: 3 });
     obj('shoes', 12, 6, (c) => { px(c, 1, 2, '#5a3a24', 4, 3); px(c, 2, 1, '#8a5a34', 2, 1); px(c, 7, 3, '#3a3a4a', 4, 2); px(c, 7, 2, '#5a5a6a', 2, 1); }, -6, -5, null, 'floor');
     obj('hibachi', 16, 14, (c) => { outline(c, 1, 4, 14, 10, '#6a4a30'); px(c, 3, 5, '#3a2a20', 10, 3); px(c, 5, 5, '#f08a2a', 2, 1); px(c, 9, 6, '#e84a2a', 2, 1); px(c, 2, 12, '#4a3220', 12, 2); }, -8, -13, { x: -7, y: -4, w: 14, h: 4 });
-    obj('wardrobe', 20, 32, (c) => { outline(c, 0, 0, 20, 32, '#7a4a2a'); px(c, 2, 2, '#a07040', 7, 26); px(c, 11, 2, '#a07040', 7, 26); px(c, 9, 2, P.ink, 2, 26); px(c, 7, 14, '#f0d040', 1, 3); px(c, 12, 14, '#f0d040', 1, 3); px(c, 0, 29, '#5a3a24', 20, 3); }, -10, -31, { x: -10, y: -6, w: 20, h: 6 });
-    obj('rug_red', 32, 20, (c) => { px(c, 0, 0, '#5a2018', 32, 20); px(c, 1, 1, '#a8382a', 30, 18); px(c, 3, 3, '#d8604a', 26, 14); px(c, 4, 4, '#a8382a', 24, 12); for (let x = 7; x < 26; x += 4) px(c, x, 8, '#f0c040', 2, 4); px(c, 0, 0, '#f4ecd8', 32, 1); px(c, 0, 19, '#f4ecd8', 32, 1); }, -16, -19, null, 'floor');
-    obj('rug_blue', 32, 20, (c) => { px(c, 0, 0, '#1a2a58', 32, 20); px(c, 1, 1, '#2f4a98', 30, 18); px(c, 3, 3, '#5a82d0', 26, 14); px(c, 4, 4, '#2f4a98', 24, 12); for (let x = 7; x < 26; x += 4) px(c, x, 8, '#f4ecd8', 2, 4); }, -16, -19, null, 'floor');
+    obj('wardrobe', 20, 32, G.environment.props.wardrobe, -10, -31, { x: -10, y: -6, w: 20, h: 6 });
+    obj('rug_red', 32, 20, G.environment.props.rug_red, -16, -19, null, 'floor');
+    obj('rug_blue', 32, 20, G.environment.props.rug_blue, -16, -19, null, 'floor');
     obj('rug_round', 26, 18, (c) => { blob(c, 13, 9, 9, '#4a2a18'); blob(c, 13, 9, 8, '#e8c878'); blob(c, 13, 9, 6, '#a84a3a'); blob(c, 13, 9, 3, '#e8c878'); }, -13, -17, null, 'floor');
     // на стену
     obj('painting', 16, 14, (c) => { outline(c, 0, 0, 16, 14, '#e8dcc0', '#5a3a24'); px(c, 2, 2, '#9ac8e8', 12, 5); px(c, 2, 7, '#6aa05a', 12, 5); px(c, 9, 3, '#f4ecd8', 3, 3); px(c, 3, 8, '#4a8a3a', 4, 3); }, -8, -13, null, 'floor');

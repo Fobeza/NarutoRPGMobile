@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "1.5"                              # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
+RELEASE = "1.6.4"                            # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -23,30 +23,30 @@ JS_FILES = [
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
     "gfx/chars.js", "data/characters.js", "gfx/char_art_data.js", "gfx/chars_render.js",
-    "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
+    "gfx/environment.js", "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
-    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/combat.js",
+    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/combat.js", "data/adventures.js",
     # ── игровые системы ──
     "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
     "systems/sim.js",
     # ── сюжет и диалоги ──
-    "data/konoha_layout.js", "data/legacy_layout.js", "data/dialogs.js", "data/story_dialogs.js", "data/story_scenes.js",
+    "data/konoha_layout.js", "data/legacy_layout.js", "data/dialogs.js", "data/story_dialogs.js", "data/story_scenes.js", "data/village_daily.js",
     # ── мир: карты, интерьеры, жители, расписания ──
     "world/buildgfx.js", "world/map.js", "world/mapgen.js", "world/interiors.js", "world/world.js",
-    "world/village_extra.js", "world/village_life.js", "world/cast.js",
+    "world/village_extra.js", "world/interior_details.js", "world/village_life.js", "world/cast.js",
     "data/schedule.js", "systems/schedule.js",     # расписание — последним из «мира»: переставляет всех жителей
-    "systems/residents.js", "world/roofs.js", "world/fx.js",
-    "engine/debug.js",
+    "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/fx.js", "world/village_stories.js",
+    "world/frontier.js", "systems/adventures.js", "world/village_daily.js", "world/motion.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
     "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js", "scenes/settings.js",
-    "scenes/gallery.js",
+    "scenes/gallery.js", "scenes/shogi.js",
     # ── точка входа ──
     "main.js",
 ]

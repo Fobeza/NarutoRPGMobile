@@ -25,7 +25,7 @@ G.scenes.register('ending', () => {
     { title: 'РАСПРЕДЕЛЕНИЕ ПО КОМАНДАМ', col: '#8ae070', lines: ['Через неделю всех выпускников собирают в классе.', 'Ирука зачитывает списки...', `${T[0]}: ${T[1]}`, '«Четвёртый член команды — по особому решению Хокаге».'] },
     { title: T[0], col: '#8ae070', lines: [T[2], T[3]] },
     { title: 'ТВОИ 8 НЕДЕЛЬ', col: P.light, lines: [`Дней прожито: ${v.day} · Боёв: ${v.battles || 0}, побед: ${v.wins || 0}`, `Тренировок: ${v.trainings || 0} · Поручений: ${v.jobs || 0}`, `Секретных свитков: ${v.scrolls || 0}/20 · Репутация: ${v.rep || 0}`, `Экзамен: ${v.exam || 0} баллов · Посещаемость: ${G.academy.attendance()}%`, 'Лучшие друзья: ' + top.join(', ')] },
-    { title: 'ВОЛЯ ОГНЯ', col: P.orange, lines: ['Фан-игра по мотивам «Наруто» Масаси Кисимото.', 'Сделано для личного использования.', '', 'Спасибо, что играл!', '', 'ПРОДОЛЖЕНИЕ СЛЕДУЕТ...'] },
+    { title: 'НОВАЯ ГЛАВА', col: P.orange, lines: ['Ты окончил Академию. Команда ждёт тебя на пограничном посту.', 'В меню «Приключения» открылись три миссии генинов: разведка, охрана переправы и допуск к экзамену чунина.', 'После этой страницы ты вернёшься домой и сможешь продолжить игру.', '', 'Фан-игра по мотивам «Наруто» Масаси Кисимото.'] },
   ];
   let i = 0, t = 0;
   f.game_clear = 1; f['end_' + kind] = 1; f['team_' + team] = 1;
@@ -39,7 +39,7 @@ G.scenes.register('ending', () => {
     name: 'ending',
     update(dt) {
       t += dt; const I = G.input;
-      if (t > 0.8 && (I.pressed('a') || I.tapNow)) { G.audio.sfx.confirm(); i++; t = 0; if (i >= pages.length) G.scenes.fadeTo(G.scenes.make('title')); }
+      if (t > 0.8 && (I.pressed('a') || I.tapNow)) { G.audio.sfx.confirm(); i++; t = 0; if (i >= pages.length) G.scenes.fadeTo(G.scenes.make('world',st.pos)); }
     },
     draw(ctx) {
       const H = G.screen.H, p = pages[Math.min(i, pages.length - 1)], U = G.ui, C = U.C, S = F.small;

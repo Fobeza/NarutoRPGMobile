@@ -25,9 +25,12 @@ G.roofs = {
   clampIn(r, x, y) { return [Math.max(r.x + 5, Math.min(r.x + r.w - 5, x)), Math.max(r.y + 6, Math.min(r.y + r.h - 2, y))]; },
   climb(world, b) {
     const p = world.player, r = this.of(world.map, b), v = G.actors.DIRV[p.dir];
+    const wall=!!G.state.flags.adv_wallrun;
+    if(wall&&G.state.vars.chakra<8){world.showToast('Для бега по стене нужно 8 чакры');return;}
     const [x, y] = this.clampIn(r, p.x + v[0] * 20, p.dir === 'up' ? r.y + r.h - 4 : p.y + v[1] * 20 - (p.y - (r.y + r.h)) * 0.5);
     this.startJump(p, x, y, true);
-    if (!G.state.flags.tip_roofs) { G.state.flags.tip_roofs = 1; world.showToast('На крыше: A у края — спрыгнуть'); }
+    if(wall){G.state.vars.chakra-=8;p.jump.wall=true;p.jump.dur=0.85;p.jump.h=0;}
+    if (!G.state.flags.tip_roofs) { G.state.flags.tip_roofs = 1; world.showToast('На крыше: A — прыжок или спуск'); }
   },
   startJump(p, x1, y1, toRoof) {
     const d = Math.hypot(x1 - p.x, y1 - p.y);
@@ -53,11 +56,8 @@ G.roofs = {
     else if (dy && ok(p.x, p.y + dy)) p.y += dy;
     else {
       // край: ищем крышу впереди в пределах прыжка
-      const cur = this.at(m, p.x, p.y), len = Math.hypot(ax.x, ax.y) || 1, ux = ax.x / len, uy = ax.y / len;
-      for (let s = 8; s <= this.JUMP; s += 4) {
-        const r = this.at(m, p.x + ux * s, p.y + uy * s);
-        if (r && r !== cur) { const [x, y] = this.clampIn(r, p.x + ux * (s + 8), p.y + uy * (s + 8)); this.startJump(p, x, y, true); return true; }
-      }
+      const next=this.jumpTarget(world,ax);
+      if(next){this.startJump(p,next.x,next.y,true);return true;}
       if (!world._edgeTip) { world._edgeTip = 1; world.showToast('Край крыши. A — спрыгнуть'); }
     }
     // опыт Скорости за пробежку по крышам
@@ -67,9 +67,21 @@ G.roofs = {
     return true;
   },
   // A на крыше — спрыгнуть
-  interact(world) {
-    const p = world.player; if (!p.roof) return false;
-    const m = world.map, r = this.at(m, p.x, p.y); if (!r) { p.roof = false; return true; }
+  jumpTarget(world, axis) {
+    const p=world.player,m=world.map,r=this.at(m,p.x,p.y);
+    if(!p.roof||!r)return null;
+    const v=axis?[axis.x,axis.y]:G.actors.DIRV[p.dir],len=Math.hypot(...v)||1,ux=v[0]/len,uy=v[1]/len;
+    const edge=ux>0?r.x+r.w-p.x:ux<0?p.x-r.x:uy>0?r.y+r.h-p.y:p.y-r.y;
+    if(edge>12)return null;
+    for(let s=8;s<=this.JUMP;s+=2){
+      const next=this.at(m,p.x+ux*s,p.y+uy*s);if(!next||next===r)continue;
+      const [x,y]=this.clampIn(next,p.x+ux*(s+6),p.y+uy*(s+6));
+      if(Math.hypot(x-p.x,y-p.y)<=this.JUMP)return {x,y,roof:next};
+    }
+    return null;
+  },
+  dropTarget(world) {
+    const p=world.player,m=world.map,r=this.at(m,p.x,p.y);if(!r)return null;
     const T = G.CONFIG.TILE, b = r.b, v = G.actors.DIRV[p.dir];
     const gy = b.ty * T + (p.y - r.y) / r.h * b.th * T;     // проекция на землю
     let x = p.x, y = gy;
@@ -79,8 +91,21 @@ G.roofs = {
     else x = (b.tx + b.tw) * T + 8;
     for (const [ox, oy] of [[0, 0], [0, 6], [0, -6], [6, 0], [-6, 0], [0, 12], [12, 0], [-12, 0], [0, -12], [v[0] * 10, v[1] * 10]]) {
       const fx = x + ox, fy = y + oy;
-      if (!m.blockedRect(G.actors.feet(p, fx, fy)) && !this.inFootprint(m, fx, fy)) { this.startJump(p, fx, fy, false); return true; }
+      if (!m.blockedRect(G.actors.feet(p, fx, fy)) && !this.inFootprint(m, fx, fy)) return {x:fx,y:fy};
     }
+    return null;
+  },
+  action(world) {
+    if(!world.player.roof||world.player.jump)return null;
+    const leap=this.jumpTarget(world);
+    if(leap)return {label:'Прыгнуть',kind:'jump',point:leap};
+    const drop=this.dropTarget(world);
+    return drop?{label:'Спрыгнуть',kind:'drop',point:drop}:null;
+  },
+  interact(world) {
+    const p=world.player;if(!p.roof)return false;
+    const action=this.action(world);
+    if(action){this.startJump(p,action.point.x,action.point.y,action.kind==='jump');return true;}
     world.showToast('Отсюда не спрыгнуть'); G.audio.sfx.error();
     return true;
   },
@@ -88,9 +113,13 @@ G.roofs = {
   drawPlayer(ctx, world) {
     const p = world.player, j = p.jump;
     const lift = j ? Math.sin(Math.PI * Math.min(1, j.t / j.dur)) * j.h : 0;
-    ctx.globalAlpha = 0.3; ctx.fillStyle = '#000';
-    ctx.fillRect(Math.round(p.x - 5 + lift * 0.1), Math.round(p.y - 2), 10, 3);
-    ctx.globalAlpha = 1;
+    if(j&&j.wall){ctx.fillStyle='#80cfee';for(let i=0;i<4;i++)ctx.fillRect(p.x+(i%2?3:-3),p.y+i*4,2,2);}
+    G.shade.shadow(ctx,p.x+lift*0.1,p.y-1,5,1.5,0.3);
+    if(j){
+      const k=Math.min(1,j.t/j.dur),dx=j.x1-j.x0,dy=j.y1-j.y0;
+      ctx.fillStyle='rgba(222,232,205,0.35)';
+      for(let i=1;i<=3;i++)ctx.fillRect(Math.round(p.x-dx*0.025*i-3),Math.round(p.y-lift-dy*0.025*i-7),3,0.5);
+    }
     const frame = p.moving ? G.chars.WALK[Math.floor(p.anim) % 4] : j ? 1 : 0;
     G.chars.draw(ctx, p.id, p.dir, frame, p.x, Math.round(p.y - lift));
   },

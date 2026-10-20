@@ -44,7 +44,7 @@ G.input = {
       const loc = G.screen.toLocal(e.clientX, e.clientY);
       const P = { id: e.pointerId, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t0: performance.now(), loc };
       const btn = G.touch.hit(loc);
-      if (btn) { P.kind = 'btn'; P.btn = btn; this._queuedPress[btn] = true; this._btnHeld[btn] = (this._btnHeld[btn] || 0) + 1; }
+      if (btn) { P.kind = 'btn'; P.btn = btn; this._queuedPress[btn] = true; this._btnHeld[btn] = (this._btnHeld[btn] || 0) + 1; if(G.storage.settings.vibration&&typeof navigator.vibrate==='function')navigator.vibrate(12); }
       else if (G.touch.joyAllowed() && !this.stick.on) P.kind = 'pending';
       else { P.kind = 'tap'; this.tap = loc; this._tapFresh = true; this.tapHeld++; }
       this._ptrs[e.pointerId] = P;
@@ -79,7 +79,8 @@ G.input = {
   _stickState() {
     const st = this.stick, d = { up: false, down: false, left: false, right: false };
     if (!st.on) return { d, run: false };
-    const dx = st.x - st.ox, dy = st.y - st.oy, dist = Math.hypot(dx, dy);
+    const sensitivity=G.storage.settings.stickSensitivity||1;
+    const dx = (st.x - st.ox)*sensitivity, dy = (st.y - st.oy)*sensitivity, dist = Math.hypot(dx, dy);
     if (dist <= this.STICK_DEAD) return { d, run: false };
     const oct = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));   // -4..4, 0 — вправо
     if (oct === 0) d.right = true;

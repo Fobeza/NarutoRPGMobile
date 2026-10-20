@@ -44,6 +44,13 @@ G.battleAi = {
         if (id === 'focus') s = E.ch < 20 ? 2 : 0.3;
         if (id === 'clones') s = 3;
         if (id === 'trap') s = 2;
+        // Только новые обучающиеся соперники: повтор одного семейства три раза читается заранее.
+        if(has('adaptive')&&P.advRepeat>=3){
+          if(P.advStyle==='tai'&&id==='guard')s*=7;
+          if(P.advStyle==='throw'&&a.kind==='move'&&a.dir>0)s*=5;
+          if(P.advStyle==='nin'&&(id==='guard'||a.kind==='throw'))s*=4;
+          if(P.advStyle==='guard'&&a.jutsu)s*=4;
+        }
         if (E.s.prov && a.kind === 'tai') s *= 3;
         if (E.s.prov && (a.kind === 'move' && a.dir < 0 || id === 'guard')) s = 0.05;
         return s * rnd(0.7, 1.3);

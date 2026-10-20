@@ -3,9 +3,11 @@
 G.scenes.register('battle', (opts, onEnd) => {
   let W = G.screen.W;
   const F = G.font, PAL = G.PAL, AU = G.audio, U = G.ui, C = U.C, FS = F.small;
-  const A = G.ARENAS[opts.terrain || 'field'] || G.ARENAS.field;
+  const arena=G.ARENAS[opts.terrain || 'field'] || G.ARENAS.field;
+  const A = Object.assign({},arena,{obj:Object.assign({},arena.obj)});
   const mode = opts.mode || 'ko';
   let ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
+  if(ed.advPhases)ed=Object.assign({},ed,{acts:ed.acts.slice()});
   const Hh = G.hero, st = (k) => Hh.stat(k), V = G.state.vars;
   const real = mode === 'ko' || mode === 'survive';
   const fac = (spd) => Math.max(0.6, 1.3 - spd * 0.05);
@@ -39,6 +41,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   P.hp = mode === 'ko' || mode === 'survive' ? Math.max(1, Math.round(hpMax * (V.hp == null ? 100 : V.hp) / 100)) : hpMax;
   P.ch = Math.round(chMax * clamp(V.chakra == null ? 100 : V.chakra, 10, 100) / 100);
   P.br = P.brMax; P.focus = P.focusMax;
+  if(opts.advanced&&(G.state.flags.adv_clan_nara||G.state.flags.adv_tactician)){P.focusMax++;P.focus=P.focusMax;}
   if (opts.will) P.will = opts.will;
   // уличные противники растут вместе с героем (баланс): HP +1,5%/день, Тай +1 за 2 недели, Скор +1 за 3
   if (ed.grow) { const d = V.day || 1; ed = Object.assign({}, ed, { hp: Math.round(ed.hp * (1 + 0.025 * d)), tai: ed.tai + Math.floor(d / 9), spd: ed.spd + Math.floor(d / 14), end: ed.end + Math.floor(d / 21) }); }
@@ -53,6 +56,8 @@ G.scenes.register('battle', (opts, onEnd) => {
   let usedTough = false, lowSaid = false, eTurns = 0, pTurns = 0, result = null, lastPTai = false;
   let react = null, seals = null, rhythm = null, target = null, moment = null;
   let stats = { perfect: 0, reacts: 0, used: {} };
+  const profile=tid=>G.adventure?G.adventure.techProfile(tid):{ch:1,w:1,dmg:1};
+  const remember=kind=>{if(!has('adaptive'))return;P.advRepeat=P.advStyle===kind?(P.advRepeat||0)+1:1;P.advStyle=kind;};
   const pName = G.state.hero.name;
 
   let simLog = null;
@@ -158,7 +163,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   // ── ходы ──
   function tick(f) {
     for (const k of ['blind', 'fear', 'bound', 'conf', 'shaken', 'prov']) if (f.s[k]) f.s[k]--;
-    f.s.guard = 0; f.s.evade = 0; if (f.wet > 0) f.wet--;
+    f.s.guard = 0; f.s.evade = 0; if (f.wet > 0) f.wet--; if(f.windReady>0)f.windReady--;
     if (f === P && E.an > 0) E.an--;
   }
   function nextTurn() {
@@ -184,6 +189,10 @@ G.scenes.register('battle', (opts, onEnd) => {
     const who = opts.allies[Math.floor(pTurns / 3) % opts.allies.length];
     if (who === 'naruto') { const d = 8 + (E.phase === 2 ? 6 : 0); E.hp -= d; pop(E, '-' + d, PAL.yellow); say('Наруто: «Не трогай моего друга!» — сюрикены летят в Мизуки!', PAL.orangeLight); sfx.hit(); }
     if (who === 'iruka') { gainWill(15); P.focus = Math.min(P.focusMax, P.focus + 1); say('Ирука: «Держись, {name}! Я в тебя верю!» (+Фокус, +Воля)', '#9ad0ff'); }
+    if(opts.advanced&&!['naruto','iruka'].includes(who)){
+      if(['sakura','hinata','ino'].includes(who)){const hp=Math.round(P.hpMax*.08);P.hp=Math.min(P.hpMax,P.hp+hp);P.focus=Math.min(P.focusMax,P.focus+1);say(G.chars.nameOf(who)+': «Прикрою!» Здоровье +'+hp+', фокус +1.','#91c9bc');}
+      else {E.hp-=7;E.t+=2;pop(E,'-7',PAL.yellow);say(G.chars.nameOf(who)+' отвлекает соперника и помогает атакой!','#91c9bc');}
+    }
   }
   function enemyTurn() {
     tick(E); eTurns++;
@@ -272,6 +281,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       if (a.kind === 'bind') { P.s.bound = 2; say('Ты связан тенью! Не двинуться!', '#d080e0'); }
       else {
         let d = Math.round(r.dmg * mul * (P.s.vuln ? 1.25 : 1) * rnd(0.9, 1.1) / (1 + P.end * 0.03));
+        if(P.earthCover>0){d=Math.max(1,Math.round(d*.6));P.earthCover--;say('Земляной щит принимает часть удара.', '#c9b48c');}
         P.s.vuln = 0;
         P.hp -= d; pop(P, '-' + d, '#ff6a3a', d >= 15); impact(P, d, '#ffb090', a.kind); gainWill(d * 0.8); fx.shake = d >= 15 ? 0.35 : 0.18; d >= 15 ? sfx.big() : sfx.hit();
         if (d >= 15) fx.flash = 0.12;
@@ -317,6 +327,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (P.s.shaken) d *= 0.8;
     if (E.s.guard && spec.kind !== 'nin') d *= 0.5;
     if (V.injury) d *= 0.85;
+    if(has('adaptive')&&P.advRepeat>=3&&P.advStyle===spec.kind&&!P.ambush){d*=.8;say('Соперник запомнил повтор. Смени тактику!', '#f4d46a');}
     d = Math.max(1, Math.round(d * rnd(0.9, 1.1)));
     E.hp -= d; pop(E, '-' + d, spec.crit ? PAL.yellow : PAL.white, d >= 15); impact(E, d, spec.crit ? '#ffe070' : '#fff6c8', spec.kind); fx.shake = d >= 15 ? 0.3 : 0.12;
     d >= 15 ? sfx.big() : sfx.hit(); gainWill(2);
@@ -334,6 +345,7 @@ G.scenes.register('battle', (opts, onEnd) => {
 
   function doMove(kind) {
     if (confused()) return;
+    remember('move');
     if (kind === 'fwd') { const n = step(P, true, 1); say(n ? 'Ты шагаешь вперёд.' : 'Дальше нельзя.'); return endTurn(6, 0.4); }
     if (kind === 'back') { const n = step(P, false, 1); say(n ? 'Ты отходишь назад.' : 'Дальше нельзя.'); return endTurn(6, 0.4); }
     if (kind === 'dash') { P.br--; const n = step(P, true, 2); fx.lines = 0.3; sfx.whoosh(); say(n ? 'Рывок!' : 'Некуда.'); xp('spd', 1); return endTurn(8, 0.4); }
@@ -345,6 +357,7 @@ G.scenes.register('battle', (opts, onEnd) => {
 
   function doThrow(kind) {
     if (confused()) return;
+    remember('throw');
     if (kind === 'kunai') { take('kunai'); sfx.whoosh(); say('Ты бросаешь кунай!'); xp('tai', 1); return attack({ kind: 'throw', dmg: 7, strong: false }, () => endTurn(7)); }
     if (kind === 'shuriken') { take('shuriken'); sfx.whoosh(); say('Сюрикен!'); xp('spd', 1); return attack({ kind: 'throw', shu: true, dmg: 5, strong: false }, () => endTurn(5)); }
     if (kind === 'fan') { take('shuriken', 3); sfx.whoosh(); say('Веер из трёх сюрикенов!'); xp('spd', 2); return attack({ kind: 'throw', fan: true, dmg: 12, strong: true }, () => endTurn(8)); }
@@ -370,6 +383,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   }
 
   function doMisc(kind) {
+    remember(kind==='guard'?'guard':'tactic');
     if (kind === 'guard') { P.s.guard = 1; P.br = Math.min(P.brMax, P.br + 2); say('Ты встаёшь в защиту и переводишь дыхание.'); return endTurn(5, 0.4); }
     if (kind === 'conc') { const c = 12 + P.chakra * 2; P.ch = Math.min(P.chMax, P.ch + c); P.focus = Math.min(P.focusMax, P.focus + 1); P.s.vuln = 1; say(`Концентрация: чакра +${c}, Фокус +1. Ты открыт для удара!`, '#7ab0ff'); xp('chakra', 1); return endTurn(8); }
     if (kind === 'analyze') {
@@ -400,6 +414,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   // тайдзюцу-цепочка с ритмом
   function runChain() {
     if (confused()) return;
+    remember('tai');
     lastPTai = true;
     const seq = chain.slice(); const combo = comboId ? G.COMBOS[comboId] : null;
     P.br -= seq.length; xp('tai', seq.length); if (combo) xp('tai', 2);
@@ -453,7 +468,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (G.storage.settings.reactSlow) limit *= 1.35;
     seals = { tid, seq, i: 0, t: 0, limit, hint: mast < 2, free, then };
     state = 'seals'; focus = 0;
-    if (!free) P.ch -= Math.round(t.ch * (1 - P.ctrl * 0.03));
+    if (!free) P.ch -= Math.round(t.ch * profile(tid).ch * (1 - P.ctrl * 0.03));
   }
   function sealDone(res) {
     const s = seals; seals = null; const t = G.TECHS[s.tid];
@@ -465,6 +480,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   }
   function doTech(tid, free) {
     if (confused()) return;
+    remember('nin');
     startSeals(tid, free, (pf) => {
       const t = G.TECHS[tid];
       aura(P, pf ? '#ffe070' : '#7ac0ff', 0.7); if (tid === 'henge') { P.s.hidden = 'henge'; P.ambush = 1.9 + P.nin * 0.08; puff(P.pos, 12); AU.sfx.puff(); say('Хенге! Ты превратился в камень. Враг тебя потерял.', '#9ad0ff'); xp('gen', 1); return endTurn(t.w); }
@@ -483,17 +499,19 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       if (G.TECHS[tid].el) {
         const el = G.TECHS[tid].el; xp('nin', 3); xp('chakra', 1);
+        if(el==='earth'){P.earthCover=2;A.obj[P.pos]='rock';aura(P,'#c8ae7b',.8);say('Дотон! Земляное укрытие: две атаки слабее на 40%.',PAL.yellow);return endTurn(t.w*profile(tid).w);}
         const wet = E.wet > 0;
-        const dmg = { fire: 20, water: 13, bolt: 18, wind: 10 }[el] * (pf ? 1.25 : 1) * (el === 'bolt' && wet ? 1.6 : el === 'fire' && wet ? 0.7 : 1);
+        const fanned=el==='fire'&&E.windReady>0;
+        const dmg = { fire: 20, water: 13, bolt: 18, wind: 10 }[el] * profile(tid).dmg * (pf ? 1.25 : 1) * (el === 'bolt' && wet ? 1.6 : el === 'fire' && wet ? 0.7 : 1) * (fanned?1.4:1);
         proj(P, E, el === 'fire' ? 'fire' : el === 'bolt' ? 'bolt' : el === 'water' ? 'water' : 'wind', el === 'wind' ? 3 : 1);
         aura(P, { fire: '#ff7a20', water: '#4a9ae8', bolt: '#e8e060', wind: '#bfe8d0' }[el], 0.6);
         say({ fire: 'Катон! Огненный шар!', water: 'Суйтон! Водяная пуля!', bolt: 'Райтон! Разряд!', wind: 'Футон! Порыв ветра!' }[el], PAL.yellow);
         return attack({ kind: 'nin', dmg, strong: true, onHit: (e) => {
           if (el === 'water') e.wet = 3;
-          if (el === 'fire') { e.wet = 0; burst(e.pos, '#ff9030', 34); }
+          if (el === 'fire') { e.wet = 0; e.windReady=0; if(fanned)say('Ветер раздувает огонь! Урон x1,4.',PAL.yellow);burst(e.pos, '#ff9030', 34); }
           if (el === 'bolt') { burst(e.pos, '#f0f070', 34); if (Math.random() < 0.4 + (wet ? 0.3 : 0)) { e.s.stun = 1; pop(e, 'ОГЛУШЁН', PAL.yellow); } }
-          if (el === 'wind') { pushBack(e, 2); e.t += 4; }
-        } }, () => endTurn(G.TECHS[tid].w));
+          if (el === 'wind') { pushBack(e, 2); e.t += 4; e.windReady=3; }
+        } }, () => endTurn(G.TECHS[tid].w*profile(tid).w));
       }
       if (tid === 'shunshin') {
         const behind = E.pos + sgn(P, E); if (canStand(P, behind)) P.pos = behind;
@@ -517,6 +535,12 @@ G.scenes.register('battle', (opts, onEnd) => {
   // ── конец боя ──
   function checkEnd() {
     if (result) { finish(); return true; }
+    if(E.hp<=0&&ed.advPhases&&E.phase<3){
+      E.phase++;E.hp=Math.round(E.hpMax*(E.phase===2?.6:.45));E.focus=E.focusMax;E.s={};E.windReady=0;
+      ed.pref=E.phase===2?1:3;ed.acts=E.phase===2?['combo','strike','dash','approach','guard']:['fireball','shuriken','retreat','guard','approach'];
+      A.obj=E.phase===2?{0:'rock',4:'rock'}:{0:'tree',4:'bush'};bubble('low');fx.flash=.4;fx.shake=.5;plan();
+      say(E.phase===2?'Вторая стойка: натиск! Каменные укрытия по краям.':'Третья стойка: стихии! Арена открылась.', '#f4d46a');return false;
+    }
     if (E.hp <= 0 && ed.phase2 && E.phase === 1) {
       E.phase = 2; E.hp = Math.round(E.hpMax * 0.6); E.focus = E.focusMax; bubble('low'); fx.flash = 0.4; fx.shake = 0.5;
       say(`${E.name} в ярости! Вторая фаза!`, '#ff6a3a');
@@ -574,7 +598,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       b.push({ label: 'Проволока', sub: 'кунай+пров.', act: () => doThrow('wire'), off: inv('wire') < 1 || inv('kunai') < 1 ? 'Нужны кунай и проволока' : null, desc: 'Опутать врага на 2 хода.' });
     } else if (menu === 'tech') {
       for (const tid of G.TECH_ORDER) if (G.combat.knows(tid)) {
-        const t = G.TECHS[tid], cost = Math.round(t.ch * (1 - P.ctrl * 0.03));
+        const t = G.TECHS[tid], cost = Math.round(t.ch * profile(tid).ch * (1 - P.ctrl * 0.03));
         b.push({ label: t.name, sub: cost + ' чакры', desc: t.desc + ' Мастерство: ' + G.combat.mastery(tid) + '/3', off: P.ch < cost ? 'Мало чакры' : null, act: () => doTech(tid) });
       }
       if (!b.length) b.push({ label: 'Пока нет', off: 'Техники изучаются на уроках', act: () => {} });

@@ -1,11 +1,11 @@
 // Большая карта Конохи (кнопка КАРТА), план §2.6.
-// Масштаб ×1 / ×2 (кнопка ЦЕЛЬ), курсор крестовиной, фильтры (МЕНЮ или тап), карточка места (A),
+// Масштаб ×1…×8, перетаскивание, фильтры, выбираемые группы знаков и карточки мест,
 // «Проложить путь» и «Метка», туман неисследованных участков, задания и друзья.
 G.scenes.register('mapview', (world) => {
   const T = G.CONFIG.TILE;
   const K = G.world.konoha();
   const FILTERS = ['Все', 'Задания', 'Лавки', 'Тренировки', 'Друзья'];
-  const TOP = 28, BOT = 46;
+  const TOP = 72, BOT = 46, ZOOMS=[1,2,4,8];
 
   // ---------- места ----------
   const placeOf = (b) => {
@@ -51,7 +51,7 @@ G.scenes.register('mapview', (world) => {
       let pos = null;
       if (d.offer.in) { const b = K.buildings.find((b) => b.tplId === d.offer.in); if (b) pos = placeOf(b); }
       else { const f = G.nav.findNpc(d.offer.npc); if (f) pos = f.b ? placeOf(f.b) : { x: f.n.x / T, y: f.n.y / T }; }
-      if (pos) out.push({ x: pos.x, y: pos.y, offer: true, icon: '!', col: G.PAL.yellow, label: d.title });
+      if (pos) out.push({ x: pos.x, y: pos.y, id, offer: true, icon: '!', col: G.PAL.yellow, label: d.title });
     }
     return out;
   }
@@ -60,7 +60,7 @@ G.scenes.register('mapview', (world) => {
     for (const id of Object.keys(G.chars.DEFS)) {
       if ((G.state.vars['friend_' + id] || 0) < 2) continue;
       const f = G.nav.findNpc(id);
-      if (!f) continue;
+      if (!f || (f.map.id!=='konoha'&&!f.b)) continue;
       const pos = f.b ? placeOf(f.b) : { x: f.n.x / T, y: f.n.y / T };
       out.push({ x: pos.x, y: pos.y, icon: '🍃', col: '#6ab04a', label: G.chars.nameOf(id), npc: id });
     }
@@ -70,8 +70,8 @@ G.scenes.register('mapview', (world) => {
   // ---------- где герой ----------
   function heroPos() {
     const m = world.map, p = world.player;
-    if (m.outdoor) return { x: p.x / T, y: p.y / T, inside: null };
-    const pp = placeOf(m.building);
+    if (m.id==='konoha') return { x: p.x / T, y: p.y / T, inside: null };
+    const pp = placeOf(m.building||G.world.heroHome());
     return { x: pp.x, y: pp.y, inside: m.name };
   }
 
@@ -130,7 +130,7 @@ G.scenes.register('mapview', (world) => {
     hover() {
       const r = 3.2 / this.zoom + 0.8;
       let best = null, bd = r;
-      for (const p of places) {
+      for (const p of this.visiblePlaces()) {
         if (!p.known && this.fogged(p.x, p.y)) continue;
         const d = Math.hypot(p.x - this.cx, p.y - this.cy);
         if (d < bd) { bd = d; best = p; }
@@ -139,11 +139,64 @@ G.scenes.register('mapview', (world) => {
     },
     say(t) { this.toast = t; this.toastT = 1.6; },
 
+    changeZoom(delta) {this.zoom=ZOOMS[G.util.clamp(ZOOMS.indexOf(this.zoom)+delta,0,ZOOMS.length-1)];this.fitView(true);G.audio.sfx.select();},
+    centerHero() {const h=heroPos();this.cx=h.x;this.cy=h.y;this.fitView(true);},
+    marks() {
+      const f=FILTERS[this.filter],out=this.visiblePlaces().map(p=>({x:p.x,y:p.y,kind:p.b.tplId==='hero_home'?'home':p.kind,label:p.name,place:p,priority:p.b.tplId==='hero_home'?80:20,closed:p.shop&&!isOpen(p.shop)}));
+      if(f==='Все'||f==='Друзья')for(const m of this.fm)out.push({...m,kind:'friend',priority:60});
+      if(f==='Все'||f==='Задания')for(const m of this.qm)out.push({...m,label:m.offer?m.label:G.QUESTS[m.id].title,kind:m.offer?'offer':'quest',priority:m.tracked?100:70,quest:m.id});
+      return out;
+    },
+    clusters() {
+      const points=this.marks().map(m=>{const [x,y]=this.toScreen(m.x,m.y);return {...m,x,y,tx:m.x,ty:m.y};}).filter(m=>m.x>=-12&&m.x<=G.screen.W+12&&m.y>=TOP-12&&m.y<=G.screen.H-BOT+12);
+      return G.cartography.cluster(points,14*(G.storage.settings.mapMarkerSize||1));
+    },
+    clusterAt(x,y) {return this.clusters().filter(q=>Math.hypot(q.x-x,q.y-y)<13*(G.storage.settings.mapMarkerSize||1)).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y))[0];},
+    openMark(mark) {
+      if(mark.place){this.openCard(mark.place);return;}
+      const found=mark.npc?G.nav.findNpc(mark.npc):null;
+      this.openCard({x:mark.tx??mark.x,y:mark.ty??mark.y,name:mark.label,kind:'place',b:found?.b||{tplDef:{cat:'place'}}});
+      if(mark.quest&&G.quests.active(mark.quest))this.card.opts[0]={label:'Следить и идти',act:()=>{G.state.marker=null;G.quests.track(mark.quest);world.savePos();G.storage.save(G.state);G.scenes.pop();world.showTrail();}};
+    },
+    openCluster(group) {
+      if(group.items.length===1){this.openMark(group.items[0]);return;}
+      G.scenes.push(G.scenes.make('pick',{title:'МЕСТА РЯДОМ',text:'Выбери нужный значок',options:group.items.map(m=>({label:m.label,desc:({quest:'Текущее задание',offer:'Новое поручение',friend:'Друг',home:'Твой дом',shop:'Лавка',food:'Еда',training:'Тренировка',place:'Место'})[m.kind]}))},i=>{if(i>=0)this.openMark(group.items[i]);}));
+    },
+    handleTap(t) {
+      const W=G.screen.W,H=G.screen.H;
+      if(t.y>=H-BOT&&t.y<H-BOT+30){const i=Math.floor(t.x/(W/FILTERS.length));if(i>=0&&i<FILTERS.length)this.filter=i;return;}
+      if(t.y>=28&&t.y<TOP){const i=Math.min(3,Math.floor(t.x/(W/4)));if(i===0)this.changeZoom(-1);if(i===1)this.changeZoom(1);if(i===2)this.centerHero();if(i===3)this.legend=true;return;}
+      if(t.y<TOP){this.changeZoom(1);return;}
+      if(t.y>=H-BOT)return;
+      const hit=this.clusterAt(t.x,t.y);
+      this.cx=G.util.clamp(t.x/this.zoom+this.vx,0,K.w-1);this.cy=G.util.clamp((t.y-TOP)/this.zoom+this.vy,0,K.h-1);
+      if(hit)this.openCluster(hit);else G.audio.sfx.blip();
+    },
+    pointerPan() {
+      const ptrs=Object.values(G.input._ptrs||{}),p=ptrs.find(p=>p.kind==='tap'&&p.loc.y>=TOP&&p.loc.y<G.screen.H-BOT);
+      if(p){
+        if(!this.drag)this.drag={id:p.id,x:p.x,y:p.y,vx:this.vx,vy:this.vy,tap:p.loc,moved:false};
+        const d=this.drag,dx=(p.x-d.x)/G.screen.scale,dy=(p.y-d.y)/G.screen.scale;
+        if(Math.hypot(dx,dy)>5)d.moved=true;
+        if(d.moved){const VW=G.screen.W/this.zoom,VH=this.vh()/this.zoom;this.vx=K.w<=VW?-(VW-K.w)/2:G.util.clamp(d.vx-dx/this.zoom,0,K.w-VW);this.vy=K.h<=VH?-(VH-K.h)/2:G.util.clamp(d.vy-dy/this.zoom,0,K.h-VH);this.cx=G.util.clamp(this.vx+VW/2,0,K.w-1);this.cy=G.util.clamp(this.vy+VH/2,0,K.h-1);}
+        return true;
+      }
+      if(this.drag){const d=this.drag;this.drag=null;if(!d.moved)this.handleTap(d.tap);return true;}
+      return false;
+    },
+    routePreview() {
+      const target=G.nav.current(),hop=target&&G.nav.hop(K,target);if(!hop)return null;
+      const h=heroPos(),key=[h.x,h.y,hop.x,hop.y].join(':');
+      if(this._routeKey!==key){this._routeKey=key;this._route=G.nav.path(K,h.x*T,h.y*T,hop.x,hop.y);}
+      return {pts:this._route||[],x:hop.x/T,y:hop.y/T,label:target.label};
+    },
+
     setMarker(x, y, label) {
       const g = G.nav.walkGrid(K);
       const w = G.nav.nearestWalkable(K, g, Math.floor(x), Math.floor(y));
       if (!w) { G.audio.sfx.error(); this.say('Туда не пройти'); return false; }
       G.state.marker = { x: w[0], y: w[1], label };
+      world.savePos();G.storage.save(G.state);
       G.audio.sfx.confirm();
       return true;
     },
@@ -153,7 +206,7 @@ G.scenes.register('mapview', (world) => {
       opts.push({ label: 'Проложить путь', act: () => { if (this.setMarker(p.x, p.y + 0.5, p.name)) { G.scenes.pop(); world.showTrail(); } } });
       const mk = G.state.marker;
       const here = mk && mk.label === p.name;
-      opts.push(here ? { label: 'Снять метку', act: () => { G.state.marker = null; this.card = null; this.say('Метка снята'); G.audio.sfx.cancel(); } }
+      opts.push(here ? { label: 'Снять метку', act: () => { G.state.marker = null;world.savePos();G.storage.save(G.state); this.card = null; this.say('Метка снята'); G.audio.sfx.cancel(); } }
         : { label: 'Метка', act: () => { if (this.setMarker(p.x, p.y + 0.5, p.name)) { this.card = null; this.say('📍 Метка: ' + p.name); } } });
       // кто сейчас там
       let who = [];
@@ -173,6 +226,8 @@ G.scenes.register('mapview', (world) => {
       if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.toast = null; }
       const W = G.screen.W, H = G.screen.H;
 
+      if(this.legend){if(I.tapNow||I.pressed('a')||I.pressed('b')||I.pressed('menu')||I.pressed('map'))this.legend=false;return;}
+
       if (this.card) {
         const c = this.card;
         if (I.pressed('b') || I.pressed('map')) { this.card = null; G.audio.sfx.cancel(); return; }
@@ -191,7 +246,8 @@ G.scenes.register('mapview', (world) => {
 
       if (I.pressed('map') || I.pressed('b')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.pressed('menu')) { this.filter = (this.filter + 1) % FILTERS.length; G.audio.sfx.select(); return; }
-      if (I.pressed('goal')) { this.zoom = this.zoom === 1 ? 2 : 1; this.fitView(true); G.audio.sfx.select(); return; }
+      if (I.pressed('goal')) { this.zoom=ZOOMS[(ZOOMS.indexOf(this.zoom)+1)%ZOOMS.length];this.fitView(true);G.audio.sfx.select();return; }
+      if(this.pointerPan())return;
 
       // курсор
       const ax = (I.held('right') ? 1 : 0) - (I.held('left') ? 1 : 0);
@@ -205,28 +261,16 @@ G.scenes.register('mapview', (world) => {
       } else this.hold = 0;
 
       if (I.tapNow) {
-        const t = I.tapNow;
-        if (t.y >= H - BOT && t.y < H - BOT + 26) {         // фильтры
-          const i = Math.floor(t.x / (W / FILTERS.length));
-          if (i >= 0 && i < FILTERS.length) { this.filter = i; G.audio.sfx.select(); }
-          return;
-        }
-        if (t.y < TOP) { this.zoom = this.zoom === 1 ? 2 : 1; this.fitView(true); return; }
-        const nx = t.x / this.zoom + this.vx, ny = (t.y - TOP) / this.zoom + this.vy;
-        const before = this.hover();
-        const same = Math.hypot(nx - this.cx, ny - this.cy) < 3 / this.zoom + 1;
-        this.cx = G.util.clamp(nx, 0, K.w - 1); this.cy = G.util.clamp(ny, 0, K.h - 1);
-        const h = this.hover();
-        if (same && h && h === before) this.openCard(h);
-        else G.audio.sfx.blip();
+        this.handleTap(I.tapNow);
         return;
       }
 
       if (I.pressed('a')) {
+        const [sx,sy]=this.toScreen(this.cx,this.cy),mark=this.clusterAt(sx,sy);if(mark){this.openCluster(mark);return;}
         const h = this.hover();
         if (h) { this.openCard(h); return; }
         const mk = G.state.marker;
-        if (mk && Math.hypot(mk.x + 0.5 - this.cx, mk.y + 0.5 - this.cy) < 3) { G.state.marker = null; this.say('Метка снята'); G.audio.sfx.cancel(); return; }
+        if (mk && Math.hypot(mk.x + 0.5 - this.cx, mk.y + 0.5 - this.cy) < 3) { G.state.marker = null;world.savePos();G.storage.save(G.state); this.say('Метка снята'); G.audio.sfx.cancel(); return; }
         if (this.fogged(this.cx, this.cy)) { G.audio.sfx.error(); this.say('Ты там ещё не был'); return; }
         if (this.setMarker(this.cx, this.cy, 'Метка')) this.say('📍 Метка поставлена');
       }
@@ -242,15 +286,18 @@ G.scenes.register('mapview', (world) => {
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, P = G.PAL, F = G.font, z = this.zoom;
+      const size=W+':'+H;if(this._size!==size){this._size=size;this.fitView(true);}
       G.ui.backdrop(ctx);
       const VH = this.vh();
       ctx.save(); ctx.beginPath(); ctx.rect(0, TOP, W, VH); ctx.clip();
       // подложка
-      const img = K.overview();
+      const img = G.cartography.atlas(K);
       ctx.imageSmoothingEnabled = false;
       const [ox, oy] = this.toScreen(0, 0);
       ctx.fillStyle = P.ink; ctx.fillRect(ox - 1, oy - 1, K.w * z + 2, K.h * z + 2);
       ctx.drawImage(img, ox, oy, K.w * z, K.h * z);
+      const route=this.routePreview();
+      if(route&&route.pts.length>1){ctx.save();ctx.strokeStyle='#173e42';ctx.lineWidth=3;ctx.beginPath();route.pts.forEach(([x,y],i)=>{const [sx,sy]=this.toScreen(x+.5,y+.5);if(i)ctx.lineTo(sx,sy);else ctx.moveTo(sx,sy);});ctx.stroke();ctx.strokeStyle='#b0ece6';ctx.lineWidth=1;ctx.setLineDash([3,2]);ctx.stroke();ctx.restore();}
       // туман
       const B = G.nav.FOG_B, fs = G.nav.fogSize();
       ctx.fillStyle = 'rgba(20,18,28,0.82)';
@@ -259,39 +306,24 @@ G.scenes.register('mapview', (world) => {
         const [sx, sy] = this.toScreen(bx * B, by * B);
         ctx.fillRect(sx, sy, B * z, B * z);
       }
-      // места
-      const bob = Math.round(Math.sin(this.t * 5) * 1.2);
-      const icon = (txt, x, y, col) => { const [sx, sy] = this.toScreen(x, y); F.small.draw(ctx, txt, sx, sy - 4, { color: col, outline: P.ink, align: 'center' }); };
-      for (const p of this.visiblePlaces()) {
-        if (p.kind === 'food') icon('🍜', p.x, p.y, isOpen(p.shop) ? '#ffb070' : '#7a7a86');
-        else if (p.kind === 'shop') icon('●', p.x, p.y, isOpen(p.shop) ? '#ffd84a' : '#7a7a86');
-        else if (p.kind === 'training') icon('★', p.x, p.y, '#ff8a6a');
-        else if (z === 2) { const [sx, sy] = this.toScreen(p.x, p.y); ctx.fillStyle = P.ink; ctx.fillRect(sx - 1, sy - 1, 3, 3); ctx.fillStyle = '#ffffff'; ctx.fillRect(sx, sy, 1, 1); }
+      // Знаки не зависят от эмодзи шрифта; близкие точки собираются в один выбираемый значок.
+      const groups=this.clusters(),labels=[];
+      for(const q of groups){
+        G.cartography.pin(ctx,q.x,q.y,q.kind,{count:q.items.length,closed:q.closed});
+        if(G.storage.settings.mapLabels!==false&&z>=4&&labels.length<6){
+          let text=q.label;while(F.small.measure(text)>96)text=text.slice(0,-2)+'…';
+          const width=F.small.measure(text)+8,rx=G.util.clamp(q.x-width/2,3,W-width-3),ry=q.y-23,rect={x:rx,y:ry,w:width,h:13};
+          if(ry>TOP+2&&!labels.some(r=>G.util.rectsOverlap(r,rect))){labels.push(rect);G.ui.panel(ctx,rx,ry,width,13,'tag');F.small.draw(ctx,text,rx+4,ry+2,{color:'#f2e7cc'});}
+        }
       }
-      const f = FILTERS[this.filter];
-      // друзья
-      if (f === 'Все' || f === 'Друзья') for (const m of this.fm) icon(m.icon, m.x, m.y, m.col);
-      // секрет с «Карты тайников»
-      if (G.game.count('map_secrets') && !G.quests.done('waterfall_scroll') && (f === 'Все' || f === 'Задания')) {
-        const wf = K.spots.waterfall;
-        if (wf) icon('❓', wf.tx - 1, wf.ty + wf.th, '#c090ff');
-      }
-      // задания
-      if (f === 'Все' || f === 'Задания') {
-        for (const m of this.qm) if (!m.tracked) icon(m.offer ? '!' : m.icon, m.x, m.y, m.col);
-        for (const m of this.qm) if (m.tracked && !G.state.marker) { const [sx, sy] = this.toScreen(m.x, m.y); F.small.draw(ctx, '▼', sx, sy - 11 + bob * 2, { color: '#ff4a3a', outline: P.ink, align: 'center' }); }
-      }
-      // метка
-      const mk = G.state.marker;
-      if (mk) { const [sx, sy] = this.toScreen(mk.x + 0.5, mk.y + 0.5); F.small.draw(ctx, '📍', sx, sy - 7 + bob, { color: '#ff4a3a', outline: P.ink, align: 'center' }); }
-      // герой ◉
+      const f=FILTERS[this.filter];
+      if(G.game.count('map_secrets')&&!G.quests.done('waterfall_scroll')&&(f==='Все'||f==='Задания')){const wf=K.spots.waterfall;if(wf){const [sx,sy]=this.toScreen(wf.tx-1,wf.ty+wf.th);G.cartography.pin(ctx,sx,sy,'offer');}}
+      if(route){const [sx,sy]=this.toScreen(route.x,route.y);G.cartography.pin(ctx,sx,sy,'target');}
+      // Герой всегда виден: светлая стрелка показывает направление взгляда.
       const h = heroPos();
       {
         const [sx, sy] = this.toScreen(h.x, h.y);
-        const on = Math.floor(this.t * 3) % 2 === 0;
-        ctx.fillStyle = P.ink; ctx.fillRect(sx - 3, sy - 2, 7, 5); ctx.fillRect(sx - 2, sy - 3, 5, 7);
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(sx - 2, sy - 1, 5, 3); ctx.fillRect(sx - 1, sy - 2, 3, 5);
-        ctx.fillStyle = on ? '#e8621a' : '#ffffff'; ctx.fillRect(sx - 1, sy - 1, 3, 3);
+        G.cartography.pin(ctx,sx,sy,'hero',{dir:world.player.dir});
       }
       // курсор
       {
@@ -304,8 +336,9 @@ G.scenes.register('mapview', (world) => {
       // заголовок: деревянная планка с красной лентой
       const U = G.ui, C = U.C;
       U.panel(ctx, 0, 0, W, TOP, 'plank');
-      U.title(ctx, 'КАРТА КОНОХИ', W / 2, 6, 0);
-      F.small.draw(ctx, (z === 1 ? '×1' : '×2') + ' · ' + G.game.clock(), W - 6, 9, { align: 'right', color: '#f4e4bc', shadow: C.woodEdge });
+      F.draw(ctx,'КАРТА',W/2,9,{align:'center',color:'#f2e4c5'});
+      F.small.draw(ctx,'×'+z,W-8,9,{align:'right',color:'#f4e4bc'});
+      ['-','+','К себе','Знаки'].forEach((label,i)=>{const bw=(W-8)/4,x=4+i*bw;U.button(ctx,x,34,bw-3,26,label,'normal');});
 
       // строка-подсказка о месте под курсором
       const hv = this.hover();
@@ -314,7 +347,7 @@ G.scenes.register('mapview', (world) => {
         info = hv.name;
         if (hv.shop) info += isOpen(hv.shop) ? ` · до ${G.game.clock(hv.shop.hours[1])}` : ` · закрыто (с ${G.game.clock(hv.shop.hours[0])})`;
       } else if (h.inside) info = 'Ты внутри: ' + h.inside;
-      else info = this.fogged(this.cx, this.cy) ? 'Неизведанные места' : 'Коснись места — карточка';
+      else {const [sx,sy]=this.toScreen(this.cx,this.cy),mark=this.clusterAt(sx,sy);info=mark?mark.label:this.fogged(this.cx,this.cy)?'Неизведанные места':'Коснись значка — карточка';}
       U.panel(ctx, 0, TOP + VH - 17, W, 17, 'night');
       F.small.draw(ctx, info, W / 2, TOP + VH - 14, { align: 'center', color: hv ? '#f4d46a' : '#c8b48a', maxW: W - 8 });
 
@@ -328,15 +361,24 @@ G.scenes.register('mapview', (world) => {
         let n = name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
         F.small.draw(ctx, n, x + (Math.round(fw) - 3) / 2, fy + 12, { align: 'center', color: sel ? '#f8eed0' : '#e4d4a8', shadow: C.woodEdge });
       });
-      F.small.draw(ctx, 'Коснись шапки — масштаб', W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
+      F.small.draw(ctx, 'Двигай карту пальцем · + приближает', W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
 
       // карточка места
       if (this.card) this.drawCard(ctx);
       if (this.toast) {
-        const w = F.measure(this.toast) + 22;
+        const w = Math.min(W-8,F.measure(this.toast) + 22);
         U.panel(ctx, Math.round((W - w) / 2), TOP + 6, w, 20, 'night');
-        F.draw(ctx, this.toast, W / 2, TOP + 11, { align: 'center', color: '#f4d46a' });
+        F.draw(ctx, this.toast, W / 2, TOP + 11, { align: 'center', color: '#f4d46a',maxW:w-12 });
       }
+      if(this.legend)this.drawLegend(ctx);
+    },
+
+    drawLegend(ctx) {
+      const W=G.screen.W,H=G.screen.H,w=Math.min(246,W-12),height=Math.min(180,H-34),x=(W-w)/2,y=(H-height)/2;
+      G.ui.panel(ctx,x,y,w,height,'frame');G.font.small.draw(ctx,'УСЛОВНЫЕ ЗНАКИ',W/2,y+8,{align:'center',color:G.ui.C.redDark});
+      const rows=[['hero','Ты и направление взгляда'],['home','Твой дом'],['quest','Задание / новое поручение'],['shop','Лавка / еда'],['friend','Друг'],['training','Тренировка'],['target','Твоя цель и маршрут'],['place','Цифра — несколько мест']];
+      rows.forEach(([kind,label],i)=>{const yy=y+29+i*16;G.cartography.pin(ctx,x+16,yy,kind,{count:i===7?3:1});if(i===3)G.cartography.pin(ctx,x+31,yy,'food');G.font.small.draw(ctx,label,x+(i===3?44:29),yy-4,{color:G.ui.C.ink,maxW:w-(i===3?51:36)});});
+      G.font.small.draw(ctx,'Коснись, чтобы закрыть',W/2,y+height-13,{align:'center',color:G.ui.C.inkDim});
     },
 
     drawCard(ctx) {
