@@ -6,6 +6,7 @@ G.scenes.register('menu', () => {
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
+    { label: 'Обучение', act: () => { G.scenes.pop(); G.learning.menu(); } },
     { label: 'Приключения', act: () => { G.scenes.pop(); G.adventure.menu(); } },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },

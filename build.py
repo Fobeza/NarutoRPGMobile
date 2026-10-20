@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "1.6.5"                            # номер версии для игроков; менять руками при выпуске (хеш сборки ниже — для обновления кэша)
+RELEASE = "2.0.0"                            # новый сюжет, тактический план и свет Конохи
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -47,6 +47,7 @@ JS_FILES = [
     "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js", "scenes/settings.js",
     "scenes/gallery.js", "scenes/shogi.js",
+    "world/lighting.js", "scenes/battle_tactics.js", "systems/curriculum.js", "data/first_promise.js",
     # ── точка входа ──
     "main.js",
 ]
@@ -130,11 +131,11 @@ def build(debug=False):
                  .replace("__ICON__", make_icon_datauri())
                  .replace("__VERSION__", version))
 
-    with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8") as f:
+    with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
 
     sw = read("sw.js").replace("__VERSION__", version)
-    with open(os.path.join(OUT, "sw.js"), "w", encoding="utf-8") as f:
+    with open(os.path.join(OUT, "sw.js"), "w", encoding="utf-8", newline="\n") as f:
         f.write(sw)
 
     # редактор карты (служебный, в игру не входит)

@@ -177,6 +177,7 @@ G.story = {
     }
     // события находят героя сами
     for (const e of G.STORY) {
+      if (e.when && !e.when()) continue;
       if (f['st_' + e.id] || v.day < e.day || (v.day > e.day && !e.must)) continue;
       if (e.after && !f['st_' + e.after]) continue;
       const late = v.day > e.day;   // обязательное событие пропущено (проспал) — случится при первой возможности
@@ -356,6 +357,7 @@ Object.assign(G.flow, {
       G.game.eat(r.food); G.game.mood(r.mood || 0); if (r.energy) G.game.rest(r.energy); if (r.bento) d.bento = 1;
       if (r.cd) G.state.vars.cd_rice = G.life.absMin() + 240;
       G.game.advance(20);
+      G.events.emit('cooked', r.label);
       w.talk([{ text: `${r.label}: готово и съедено! Сытость +${r.food}.` }]);
     }));
   },

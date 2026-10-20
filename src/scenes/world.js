@@ -861,6 +861,7 @@ G.scenes.register('world', (pos) => {
     },
 
     drawLight(ctx, vis, cx, cy, W, VH) {
+      if (G.lighting) return G.lighting.draw(ctx, this, vis, cx, cy, W, VH);
       const L = G.game.light();
       if (!L) return;
       const m = this.map;
@@ -884,6 +885,7 @@ G.scenes.register('world', (pos) => {
     },
 
     drawActor(ctx, a) {
+      if (G.lighting) G.lighting.actor(ctx, a, this.map, G.state.vars.min);
       G.shade.shadow(ctx, a.x + 1, a.y - 1, 6, 2, 0.34);   // V9: мягкая тень под ногами
       const frame = a.moving ? G.chars.WALK[Math.floor(a.anim) % 4] : 0;
       // жители: у каждого своя расцветка одежды (по номеру в списке жителей карты — одинаково между кадрами и загрузками)

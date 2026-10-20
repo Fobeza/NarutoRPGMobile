@@ -83,6 +83,7 @@ G.outdoor = {
       if (i < 0) return done && done();
       const id = opts[i].id, pr = this.sellPrice(id);
       G.game.give(id, -1); G.game.earn(pr); G.audio.sfx.confirm();
+      G.events.emit('sold', id);
       this.sellMenu(n, world, done);
     }));
   },
@@ -114,6 +115,7 @@ G.outdoor = {
       const r = this.RECIPES[i];
       for (const [k, n] of Object.entries(r.need)) G.game.give(k, -n);
       G.game.give(r.id, r.n || 1); G.game.advance(r.min); G.train.addXp('know', 1.5);
+      G.events.emit('crafted', r.id);
       G.audio.sfx.confirm();
       world.talk([{ text: `Готово: ${G.ITEMS[r.id].name}${r.n ? ' ×' + r.n : ''}.` }]);
     }));

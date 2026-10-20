@@ -50,7 +50,9 @@ def main():
     print((entries.stdout or "") + (entries.stderr or ""))
     cartography = subprocess.run([node, os.path.join(ROOT, "tools", "node", "cartography.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
     print((cartography.stdout or "") + (cartography.stderr or ""))
-    return 1 if (bad or r.returncode or regressions.returncode or village.returncode or adventures.returncode or daily.returncode or motion.returncode or entries.returncode or cartography.returncode) else 0
+    release2 = subprocess.run([node, os.path.join(ROOT, 'tools', 'node', 'release2.js')], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((release2.stdout or '') + (release2.stderr or ''))
+    return 1 if (bad or r.returncode or regressions.returncode or village.returncode or adventures.returncode or daily.returncode or motion.returncode or entries.returncode or cartography.returncode or release2.returncode) else 0
 
 
 if __name__ == "__main__":

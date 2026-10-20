@@ -29,6 +29,7 @@ G.game = (() => {
       frQueue: [],
       makeupQ: [],
       battleCheckpoint: null, // независимый снимок до боя; незавершённый бой откатывается целиком
+      learning: {},        // выполненные упражнения и памятка наставников
       goal: null,
       pos: null,
       log: [],             // события дня для экрана «Итоги дня»
@@ -221,6 +222,7 @@ G.game = (() => {
       if (e.poison) v.poison = 0;
       if (e.sleep) G.state.daily.herbTea = 1;
       if (e.minutes) this.advance(e.minutes);
+      G.events.emit('item-used', id);
       return { ok: true, text: `${it.name}: применено.` };
     },
     // занято слотов подсумка (боевые предметы и медицина)
