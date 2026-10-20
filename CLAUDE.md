@@ -37,7 +37,8 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
    `tools/node/checks.js`), таблицы — в `docs/BALANCE.md` (файл генерируется, руками его не правь).
    Рефакторинг боя/сцен — только со снятыми отпечатками: `node tools/node/golden.js` до и после, `diff` пустой.
 9. Перед коммитом: `python3 tools/check_all.py` зелёный (без Playwright — `--node`), запись в `docs/CHANGELOG.md`.
-10. Публикация: `git push` в `main` — GitHub Pages обновится сам за 1–2 минуты.
+10. Полировка (вид, ощущение, мелочи) — по памятке `.claude/skills/polish/SKILL.md`: цикл «скриншот до → правка → проверки → скриншот после».
+11. Публикация: `git push` в `main` — GitHub Pages обновится сам за 1–2 минуты.
 
 ## Карта кода (кратко)
 
