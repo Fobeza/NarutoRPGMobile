@@ -5,7 +5,8 @@ G.scenes.register('title', () => {
   let items = [];   // кнопки главного меню: { label, act }
   let bg = null;
 
-  // Фон — готовая картинка (gfx/title_art.js), растянутая на экран; пока не загрузилась или её нет — рисуем кодом
+  // Фон — готовая картинка (gfx/title_art.js) без искажений: по ширине экрана, прижата к низу,
+  // сверху — продолжение ночного неба; пока не загрузилась или её нет — рисуем кодом
   let art = null;
   function artReady() {
     if (!G.titleArt || typeof Image === 'undefined') return false;
@@ -16,10 +17,30 @@ G.scenes.register('title', () => {
     const W = G.screen.W, H = G.screen.H;
     if (artReady()) {
       const c = G.gfx.canvas(W, H), x = c.getContext('2d');
-      x.imageSmoothingEnabled = false; x.drawImage(art, 0, 0, W, H);
+      const aw = art.naturalWidth || art.width, ah = art.naturalHeight || art.height;
+      const s = W / aw, dh = Math.round(ah * s), top = H - dh;
+      x.imageSmoothingEnabled = false;
+      if (top > 0) skyAbove(c, W, top, s);
+      x.drawImage(art, 0, top, W, dh);
       return c;
     }
     return drawBg(W, H);
+  }
+  // Небо над картинкой: цвет её верхнего ряда, звёзды и верх луны (в картинке луна срезана краем: центр 223,4, r 33)
+  function skyAbove(c, W, top, s) {
+    const x = c.getContext('2d'), Hh = G.util.hash2;
+    G.shade.grad(c, 0, 0, W, top, ['#121830', '#1e2a4a'], { dir: 'v', steps: 3 });
+    for (let i = 0; i < Math.round(W * top / 600); i++) {
+      const sx = Math.floor(Hh(i, 3, 51) * W), sy = Math.floor(Hh(3, i, 52) * (top - 4)), b = Hh(i, i, 53);
+      x.fillStyle = b > 0.8 ? '#ffffff' : b > 0.45 ? '#c8c0e8' : '#6a6498'; x.fillRect(sx, sy, 1, 1);
+    }
+    const mx = 223, my = 4, r = 33;
+    for (let ay = Math.max(my - r, -Math.ceil(top / s)); ay < 0; ay++) {
+      const half = Math.sqrt(r * r - (ay + 0.5 - my) ** 2), x0 = Math.round((mx - half) * s), x1 = Math.round((mx + half) * s);
+      const y0 = top + Math.floor(ay * s), y1 = top + Math.floor((ay + 1) * s);
+      x.fillStyle = '#f4ecd8'; x.fillRect(x0, y0, x1 - x0, y1 - y0);
+      x.fillStyle = '#d8ccb0'; x.fillRect(x1 - Math.max(1, Math.round(s * 2)), y0, Math.max(1, Math.round(s * 2)), y1 - y0);
+    }
   }
   // V9: ночная Коноха со светотенью — запасной фон кодом
   function drawBg(W, H) {
