@@ -4,7 +4,9 @@ art/chars/<id>.webp — лист 571×2000: 14 рядов × 4 столбца (�
 9–14 — бег, действия, падение (пока не используются). Из каждой клетки вырезается окно вокруг фиксированной «земли», масштабируется в кадр 16×20
 (×2 = 32×40 px, как у персонажей, нарисованных кодом) и кладётся в лист 3 кадра × 4 направления:
 кадр 0 — стойка, 1 и 2 — шаги (кадры ходьбы 0 и 2 — «ноги врозь»). Ещё для каждого — портрет 64×64 (голова и плечи).
-Результат: src/gfx/char_art_data.js (палитра + строки повторов, как у зданий). Нужны Pillow и numpy."""
+Раскладки нестандартных листов заданы в tools/char_sheets.json.
+Результат: src/gfx/char_art_data.js (палитра + строки повторов, как у зданий). Нужны Pillow и numpy.
+Для обновления отдельных персонажей: python3 tools/import_chars.py hero fugaku."""
 import os, json, sys
 import numpy as np
 from PIL import Image
@@ -13,7 +15,7 @@ import import_art as ia
 
 ROOT = ia.ROOT
 AUTO = ('hero',)             # листы другого размера: масштаб по высоте фигуры
-CHARS = ['hero', 'merchant', 'asuma', 'ayame', 'kiba', 'akamaru', 'anko', 'izumo', 'teuchi', 'cart', 'choji', 'choza', 'danzo', 'ebisu', 'fisher', 'sasuke', 'courier', 'grandma', 'hanabi', 'hinata', 'kotetsu', 'ibiki', 'ino', 'inoichi', 'hokage', 'homura', 'genma', 'jiraiya', 'kakashi', 'iruka', 'itachi', 'konohamaru', 'chunin', 'kurenai', 'bully', 'koharu', 'lee', 'mikoto', 'mizuki', 'naruto', 'guy', 'kid_m', 'orochimaru', 'sakura', 'neji', 'shizune', 'tenten', 'shikaku', 'shikamaru', 'shino', 'tora', 'kid_f', 'cook', 'thief', 'villager_f', 'villager_m']
+CHARS = ['hero', 'merchant', 'asuma', 'ayame', 'kiba', 'akamaru', 'anko', 'izumo', 'teuchi', 'cart', 'choji', 'choza', 'danzo', 'ebisu', 'fisher', 'sasuke', 'courier', 'grandma', 'hanabi', 'hinata', 'kotetsu', 'ibiki', 'ino', 'inoichi', 'hokage', 'homura', 'genma', 'jiraiya', 'kakashi', 'iruka', 'itachi', 'konohamaru', 'chunin', 'kurenai', 'bully', 'koharu', 'lee', 'mikoto', 'mizuki', 'naruto', 'guy', 'kid_m', 'orochimaru', 'sakura', 'neji', 'shizune', 'tenten', 'shikaku', 'shikamaru', 'shino', 'tora', 'kid_f', 'cook', 'thief', 'villager_f', 'villager_m', 'fugaku']
 ROWH = 2000 / 14                  # ширина листа бывает разной (571, 668…): столбец = ширина / 4
 SC = 0.4                      # масштаб исходник → px кадра (ширина кадра 32, высота 40)
 BASE = 132                    # «земля» внутри клетки (исходные px)
@@ -60,14 +62,22 @@ def auto_scale(a):
 
 
 def build(id):
-    a = np.array(Image.open(os.path.join(ROOT, 'art', 'chars', id + '.webp')).convert('RGBA'))
+    with open(os.path.join(ROOT, 'tools', 'char_sheets.json'), encoding='utf-8') as f:
+        layout = json.load(f).get(id, {})
+    a = np.array(Image.open(os.path.join(ROOT, 'art', 'chars', layout.get('file', id + '.webp'))).convert('RGBA'))
     a[a[:, :, 3] < 40] = 0                  # прозрачность без полупрозрачной каймы
     # Лист содержит неровные поля, а обувь иногда заходит в соседний ряд.
     # Выделяем саму фигуру, а не фиксированное окно 80×100.
     def figure(row, col):
-        cw = a.shape[1] / 4
+        cw = a.shape[1] / layout.get('columns', 4)
         x0, x1 = round(col * cw), round((col + 1) * cw)
-        y0, y1 = max(0, round(ROWH * row) - 16), min(a.shape[0], round(ROWH * (row + 1)) + 16)
+        if 'row_edges' in layout:
+            # У героя ряды сдвинуты: общая сетка захватывала обувь и волосы соседней позы.
+            y0, y1 = layout['row_edges'][row:row + 2]
+        elif 'rows' in layout:
+            y0, y1 = round(a.shape[0] * row / layout['rows']), round(a.shape[0] * (row + 1) / layout['rows'])
+        else:
+            y0, y1 = max(0, round(ROWH * row) - 16), min(a.shape[0], round(ROWH * (row + 1)) + 16)
         part = a[y0:y1, x0:x1].copy()
         groups = ia.components(part[:, :, 3] > 0)
         if not groups:
@@ -84,7 +94,10 @@ def build(id):
         part[~keep] = 0
         return part[by0:by1, bx0:bx1]
 
-    poses = [[figure(di, 0), figure(4 + di, 0), figure(4 + di, 2)] for di in range(4)]
+    if layout.get('rows') == 4:
+        poses = [[figure(di, f) for f in range(3)] for di in range(4)]
+    else:
+        poses = [[figure(di, 0), figure(4 + di, 0), figure(4 + di, 2)] for di in range(4)]
     maxw = max(p.shape[1] for row in poses for p in row)
     maxh = max(p.shape[0] for row in poses for p in row)
     sc = min(0.4 if id not in AUTO else 1, (FW - 4) / maxw, (FH - 6) / maxh)
@@ -111,8 +124,15 @@ def build(id):
 
 
 def main():
+    ids = sys.argv[1:] or CHARS
+    if any(id not in CHARS for id in ids):
+        raise ValueError('Неизвестный персонаж: ' + ', '.join(id for id in ids if id not in CHARS))
+    p = os.path.join(ROOT, 'src', 'gfx', 'char_art_data.js')
     out = {}
-    for id in CHARS:
+    if sys.argv[1:]:
+        with open(p, encoding='utf-8') as f:
+            out = json.JSONDecoder().raw_decode(f.read().split('G.CHAR_ART = ', 1)[1])[0]
+    for id in ids:
         sheet, por = build(id)
         pal, rle = ia.encode(sheet)
         ppal, prle = ia.encode(por)
@@ -120,7 +140,6 @@ def main():
     js = ['// Нарисованные персонажи — СГЕНЕРИРОВАНО tools/import_chars.py из art/chars/, руками не править.',
           '// Лист 3 кадра × 4 направления (кадр 32×40 px, как у персонажей кодом) и портрет 64×64: палитра + строки повторов.',
           'G.CHAR_ART = ' + json.dumps(out, ensure_ascii=False, separators=(',', ':')) + ';', '']
-    p = os.path.join(ROOT, 'src', 'gfx', 'char_art_data.js')
     open(p, 'w', encoding='utf-8').write('\n'.join(js))
     print('персонажей: %d, файл %d КБ' % (len(out), os.path.getsize(p) // 1024))
 
