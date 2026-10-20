@@ -23,6 +23,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
   function buy() {
     const it = items[idx];
     const g = G.game;
+    if (g.v.min < shop.hours[0] || g.v.min >= shop.hours[1]) { G.audio.sfx.error(); say('Лавка закрылась. Приходи завтра.', true); return; }
     if (locked(it)) { G.audio.sfx.error(); say(`Продаётся с ${it.week}-й недели.`, true); return; }
     const total = it.price * qty;
     if (!g.canPay(total)) { G.audio.sfx.error(); say('Не хватает рё!', true); return; }
@@ -58,10 +59,11 @@ G.scenes.register('shop', (shopId, opts = {}) => {
 
     layout() {
       const W = G.screen.W, H = G.screen.H;
-      const hdr = { x: 4, y: 4, w: W - 8, h: 58 };
-      const foot = { x: 4, y: H - 30, w: W - 8, h: 26 };
-      const info = { x: 4, y: foot.y - 74, w: W - 8, h: 70 };
-      const cols = Math.max(2, Math.floor((W - 22) / 62)), cardW = Math.floor((W - 8 - 12) / cols), cardH = 56;
+      const compact = H < 300;
+      const hdr = { x: 4, y: 4, w: W - 8, h: compact ? 48 : 58 };
+      const foot = { x: 4, y: H - 26, w: W - 8, h: 22 };
+      const info = { x: 4, y: foot.y - (compact ? 58 : 74), w: W - 8, h: compact ? 54 : 70 };
+      const cols = Math.max(2, Math.floor((W - 22) / 62)), cardW = Math.floor((W - 8 - 12) / cols), cardH = compact ? 44 : 56;
       const listY = hdr.y + hdr.h + 4;
       const rows = Math.max(1, Math.floor((info.y - 4 - listY - 12) / cardH));
       const list = { x: 4, y: listY, w: W - 8, h: rows * cardH + 12, rows, cols, cardW, cardH, per: rows * cols };
@@ -130,8 +132,8 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         ctx.drawImage(G.chars.portrait(who), h.x + 13, h.y + 13);
         tx = h.x + 58;
       }
-      F.draw(ctx, title, tx, h.y + 10, { color: C.redDark, maxW: h.w - (tx - h.x) - 8 });
-      F.small.wrap('«' + shop.greet + '»', h.w - (tx - h.x) - 10).slice(0, 3).forEach((ln, i) => F.small.draw(ctx, ln, tx, h.y + 25 + i * 11, { color: C.ink }));
+      F.draw(ctx, title, tx, h.y + 8, { color: C.redDark, maxW: h.w - (tx - h.x) - 8 });
+      F.small.wrap('«' + shop.greet + '»', h.w - (tx - h.x) - 10).slice(0, h.h < 58 ? 1 : 2).forEach((ln, i) => F.small.draw(ctx, ln, tx, h.y + 23 + i * 10, { color: C.ink }));
 
       // список — сетка карточек с иконками
       const l = L.list;
@@ -143,7 +145,8 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const it = items[i], lk = locked(it);
         const cx = l.x + 6 + (k % l.cols) * l.cardW, cy = l.y + 6 + Math.floor(k / l.cols) * l.cardH;
         U.card(ctx, cx, cy, l.cardW - 3, l.cardH - 3, i === idx);
-        G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - 48) / 2), cy + 1, 48, 48);
+        const icon = l.cardH < 56 ? 36 : 48;
+        G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - icon) / 2), cy + 1, icon, icon);
         if (lk) { ctx.globalAlpha = .5; ctx.fillStyle = '#2a1e14'; ctx.fillRect(cx + 2, cy + 2, l.cardW - 7, l.cardH - 7); ctx.globalAlpha = 1; }
         F.small.draw(ctx, lk ? '—' : it.price + 'р', cx + l.cardW - 7, cy + l.cardH - 17,
           { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', outline: C.woodEdge });
@@ -160,7 +163,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       U.panel(ctx, inf.x, inf.y, inf.w, inf.h, 'frame');
       // название выбранного товара — до покупки (B24)
       F.small.draw(ctx, it.name, inf.x + 12, inf.y + 8, { color: C.redDark, maxW: inf.w - 110 });
-      const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, 2);
+      const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, inf.h < 70 ? 1 : 2);
       textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 20 + i * 11, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
       const qy = inf.y + inf.h - 24;
       if (it.cat === 'food' || it.cat === 'service') {
@@ -179,7 +182,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       // кнопки внизу + деньги
       U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, it.cat === 'food' || it.cat === 'service' ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
       U.button(ctx, L.exitB.x, L.exitB.y, L.exitB.w, L.exitB.h, 'Выйти', 'normal');
-      F.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + 10, { align: 'right', color: '#8a5a10' });
+      F.small.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + h.h - 12, { align: 'right', color: '#8a5a10' });
     },
   };
   return S;

@@ -30,6 +30,9 @@ G.nav = (() => {
     // Где сейчас NPC: { map, b (здание или null), n }
     findNpc(id) {
       const k = K();
+      if (G.residents) G.residents.ensureCurrent();
+      const resident = G.residents && G.residents.people.get(id);
+      if (resident && resident.active && G.life.visible(resident.active.actor)) return { map: resident.active.map, b: resident.active.map.building || null, n: resident.active.actor };
       const n = k.npcs.find((n) => n.id === id && G.life.visible(n));
       if (n) return { map: k, b: null, n };
       for (const b of k.buildings) {
@@ -124,8 +127,12 @@ G.nav = (() => {
     },
 
     // Путь по тайлам от (x0,y0) до (x1,y1) в пикселях → массив [tx,ty] или null
-    path(m, x0, y0, x1, y1, maxNodes = 30000) {
-      const g = this.walkGrid(m), W = m.w;
+    path(m, x0, y0, x1, y1, maxNodes = 30000, avoid = []) {
+      const g = avoid.length ? this.walkGrid(m).slice() : this.walkGrid(m), W = m.w;
+      for (const box of avoid) {
+        const tx = Math.floor((box.x + box.w / 2) / T), ty = Math.floor((box.y + box.h) / T);
+        if (tx >= 0 && ty >= 0 && tx < m.w && ty < m.h) g[ty * W + tx] = 0;
+      }
       const s = this.nearestWalkable(m, g, Math.floor(x0 / T), Math.floor((y0 - 2) / T));
       const e = this.nearestWalkable(m, g, Math.floor(x1 / T), Math.floor((y1 - 2) / T));
       if (!s || !e) return null;

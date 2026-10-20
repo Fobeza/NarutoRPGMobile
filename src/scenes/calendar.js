@@ -15,7 +15,7 @@ G.scenes.register('calendar', () => {
     if (ev) out.push({ c: '#c8581a', t: ev });
     for (const e of G.STORY) if (e.day === d && STORY_NAMES[e.id] && ev !== STORY_NAMES[e.id]) out.push({ c: '#c8581a', t: STORY_NAMES[e.id] });
     if (G.calendar.BDAY[d]) out.push({ c: '#c89010', t: 'День рождения: ' + G.chars.nameOf(G.calendar.BDAY[d]) });
-    if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
+    if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00. Вход 7:30–9:30' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
     else if (d < 54) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
     const Q = G.state.quests || {};
     for (const id of Object.keys(Q)) if (Q[id].st === 'active' && Q[id].due === d && G.QUESTS[id]) out.push({ c: '#b8321c', t: 'Срок: ' + G.QUESTS[id].title });

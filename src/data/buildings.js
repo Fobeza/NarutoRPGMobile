@@ -52,9 +52,9 @@ G.BUILDINGS = {
   clan_sarutobi:{name: 'Особняк Сарутоби',   w: 8, h: 7, cat: 'clan', color: '#d87a3a', door: [3, 6], unique: true, interior: 'sarutobi_hall' },
   clan_yamanaka:{name: 'Особняк Яманака',    w: 8, h: 7, cat: 'clan', color: '#8a6ab0', door: [3, 6], unique: true, interior: 'yamanaka_hall' },
   clan_uchiha: { name: 'Особняк Учиха',      w: 8, h: 7, cat: 'clan', color: '#3a3a6a', door: [3, 6], unique: true, interior: 'uchiha_hall' },
-  uchiha_house:{ name: 'Дом Учиха (пустой)', w: 5, h: 5, cat: 'clan', color: '#5a4a5a', door: [2, 4] },
+  uchiha_house:{ name: 'Дом Учиха', w: 5, h: 5, cat: 'clan', color: '#5a4a5a', door: [2, 4] },
   sasuke_home: { name: 'Дом Саске',          w: 6, h: 5, cat: 'clan', color: '#4a3a5a', door: [2, 4], unique: true, interior: 'sasuke_home' },
-  uchiha_small:{ name: 'Дом Учиха (пустой)', w: 4, h: 4, cat: 'clan', color: '#5a4a5a', door: [1, 3] },
+  uchiha_small:{ name: 'Дом Учиха', w: 4, h: 4, cat: 'clan', color: '#5a4a5a', door: [1, 3] },
   uchiha_police:{name: 'Участок полиции Учиха', w: 6, h: 5, cat: 'clan', color: '#3a3a4a', door: [2, 4], unique: true },
 
   // ---------- Тренировки ----------

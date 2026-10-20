@@ -32,13 +32,17 @@ G.quests = (() => {
       const s = S()[id], d = Q()[id];
       if (!s || s.st !== 'active') return false;
       const cur = d.steps[s.step];
+      if (!cur) return false;
       if (stepId && cur.id !== stepId) {
         // шаг впереди — пропустить до него (например, игрок сделал всё в другом порядке)
         const i = d.steps.findIndex((x) => x.id === stepId);
-        if (i < s.step) return false;
+        if (i < s.step || i < 0) return false;
         s.step = i;
       }
-      G.state.flags[`q_${id}_${d.steps[s.step].id}`] = 1;
+      const current = d.steps[s.step];
+      if (!this.hasNeeded(current)) return false;
+      if (current.consume) for (const [item, n] of Object.entries(current.need || {})) G.game.take(item, n);
+      G.state.flags[`q_${id}_${current.id}`] = 1;
       s.step++;
       if (s.step >= d.steps.length) this.complete(id);
       else { emit('step', id, d.steps[s.step - 1].text); this.check(); }
@@ -104,10 +108,11 @@ G.quests = (() => {
     },
 
     // Какой сценарий запустить при разговоре с NPC (задания важнее обычных реплик)
+    hasNeeded(step) { return Object.entries(step.need || {}).every(([id, n]) => G.game.count(id) >= n); },
     scriptFor(npcId) {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.script && st.target.npc === npcId && this.timeOk(st)) return st.script;
+        if (st && st.script && st.target.npc === npcId && this.timeOk(st)) return this.hasNeeded(st) ? st.script : 'quest_missing_items';
       }
       for (const [id, d] of Object.entries(Q())) {
         if (d.offer && d.offer.npc === npcId && !S()[id] && d.offer.when()) return d.offer.script;

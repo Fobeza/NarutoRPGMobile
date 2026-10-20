@@ -79,11 +79,9 @@ G.scenes.register('world', (pos) => {
     setMap(p) {
       let m = G.world.get(p.map);
       const pl = this.player;
+      if (m.id !== p.map) { p = G.world.startPos(); m = G.world.get(p.map); }
       if (p.entry) { pl.x = m.spawn.x; pl.y = m.spawn.y; pl.dir = m.spawn.dir; }
       else { pl.x = p.x; pl.y = p.y; pl.dir = p.dir || 'down'; }
-      if (m.id !== p.map && !p.entry) { // неизвестный id (старый сейв) → домой
-        const sp = G.world.startPos(); m = G.world.get(sp.map); pl.x = sp.x; pl.y = sp.y;
-      }
       pl.vx = pl.vy = 0; pl.moving = false;
       pl.jump = null; pl.roof = !!(p.roof && m.outdoor && G.roofs && G.roofs.at(m, pl.x, pl.y));
       this.map = m;
@@ -107,6 +105,7 @@ G.scenes.register('world', (pos) => {
       if (!b.interior) { this.showToast('Заперто.'); G.audio.sfx.error(); return; }
       if (b.tplId === 'hero_home' && !G.state.flags.home_seen) { G.state.flags.home_seen = 1; this.pendingTalk = 'home_first'; }   // первый раз в новом доме
       this.goTo({ map: b.interior.id, entry: true });
+      if (b.occupantNames) this.showToast('Здесь живут: ' + b.occupantNames.join(', '));
     },
 
     exitBuilding() {
@@ -208,7 +207,7 @@ G.scenes.register('world', (pos) => {
 
       if (I.pressed('a')) this.interact();
 
-      // часы идут (этап 4): 1 игровая минута = 1 секунда
+      // Скорость часов задаётся G.life.RATE.
       if (G.state.started && !G.scenes.busy && G.scenes.top() === this) {
         const before = v.min;
         if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
@@ -271,6 +270,7 @@ G.scenes.register('world', (pos) => {
     },
 
     updateNpc(n, dt) {
+      if (G.residents && G.residents.tick(this, n, dt)) return;
       n.aiT -= dt;
       if (G.life2) G.life2.npcTick(this, n, dt);
       if (n.ai === 'wander') {
@@ -420,7 +420,7 @@ G.scenes.register('world', (pos) => {
       if (every(10)) this.softRefresh();
       if (every(120) && G.state.started) G.storage.save(G.state);          // автосейв раз в 2 часа
       // подсказки онбординга
-      if (m.outdoor) this.tip('clock', '⏰ Время идёт', 'Минута в игре — секунда. В меню и диалогах часы стоят');
+      if (m.outdoor) this.tip('clock', '⏰ Время идёт', `Игровая минута — ${(1 / G.life.RATE).toFixed(1)} сек. В меню и диалогах часы стоят`);
       if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам, настроение чуть падает');
       if (crossed(19 * 60)) this.tip('evening', '🌙 Вечер', 'Лавки закрываются в 19–23 часа. Смотри часы на карте');
       // лавка закрывается

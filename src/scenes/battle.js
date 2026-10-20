@@ -1,7 +1,8 @@
 // Бой «Дуэль шиноби» (план §4). opts: { enemy, mode: ko|spar|bells|scroll|survive|ringout, terrain, turns, ambush, story, allies }
 // onEnd(result) — result: { win, mode, enemy, ringout, surrender }
 G.scenes.register('battle', (opts, onEnd) => {
-  const W = G.screen.W, F = G.font, PAL = G.PAL, AU = G.audio, U = G.ui, C = U.C, FS = F.small;
+  let W = G.screen.W;
+  const F = G.font, PAL = G.PAL, AU = G.audio, U = G.ui, C = U.C, FS = F.small;
   const A = G.ARENAS[opts.terrain || 'field'] || G.ARENAS.field;
   const mode = opts.mode || 'ko';
   let ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
@@ -11,9 +12,10 @@ G.scenes.register('battle', (opts, onEnd) => {
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const has = (t) => (ed.traits || []).includes(t);
-  const inv = (id) => G.game.count ? G.game.count(id) : (G.state.inv[id] || 0);
+  const inv = (id) => trainingFight ? (supplies[id] || 0) : G.game.count(id);
   const trainingFight = mode === 'spar' || mode === 'ringout';   // уроки, спарринги, турнир: запасы не тратятся
-  const take = (id, n = 1) => { if (trainingFight) return; if (G.game.take) G.game.take(id, n); else G.state.inv[id] = Math.max(0, (G.state.inv[id] || 0) - n); };
+  const supplies = Object.assign({}, G.state.inv);
+  const take = (id, n = 1) => { if (trainingFight) { supplies[id] = Math.max(0, (supplies[id] || 0) - n); return; } G.game.take(id, n); };
   const sfx = {
     hit() { AU.noise(0.08, 0.25); AU.tone(140, 0.08, 'square', 0.12, 60); },
     big() { AU.noise(0.2, 0.3); AU.tone(110, 0.2, 'sawtooth', 0.15, 40); },
@@ -55,7 +57,7 @@ G.scenes.register('battle', (opts, onEnd) => {
 
   let simLog = null;
   const say = (t, col) => { if (simLog) simLog.push(G.util.fmt(t, { name: pName })); msgs.push({ t: G.util.fmt(t, { name: pName }), col: col || PAL.white }); while (msgs.length > 2) msgs.shift(); };
-  const SP = Math.min(52, Math.floor((W - 48) / 4)), X = (pos) => Math.round(W / 2 + (pos - 2) * SP);
+  const X = (pos) => Math.round(W / 2 + (pos - 2) * Math.min(52, Math.floor((W - 48) / 4)));
   const dist = () => Math.abs(P.pos - E.pos);
   const sgn = (a, b) => Math.sign(b.pos - a.pos) || 1;
   const objAt = (pos) => A.obj[pos];
@@ -77,6 +79,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   // ── раскладка экрана ──
   const layout = {};
   function relayout() {
+    W = G.screen.W;
     const H = G.screen.H;
     layout.tl = 0; layout.eb = 13; layout.ar = 40;
     const panelH = clamp(Math.round(H * 0.3), 74, 124);
@@ -357,12 +360,13 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (kind === 'tag') { take('tag_explosive'); say('Ты бросаешь кунай со взрывной печатью!'); return attack({ kind: 'throw', dmg: 18, strong: true, onHit: () => { fx.flash = 0.2; puff(E.pos, 18); burst(E.pos, '#ff9030', 42); }, tag: true }, () => endTurn(9)); }
     if (kind === 'trap_tag' || kind === 'trap_wire') {
       const tp = P.pos + sgn(P, E);
+      if (tp === E.pos || traps.some((t) => t.pos === tp)) { say('Для ловушки нужна свободная клетка.'); return; }
       take(kind === 'trap_tag' ? 'tag_explosive' : 'wire');
       if (tp !== E.pos) traps.push({ pos: tp, owner: 'p', kind: kind === 'trap_tag' ? 'tag' : 'wire', seen: true });
       say(tp !== E.pos ? 'Ловушка поставлена перед тобой.' : 'Враг слишком близко — ловушка бесполезна.'); xp('know', 2); return endTurn(7);
     }
     if (kind === 'bandage') { take('bandage'); const h = Math.round(P.hpMax * 0.25); P.hp = Math.min(P.hpMax, P.hp + h); pop(P, '+' + h, '#8ae070'); say('Перевязка. +' + h + ' HP'); return endTurn(7); }
-    if (kind === 'pill') { take('chakra_pill'); const c = Math.round(P.chMax * 0.5); P.ch = Math.min(P.chMax, P.ch + c); pop(P, '+' + c, '#7ab0ff'); say('Пилюля чакры! +' + c); return endTurn(5); }
+    if (kind === 'pill') { if (P.ch >= P.chMax) { say('Чакра уже полная.'); return; } take('chakra_pill'); const c = Math.round(P.chMax * 0.5); P.ch = Math.min(P.chMax, P.ch + c); pop(P, '+' + c, '#7ab0ff'); say('Пилюля чакры! +' + c); return endTurn(5); }
   }
 
   function doMisc(kind) {
@@ -531,7 +535,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     result.mode = mode; result.enemy = opts.enemy; result.turns = pTurns; result.perfect = stats.perfect;
     if (result.win) { sfx.win(); bubble('lose'); } else { sfx.lose(); bubble('win'); }
     // обновить HP/чакру вне боя
-    V.hp = real ? clamp(Math.round(P.hp / P.hpMax * 100), result.win ? 5 : 15, 100) : 100;
+    if (real) V.hp = clamp(Math.round(P.hp / P.hpMax * 100), result.win ? 5 : 15, 100);
     V.chakra = clamp(Math.round(P.ch / P.chMax * 100), 0, 100);
     V.battles = (V.battles || 0) + 1; if (result.win) V.wins = (V.wins || 0) + 1;
     if (G.train && G.train.addXp) for (const [k, n] of Object.entries(stats.used)) G.train.addXp(k, n * (result.win ? 1.5 : 1), true);
@@ -580,11 +584,12 @@ G.scenes.register('battle', (opts, onEnd) => {
       it('flash_bomb', 'Вспышка', 'flash', 'Ослепить врага.');
       it('tag_explosive', 'Взрыв. печать', 'tag', 'Бросок: урон 18.');
       if (inv('book_traps') > 0) {   // ловушки открывает учебник (награда полевого выхода или книжная лавка)
-        it('tag_explosive', 'Ловушка-печать', 'trap_tag', 'Поставить перед собой: взрыв 22.');
-        it('wire', 'Ловушка-пров.', 'trap_wire', 'Поставить перед собой: связывает.');
+        const blocked = d <= 1 || traps.some((t) => t.pos === P.pos + sgn(P, E)) ? 'Нужна свободная клетка' : null;
+        it('tag_explosive', 'Ловушка-печать', 'trap_tag', 'Поставить перед собой: взрыв 22.', blocked);
+        it('wire', 'Ловушка-пров.', 'trap_wire', 'Поставить перед собой: связывает.', blocked);
       }
       it('bandage', 'Бинт', 'bandage', '+25% HP.', P.hp >= P.hpMax ? 'Здоров' : null);
-      it('chakra_pill', 'Пилюля', 'pill', '+50% чакры.');
+      it('chakra_pill', 'Пилюля', 'pill', '+50% чакры.', P.ch >= P.chMax ? 'Чакра полная' : null);
       if (!b.length) b.push({ label: 'Пусто', off: 'Купи в оружейной и аптеке', act: () => {} });
     } else if (menu === 'misc') {
       if (P.will >= 100) b.push({ label: 'Воля Огня!', hot: true, act: () => doMisc('will'), desc: 'Кинематографичный момент!' });
@@ -673,7 +678,11 @@ G.scenes.register('battle', (opts, onEnd) => {
       if (kind === 'tech') { doTech(arg); return true; }
       map[kind](arg); return true;
     },
-    enter() { relayout(); plan(); say(`${ed.name}! Бой начинается!`, PAL.yellow); bubble('start'); if (opts.ambush) say('Засада! Ты атакуешь первым.', PAL.yellow); },
+    enter() {
+      // При выгрузке вкладки незавершённый бой откатывается вместе с его расходами.
+      if (G.state.started && !G.state.battleCheckpoint) G.state.battleCheckpoint = JSON.stringify(Object.assign({}, G.state, { battleCheckpoint: null }));
+      relayout(); plan(); say(`${ed.name}! Бой начинается!`, PAL.yellow); bubble('start'); if (opts.ambush) say('Засада! Ты атакуешь первым.', PAL.yellow);
+    },
     update(dt) {
       fx.t += dt;
       if (fx.hitstop > 0) { fx.hitstop -= dt; return; }
@@ -754,7 +763,12 @@ G.scenes.register('battle', (opts, onEnd) => {
           }
           return;
         }
-        case 'end': stT += dt; if (stT > 1.0 && (I.pressed('a') || I.pressed('b') || I.tapNow)) { G.audio.sfx.confirm(); G.scenes.pop(); onEnd && onEnd(result); } return;
+        case 'end': stT += dt; if (stT > 1.0 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
+          G.audio.sfx.confirm(); G.scenes.pop();
+          G.state.battleCheckpoint = null;
+          onEnd && onEnd(result);
+          if (G.state.started) G.storage.save(G.state);
+        } return;
         default: return;
       }
     },
@@ -1003,7 +1017,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     // арена
     ctx.save(); ctx.beginPath(); ctx.rect(0, L.ar, W, L.arH); ctx.clip();
     // базовое приближение арены: на широких экранах бойцы крупнее (позиции 0–4 остаются в кадре)
-    const bz = clamp((W - 16) / (4 * SP + 70), 1, 1.6), bzy = L.groundY + 6;
+    const bz = clamp((W - 16) / (4 * Math.min(52, Math.floor((W - 48) / 4)) + 70), 1, 1.6), bzy = L.groundY + 6;
     // V9: фон арены запекается один раз (scenes/battle_bg.js), облака с объёмом плывут поверх; фон не приближается
     ctx.drawImage(G.battleBg.get(opts.terrain || 'field', W, L.arH), 0, L.ar);
     G.battleBg.clouds(ctx, opts.terrain || 'field', 0, L.ar, W, L.arH, t);

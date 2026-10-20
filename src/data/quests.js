@@ -32,7 +32,7 @@ G.QUESTS = {
     deadline: 1,
     steps: [
       { id: 'buy', text: 'Купить 3 куная в Оружейной', target: { building: 'weapons' }, have: { kunai: 3 }, time: [8 * 60, 19 * 60] },
-      { id: 'show', text: 'Показать кунаи Ируке', target: { npc: 'iruka', in: 'academy' }, script: 'iruka_homework' },
+      { id: 'show', text: 'Показать кунаи Ируке', target: { npc: 'iruka', in: 'academy' }, need: { kunai: 3 }, script: 'iruka_homework' },
     ],
     reward: { vars: { friend_iruka: 1 }, text: 'Ирука-сенсей доволен' },
   },
@@ -42,7 +42,7 @@ G.QUESTS = {
     desc: 'Ино собрала букет по заказу клана Хьюга. Сама отойти от прилавка не может.',
     offer: { npc: 'ino', in: 'flowers', script: 'ino_offer', when: () => G.state.vars.day >= 1 },
     steps: [
-      { id: 'deliver', text: 'Отнести букет Хинате к особняку Хьюга', target: { npc: 'hinata' }, script: 'hinata_flowers' },
+      { id: 'deliver', text: 'Отнести букет Хинате к особняку Хьюга', target: { npc: 'hinata' }, need: { bouquet_ino: 1 }, consume: true, script: 'hinata_flowers' },
       { id: 'return', text: 'Вернуться к Ино за наградой', target: { npc: 'ino', in: 'flowers' }, script: 'ino_reward', time: [8 * 60, 19 * 60] },
     ],
     reward: { money: 60, vars: { friend_ino: 1, friend_hinata: 1 }, text: '60 рё' },
@@ -54,7 +54,7 @@ G.QUESTS = {
     offer: { npc: 'shikamaru', in: 'academy', script: 'shikamaru_offer', when: () => G.state.flags.met_shikamaru },
     steps: [
       { id: 'buy', text: 'Купить набор шоги', target: { building: 'souvenir' }, have: { shogi: 1 } },
-      { id: 'give', text: 'Отдать шоги Шикамару', target: { npc: 'shikamaru', in: 'academy' }, script: 'shikamaru_shogi' },
+      { id: 'give', text: 'Отдать шоги Шикамару', target: { npc: 'shikamaru', in: 'academy' }, need: { shogi: 1 }, consume: true, script: 'shikamaru_shogi' },
     ],
     reward: { vars: { friend_shikamaru: 2 }, text: 'Дружба с Шикамару' },
   },

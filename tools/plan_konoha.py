@@ -202,7 +202,11 @@ def near(tpl, ax, ay, art=None, maxr=20, maxrd=3, gap=2, rows=None):
 
 
 def place_near(tpl, ax, ay, art=None, **kw):
+    required = kw.pop('required', False)
     p = near(tpl, ax, ay, art, **kw)
+    if not p and required:
+        p = near(tpl, ax, ay, art, maxr=160, maxrd=99)
+        if not p: raise RuntimeError('Не удалось разместить обязательное здание: ' + tpl)
     if not p: print('  нет места:', tpl, art or '', (ax, ay)); return None
     return put(tpl, p[0], p[1], art, kw.get('name'))
 
@@ -214,7 +218,7 @@ KEY = [
     ('books', 48, 33), ('flowers', 98, 54), ('souvenir', 84, 106), ('weapons', 128, 66), ('pharmacy', 112, 26),
     ('inuzuka_shop', 30, 98), ('hero_home', 86, 70), ('naruto_flat', 96, 70),
 ]
-for tpl, ax, ay in KEY: place_near(tpl, ax, ay, maxr=26, maxrd=14)
+for tpl, ax, ay in KEY: place_near(tpl, ax, ay, maxr=26, maxrd=14, required=True)
 # тренировки, ориентиры без дверей
 for tpl, ax, ay in (('training_3', 19, 32), ('training_ground', 34, 114), ('training_ground', 46, 114)): place_near(tpl, ax, ay, maxr=30, maxrd=99, gap=1)
 place_near('dojo', 62, 112, art='house13', maxr=34, maxrd=30)
@@ -247,10 +251,20 @@ CL = [('nara', 22, 30, 12), ('hyuga', 20, 64, 12), ('inuzuka', 30, 98, 11), ('ab
       ('uchiha', 142, 60, 22), ('senju', 114, 16, 11), ('sarutobi', 52, 26, 11), ('yamanaka', 100, 48, 11)]
 CLAN_RU = dict(nara='Нара', hyuga='Хьюга', inuzuka='Инузука', aburame='Абураме', akimichi='Акимичи', uchiha='Учиха', senju='Сенджу', sarutobi='Сарутоби', yamanaka='Яманака')
 clan_pos = {}
+manors = {}
 for cid, ax, ay, k in CL:
-    b = place_near('clan_' + cid, ax, ay, maxr=26, maxrd=4)
-    if not b: continue
+    b = place_near('clan_' + cid, ax, ay, maxr=36, maxrd=14, required=True)
+    manors[cid] = b
     clan_pos[cid] = (b['x'] + 4, b['y'] + 3)
+    w, h, dx = size_of(b['tpl'])
+    carve_spur(b['x'] + dx, b['y'] + h)
+# Сначала резервируем все особняки и сюжетные дома, затем рядовую застройку.
+for tpl, ax, ay in (('sasuke_home', 140, 30), ('uchiha_police', 134, 44)):
+    b = place_near(tpl, ax, ay, maxr=40, maxrd=14, required=True)
+    w, h, dx = size_of(tpl); carve_spur(b['x'] + dx, b['y'] + h)
+refresh_rd()
+for cid, ax, ay, k in CL:
+    b = manors[cid]
     got, tries = 0, 0
     while got < k and tries < 900:
         tries += 1
@@ -269,8 +283,6 @@ for _ in range(60):
     far.sort(reverse=True); _, fx, fy = far[0]
     if not carve_spur(fx, fy, 2 if rnd.random() < 0.3 else 1): RD[fy][fx] = 0
     refresh_rd()
-# квартал Учиха: дом Саске, участок полиции
-for tpl, ax, ay in (('sasuke_home', 140, 30), ('uchiha_police', 134, 44)): place_near(tpl, ax, ay, maxr=30, maxrd=4)
 # конторы и рядовые лавки по всем районам, потом жилые дома вдоль улиц
 for ax, ay in ((72, 30), (60, 36), (92, 34)):
     place_near('office', ax, ay, art=rnd.choice(['house02', 'house08']), maxr=14, maxrd=4)
@@ -337,6 +349,7 @@ while True:
 print('домов %d, выброшено без прохода %d, всего зданий %d' % (houses, removed, len(bld)))
 hard = [b for b in bld if NEEDS_DOOR(b) and not reach(b)]
 if hard: print('  без прохода (ключевые):', [(b['tpl'], b['x'], b['y']) for b in hard])
+if hard: raise RuntimeError('Обязательные здания должны иметь проход к дороге')
 
 # ───────────── районы ─────────────
 # порядок важен: следующий район перекрывает предыдущие (кварталы кланов → центр и торговая улица → полигоны)

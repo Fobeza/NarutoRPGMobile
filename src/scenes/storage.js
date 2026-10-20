@@ -1,6 +1,7 @@
 // Сундук-хранилище дома: слева сумка, справа сундук. ←/→ — колонка, ↑/↓ — предмет, A — переложить 1, B — закрыть.
 G.scenes.register('storage', () => {
-  const W = G.screen.W, F = G.font, P = G.PAL, AU = G.audio, In = G.input;
+  let W = G.screen.W;
+  const F = G.font, P = G.PAL, AU = G.audio, In = G.input;
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
   const chest = () => G.outdoor.chest();
   const lists = () => [
@@ -22,6 +23,7 @@ G.scenes.register('storage', () => {
       AU.sfx.select(); return true;
     },
     update(dt) {
+      W = G.screen.W;
       if (msgT > 0) msgT -= dt;
       const L = lists(), rows = this.rows();
       if (In.pressed('b')) { AU.sfx.cancel(); G.scenes.pop(); return; }
@@ -43,6 +45,7 @@ G.scenes.register('storage', () => {
     },
     rows() { return Math.floor((G.screen.H - TOP - 66) / ROW); },
     draw(ctx) {
+      W = G.screen.W;
       const H = G.screen.H, L = lists(), rows = this.rows(), U = G.ui, C = U.C;
       U.backdrop(ctx);
       U.title(ctx, 'СУНДУК', W / 2, 3, 90);

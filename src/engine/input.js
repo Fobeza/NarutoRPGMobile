@@ -18,7 +18,7 @@ G.input = {
     document.addEventListener('dblclick', (e) => e.preventDefault());
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('touchmove', (e) => {
-      if (!e.target.closest || !e.target.closest('#text-entry')) e.preventDefault();
+      if (!e.target.closest || !e.target.closest('#text-entry, #code-box')) e.preventDefault();
     }, { passive: false });
   },
 

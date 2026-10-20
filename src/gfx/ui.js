@@ -249,22 +249,24 @@ G.ui = (() => {
   const menu = {
     ROW,
     rect(n, w, o = {}) {
-      const h = 24 + n * ROW + 10 + (o.extra || 0);
-      return { x: Math.round((G.screen.W - w) / 2), y: Math.round((G.screen.H - h) / 2) - 6, w, h };
+      w = Math.min(w, G.screen.W - 8);
+      const row = Math.min(ROW, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
+      const h = 24 + n * row + 10 + (o.extra || 0);
+      return { x: Math.round((G.screen.W - w) / 2), y: Math.max(14, Math.round((G.screen.H - h) / 2) - 6), w, h, row };
     },
-    rowY(r, i) { return r.y + 20 + i * ROW; },
+    rowY(r, i) { return r.y + 20 + i * r.row; },
     hit(p, n, w, o) {
-      const r = menu.rect(n, w, o), i = Math.floor((p.y - r.y - 20) / ROW);
+      const r = menu.rect(n, w, o), i = Math.floor((p.y - r.y - 20) / r.row);
       return p.x > r.x && p.x < r.x + r.w && i >= 0 && i < n ? i : -1;
     },
     draw(ctx, title, items, idx, w, o = {}) {
-      const r = menu.rect(items.length, w, o), F = G.font;
+        const r = menu.rect(items.length, w, o), F = r.row < 18 ? G.font.small : G.font;
       ctx.globalAlpha = 0.55; ctx.fillStyle = '#0a0604'; ctx.fillRect(0, 0, G.screen.W, G.screen.H); ctx.globalAlpha = 1;
       panel(ctx, r.x, r.y, r.w, r.h, 'frame');
       title && U_title(ctx, title, r.x + r.w / 2, r.y - 7, 0);
       items.forEach((it, i) => {
         const y = menu.rowY(r, i), sel = i === idx;
-        row(ctx, r.x + 6, y - 1, r.w - 12, ROW - 2, sel);
+        row(ctx, r.x + 6, y - 1, r.w - 12, r.row - 2, sel);
         const col = it.dis ? C.inkFaint : sel ? '#f8eed0' : C.ink;
         F.draw(ctx, it.label, r.x + 14, y + 3, { color: col, shadow: sel && !it.dis ? '#5a1408' : null, maxW: r.w - 28 - (it.value ? F.measure(it.value) + 8 : 0) });
         if (it.value) F.draw(ctx, it.value, r.x + r.w - 14, y + 3, { align: 'right', color: sel ? '#f4d46a' : C.redDark, shadow: sel ? '#5a1408' : null });

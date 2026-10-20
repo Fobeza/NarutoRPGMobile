@@ -181,13 +181,14 @@ G.interiors = (() => {
       const w = 12, h = 10;
       const m = room(info.id, 'Резиденция Хокаге', w, h, ID.FLOOR, { exitX: 6 });
       rug(m, 5, 4, 6, 8);
-      put(m, 'bigdesk', 6, 3, { talk: ['Стол Хокаге. На нём гора бумаг: поручения D-ранга, отчёты, заявка «Найти кошку Тору» (снова).', 'Третьего Хокаге сейчас нет на месте.'] }, 0);
+      put(m, 'bigdesk', 6, 3, { talk: ['Стол Хокаге. На нём гора бумаг: поручения D-ранга, отчёты, заявка «Найти кошку Тору» (снова).'] }, 0);
       put(m, 'pillar', 2, 4); put(m, 'pillar', 9, 4); put(m, 'pillar', 2, 7); put(m, 'pillar', 9, 7);
       put(m, 'shelf', 1, 2); put(m, 'shelf', 10, 2);
       onWall(m, 'emblem', 6, null, 0); onWall(m, 'scroll', 3); onWall(m, 'scroll', 8);
       put(m, 'plant', 1, 8); put(m, 'plant', 10, 8);
       // Ирука после уроков раздаёт поручения за столом миссий
       npc(m, 'iruka', 4, 5, 'down', 'iruka_mission', { sched: [[15 * 60, 18 * 60, 'wd']] });
+      npc(m, 'hokage', 8, 5, 'down', [{ who: 'hokage', text: 'Здравствуй. Как идёт учёба? Помни: сила шиноби — в тех, кого он защищает.' }], { sched: [[8 * 60, 18 * 60]], cond: () => !!G.state.flags.hosp_done });
       return m;
     },
 

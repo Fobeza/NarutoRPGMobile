@@ -21,11 +21,11 @@ G.ITEMS = {
   flash_bomb:   { name: 'Световая бомба',    price: 60,  cat: 'tool', pouch: true, desc: 'Ослепляет противника.' },
   tag_explosive:{ name: 'Взрывная печать',   price: 120, cat: 'tool', pouch: true, week: 6, desc: 'Мощный взрыв. Только с разрешения Ируки.' },
   // ── Аптека ──
-  bandage:      { name: 'Бинт',              price: 20,  cat: 'med', pouch: true, desc: 'Восстанавливает немного здоровья.' },
-  ointment:     { name: 'Мазь',              price: 50,  cat: 'med', pouch: true, desc: 'Травма заживает быстрее.' },
-  chakra_pill:  { name: 'Пилюля чакры',      price: 80,  cat: 'med', pouch: true, desc: 'Восстанавливает часть чакры.' },
-  antidote:     { name: 'Противоядие',       price: 40,  cat: 'med', pouch: true, desc: 'Снимает отравление.' },
-  herb_tea:     { name: 'Травяной чай',      price: 30,  cat: 'misc', desc: 'Выпей перед сном — сон будет крепче.' },
+  bandage:      { name: 'Бинт',              price: 20,  cat: 'med', pouch: true, effect: { hp: 25 }, desc: 'Здоровье +25%. Применить в сумке или в бою.' },
+  ointment:     { name: 'Мазь',              price: 50,  cat: 'med', pouch: true, effect: { injury: 1, hp: 10 }, desc: 'Снимает день травмы, здоровье +10%. Применить в сумке.' },
+  chakra_pill:  { name: 'Пилюля чакры',      price: 80,  cat: 'med', pouch: true, effect: { chakra: 50 }, desc: 'Чакра +50%. Применить в сумке или в бою.' },
+  antidote:     { name: 'Противоядие',       price: 40,  cat: 'med', pouch: true, effect: { poison: 1 }, desc: 'Снимает отравление. Применить в сумке.' },
+  herb_tea:     { name: 'Травяной чай',      price: 30,  cat: 'misc', effect: { sleep: 1 }, desc: 'Перед сном: энергия и чакра полностью, здоровье +50%.' },
   // ── Книжная лавка ──
   book_history: { name: 'История Конохи',    price: 80,  cat: 'book', desc: 'Книга для чтения дома за столом (+Знания).' },
   book_traps:   { name: 'Теория ловушек',    price: 200, cat: 'book', desc: 'Свиток о ловушках. Без него в бою нельзя ставить ловушки.' },

@@ -20,7 +20,7 @@ G.calendar = {
     for (let d = d0; d <= 56 && out.length < n; d++) {
       if (this.EVENTS[d]) out.push({ d, text: this.EVENTS[d] });
       if (this.BDAY[d]) out.push({ d, text: 'ДР: ' + G.chars.nameOf(this.BDAY[d]) + ' ♥×2' });
-      if (G.academy.isSchoolDay(d) && !this.EVENTS[d] && d === d0) out.push({ d, text: 'Уроки 8:00–13:00' });
+      if (G.academy.isSchoolDay(d) && !this.EVENTS[d] && d === d0) out.push({ d, text: 'Уроки: прийти до 9:30' });
     }
     return out.slice(0, n);
   },
@@ -141,6 +141,10 @@ G.story = {
     // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
     if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
     if (d.lessonRun) { delete d.lesson; delete d.lessonRun; fixes.push('урок'); }
+    // Возвращаем постоянные награды, потерянные старыми версиями при выгрузке диалога.
+    for (const [sc, fl] of [['fr_naruto_3', 'tech_sexy'], ['fr_shikamaru_3', 'tactic'], ['fr_lee_3', 'combo_whirl']]) {
+      if (f['frd_' + sc.slice(3)] && !f[fl] && !(st.frQueue || []).includes(sc)) (st.frQueue || (st.frQueue = [])).push(sc);
+    }
     if (fixes.length) console.info('Восстановлено после прерывания:', fixes.join(', '));
     return fixes;
   },
@@ -149,7 +153,17 @@ G.story = {
     const st = G.state, v = st.vars, f = st.flags;
     if (!st.started || !f.day2_intro || G.scenes.top() !== world || G.scenes.busy) return false;
     while (st.frQueue && st.frQueue.length && !G.script.library[st.frQueue[0]]) st.frQueue.shift();
-    if (st.frQueue && st.frQueue.length) { _dlg(st.frQueue.shift()); return true; }
+    if (st.frQueue && st.frQueue.length) {
+      // Все действия награды стоят в конце сценария и выполняются одним синхронным шагом.
+      // До onEnd запись остаётся в очереди: загрузка безопасно повторит незавершённые реплики.
+      const id = st.frQueue[0];
+      _dlg(id, () => {
+        const i = st.frQueue.indexOf(id); if (i >= 0) st.frQueue.splice(i, 1);
+        if (/^fr_/.test(id)) f['frd_' + id.slice(3)] = 1;
+        G.storage.save(st);
+      });
+      return true;
+    }
     const m = world.map;
     // Мизуки побеждён, а титры не показаны (закрыли игру посреди эпилога) — показываем их
     if (f.st_night && f.mizuki_beaten && !f.game_clear) { G.scenes.fadeTo(G.scenes.make('ending')); return true; }

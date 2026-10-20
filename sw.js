@@ -1,6 +1,6 @@
 // Service Worker «Воля Огня»: кэширует игру при первом запуске → дальше работает без интернета.
 // Стратегия: сначала кэш (мгновенный запуск), в фоне — проверка обновления.
-const CACHE = 'wof-88943741';
+const CACHE = 'wof-9f0e1c4b';
 const FILES = ['./', './index.html', './sw.js'];
 
 self.addEventListener('install', (e) => {

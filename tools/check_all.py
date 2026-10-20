@@ -15,8 +15,8 @@ TOOLS = os.path.join(ROOT, "tools")
 QUICK = "--quick" in sys.argv
 NODE_ONLY = "--node" in sys.argv
 
-FULL = ["test_recover.py", "test_battle.py", "test_life.py", "test_outdoor.py", "test_iphone.py", "test_calendar.py"]
-FAST = ["test_recover.py", "test_battle.py", "test_calendar.py"]
+FULL = ["test_recover.py", "test_battle.py", "test_life.py", "test_outdoor.py", "test_iphone.py", "test_calendar.py", "test_audit.py"]
+FAST = ["test_recover.py", "test_battle.py", "test_calendar.py", "test_audit.py"]
 
 
 def server_up():

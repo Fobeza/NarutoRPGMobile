@@ -37,18 +37,46 @@ G.storage = {
   _raw(key) { return this._text(key); },
 
   // Проверка структуры: числа там, где числа, объекты там, где объекты; версия не новее нашей
-  valid(d) {
+  valid(d, nested = false) {
     const obj = (o) => o && typeof o === 'object' && !Array.isArray(o);
     if (!obj(d) || !obj(d.state)) return false;
     if (d.v != null && (typeof d.v !== 'number' || d.v > this.SAVE_VERSION)) return false;
     const st = d.state;
     if (!obj(st.vars) || !obj(st.hero)) return false;
+    if (st.started != null && typeof st.started !== 'boolean') return false;
+    if (st.goal != null && typeof st.goal !== 'string') return false;
+    if (st.tracked != null && (typeof st.tracked !== 'string' || !G.QUESTS[st.tracked])) return false;
+    if (st.layoutVersion != null && ![1, 2].includes(st.layoutVersion)) return false;
+    const finite = (n) => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 1e12;
+    const qty = (n) => Number.isSafeInteger(n) && n >= 0 && n <= 1000000;
+    if (Object.values(st.vars).some((n) => !finite(n))) return false;
     for (const k of ['day', 'min', 'money']) if (st.vars[k] != null && !Number.isFinite(st.vars[k])) return false;
     if (st.vars.day != null && (st.vars.day < 1 || st.vars.day > 9999)) return false;
     for (const k of ['flags', 'inv', 'quests', 'daily']) if (st[k] != null && !obj(st[k])) return false;
     if (st.hero.name != null && typeof st.hero.name !== 'string') return false;
     if (st.hero.skills != null && !Array.isArray(st.hero.skills)) return false;
     if (st.hero.stats != null && !obj(st.hero.stats)) return false;
+    if (st.hero.stats && G.STATS && G.STATS.some((s) => !finite(st.hero.stats[s.id]) || st.hero.stats[s.id] < 1 || st.hero.stats[s.id] > (G.STAT_CAP || 12))) return false;
+    if (st.hero.skills && st.hero.skills.some((id) => typeof id !== 'string' || !G.SKILLS.some((s) => s.id === id))) return false;
+    for (const k of ['inv', 'chest']) {
+      if (st[k] != null && (!obj(st[k]) || Object.entries(st[k]).some(([id, n]) => !Object.hasOwn(G.ITEMS, id) || !qty(n)))) return false;
+    }
+    for (const k of ['flags', 'daily']) if (st[k] && Object.values(st[k]).some((n) => typeof n !== 'boolean' && !finite(n))) return false;
+    if (st.log != null && (!Array.isArray(st.log) || st.log.some((x) => typeof x !== 'string'))) return false;
+    if (st.fog != null && (typeof st.fog !== 'string' || !/^[01]*$/.test(st.fog))) return false;
+    if (st.frQueue != null && (!Array.isArray(st.frQueue) || st.frQueue.some((id) => typeof id !== 'string' || !G.script.library[id]))) return false;
+    if (st.makeupQ != null && (!Array.isArray(st.makeupQ) || st.makeupQ.some((day) => !qty(day) || day < 1))) return false;
+    if (st.pos != null && (!obj(st.pos) || typeof st.pos.map !== 'string' || !finite(st.pos.x) || !finite(st.pos.y) || st.pos.x < 0 || st.pos.y < 0 || !['up', 'down', 'left', 'right'].includes(st.pos.dir))) return false;
+    if (st.marker != null && (!obj(st.marker) || !finite(st.marker.x) || !finite(st.marker.y) || (st.marker.label != null && typeof st.marker.label !== 'string'))) return false;
+    if (st.quests) for (const [id, q] of Object.entries(st.quests)) {
+      const def = G.QUESTS[id];
+      if (!def || !obj(q) || !['active', 'done', 'failed'].includes(q.st) || !qty(q.step) || (q.st === 'active' && q.step >= def.steps.length)) return false;
+      for (const key of ['day', 'due', 'doneDay']) if (q[key] != null && (!qty(q[key]) || q[key] < 1)) return false;
+    }
+    if (st.battleCheckpoint != null) {
+      if (nested || typeof st.battleCheckpoint !== 'string' || st.battleCheckpoint.length > 500000) return false;
+      try { if (!this.valid({ state: JSON.parse(st.battleCheckpoint) }, true)) return false; } catch (_) { return false; }
+    }
     // пробная починка на копии: если fix() падает — сохранение непригодно
     try { if (G.game && G.game.fix) G.game.fix(JSON.parse(JSON.stringify(st))); } catch (_) { return false; }
     return true;

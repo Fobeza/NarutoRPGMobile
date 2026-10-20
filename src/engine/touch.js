@@ -5,7 +5,7 @@
 // Сцена сама говорит, что показывать: необязательный метод scene.touch() → { joy, action: {label}, sys, back }.
 // Нет метода — «Назад» показываем только в известных меню-сценах (BACK).
 G.touch = (() => {
-  const BACK = new Set(['bag', 'journal', 'calendar', 'gallery', 'mapview', 'storage', 'charcreate', 'cheats']);
+  const BACK = new Set(['bag', 'status', 'journal', 'calendar', 'gallery', 'mapview', 'storage', 'charcreate', 'cheats']);
   const STRIP_H = 22;          // высота нижней полосы мира (scenes/world.js)
   let hits = [];               // горячие зоны прошлого кадра: { x, y, w, h, btn }
   const anim = { action: 0, label: '' };

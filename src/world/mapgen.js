@@ -53,7 +53,7 @@ G.mapgen = (() => {
   // Какой интерьер у здания
   function interiorKind(id, tpl) {
     if (tpl.interior) return tpl.interior;
-    if (id === 'uchiha_house' || id === 'uchiha_small') return 'abandoned';
+    if (id === 'uchiha_house' || id === 'uchiha_small') return 'house';
     if (id === 'shop_generic') return 'shop';
     if (id === 'dojo') return 'dojo';
     if (id === 'guard_post') return null;

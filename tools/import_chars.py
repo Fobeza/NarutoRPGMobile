@@ -62,21 +62,50 @@ def auto_scale(a):
 def build(id):
     a = np.array(Image.open(os.path.join(ROOT, 'art', 'chars', id + '.webp')).convert('RGBA'))
     a[a[:, :, 3] < 40] = 0                  # прозрачность без полупрозрачной каймы
-    sc, base = auto_scale(a) if id in AUTO else (SC, BASE)
+    # Лист содержит неровные поля, а обувь иногда заходит в соседний ряд.
+    # Выделяем саму фигуру, а не фиксированное окно 80×100.
+    def figure(row, col):
+        cw = a.shape[1] / 4
+        x0, x1 = round(col * cw), round((col + 1) * cw)
+        y0, y1 = max(0, round(ROWH * row) - 16), min(a.shape[0], round(ROWH * (row + 1)) + 16)
+        part = a[y0:y1, x0:x1].copy()
+        groups = ia.components(part[:, :, 3] > 0)
+        if not groups:
+            raise ValueError(f'{id}: пустой кадр {row}/{col}')
+        body = max(groups, key=len)
+        yy, xx = zip(*body)
+        bx0, bx1, by0, by1 = min(xx), max(xx) + 1, min(yy), max(yy) + 1
+        # Отдельные детали внутри силуэта сохраняем, фрагменты соседних поз — нет.
+        keep = np.zeros(part.shape[:2], bool)
+        for group in groups:
+            gy, gx = zip(*group)
+            if group is body or (min(gx) >= bx0 and max(gx) < bx1 and min(gy) >= by0 and max(gy) < by1):
+                keep[gy, gx] = True
+        part[~keep] = 0
+        return part[by0:by1, bx0:bx1]
+
+    poses = [[figure(di, 0), figure(4 + di, 0), figure(4 + di, 2)] for di in range(4)]
+    maxw = max(p.shape[1] for row in poses for p in row)
+    maxh = max(p.shape[0] for row in poses for p in row)
+    sc = min(0.4 if id not in AUTO else 1, (FW - 4) / maxw, (FH - 6) / maxh)
     sheet = np.zeros((FH * 4, FW * 3, 4), np.uint8)
-    for di in range(4):                      # 0 вниз, 1 влево, 2 вправо, 3 вверх
-        frames = [cell(a, di, 0, sc, base), cell(a, 4 + di, 0, sc, base), cell(a, 4 + di, 2, sc, base)]
-        for f, win in enumerate(frames):
-            sheet[di * FH:(di + 1) * FH, f * FW:(f + 1) * FW] = shrink(win)
+    for di, frames in enumerate(poses):
+        for f, pose in enumerate(frames):
+            w, h = max(1, round(pose.shape[1] * sc)), max(1, round(pose.shape[0] * sc))
+            image = ia.scale(pose.astype(np.float32), w, h)
+            x, y = f * FW + (FW - w) // 2, di * FH + FH - 3 - h
+            sheet[y:y + h, x:x + w] = image
     # портрет: верх фигуры «вниз» в исходном размере
-    idle = cell(a, 0, 0, sc, base)
+    idle = poses[0][0]
     ys = np.where(idle[:, :, 3] > 0)[0]
     top = max(0, ys.min() - 2)
-    n = 32 if id in ('akamaru', 'tora') else int(64 * SC / sc)     # окно портрета в исходных px (у крупных листов — больше)          # щенок мелкий: окно вдвое меньше, потом увеличиваем
+    n = max(idle.shape[:2]) if id in ('akamaru', 'tora') else max(16, round(idle.shape[0] * .68))
     if n == 32: top = max(0, ys.max() - 34)
     crop = np.zeros((n, n, 4), np.uint8)
-    part = idle[top:top + n, idle.shape[1] // 2 - n // 2:idle.shape[1] // 2 + n // 2]
-    crop[:part.shape[0]] = part
+    x0 = (idle.shape[1] - n) // 2
+    sx0, sx1 = max(0, x0), min(idle.shape[1], x0 + n)
+    part = idle[top:top + n, sx0:sx1]
+    crop[:part.shape[0], sx0 - x0:sx0 - x0 + part.shape[1]] = part
     por = crop if n == 64 else np.array(Image.fromarray(crop).resize((64, 64), Image.LANCZOS if n > 64 else Image.NEAREST))
     return sheet, por
 

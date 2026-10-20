@@ -165,7 +165,7 @@ with sync_playwright() as p:
     time.sleep(2.0)
     shot(page, "33_academy_iruka_target")
     W(page, "s.setMap(G.world.outsideOf(G.world.konoha().landmarks.academy));"); time.sleep(0.4)
-    W(page, "s.setMap({ map: 'konoha', x: 88*16+8, y: 72*16+8, dir: 'down' });"); time.sleep(0.4)
+    W(page, "s.setMap(G.world.outsideOf(G.world.heroHome()));"); time.sleep(0.4)
 
     # ── прогулка к квартире Наруто и вход ──────────────────────
     door = page.evaluate("(() => { const b = G.world.konoha().buildings.find(b => b.tplId === 'naruto_flat'); return { x: b.door.tx*16+8, y: b.door.ty*16+8 }; })()")
@@ -374,7 +374,7 @@ with sync_playwright() as p:
     # ── Этап 4: время и жизнь ─────────────────────────────────
     W(page, "s.setMap({ map: 'konoha', x: 66*16+8, y: 46*16+8, dir: 'down' });"); time.sleep(0.5)
     m0 = page.evaluate("G.state.vars.min"); time.sleep(3.2); m1 = page.evaluate("G.state.vars.min")
-    check(2 <= m1 - m0 <= 5, "часы идут сами: за 3 сек прошло %s игровых мин" % (m1 - m0))
+    check(1 <= m1 - m0 <= 3, "часы идут сами: за 3 сек прошло %s игровых мин" % (m1 - m0))
     key(page, "Escape"); time.sleep(0.3); m2 = page.evaluate("G.state.vars.min"); time.sleep(2.0); m3 = page.evaluate("G.state.vars.min")
     check(m3 == m2, "в меню часы стоят")
     key(page, "Escape"); time.sleep(0.3)

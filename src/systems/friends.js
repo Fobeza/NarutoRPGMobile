@@ -46,7 +46,8 @@ G.friends = {
     // награды за ВСЕ достигнутые уровни, каждая — один раз (флаг frd_), даже если дружба потом падала и росла снова
     for (let l = 1; l <= after; l++) {
       const sc = 'fr_' + id + '_' + l, fl = 'frd_' + id + '_' + l;
-      if (G.script.library[sc] && !G.state.flags[fl]) { G.state.flags[fl] = 1; G.state.vars.fr_pending = 1; (G.state.frQueue = G.state.frQueue || []).push(sc); }
+      const queue = G.state.frQueue || (G.state.frQueue = []);
+      if (G.script.library[sc] && !G.state.flags[fl] && !queue.includes(sc)) queue.push(sc);
     }
     return Math.round((this.pts(id) - p0) * 10) / 10;
   },

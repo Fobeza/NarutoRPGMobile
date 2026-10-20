@@ -607,7 +607,8 @@
     if (SHEETS[key]) return SHEETS[key];
     const base = sheet(id), W = base.width, H = base.height;
     const src = document.createElement('canvas'); src.width = W; src.height = H;
-    const sx = src.getContext('2d'); sx.drawImage(base, 0, 0);
+    // Копируем физические пиксели: обычный drawImage(hiCanvas, x, y) уменьшает лист вдвое.
+    const sx = src.getContext('2d'); sx.drawImage(base, 0, 0, W, H);
     const img = sx.getImageData(0, 0, W, H), d = img.data, dh = HUE[v % LOOKS];
     const rowH = FHH, headRows = 17 * (W / (FWH * 3));   // голова — верхние 17 строк кадра (масштаб листа учтён)
     for (let y = 0; y < H; y++) {

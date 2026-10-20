@@ -36,7 +36,9 @@ def main():
     if r.returncode and not bad:
         print("  ✘ проверки завершились с кодом %d" % r.returncode)
         return 1
-    return 1 if (bad or r.returncode) else 0
+    regressions = subprocess.run([node, os.path.join(ROOT, "tools", "node", "regressions.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+    print((regressions.stdout or "") + (regressions.stderr or ""))
+    return 1 if (bad or r.returncode or regressions.returncode) else 0
 
 
 if __name__ == "__main__":
