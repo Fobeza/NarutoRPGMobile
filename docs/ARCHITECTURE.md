@@ -28,6 +28,8 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 | `G.chars` | gfx/chars.js + data/characters.js + gfx/chars_render.js | персонажи: `DEFS`, `STY`, `sheet`, `draw`, `portrait`, `nameOf` |
 | `G.quests` / `G.QUESTS` | systems/quests.js / data/quests.js | задания |
 | `G.life` | systems/life.js | часы, погода, будни/выходные, видимость NPC по расписанию |
+| `G.audio` / `G.ambience` | engine/audio.js / engine/ambience.js | синтез звука: эффекты `sfx.*` (шаги по земле, двери, монеты…); фон деревни (ветер, дождь, вода, гомон, птицы, сверчки, колокол Академии) и тихая пентатоника; настройки `music`, `ambience` |
+| `G.guards` | world/guards.js | уличная стража: пары патрульных между ориентирами, ночью с фонарями (декорация, как шиноби на крышах в `world/roof_patrol.js`) |
 | `G.schedule` / `G.SCHED` | systems/schedule.js / data/schedule.js | перемещения персонажей по деревне, данные для календаря |
 | `G.academy`, `G.calendar`, `G.STORY` | systems/story.js | уроки и оценки, календарь событий, сюжетные события по дням |
 | `G.lessons` | systems/lessons.js | содержание уроков (лекции, вопросы, тесты) |

@@ -19,7 +19,7 @@ DEV = os.path.join(ROOT, "build")           # служебное (редакто
 # Новый файл → добавь его сюда в подходящую группу (см. docs/ARCHITECTURE.md).
 JS_FILES = [
     # ── движок: экран, ввод, звук, сцены, сохранения ──
-    "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/scenes.js", "engine/storage.js",
+    "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
     "gfx/chars.js", "data/characters.js", "gfx/char_art_data.js", "gfx/chars_render.js",
@@ -38,7 +38,7 @@ JS_FILES = [
     "world/buildgfx.js", "world/map.js", "world/mapgen.js", "world/interiors.js", "world/world.js",
     "world/village_extra.js", "world/interior_details.js", "world/village_life.js", "world/cast.js",
     "data/schedule.js", "systems/schedule.js",     # расписание — последним из «мира»: переставляет всех жителей
-    "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/fx.js", "world/village_stories.js",
+    "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/guards.js", "world/fx.js", "world/village_stories.js",
     "world/frontier.js", "systems/adventures.js", "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/street_events.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
     "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",

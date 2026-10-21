@@ -7,6 +7,8 @@ G.scenes.register('settings', () => {
   const onoff = (v) => (v ? 'ВКЛ' : 'ВЫКЛ');
   const items = () => [
     { label: 'Звук', value: onoff(S.sound), act: () => { S.sound = !S.sound; G.audio.setEnabled(S.sound); G.storage.saveSettings(); } },
+    { label: 'Музыка', value: onoff(S.music !== false), act: () => { S.music = S.music === false; G.storage.saveSettings(); } },
+    { label: 'Звуки деревни', value: onoff(S.ambience !== false), act: () => { S.ambience = S.ambience === false; G.storage.saveSettings(); } },
     { label: 'Текст', value: SPEED_NAMES[S.textSpeed], act: () => { S.textSpeed = (S.textSpeed + 1) % 4; G.storage.saveSettings(); } },
     { label: 'Карта и метки', act: () => G.scenes.push(G.scenes.make('mapsettings')) },
     { label: 'Эффекты', value: onoff(S.fx !== false), act: () => { S.fx = S.fx === false; G.storage.saveSettings(); } },

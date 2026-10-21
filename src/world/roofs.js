@@ -36,13 +36,13 @@ G.roofs = {
     const d = Math.hypot(x1 - p.x, y1 - p.y);
     p.jump = { t: 0, dur: 0.28 + d / 260, x0: p.x, y0: p.y, x1, y1, toRoof, h: 10 + Math.min(16, d / 4) };
     p.roof = false; p.moving = false;
-    G.audio.tone ? G.audio.tone(700, 0.08, 'triangle', 0.06, 1100) : G.audio.sfx.blip();
+    G.audio.sfx.jump();
   },
   updateJump(world, dt) {
     const p = world.player, j = p.jump; if (!j) return;
     j.t += dt; const k = Math.min(1, j.t / j.dur);
     p.x = j.x0 + (j.x1 - j.x0) * k; p.y = j.y0 + (j.y1 - j.y0) * k;
-    if (k >= 1) { p.jump = null; p.roof = j.toRoof; G.audio.sfx.step(); }
+    if (k >= 1) { p.jump = null; p.roof = j.toRoof; G.audio.sfx.land(); }
   },
   // движение по крышам; true — обработано
   move(world, p, ax, speed) {
