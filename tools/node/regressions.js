@@ -133,5 +133,18 @@ test('Старые позиции в интерьерах мигрируют к 
   assert.equal(G.state.pos.map, G.world.konoha().landmarks.naruto_flat.interior.id);
   assert.ok(G.storage.valid({state:G.state}));
 });
+test('Плотность по умолчанию: точка не меньше 1.25 CSS, выбор игрока не трогаем, экран заполняется по высоте', () => {
+  const wrap = document.getElementById('screen-wrap'), keep = [wrap.clientWidth, wrap.clientHeight, globalThis.devicePixelRatio, G.storage.settings.density];
+  const size = (w, h, dpr) => { wrap.clientWidth = w; wrap.clientHeight = h; globalThis.devicePixelRatio = dpr; G.screen.resize(); return [G.screen.W, G.screen.H, G.screen.scale]; };
+  try {
+    delete G.storage.settings.density;
+    let [W, H, sc] = size(414, 862, 2); assert.ok(sc >= 1.25 && W >= 192 && H === 430, `iPhone XR/11: ${W}×${H} по ${sc} CSS`);
+    [W, H, sc] = size(393, 722, 3); assert.ok(W === 294 && Math.abs(sc - 4 / 3) < 0.01, `iPhone 15 Pro не меняется: ${W}×${H} по ${sc}`);
+    [W, H, sc] = size(375, 632, 2); assert.ok(W === 374 && H === 632, `SE — выбора нет, высота целиком: ${W}×${H}`);
+    G.storage.settings.density = 'fine'; [W, H, sc] = size(414, 862, 2); assert.ok(W === 414 && H === 862 && sc === 1, `выбор «мелко» уважается: ${W}×${H}`);
+  } finally {
+    [wrap.clientWidth, wrap.clientHeight, globalThis.devicePixelRatio] = keep; if (keep[3]) G.storage.settings.density = keep[3]; else delete G.storage.settings.density; G.screen.resize();
+  }
+});
 console.log(`ИТОГ регрессий: ✔ ${passed}  ✘ ${failed}`);
 process.exitCode = failed ? 1 : 0;

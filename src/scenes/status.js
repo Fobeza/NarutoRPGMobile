@@ -37,7 +37,9 @@ G.scenes.register('status', () => {
       F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(`Неделя ${g.week()}`) });
       S.draw(ctx, `Неделя ${g.week()}`, W - 14, y + 11, { align: 'right', color: C.inkDim });
       const wt = G.life.WEATHER[G.life.weather()];
-      S.draw(ctx, `${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
+      // узкий экран («крупно»): время суток не влезает — без него, а не с обрезанным «У…»
+      const when = [`${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, `${g.dayName()}, день ${v.day} · ${g.clock()}`].find((t) => S.measure(t) <= W - 90);
+      S.draw(ctx, when || `${g.dayName()}, день ${v.day} · ${g.clock()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
       S.draw(ctx, wt.icon + ' ' + wt.name, W - 14, y + 28, { align: 'right', color: '#3a62a0' });
       y += 48;
       // нужды: бамбуковые шкалы
@@ -57,7 +59,8 @@ G.scenes.register('status', () => {
       if (!G.hero.ready()) S.draw(ctx, 'Вступительный тест ещё не пройден', W / 2, y + 12, { align: 'center', color: C.inkDim });
       else G.STATS.forEach((st, i) => {
         const cw = Math.floor((W - 24) / 2), x = 12 + (i % 2) * cw, yy = y + 8 + Math.floor(i / 2) * 15;
-        S.draw(ctx, st.id === 'ctrl' ? 'Контроль' : st.name, x, yy, { color: C.ink, maxW: cw - 30 });
+        const sn = st.id === 'ctrl' ? 'Контроль' : st.name;
+        S.draw(ctx, S.measure(sn) > cw - 30 && st.id === 'end' ? 'Выносл.' : sn, x, yy, { color: C.ink, maxW: cw - 30 });
         F.draw(ctx, String(G.hero.stat(st.id)), x + cw - 12, yy - 2, { align: 'right', color: C.redDark });
       });
       y += rows * 15 + 18;

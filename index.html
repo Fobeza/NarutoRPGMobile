@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.0.0', version: '3d4a4f24', date: '2026-10-21 03:52', debug: false };
+const BUILD = { release: '2.0.0', version: '77dea80e', date: '2026-10-21 04:48', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -245,7 +245,17 @@ G.screen = {
   // Плотность пикселей: целевая внутренняя ширина. Масштаб целый в ФИЗИЧЕСКИХ пикселях
   // (dpr 3 на iPhone), поэтому пиксели остаются чёткими при любой ширине.
   DENSITY: [{ id: 'big', name: 'КРУПНО', w: 192 }, { id: 'mid', name: 'СРЕДНЕ', w: 240 }, { id: 'fine', name: 'МЕЛКО', w: 300 }],
-  density() { const id = (G.storage && G.storage.settings.density) || 'fine'; return this.DENSITY.find((d) => d.id === id) || this.DENSITY[2]; },
+  density() {
+    const id = G.storage && G.storage.settings.density;
+    return id ? this.DENSITY.find((d) => d.id === id) || this.DENSITY[2] : this.autoDensity();
+  },
+  // Игрок ещё не выбирал: самая мелкая плотность, где точка не меньше 1.25 CSS-пикселя — иначе текст мельче ~9 CSS
+  // (iPhone XR/11 при «мелко»: 414 точек по 1 CSS → «крупно», 207 по 2). Где выбора нет (SE, 320 точек) — как было.
+  autoDensity() {
+    const opts = this.densityOptions();
+    for (let i = opts.length - 1; i >= 0; i--) { const g = this.geometry(opts[i].w); if (g.scale / g.dpr >= 1.25) return opts[i]; }
+    return opts[opts.length - 1] || this.DENSITY[2];
+  },
   densityOptions() {
     const seen = new Set();
     return this.DENSITY.filter((d) => { const g = this.geometry(d.w), key = g.w + ':' + g.h; if (seen.has(key)) return false; seen.add(key); return true; });
@@ -15732,6 +15742,7 @@ G.scenes.register('mapview', (world) => {
   const T = G.CONFIG.TILE;
   const K = G.world.konoha();
   const FILTERS = ['Все', 'Задания', 'Лавки', 'Тренировки', 'Друзья'];
+  const SHORT = { 'Задания': ['Задания', 'Задан.', 'Зад.'], 'Тренировки': ['Тренировки', 'Трениров.', 'Трен.'], 'Друзья': ['Друзья', 'Друз.'] };
   const TOP = 72, BOT = 46, ZOOMS=[1,2,4,8];
 
   // ---------- места ----------
@@ -16088,7 +16099,8 @@ G.scenes.register('mapview', (world) => {
       FILTERS.forEach((name, i) => {
         const sel = i === this.filter, x = Math.round(4 + i * fw);
         U.button(ctx, x, fy + 6, Math.round(fw) - 3, 22, '', sel ? 'sel' : 'normal');
-        let n = name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
+        // сокращения по правилам (не на гласную): первое, что влезает; иначе — обрезка, как раньше
+        let n = (SHORT[name] || [name]).find((t) => F.small.measure(t) <= fw - 8) || name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
         F.small.draw(ctx, n, x + (Math.round(fw) - 3) / 2, fy + 12, { align: 'center', color: sel ? '#f8eed0' : '#e4d4a8', shadow: C.woodEdge });
       });
       const tip = ['Двигай карту пальцем · + приближает', 'Двигай пальцем · + ближе'].find((t) => F.small.measure(t) <= W - 8) || 'Двигай пальцем';
@@ -17025,7 +17037,9 @@ G.scenes.register('status', () => {
       F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(`Неделя ${g.week()}`) });
       S.draw(ctx, `Неделя ${g.week()}`, W - 14, y + 11, { align: 'right', color: C.inkDim });
       const wt = G.life.WEATHER[G.life.weather()];
-      S.draw(ctx, `${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
+      // узкий экран («крупно»): время суток не влезает — без него, а не с обрезанным «У…»
+      const when = [`${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, `${g.dayName()}, день ${v.day} · ${g.clock()}`].find((t) => S.measure(t) <= W - 90);
+      S.draw(ctx, when || `${g.dayName()}, день ${v.day} · ${g.clock()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
       S.draw(ctx, wt.icon + ' ' + wt.name, W - 14, y + 28, { align: 'right', color: '#3a62a0' });
       y += 48;
       // нужды: бамбуковые шкалы
@@ -17045,7 +17059,8 @@ G.scenes.register('status', () => {
       if (!G.hero.ready()) S.draw(ctx, 'Вступительный тест ещё не пройден', W / 2, y + 12, { align: 'center', color: C.inkDim });
       else G.STATS.forEach((st, i) => {
         const cw = Math.floor((W - 24) / 2), x = 12 + (i % 2) * cw, yy = y + 8 + Math.floor(i / 2) * 15;
-        S.draw(ctx, st.id === 'ctrl' ? 'Контроль' : st.name, x, yy, { color: C.ink, maxW: cw - 30 });
+        const sn = st.id === 'ctrl' ? 'Контроль' : st.name;
+        S.draw(ctx, S.measure(sn) > cw - 30 && st.id === 'end' ? 'Выносл.' : sn, x, yy, { color: C.ink, maxW: cw - 30 });
         F.draw(ctx, String(G.hero.stat(st.id)), x + cw - 12, yy - 2, { align: 'right', color: C.redDark });
       });
       y += rows * 15 + 18;

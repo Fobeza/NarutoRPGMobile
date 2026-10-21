@@ -19,7 +19,17 @@ G.screen = {
   // Плотность пикселей: целевая внутренняя ширина. Масштаб целый в ФИЗИЧЕСКИХ пикселях
   // (dpr 3 на iPhone), поэтому пиксели остаются чёткими при любой ширине.
   DENSITY: [{ id: 'big', name: 'КРУПНО', w: 192 }, { id: 'mid', name: 'СРЕДНЕ', w: 240 }, { id: 'fine', name: 'МЕЛКО', w: 300 }],
-  density() { const id = (G.storage && G.storage.settings.density) || 'fine'; return this.DENSITY.find((d) => d.id === id) || this.DENSITY[2]; },
+  density() {
+    const id = G.storage && G.storage.settings.density;
+    return id ? this.DENSITY.find((d) => d.id === id) || this.DENSITY[2] : this.autoDensity();
+  },
+  // Игрок ещё не выбирал: самая мелкая плотность, где точка не меньше 1.25 CSS-пикселя — иначе текст мельче ~9 CSS
+  // (iPhone XR/11 при «мелко»: 414 точек по 1 CSS → «крупно», 207 по 2). Где выбора нет (SE, 320 точек) — как было.
+  autoDensity() {
+    const opts = this.densityOptions();
+    for (let i = opts.length - 1; i >= 0; i--) { const g = this.geometry(opts[i].w); if (g.scale / g.dpr >= 1.25) return opts[i]; }
+    return opts[opts.length - 1] || this.DENSITY[2];
+  },
   densityOptions() {
     const seen = new Set();
     return this.DENSITY.filter((d) => { const g = this.geometry(d.w), key = g.w + ':' + g.h; if (seen.has(key)) return false; seen.add(key); return true; });

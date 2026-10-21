@@ -5,6 +5,7 @@ G.scenes.register('mapview', (world) => {
   const T = G.CONFIG.TILE;
   const K = G.world.konoha();
   const FILTERS = ['Все', 'Задания', 'Лавки', 'Тренировки', 'Друзья'];
+  const SHORT = { 'Задания': ['Задания', 'Задан.', 'Зад.'], 'Тренировки': ['Тренировки', 'Трениров.', 'Трен.'], 'Друзья': ['Друзья', 'Друз.'] };
   const TOP = 72, BOT = 46, ZOOMS=[1,2,4,8];
 
   // ---------- места ----------
@@ -361,7 +362,8 @@ G.scenes.register('mapview', (world) => {
       FILTERS.forEach((name, i) => {
         const sel = i === this.filter, x = Math.round(4 + i * fw);
         U.button(ctx, x, fy + 6, Math.round(fw) - 3, 22, '', sel ? 'sel' : 'normal');
-        let n = name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
+        // сокращения по правилам (не на гласную): первое, что влезает; иначе — обрезка, как раньше
+        let n = (SHORT[name] || [name]).find((t) => F.small.measure(t) <= fw - 8) || name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
         F.small.draw(ctx, n, x + (Math.round(fw) - 3) / 2, fy + 12, { align: 'center', color: sel ? '#f8eed0' : '#e4d4a8', shadow: C.woodEdge });
       });
       const tip = ['Двигай карту пальцем · + приближает', 'Двигай пальцем · + ближе'].find((t) => F.small.measure(t) <= W - 8) || 'Двигай пальцем';
