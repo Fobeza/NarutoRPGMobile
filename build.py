@@ -2,7 +2,7 @@
 """
 Сборка игры «Воля Огня» в один HTML-файл.
 
-    python3 build.py           → index.html + sw.js (в корне, это и есть сайт) + build/map_editor.html
+    python3 build.py           → index.html + sw.js + map-editor.html (в корне, это и есть сайт) + build/map_editor.html (служебный)
     python3 build.py --debug   → то же, но с включённым debug-режимом по умолчанию
 
 Исходники лежат в src/. Порядок подключения JS задаётся списком JS_FILES.
