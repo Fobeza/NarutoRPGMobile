@@ -3,16 +3,17 @@ G.scenes.register('status', () => {
   const FRIENDS = Object.keys(G.FRIENDS);
   let scroll = 0;
   let buffer = null;
+  const header=()=>G.touch.header();
   const compact = () => G.screen.W < 260;
   const footer = () => Math.max(24,Math.ceil(44/(G.screen.scale||1)))+4;
   const contentH = () => {
     const skills=(G.state.hero.skills||[]).map(id=>G.SKILLS.find(s=>s.id===id)?.name).filter(Boolean).join(', ')||'—';
     const extra=Math.max(0,G.font.small.wrap('Навыки: '+skills,G.screen.W-24).length-1)*12;
-    return Math.max(G.screen.H-footer(),330+(compact()?60:0)+extra+Math.ceil(FRIENDS.filter(id=>G.state.flags['met_'+id]).length/2)*16);
+    return Math.max(G.screen.H-footer(),330+header().height-20+(compact()?60:0)+extra+Math.ceil(FRIENDS.filter(id=>G.state.flags['met_'+id]).length/2)*16);
   };
   const maxScroll = () => Math.max(0, contentH() - G.screen.H + footer());
   return {
-    name: 'status',
+    name: 'status',touch(){return {back:true,roomyBack:true};},
     layout() { return {footer:footer(),maxScroll:maxScroll(),scroll,gaugeWidth:compact()?G.screen.W-28:G.screen.W-180}; },
     update(dt) {
       const I = G.input;
@@ -29,19 +30,19 @@ G.scenes.register('status', () => {
       const c = buffer;
       this.drawContent(c.getContext('2d'), contentH());
       U.backdrop(ctx);
-      ctx.save(); ctx.beginPath(); ctx.rect(0, 20, W, H - 20 - footer()); ctx.clip(); ctx.drawImage(c, 0, -scroll); ctx.restore();
-      U.title(ctx, 'СТАТУС', W / 2, 3, 80);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, header().height, W, H - header().height - footer()); ctx.clip(); ctx.drawImage(c, 0, -scroll); ctx.restore();
+      U.title(ctx, 'СТАТУС', header().titleX, header().titleY, 80);
       if(maxScroll()>0){
         U.button(ctx,4,H-footer()+2,(W-12)/2,footer()-4,'▲ Выше',scroll>0?'normal':'dis');
         U.button(ctx,W/2+2,H-footer()+2,(W-12)/2,footer()-4,'▼ Ниже',scroll<maxScroll()?'normal':'dis');
-        U.scrollbar(ctx,W-5,24,H-24-footer(),scroll/maxScroll(),Math.min(1,(H-20-footer())/(contentH()-20)));
+        U.scrollbar(ctx,W-5,header().height+4,H-header().height-4-footer(),scroll/maxScroll(),Math.min(1,(H-header().height-footer())/(contentH()-header().height)));
       }else G.font.small.draw(ctx,'Все сведения',W/2,H-footer()/2-4,{align:'center',color:U.C.paperHi});
     },
     drawContent(ctx, H) {
       const W = G.screen.W, F = G.font, S = G.font.small, U = G.ui, C = U.C, g = G.game, v = g.v;
       U.backdrop(ctx);
-      U.title(ctx, 'СТАТУС', W / 2, 3, 80);
-      let y = 20;
+      U.title(ctx, 'СТАТУС', header().titleX, header().titleY, 80);
+      let y = header().height;
       // герой, неделя, дата и погода
       U.panel(ctx, 4, y, W - 8, 44, 'frame');
       F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(`Неделя ${g.week()}`) });
