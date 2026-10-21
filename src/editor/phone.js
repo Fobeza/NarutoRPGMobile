@@ -31,7 +31,7 @@ function valid(v){
  }
  return clean;
 }
-function sprite(o){return o.kind==='building'?G.houseArt.sprite(o.id):(G.villageArt.sprite(o.id)||G.tiles.object(o.id));}
+function sprite(o){return o.kind==='building'?G.houseArt.sprite(o.id):(G.editorArt.sprite(o.id)||G.tiles.object(o.id));}
 function bounds(o){const s=sprite(o),a=o.kind==='building'?G.houseArt.spec(o.id):null;
  const k=o.scale??1;return {x:o.x*16+(a?0:8)+s.ox*k,y:o.y*16+(a?0:16)+s.oy*k,w:(s.w||s.img.lw)*k,h:(s.h||s.img.lh)*k};}
 function footprint(o){const b=bounds(o),x=Math.floor(b.x/16),y=Math.floor(b.y/16);return{x,y,w:Math.ceil((b.x+b.w)/16)-x,h:Math.ceil((b.y+b.h)/16)-y};}

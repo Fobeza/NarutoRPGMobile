@@ -1,0 +1,398 @@
+{
+  "vwall_h": {
+    "file": "vwall_h.webp",
+    "status": "integrated-editor",
+    "source_sha256": "8bb73ff8e4d0493c2d886d5d1d08946df925c5507987fe1c88118a40e505819b",
+    "cropped_source_size": [
+      1660,
+      502
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "19438454a31ae740bf12493128f23e8f8801186dfdbf4e8e3fada2914e2c93b3"
+  },
+  "vwall_v": {
+    "file": "vwall_v.webp",
+    "status": "integrated-editor",
+    "source_sha256": "67b6a3aa5ebefada94e6187359930b468a7968f55606f46311a074b1f553b242",
+    "cropped_source_size": [
+      394,
+      1509
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "5c917f2b20cbb29b7463339d665ae7d5e6b99c5fff355320751d9137b187b3ca"
+  },
+  "vwall_corner": {
+    "file": "vwall_corner.webp",
+    "status": "integrated-editor",
+    "source_sha256": "b8fbc228a15fcf80de6f83a7a857e79117c232b0b53edd3450f304e9433fc389",
+    "cropped_source_size": [
+      1040,
+      1092
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "9c20065594259b20bf9874c40b619c49af73b66c74cab1847e30eaa80df5ff91"
+  },
+  "vwall_end": {
+    "file": "vwall_end.webp",
+    "status": "integrated-editor",
+    "source_sha256": "51c13fe73238877c8c7d008bf9cb22c22faad5813cb7b4f0925f7dc6b2eaca0f",
+    "cropped_source_size": [
+      882,
+      966
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "8c3231bc500e8f089bd7d24fe0028810341fbdec590d4a537124e3a2ef53a51f"
+  },
+  "vgate": {
+    "file": "vgate.webp",
+    "status": "integrated-editor",
+    "source_sha256": "1b98e5afc1eed0153eab9dc546d7bf2c394ea6b58b4eb0d52d29c26ec3fd0ff6",
+    "cropped_source_size": [
+      1284,
+      740
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "8633f5fe56a0015192c73859e1cce3006367489ed8348dcf3c8ca53e028cb59e"
+  },
+  "raintank": {
+    "file": "raintank.webp",
+    "status": "integrated-editor",
+    "source_sha256": "6128757862a8f82f3f98f738829bc47edf2459ce38b354df7034a791626a211b",
+    "cropped_source_size": [
+      885,
+      1139
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "9f9976ab9c35d9f4e61e7b79dbc8076ceacab09a1a70dcccb92f6656dcd2e63e"
+  },
+  "shrine": {
+    "file": "shrine.webp",
+    "status": "integrated-editor",
+    "source_sha256": "02e33794bf7d019352e34dc65190e4e3f525e9cda492f09985ec8f60851c0423",
+    "cropped_source_size": [
+      899,
+      1084
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "5597f6e7ba8f31a016a5b8f515960b4668b52d05a51a639ecf0568397244c234"
+  },
+  "hedge": {
+    "file": "hedge.webp",
+    "status": "integrated-editor",
+    "source_sha256": "5a1fb2efe5ee54bb66058e89db2cae0b74a43511391424f95736b3c42c139700",
+    "cropped_source_size": [
+      1951,
+      415
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "c08b82c6c4f7782b0330becf0e2002e560e0590d1a959f869e3941a725ce2c21"
+  },
+  "bamboofence": {
+    "file": "bamboofence.webp",
+    "status": "integrated-editor",
+    "source_sha256": "05a4d32c8a18a6adb8469992611ba59ccc4a2bf10b24cb558a3ec88c48561a50",
+    "cropped_source_size": [
+      1587,
+      364
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "3813773bb06037887b5ad796398b2953689d463e7fcd34f28ae2daa55a03076b"
+  },
+  "sacks": {
+    "file": "sacks.webp",
+    "status": "integrated-editor",
+    "source_sha256": "ed92d6239b6a3189cb8d47abd6f72193ce22722d90373a72107bc1ec38e86a35",
+    "cropped_source_size": [
+      1024,
+      1041
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "82bdb68184831b4e92a7d1d8058b930647ae5ef6a2065cead91a8062cb565019"
+  },
+  "redlantern": {
+    "file": "redlantern.webp",
+    "status": "integrated-editor",
+    "source_sha256": "089918081e05c96e3f298752e40fb598dbd1c4e784c37bf9ce5631d40d4e068f",
+    "cropped_source_size": [
+      555,
+      1207
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "140e6853907f3e5b33d10265ff94a1a15ebf1d7529297903985528506b735485"
+  },
+  "banner": {
+    "file": "banner.webp",
+    "status": "integrated-editor",
+    "source_sha256": "a40e59d90184e43af11e484f536ccd7f68fc79f9e429dd35b339184d37c3e0c2",
+    "cropped_source_size": [
+      600,
+      1082
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "f3621e9cf794968f845f5c67e5e272654131c2d30222dfba8a7ab4c57e9ede57"
+  },
+  "bicycle": {
+    "file": "bicycle.webp",
+    "status": "integrated-editor",
+    "source_sha256": "6e408c17e4fa053e8d59bc6975a989c529341a5cd9aa1b6040cfca1bfafcff10",
+    "cropped_source_size": [
+      1073,
+      510
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "b1b265e16adcea5b6c962a445c6fa0e84463ad5c181fcdadbcccd31ecbdb27a3"
+  },
+  "tallgrass": {
+    "file": "tallgrass.webp",
+    "status": "integrated-editor",
+    "source_sha256": "94f8dccab972e764dbd6e444f4aea6cf7bd82cd90919aad6c1ff66aca2e4be62",
+    "cropped_source_size": [
+      903,
+      802
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "d0f2b81e8cf7e7bc9054c6dbfe4ca352693acd6faa4b34e965c2324139577f2c"
+  },
+  "flowerbed": {
+    "file": "flowerbed.webp",
+    "status": "integrated-editor",
+    "source_sha256": "3894d70b6fad4637e470f6b4ee23367ab0bebe6116c306f16558b7d7f0f02f52",
+    "cropped_source_size": [
+      1128,
+      669
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "a9a998b80bbfafdd640f623564acf27fbadcb384edfed0fe2bac5cdab6b470cc"
+  },
+  "lavender": {
+    "file": "lavender.webp",
+    "status": "integrated-editor",
+    "source_sha256": "50830a48dc0bc313a6aad4b645446b675d7fceb41009d3395ec4647f726e35ea",
+    "cropped_source_size": [
+      941,
+      920
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "84254a554697c3485571211125490cae526ce15d956de03b015fa090842e64a2"
+  },
+  "sunflower": {
+    "file": "sunflower.webp",
+    "status": "integrated-editor",
+    "source_sha256": "5ea1f8c8ec1d3a45f677a4ba9070266eaa2f8f628c10b0e6092135a478ce7253",
+    "cropped_source_size": [
+      921,
+      1103
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "7e063889c72f79b56097d7c7622b42bae2d3c3ca16db348ecde54c27ebed9148"
+  },
+  "shrub": {
+    "file": "shrub.webp",
+    "status": "integrated-editor",
+    "source_sha256": "3a3c37466f8904269ab10c04a4e7370356b2e70f067d0af224cb20d89c02c3f7",
+    "cropped_source_size": [
+      967,
+      907
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "ca077266c12adf3822392157e891a1b88bebd82e7c2baf7816cb02cba4a1fb71"
+  },
+  "fern": {
+    "file": "fern.webp",
+    "status": "integrated-editor",
+    "source_sha256": "faeea1e131ef069dec795536b79605128d41fed6b37bace579be210f06716ac9",
+    "cropped_source_size": [
+      1013,
+      889
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "114895eaf0553a9d32a3d33e09ba568442149f836ebb77bd88df5325e32ad507"
+  },
+  "mushroom": {
+    "file": "mushroom.webp",
+    "status": "integrated-editor",
+    "source_sha256": "4340c2ccd987494f18a511fc001e5b30914169d62025bcb7901939ac0e80a342",
+    "cropped_source_size": [
+      861,
+      868
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "cf6ac93e1d7acbf5d16b9c7cb447d9a6836e41692feb1a7a92eabdfb487ca0e7"
+  },
+  "pebbles": {
+    "file": "pebbles.webp",
+    "status": "integrated-editor",
+    "source_sha256": "a6e5be54a7ea0138fea86954291744ae0d8eda91efa5d7ba97ea983d894686ea",
+    "cropped_source_size": [
+      849,
+      810
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "798ace76924aee4500be664bfa93253068ea24b99bd1cb64b952bb35265c4c9d"
+  },
+  "rock3": {
+    "file": "rock3.webp",
+    "status": "integrated-editor",
+    "source_sha256": "d2b2519fdf6530da3052a3a2e0143d1bb8a2dc7b7c14f9fad2e1936d92f5ee87",
+    "cropped_source_size": [
+      1117,
+      955
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "12138297847d14ffe0fb9ac29b1bc1c9878aef9e702a671fb37d71f1d7db865c"
+  },
+  "reeds": {
+    "file": "reeds.webp",
+    "status": "integrated-editor",
+    "source_sha256": "0a18babbdd2a0f999a773797f0f9756ccc18f8f64329d27308126c215f9c2a07",
+    "cropped_source_size": [
+      903,
+      1036
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "4043ddb0693454ca7b01719d645b28995300a631678861b51b06f657ab9e9fff"
+  },
+  "leafpile": {
+    "file": "leafpile.webp",
+    "status": "integrated-editor",
+    "source_sha256": "370b6632301a45c65ab9c21a8f94d6f1bc5e65be6b18cfc1e8cdb9edacd6795b",
+    "cropped_source_size": [
+      1109,
+      826
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "ed89e6da702622e545be560f04b9c40c64924012cbc42b49718fea0d1881dd96"
+  },
+  "stall": {
+    "file": "stall.webp",
+    "status": "integrated-editor",
+    "source_sha256": "5df1d6f1fe22da5b1db3261e84b22d7d224cfe28e82ea6bfc3dd2dafca4ef81b",
+    "cropped_source_size": [
+      986,
+      940
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "5cfedc5572c21accfdd37bb9fbf9421de8ea321bdf075a83767fe4018ae2a71a"
+  },
+  "stonelamp": {
+    "file": "stonelamp.webp",
+    "status": "integrated-editor",
+    "source_sha256": "9396cc0b93d5afd2f7fa93f9e05fbcf778215c4669a6ecd882b8a260ff495fdd",
+    "cropped_source_size": [
+      745,
+      970
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "921c0a5140955eba00c6ffab7fcd434550b53cd6d74568e9c541c43b186166d1"
+  },
+  "planter": {
+    "file": "planter.webp",
+    "status": "integrated-editor",
+    "source_sha256": "6058cba19c446f93fad25e23c70d9d1891302d866fb3b1b9de02c0888aaa5933",
+    "cropped_source_size": [
+      1000,
+      1069
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "636e9516f5bb266e41f82a782abae7c313bfc95c3e41df3c0ff028f097b84f0b"
+  },
+  "flowerbox": {
+    "file": "flowerbox.webp",
+    "status": "integrated-editor",
+    "source_sha256": "63100e10ef49b251f1eddd8afc933efc9b3f1b94b392010fe42d6f43273a2157",
+    "cropped_source_size": [
+      1423,
+      454
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "fbb94df5d57fddd41cc61129e0bd0430373b543e5de32555198f2674dd736ad8"
+  },
+  "swing": {
+    "file": "swing.webp",
+    "status": "integrated-editor",
+    "source_sha256": "6fcb95b74f9f4597209c780b2d9b004317dfb1088cd3b417dd0a647106897179",
+    "cropped_source_size": [
+      1224,
+      850
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "2b137305e087ee0353c4c04006e0d9a9e4965c5c6a36be6bedd64971d4cf9039"
+  },
+  "log": {
+    "file": "log.webp",
+    "status": "integrated-editor",
+    "source_sha256": "f8448b2c43273b287cc5b61bdf8b93b1fd87a3f4ef1eb22accfba8a7cf4105aa",
+    "cropped_source_size": [
+      1153,
+      417
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "17bee58f5a8b01d207d418bac3af35c6179a8d407f2719649974ab77f98e6620"
+  },
+  "stump": {
+    "file": "stump.webp",
+    "status": "integrated-editor",
+    "source_sha256": "102c767ca9d8441c45150714cc289ece49f2cf14576a167e207757f9d36701ac",
+    "cropped_source_size": [
+      1093,
+      1110
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "2199ce7312523a6ed7d2bf9bc5d432296e7a51fc1477d653cd4c1f27e60d4a5a"
+  },
+  "ginkgo": {
+    "file": "ginkgo.webp",
+    "status": "integrated-editor",
+    "source_sha256": "74e989ffb855bbd998cf0fe675f4c8421a4e1fb5c89242c5e7136c6b81cc8f94",
+    "cropped_source_size": [
+      1081,
+      994
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "33f20c36f8dfdd18d9d1ecf516bdb04b91bcae67ba86a864ad44408545b513b0"
+  },
+  "bamboo": {
+    "file": "bamboo.webp",
+    "status": "integrated-editor",
+    "source_sha256": "5a6138fa89552d29d9ebd73ac1814c681ec496a704a7b50a271ef9fc77af5014",
+    "cropped_source_size": [
+      886,
+      913
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "f4990cf18be56fd18918e2243db222c9344965f5c071510ae8b3483f9f92339f"
+  },
+  "laundry": {
+    "file": "laundry.webp",
+    "status": "integrated-editor",
+    "source_sha256": "71dfa1c42b87af69f41ab9e3698514cee70175ebb7ae782ad588c1e0a0f3aa4c",
+    "cropped_source_size": [
+      1223,
+      753
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "d3604b1eb04a9057e870a0aa3abe0911206169ff5b2107bf25f0f2023654a467"
+  },
+  "woodpile": {
+    "file": "woodpile.webp",
+    "status": "integrated-editor",
+    "source_sha256": "20cb160a5ef0189afd53f7dbfba249efa97cf0bc53f08362bbeb2b4b8faca7c0",
+    "cropped_source_size": [
+      887,
+      699
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "b3256ebe654a7701571a3379f245000df43519ceed4e39b15e6e4d66b60907e6"
+  },
+  "pots": {
+    "file": "pots.webp",
+    "status": "integrated-editor",
+    "source_sha256": "5db6e07e497ba6c9852d65c2a2936349ec0b24a692eea3041b076212e5a65ddd",
+    "cropped_source_size": [
+      928,
+      967
+    ],
+    "camera": "high-overhead-topdown",
+    "master_sha256": "44b40efd4111f5dc8978fa8ca5fff882cbbd3a6bc8ed70d90d66beeb69dfa835"
+  }
+}
