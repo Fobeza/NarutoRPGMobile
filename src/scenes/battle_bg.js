@@ -1,6 +1,6 @@
 // Фоны арен V9: небо, дальние планы, дымка и земля — кодом, со светом сверху-слева и дизерными переходами.
 // Фон запекается один раз на размер арены (кэш по арене и размеру); облака плывут поверх каждый кадр.
-//   G.battleBg.get(terrain, W, H) → холст W×H (лог. px); земля начинается на H − 14
+//   G.battleBg.get(terrain, W, H, fd) → холст W×H (лог. px); земля начинается на H − 14 − fd (fd — передний план высокой арены)
 //   G.battleBg.clouds(ctx, terrain, x0, y0, W, H, t) — облака с объёмом
 //   G.battleBg.obj(kind, dark) → { img, ox, oy } — предметы на арене (дерево, куст, камень, брёвна, вода)
 G.battleBg = (() => {
@@ -223,11 +223,11 @@ G.battleBg = (() => {
     },
   };
 
-  function get(terrain, W, H) {
-    const t = DRAW[terrain] ? terrain : 'field', key = t + ':' + W + 'x' + H;
+  function get(terrain, W, H, fd = 0) {
+    const t = DRAW[terrain] ? terrain : 'field', key = t + ':' + W + 'x' + H + ':' + fd;
     if (cache[key]) return cache[key];
     const c = G.gfx.canvas(W, H);
-    DRAW[t](c, W, H, H - 14, clamp(H / 190, 1, 2));   // s — растяжка высоты пейзажа под высокую арену
+    DRAW[t](c, W, H, H - 14 - fd, clamp((H - fd) / 190, 1, 2));   // s — растяжка высоты пейзажа под высокую арену
     for (const k of Object.keys(cache)) if (k.startsWith(t + ':')) delete cache[k];   // держим один размер на арену
     return (cache[key] = c);
   }

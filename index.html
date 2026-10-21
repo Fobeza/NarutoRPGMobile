@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.0.0', version: 'a9124de0', date: '2026-10-20 20:07', debug: false };
+const BUILD = { release: '2.0.0', version: 'ca4fb3c2', date: '2026-10-21 02:42', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -16065,7 +16065,10 @@ G.scenes.register('mapview', (world) => {
       U.panel(ctx, 0, 0, W, TOP, 'plank');
       F.draw(ctx,'КАРТА',W/2,9,{align:'center',color:'#f2e4c5'});
       F.small.draw(ctx,'×'+z,W-8,9,{align:'right',color:'#f4e4bc'});
-      ['-','+','К себе','Знаки'].forEach((label,i)=>{const bw=(W-8)/4,x=4+i*bw;U.button(ctx,x,34,bw-3,26,label,'normal');});
+      // узкий экран («крупно», ~196 точек): подпись, которая не влезает крупным шрифтом, — мелким, как у фильтров
+      ['-','+','К себе','Знаки'].forEach((label,i)=>{const bw=(W-8)/4,x=4+i*bw,big=F.measure(label)<=bw-9;
+        U.button(ctx,x,34,bw-3,26,big?label:'','normal');
+        if(!big)F.small.draw(ctx,label,x+(bw-3)/2,34+Math.round((26-F.small.CAP)/2),{align:'center',color:'#f8eed0',shadow:'#160c06',maxW:bw-7});});
 
       // строка-подсказка о месте под курсором
       const hv = this.hover();
@@ -16088,7 +16091,8 @@ G.scenes.register('mapview', (world) => {
         let n = name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
         F.small.draw(ctx, n, x + (Math.round(fw) - 3) / 2, fy + 12, { align: 'center', color: sel ? '#f8eed0' : '#e4d4a8', shadow: C.woodEdge });
       });
-      F.small.draw(ctx, 'Двигай карту пальцем · + приближает', W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
+      const tip = ['Двигай карту пальцем · + приближает', 'Двигай пальцем · + ближе'].find((t) => F.small.measure(t) <= W - 8) || 'Двигай пальцем';
+      F.small.draw(ctx, tip, W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
 
       // карточка места
       if (this.card) this.drawCard(ctx);
@@ -16284,8 +16288,12 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const icon = l.cardH < 56 ? 36 : 48;
         G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - icon) / 2), cy + 1, icon, icon);
         if (lk) { ctx.globalAlpha = .5; ctx.fillStyle = '#2a1e14'; ctx.fillRect(cx + 2, cy + 2, l.cardW - 7, l.cardH - 7); ctx.globalAlpha = 1; }
-        F.small.draw(ctx, lk ? '—' : it.price + 'р', cx + l.cardW - 7, cy + l.cardH - 17,
-          { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', outline: C.woodEdge });
+        // ценник на плашке: «рё», как во всей лавке; на узкой карточке — короткое «р»
+        const tag = lk ? '—' : F.small.measure(it.price + ' рё') + 10 <= l.cardW - 7 ? it.price + ' рё' : it.price + 'р';
+        const tw = F.small.measure(tag) + 8, tx = cx + l.cardW - 6 - tw, ty = cy + l.cardH - 19;
+        U.panel(ctx, tx, ty, tw, 13, 'night');
+        F.small.draw(ctx, tag, tx + tw - 4, ty + 2,
+          { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', shadow: '#160c06' });
       }
       const pages = Math.ceil(items.length / l.per);
       if (pages > 1) {
@@ -17363,7 +17371,7 @@ G.battleAi = {
 // ===== scenes/battle_bg.js =====
 // Фоны арен V9: небо, дальние планы, дымка и земля — кодом, со светом сверху-слева и дизерными переходами.
 // Фон запекается один раз на размер арены (кэш по арене и размеру); облака плывут поверх каждый кадр.
-//   G.battleBg.get(terrain, W, H) → холст W×H (лог. px); земля начинается на H − 14
+//   G.battleBg.get(terrain, W, H, fd) → холст W×H (лог. px); земля начинается на H − 14 − fd (fd — передний план высокой арены)
 //   G.battleBg.clouds(ctx, terrain, x0, y0, W, H, t) — облака с объёмом
 //   G.battleBg.obj(kind, dark) → { img, ox, oy } — предметы на арене (дерево, куст, камень, брёвна, вода)
 G.battleBg = (() => {
@@ -17586,11 +17594,11 @@ G.battleBg = (() => {
     },
   };
 
-  function get(terrain, W, H) {
-    const t = DRAW[terrain] ? terrain : 'field', key = t + ':' + W + 'x' + H;
+  function get(terrain, W, H, fd = 0) {
+    const t = DRAW[terrain] ? terrain : 'field', key = t + ':' + W + 'x' + H + ':' + fd;
     if (cache[key]) return cache[key];
     const c = G.gfx.canvas(W, H);
-    DRAW[t](c, W, H, H - 14, clamp(H / 190, 1, 2));   // s — растяжка высоты пейзажа под высокую арену
+    DRAW[t](c, W, H, H - 14 - fd, clamp((H - fd) / 190, 1, 2));   // s — растяжка высоты пейзажа под высокую арену
     for (const k of Object.keys(cache)) if (k.startsWith(t + ':')) delete cache[k];   // держим один размер на арену
     return (cache[key] = c);
   }
@@ -17758,7 +17766,10 @@ G.scenes.register('battle', (opts, onEnd) => {
     layout.tl = 0; layout.eb = 13; layout.ar = 40;
     const panelH = opts.tacticalUI && G.tacticalGeometry ? G.tacticalGeometry().area - 56 : clamp(Math.round(H * 0.3), 74, 124);
     layout.pn = H - panelH; layout.ms = layout.pn - 27; layout.pb = layout.ms - 29;
-    layout.arH = layout.pb - layout.ar; layout.groundY = layout.ar + layout.arH - 10;
+    layout.arH = layout.pb - layout.ar;
+    // высокая арена (Pro Max, телефоны ×2 при «мелко»): половину высоты сверх 230 отдаём земле под бойцами, а не пустому небу
+    layout.fd = Math.round(clamp(layout.arH - 230, 0, 280) * 0.5);
+    layout.groundY = layout.ar + layout.arH - 10 - layout.fd;
     layout.panelH = panelH;
   }
 
@@ -18718,7 +18729,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     // базовое приближение арены: на широких экранах бойцы крупнее (позиции 0–4 остаются в кадре)
     const bz = clamp((W - 16) / (4 * Math.min(52, Math.floor((W - 48) / 4)) + 70), 1, 1.6), bzy = L.groundY + 6;
     // V9: фон арены запекается один раз (scenes/battle_bg.js), облака с объёмом плывут поверх; фон не приближается
-    ctx.drawImage(G.battleBg.get(opts.terrain || 'field', W, L.arH), 0, L.ar);
+    ctx.drawImage(G.battleBg.get(opts.terrain || 'field', W, L.arH, L.fd), 0, L.ar);
     G.battleBg.clouds(ctx, opts.terrain || 'field', 0, L.ar, W, L.arH, t);
     ctx.save(); if (bz > 1.01) { ctx.translate(W / 2, bzy); ctx.scale(bz, bz); ctx.translate(-W / 2, -bzy); }
     for (let i = 0; i < 5; i++) G.shade.shadow(ctx, X(i), L.groundY + 3, 13, 2, 0.14);

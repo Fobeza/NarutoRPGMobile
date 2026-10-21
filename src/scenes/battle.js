@@ -89,7 +89,10 @@ G.scenes.register('battle', (opts, onEnd) => {
     layout.tl = 0; layout.eb = 13; layout.ar = 40;
     const panelH = opts.tacticalUI && G.tacticalGeometry ? G.tacticalGeometry().area - 56 : clamp(Math.round(H * 0.3), 74, 124);
     layout.pn = H - panelH; layout.ms = layout.pn - 27; layout.pb = layout.ms - 29;
-    layout.arH = layout.pb - layout.ar; layout.groundY = layout.ar + layout.arH - 10;
+    layout.arH = layout.pb - layout.ar;
+    // высокая арена (Pro Max, телефоны ×2 при «мелко»): половину высоты сверх 230 отдаём земле под бойцами, а не пустому небу
+    layout.fd = Math.round(clamp(layout.arH - 230, 0, 280) * 0.5);
+    layout.groundY = layout.ar + layout.arH - 10 - layout.fd;
     layout.panelH = panelH;
   }
 
@@ -1049,7 +1052,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     // базовое приближение арены: на широких экранах бойцы крупнее (позиции 0–4 остаются в кадре)
     const bz = clamp((W - 16) / (4 * Math.min(52, Math.floor((W - 48) / 4)) + 70), 1, 1.6), bzy = L.groundY + 6;
     // V9: фон арены запекается один раз (scenes/battle_bg.js), облака с объёмом плывут поверх; фон не приближается
-    ctx.drawImage(G.battleBg.get(opts.terrain || 'field', W, L.arH), 0, L.ar);
+    ctx.drawImage(G.battleBg.get(opts.terrain || 'field', W, L.arH, L.fd), 0, L.ar);
     G.battleBg.clouds(ctx, opts.terrain || 'field', 0, L.ar, W, L.arH, t);
     ctx.save(); if (bz > 1.01) { ctx.translate(W / 2, bzy); ctx.scale(bz, bz); ctx.translate(-W / 2, -bzy); }
     for (let i = 0; i < 5; i++) G.shade.shadow(ctx, X(i), L.groundY + 3, 13, 2, 0.14);

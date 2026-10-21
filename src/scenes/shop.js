@@ -148,8 +148,12 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const icon = l.cardH < 56 ? 36 : 48;
         G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - icon) / 2), cy + 1, icon, icon);
         if (lk) { ctx.globalAlpha = .5; ctx.fillStyle = '#2a1e14'; ctx.fillRect(cx + 2, cy + 2, l.cardW - 7, l.cardH - 7); ctx.globalAlpha = 1; }
-        F.small.draw(ctx, lk ? '—' : it.price + 'р', cx + l.cardW - 7, cy + l.cardH - 17,
-          { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', outline: C.woodEdge });
+        // ценник на плашке: «рё», как во всей лавке; на узкой карточке — короткое «р»
+        const tag = lk ? '—' : F.small.measure(it.price + ' рё') + 10 <= l.cardW - 7 ? it.price + ' рё' : it.price + 'р';
+        const tw = F.small.measure(tag) + 8, tx = cx + l.cardW - 6 - tw, ty = cy + l.cardH - 19;
+        U.panel(ctx, tx, ty, tw, 13, 'night');
+        F.small.draw(ctx, tag, tx + tw - 4, ty + 2,
+          { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', shadow: '#160c06' });
       }
       const pages = Math.ceil(items.length / l.per);
       if (pages > 1) {

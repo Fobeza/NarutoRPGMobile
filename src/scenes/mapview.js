@@ -338,7 +338,10 @@ G.scenes.register('mapview', (world) => {
       U.panel(ctx, 0, 0, W, TOP, 'plank');
       F.draw(ctx,'КАРТА',W/2,9,{align:'center',color:'#f2e4c5'});
       F.small.draw(ctx,'×'+z,W-8,9,{align:'right',color:'#f4e4bc'});
-      ['-','+','К себе','Знаки'].forEach((label,i)=>{const bw=(W-8)/4,x=4+i*bw;U.button(ctx,x,34,bw-3,26,label,'normal');});
+      // узкий экран («крупно», ~196 точек): подпись, которая не влезает крупным шрифтом, — мелким, как у фильтров
+      ['-','+','К себе','Знаки'].forEach((label,i)=>{const bw=(W-8)/4,x=4+i*bw,big=F.measure(label)<=bw-9;
+        U.button(ctx,x,34,bw-3,26,big?label:'','normal');
+        if(!big)F.small.draw(ctx,label,x+(bw-3)/2,34+Math.round((26-F.small.CAP)/2),{align:'center',color:'#f8eed0',shadow:'#160c06',maxW:bw-7});});
 
       // строка-подсказка о месте под курсором
       const hv = this.hover();
@@ -361,7 +364,8 @@ G.scenes.register('mapview', (world) => {
         let n = name; while (F.small.measure(n) > fw - 8) n = n.slice(0, -2) + '.';
         F.small.draw(ctx, n, x + (Math.round(fw) - 3) / 2, fy + 12, { align: 'center', color: sel ? '#f8eed0' : '#e4d4a8', shadow: C.woodEdge });
       });
-      F.small.draw(ctx, 'Двигай карту пальцем · + приближает', W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
+      const tip = ['Двигай карту пальцем · + приближает', 'Двигай пальцем · + ближе'].find((t) => F.small.measure(t) <= W - 8) || 'Двигай пальцем';
+      F.small.draw(ctx, tip, W / 2, fy + 32, { align: 'center', color: '#c8b48a', maxW: W - 8, shadow: C.woodEdge });
 
       // карточка места
       if (this.card) this.drawCard(ctx);
