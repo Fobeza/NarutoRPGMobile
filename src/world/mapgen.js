@@ -102,8 +102,6 @@ G.mapgen = (() => {
 
     // ---------- 1б. Форма деревни по карте из аниме: круглая стена, горы и лес вокруг, круговые комплексы, озёра ----------
     const SH = layout.shape;
-    const inRect = (x, y) => x >= 0 && y >= 0 && x < W && y < HH;
-    const fillO = (x, y, v) => { if (inRect(x, y)) occ[y * W + x] = v; };
     if (SH) {
       const sup = (x, y, a, b) => Math.pow(Math.abs(x + 0.5 - SH.cx) / a, SH.p) + Math.pow(Math.abs(y + 0.5 - SH.cy) / b, SH.p);
       const wallT = SH.wall || 2.4, mount = new Uint8Array(W * HH);
@@ -193,7 +191,6 @@ G.mapgen = (() => {
 
     // ---------- 3. Здания ----------
     let bseed = 0;
-    const isRoad = (x, y) => O(x, y) === 1 || G.tiles.ROADY.has(m.get(x, y));
 
     function addBuildingTiles(id, tpl, tx, ty, opts = {}) {
       const spr = G.buildgfx.make(id, tpl, opts.seed != null ? opts.seed : ++bseed, opts.art);
@@ -223,20 +220,6 @@ G.mapgen = (() => {
         if (m.inside(dx, dy + 1) && O(dx, dy + 1) !== 1) { if (grassy(dx, dy + 1)) m.set(dx, dy + 1, ID.PATH); setO(dx, dy + 1, 4); setK(dx, dy + 1); }
       }
       return b;
-    }
-
-    // Дорожка от крыльца вниз до дороги (для ключевых зданий)
-    function walkwayDown(x, y, maxLen = 12) {
-      const path = [];
-      for (let i = 0; i < maxLen; i++) {
-        const yy = y + i;
-        if (!m.inside(x, yy)) return;
-        if (isRoad(x, yy) && i > 0) break;
-        if (O(x, yy) === 2 || O(x, yy) === 3) return;
-        path.push(yy);
-        if (i === maxLen - 1) return;
-      }
-      for (const yy of path) { if (grassy(x, yy)) m.set(x, yy, ID.PATH); if (O(x, yy) !== 1) setO(x, yy, 4); }
     }
 
     function place(id, tx, ty, ent = {}) {

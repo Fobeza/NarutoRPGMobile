@@ -1006,7 +1006,6 @@ G.ui = (() => {
   };
   const cache = {};
   const px = (c, x, y, col, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-  const mixHex = (a, b, t) => S.hex(S.mix(S.rgb(a), S.rgb(b), t));
   const tone = (col, k) => S.toneHex(col, k);
 
   // ---------- заготовки материалов ----------

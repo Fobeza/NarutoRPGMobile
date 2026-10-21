@@ -3,7 +3,6 @@
 G.scenes.register('world', (pos) => {
   const T = G.CONFIG.TILE;
   const HUD_H = 28, STRIP_H = 22;
-  const CANON = ['naruto', 'sakura', 'sasuke', 'hinata'];
   const FADE_BEHIND = { tree: 1, pine: 1, planter: 1, lamp: 1 };
 
   const S = {

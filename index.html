@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.2.2', version: '33f2e345', date: '2026-10-21 16:08', debug: false };
+const BUILD = { release: '2.2.2', version: '3406e432', date: '2026-10-21 19:01', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -1894,7 +1894,6 @@ G.ui = (() => {
   };
   const cache = {};
   const px = (c, x, y, col, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-  const mixHex = (a, b, t) => S.hex(S.mix(S.rgb(a), S.rgb(b), t));
   const tone = (col, k) => S.toneHex(col, k);
 
   // ---------- заготовки материалов ----------
@@ -2453,7 +2452,6 @@ G.CHAR_ART = {"hero":{"w":96,"h":160,"pal":["#f2ceac","#deb28d","#cf996e","#aa8f
   const OR = (...f) => (x, y) => f.some((g) => g(x, y));
   const AND = (a, b) => (x, y) => a(x, y) && b(x, y);
   const SUB = (a, b) => (x, y) => a(x, y) && !b(x, y);
-  const MIR = (f, cx = 16) => (x, y) => f(2 * cx - x, y);          // зеркало формы относительно вертикали x = cx
   const SH = (f, dx, dy) => (x, y) => f(x - dx, y - dy);            // сдвиг формы
 
   // ---------- холст пикселей ----------
@@ -2717,7 +2715,6 @@ G.CHAR_ART = {"hero":{"w":96,"h":160,"pal":["#f2ceac","#deb28d","#cf996e","#aa8f
         if (!fat) { flat(B, R(10, 29.4 + b, 22, 30.4 + b), T); }
       } else if (st.top === 'vest') {
         fill(B, PO([[13.4, 21.8 + b], [18.6, 21.8 + b], [16, 25.4 + b]]), st.inner || T, { flat: true });
-        const vc = mix(rgb(t), [255, 255, 255], 0);
         fill(B, RR(10.6, 24.4 + b, 14.8, 28.6 + b, 0.8), T, { seam: true }); fill(B, RR(17.2, 24.4 + b, 21.4, 28.6 + b, 0.8), T, { seam: true });
         flat(B, R(15.4, 25.6 + b, 16.6, torsoBot - 1 + b), T);
       } else if (st.top === 'apron') {
@@ -10951,8 +10948,6 @@ G.mapgen = (() => {
 
     // ---------- 1б. Форма деревни по карте из аниме: круглая стена, горы и лес вокруг, круговые комплексы, озёра ----------
     const SH = layout.shape;
-    const inRect = (x, y) => x >= 0 && y >= 0 && x < W && y < HH;
-    const fillO = (x, y, v) => { if (inRect(x, y)) occ[y * W + x] = v; };
     if (SH) {
       const sup = (x, y, a, b) => Math.pow(Math.abs(x + 0.5 - SH.cx) / a, SH.p) + Math.pow(Math.abs(y + 0.5 - SH.cy) / b, SH.p);
       const wallT = SH.wall || 2.4, mount = new Uint8Array(W * HH);
@@ -11042,7 +11037,6 @@ G.mapgen = (() => {
 
     // ---------- 3. Здания ----------
     let bseed = 0;
-    const isRoad = (x, y) => O(x, y) === 1 || G.tiles.ROADY.has(m.get(x, y));
 
     function addBuildingTiles(id, tpl, tx, ty, opts = {}) {
       const spr = G.buildgfx.make(id, tpl, opts.seed != null ? opts.seed : ++bseed, opts.art);
@@ -11072,20 +11066,6 @@ G.mapgen = (() => {
         if (m.inside(dx, dy + 1) && O(dx, dy + 1) !== 1) { if (grassy(dx, dy + 1)) m.set(dx, dy + 1, ID.PATH); setO(dx, dy + 1, 4); setK(dx, dy + 1); }
       }
       return b;
-    }
-
-    // Дорожка от крыльца вниз до дороги (для ключевых зданий)
-    function walkwayDown(x, y, maxLen = 12) {
-      const path = [];
-      for (let i = 0; i < maxLen; i++) {
-        const yy = y + i;
-        if (!m.inside(x, yy)) return;
-        if (isRoad(x, yy) && i > 0) break;
-        if (O(x, yy) === 2 || O(x, yy) === 3) return;
-        path.push(yy);
-        if (i === maxLen - 1) return;
-      }
-      for (const yy of path) { if (grassy(x, yy)) m.set(x, yy, ID.PATH); if (O(x, yy) !== 1) setO(x, yy, 4); }
     }
 
     function place(id, tx, ty, ent = {}) {
@@ -15444,7 +15424,6 @@ G.scenes.register('prologue', () => {
 G.scenes.register('world', (pos) => {
   const T = G.CONFIG.TILE;
   const HUD_H = 28, STRIP_H = 22;
-  const CANON = ['naruto', 'sakura', 'sasuke', 'hinata'];
   const FADE_BEHIND = { tree: 1, pine: 1, planter: 1, lamp: 1 };
 
   const S = {
@@ -18709,7 +18688,6 @@ G.scenes.register('battle', (opts, onEnd) => {
     else if (Math.random() < 0.25) bubble('hurt');
     then(true, d);
   }
-  const strongish = (d) => d >= 11;
 
   // ── действия героя ──
   const endTurn = (w, delay = 0.6) => { P.t += w * fac(P.spd); wait(delay, () => { if (!validAct(E.plan, dist())) plan(); nextTurn(); }); };
