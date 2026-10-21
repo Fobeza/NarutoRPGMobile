@@ -3,16 +3,23 @@ G.scenes.register('status', () => {
   const FRIENDS = Object.keys(G.FRIENDS);
   let scroll = 0;
   let buffer = null;
-  const contentH = () => Math.max(G.screen.H - 24, 330 + Math.ceil(FRIENDS.filter((id) => G.state.flags['met_' + id]).length / 2) * 16);
-  const maxScroll = () => Math.max(0, contentH() - G.screen.H + 24);
+  const compact = () => G.screen.W < 260;
+  const footer = () => Math.max(24,Math.ceil(44/(G.screen.scale||1)))+4;
+  const contentH = () => {
+    const skills=(G.state.hero.skills||[]).map(id=>G.SKILLS.find(s=>s.id===id)?.name).filter(Boolean).join(', ')||'—';
+    const extra=Math.max(0,G.font.small.wrap('Навыки: '+skills,G.screen.W-24).length-1)*12;
+    return Math.max(G.screen.H-footer(),330+(compact()?60:0)+extra+Math.ceil(FRIENDS.filter(id=>G.state.flags['met_'+id]).length/2)*16);
+  };
+  const maxScroll = () => Math.max(0, contentH() - G.screen.H + footer());
   return {
     name: 'status',
+    layout() { return {footer:footer(),maxScroll:maxScroll(),scroll,gaugeWidth:compact()?G.screen.W-28:G.screen.W-180}; },
     update(dt) {
       const I = G.input;
       if (I.pressed('b') || I.pressed('a') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.repeat('up', dt)) scroll -= 48;
       if (I.repeat('down', dt)) scroll += 48;
-      if (I.tapNow && I.tapNow.y >= G.screen.H - 24) scroll += I.tapNow.x < G.screen.W / 2 ? -80 : 80;
+      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -80 : 80;G.audio.sfx.select(); }
       scroll = G.util.clamp(scroll, 0, maxScroll());
     },
     draw(ctx) {
@@ -22,10 +29,13 @@ G.scenes.register('status', () => {
       const c = buffer;
       this.drawContent(c.getContext('2d'), contentH());
       U.backdrop(ctx);
-      ctx.save(); ctx.beginPath(); ctx.rect(0, 20, W, H - 44); ctx.clip(); ctx.drawImage(c, 0, -scroll); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 20, W, H - 20 - footer()); ctx.clip(); ctx.drawImage(c, 0, -scroll); ctx.restore();
       U.title(ctx, 'СТАТУС', W / 2, 3, 80);
-      U.button(ctx, 4, H - 23, (W - 12) / 2, 20, '▲ Выше', scroll > 0 ? 'normal' : 'dis');
-      U.button(ctx, W / 2 + 2, H - 23, (W - 12) / 2, 20, '▼ Ниже', scroll < maxScroll() ? 'normal' : 'dis');
+      if(maxScroll()>0){
+        U.button(ctx,4,H-footer()+2,(W-12)/2,footer()-4,'▲ Выше',scroll>0?'normal':'dis');
+        U.button(ctx,W/2+2,H-footer()+2,(W-12)/2,footer()-4,'▼ Ниже',scroll<maxScroll()?'normal':'dis');
+        U.scrollbar(ctx,W-5,24,H-24-footer(),scroll/maxScroll(),Math.min(1,(H-20-footer())/(contentH()-20)));
+      }else G.font.small.draw(ctx,'Все сведения',W/2,H-footer()/2-4,{align:'center',color:U.C.paperHi});
     },
     drawContent(ctx, H) {
       const W = G.screen.W, F = G.font, S = G.font.small, U = G.ui, C = U.C, g = G.game, v = g.v;
@@ -44,15 +54,16 @@ G.scenes.register('status', () => {
       y += 48;
       // нужды: бамбуковые шкалы
       const bars = [['Здоровье', v.hp, C.hp], ['Чакра', v.chakra, C.chakra], ['Сытость', v.food, C.food], ['Энергия', v.energy, C.energy], ['Настроение', v.mood, '#a860c0']];
-      U.panel(ctx, 4, y, W - 8, bars.length * 16 + 12, 'frame');
+      const barRow=compact()?28:16;
+      U.panel(ctx, 4, y, W - 8, bars.length * barRow + 12, 'frame');
       bars.forEach(([nm, val, col], i) => {
-        const yy = y + 9 + i * 16;
+        const yy = y + 9 + i * barRow;
         S.draw(ctx, nm, 14, yy, { color: C.ink });
-        const bw = W - 8 - 14 * 2 - 82 - 62;
-        U.gauge(ctx, 14 + 82, yy + 1, bw, 7, Math.max(0, Math.min(100, val)) / 100, col);
+        const bw = compact()?W-28:W-180;
+        U.gauge(ctx, compact()?14:96, yy + (compact()?12:1), bw, 7, Math.max(0, Math.min(100, val)) / 100, col);
         S.draw(ctx, i === 4 ? g.moodName() : String(Math.round(val)), W - 14, yy, { align: 'right', color: val < 20 ? C.err : C.ink });
       });
-      y += bars.length * 16 + 16;
+      y += bars.length * barRow + 16;
       // характеристики
       const rows = Math.ceil(G.STATS.length / 2);
       U.panel(ctx, 4, y, W - 8, rows * 15 + 14, 'well');
