@@ -146,5 +146,38 @@ test('Плотность по умолчанию: точка не меньше 1
     [wrap.clientWidth, wrap.clientHeight, globalThis.devicePixelRatio] = keep; if (keep[3]) G.storage.settings.density = keep[3]; else delete G.storage.settings.density; G.screen.resize();
   }
 });
+test('NPC: секунда упора, проход до выхода и повторная коллизия', () => {
+  const A=G.actors, p=A.make('hero',20,20), n=A.make('naruto',30,20), others=[p,n];
+  const map={blockedRect:b=>b.y!==15}; // узкий коридор без обхода
+  for(let i=0;i<9;i++){A.playerContact(map,p,1,0,others,.1);A.move(map,p,1,0,others);}
+  assert.equal(p.x,20); assert.equal(p._npcPass.size,0);
+  A.playerContact(map,p,1,0,others,.1);A.move(map,p,1,0,others);
+  assert.equal(p.x,21);assert.ok(p._npcPass.has(n));
+  A.playerContact(map,p,0,0,others,.5);
+  assert.ok(p._npcPass.has(n)); // остановка внутри не возвращает ловушку
+  assert.equal(A.blocked(map,n,29,20,others),false);
+  for(let i=0;i<23;i++){A.playerContact(map,p,1,0,others,.1);A.move(map,p,1,0,others);}
+  A.playerContact(map,p,0,0,others,.1);assert.equal(p._npcPass.size,0);
+  assert.equal(A.blocked(map,p,39,20,others),true);
+});
+test('NPC: отпускание сбрасывает ожидание, стены и другие NPC остаются твёрдыми', () => {
+  const A=G.actors,p=A.make('hero',20,20),n=A.make('naruto',30,20),other=A.make('sasuke',50,20),all=[p,n,other];
+  const map={blockedRect:b=>b.y!==15||b.x>=50};
+  A.playerContact(map,p,1,0,all,.8);A.playerContact(map,p,0,0,all,.1);
+  A.playerContact(map,p,1,0,all,.3);assert.equal(p._npcPass.size,0);
+  A.playerContact(map,p,1,0,all,.7);assert.ok(p._npcPass.has(n));
+  assert.equal(A.blocked(map,p,41,20,all),true);
+  assert.equal(A.blocked(map,p,55,20,all),true);
+  A.playerContact({blockedRect:()=>false},p,0,0,all,.1);assert.equal(p._npcPass.size,0);
+});
+test('NPC: выход из уже существующего перекрытия при 30/60/120 FPS', () => {
+  for(const fps of [30,60,120]){
+    const A=G.actors,p=A.make('hero',30,20),n=A.make('naruto',30,20),all=[p,n],map={blockedRect:b=>b.y!==15};
+    for(let i=0;i<fps-1;i++) A.playerContact(map,p,1,0,all,1/fps);
+    assert.equal(p._npcPass.size,0);
+    A.playerContact(map,p,1,0,all,1/fps);A.move(map,p,1,0,all);
+    assert.equal(p.x,31);
+  }
+});
 console.log(`ИТОГ регрессий: ✔ ${passed}  ✘ ${failed}`);
 process.exitCode = failed ? 1 : 0;

@@ -180,6 +180,7 @@ G.scenes.register('world', (pos) => {
       if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast(v.food <= 0 ? 'Голодный — не до бега' : 'Нет сил бежать'); }
       const run = I.held('b') && !tired;
       const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * (G.state.flags.adv_runner?1.08:1) * dt;
+      G.actors.playerContact(m, p, ax.x, ax.y, this.others, dt);
       p.moving = !!(ax.x || ax.y);
       if (p.moving) {
         if (ax.x && ax.y) {
@@ -190,6 +191,7 @@ G.scenes.register('world', (pos) => {
         if (!(G.roofs && G.roofs.move(this, p, ax, speed))) G.actors.move(m, p, ax.x * speed, ax.y * speed, this.others);
         // упёрся в стену или в человека — стоим на месте: без шагов и без анимации ходьбы
         const shifted = Math.abs(p.x - px) + Math.abs(p.y - py) > speed * 0.25;
+        p.moving = shifted;
         if (shifted) {
           p.anim += dt * (run ? 12 : 8);
           p.stepT -= dt;
@@ -603,6 +605,7 @@ G.scenes.register('world', (pos) => {
         if (alpha < 1) ctx.globalAlpha = 1;
       }
 
+      if(G.worldMotion)G.worldMotion.atmosphere(ctx,this,vis);
       if(G.roofPatrol)G.roofPatrol.draw(ctx,this,cx,cy,W,VH);
       if(G.adventure)G.adventure.draw(ctx,this);
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
@@ -886,12 +889,17 @@ G.scenes.register('world', (pos) => {
 
     drawActor(ctx, a) {
       if (G.lighting) G.lighting.actor(ctx, a, this.map, G.state.vars.min);
-      G.shade.shadow(ctx, a.x + 1, a.y - 1, 6, 2, 0.34);   // V9: мягкая тень под ногами
+      const bounce = a.moving ? Math.abs(Math.sin(a.anim * Math.PI)) : 0;
+      G.shade.shadow(ctx, a.x + 1, a.y - 1, 6 - bounce * .5, 2, 0.28);
+      G.shade.shadow(ctx, a.x, a.y - 1, 3, 1, 0.23);   // V9: мягкая тень под ногами
       const frame = a.moving ? G.chars.WALK[Math.floor(a.anim) % 4] : 0;
       // жители: у каждого своя расцветка одежды (по номеру в списке жителей карты — одинаково между кадрами и загрузками)
       if (a._look === undefined) a._look = (a.id === 'villager_m' || a.id === 'villager_f') ? Math.floor(G.util.hash2(this.map.npcs.indexOf(a), 7, 91) * G.chars.LOOKS) : 0;
       const lift=G.villageDaily?G.villageDaily.lift(a,this.time):0;
+      ctx.save();
+      if (a._npcPass?.size) ctx.globalAlpha *= .65;
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
+      ctx.restore();
       if(G.villageDaily)G.villageDaily.drawActorExtras(ctx,this,a);
     },
 
