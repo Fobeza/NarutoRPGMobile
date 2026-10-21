@@ -30,8 +30,8 @@ def main():
         entries.append(entry(dest, original, 512, 'terrain'))
     if len(entries) != 35:
         raise ValueError(f'Ожидалось 35 согласованных изображений, найдено {len(entries)}')
-    data = {'release': '2.2.2', 'status': 'not_integrated',
-            'note': 'Размеры мастеров не задают игровые размеры. Тайл игры 16 точек, HI=2. Границы земли ещё не согласованы.',
+    data = {'release': '2.2.2', 'status': 'integrated',
+            'note': 'Мастеры встроены через tools/import_environment.py. Игровой тайл 16 точек, HI=2; размеры холстов и коллизии сохранены.',
             'assets': entries}
     (ROOT / 'art/manifest.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')
     print(f'{len(entries)} изображений, {sum(e["bytes"] for e in entries):,} байт')

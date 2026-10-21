@@ -1,4 +1,4 @@
-// Тайлы и объекты окружения, нарисованные кодом (без картинок).
+// Тайлы и объекты окружения: встроенные рисунки и процедурные запасные варианты.
 // Тайл 16×16. Объекты (деревья, фонари, мебель) — отдельные спрайты, сортируются по Y вместе с персонажами.
 G.tiles = (() => {
   const T = G.CONFIG.TILE;
@@ -277,6 +277,7 @@ G.tiles = (() => {
     ];
     fns.forEach((f, i) => f(i * T));
     buildVariants(c);
+    G.terrainArt.paintAtlas(c,ID,VAR);
   }
 
   // Простой тайл без учёта соседей
@@ -349,7 +350,9 @@ G.tiles = (() => {
     const id = map.get(tx, ty);
     if (id < 0) return;
     const vs = map.outdoor ? VAR[id] : null, hv = vs ? H(tx, ty, 555) : 1;
-    if (id === ID.FLOOR || id === ID.DUSTFLOOR) G.environment.floor(ctx, x, y, tx, ty, id === ID.DUSTFLOOR);
+    const drawnPath=G.terrainArt.draw(ctx,map,tx,ty,x,y,ID,GRASSY);
+    if(drawnPath){}
+    else if (id === ID.FLOOR || id === ID.DUSTFLOOR) G.environment.floor(ctx, x, y, tx, ty, id === ID.DUSTFLOOR);
     else if (id === ID.TATAMI) G.environment.tatami(ctx, x, y, tx, ty);
     else if (id === ID.MAINROAD) G.environment.stone(ctx, x, y, Math.floor(tx / 2) + ty * 3, true);
     else if (hv < VAR_P) ctx.drawImage(atlas, vs[Math.floor(hv / VAR_P * vs.length)] * T, T, T, T, x, y, T, T);
@@ -374,7 +377,7 @@ G.tiles = (() => {
       }
     }
     // плавные переходы: более «живая» поверхность соседа заходит рваным краем с дизерингом
-    blendEdges(ctx, map, tx, ty, x, y, id);
+    if(!drawnPath)blendEdges(ctx, map, tx, ty, x, y, id);
     // берег
     if (id === ID.WATER) {
       if (LAND(up) || up === ID.CLIFF) { px(ctx, x, y, P.waterDark, 16, 2); px(ctx, x, y + 2, P.waterLight, 16, 1); }
@@ -429,10 +432,19 @@ G.tiles = (() => {
   const OBJ = {};
   function obj(name, w, h, drawFn, ox, oy, box, layer) {
     const c = G.gfx.canvas(w, h);
-    drawFn(c.getContext('2d'));
-    G.gfx.smooth(c);
-    if (layer !== 'floor' && !/tree|pine|sakura|maple|ginkgo|bush/.test(name)) G.shade.light(c, { r: Math.min(4, Math.max(2, Math.min(w, h) / 6)), vert: h > 20 ? 0.5 : 0.25 });   // V9: объём
-    OBJ[name] = { img: c, ox, oy, box, layer: layer || null, w, h };
+    const art=G.environmentArt.draw(c.getContext('2d'),name,w,h);
+    if(!art){
+      drawFn(c.getContext('2d'));
+      G.gfx.smooth(c);
+      if (layer !== 'floor' && !/tree|pine|sakura|maple|ginkgo|bush/.test(name)) G.shade.light(c, { r: Math.min(4, Math.max(2, Math.min(w, h) / 6)), vert: h > 20 ? 0.5 : 0.25 });
+    }
+    OBJ[name] = { img: c, ox, oy, box, layer: layer || null, w, h, art };
+    const names=G.environmentArt.bindings[name];
+    if(names?.length>1)OBJ[name].variants=names.map((asset,i)=>{
+      if(i===0)return {...OBJ[name]};
+      const img=G.gfx.canvas(w,h);G.environmentArt.draw(img.getContext('2d'),name,w,h,i);
+      return {img,ox,oy,box,layer:layer||null,w,h,art:asset};
+    });
   }
   const blob = (c, x, y, r, col) => {
     c.fillStyle = col;
@@ -757,9 +769,10 @@ G.tiles = (() => {
     }, -8, -15, null, 'floor');
   }
 
-  function object(name) {
+  function object(name, variation=0) {
     if (!OBJ.tree) buildObjects();
-    return OBJ[name];
+    const base=OBJ[name];
+    return base?.variants?base.variants[Math.floor(variation*base.variants.length)%base.variants.length]:base;
   }
 
   return { ID, COUNT, SOLID, GRASSY, ROADY, MAPCOL, drawTile, renderTile, waterOverlay, object };

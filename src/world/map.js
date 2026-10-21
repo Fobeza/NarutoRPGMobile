@@ -38,7 +38,7 @@ G.WorldMap = class {
   // ---------- Объекты ----------
   addObject(kind, x, y, extra) {
     extra = extra || {};
-    const spr = G.tiles.object(kind);
+    const spr = G.tiles.object(kind, G.util.hash2(Math.round(x), Math.round(y), 771));
     const o = Object.assign({ kind, x, y, ox: spr.ox, oy: spr.oy, img: spr.img, layer: spr.layer, w: spr.w, h: spr.h }, extra);
     o.box = extra.box !== undefined ? extra.box : spr.box ? { x: x + spr.box.x, y: y + spr.box.y, w: spr.box.w, h: spr.box.h } : null;
     o.sortY = y;
