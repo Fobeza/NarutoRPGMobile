@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "2.1.0"                            # полировка под все iPhone: экран, бой, касания, тесты
+RELEASE = "2.2.0"                            # живая деревня, бытовые детали и проход мимо NPC
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -39,7 +39,7 @@ JS_FILES = [
     "world/village_extra.js", "world/interior_details.js", "world/village_life.js", "world/cast.js",
     "data/schedule.js", "systems/schedule.js",     # расписание — последним из «мира»: переставляет всех жителей
     "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/fx.js", "world/village_stories.js",
-    "world/frontier.js", "systems/adventures.js", "world/village_daily.js", "world/motion.js", "world/cartography.js", "engine/debug.js",
+    "world/frontier.js", "systems/adventures.js", "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
     "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",

@@ -23,4 +23,21 @@ test('Нельзя войти издалека, спиной, с крыши ил
 test('Стоящий в дверях житель не перехватывает кнопку входа, выход не вызывает обратный вход',w=>{
  const warp=w.map.warps.find(q=>q.building.tplId==='hero_home');at(w,warp);w.npcs=[G.world.makeNpc({id:'villager_m',x:w.player.x,y:w.player.y-10,dir:'down'})];assert.equal(w.currentAction()?.label,'Войти');Object.assign(w.player,G.world.outsideOf(warp.building));w._actionKey=null;assert.equal(w.doorAction(),null);
 });
+test('Бытовые детали не перекрывают двери, дороги, NPC и соседние предметы',w=>{
+ const m=w.map,details=m.objects.filter(o=>o._villageDetail);assert.ok(details.length>=10&&details.length<=100);
+ for(const o of details){
+  assert.equal(o.box,null);assert.ok(o.talk?.[0]);
+  const all=m.objects;
+  try{m.objects=all.filter(q=>q!==o);assert.ok(G.villageDetails.safe(m,m.drawRect(o)),o.kind+' '+o.x+','+o.y);}
+  finally{m.objects=all;}
+ }
+});
+test('Детали воспроизводимы, не дублируются и не меняют проходимость',w=>{
+ const m=w.map,signature=()=>JSON.stringify(m.objects.filter(o=>o._villageDetail).map(o=>[o.kind,o.x,o.y,o.talk]));
+ const initial=signature(),count=m.objects.length,grid=Array.from(G.nav.walkGrid(m));
+ G.villageDetails.populate(m);assert.equal(m.objects.length,count);
+ m.objects=m.objects.filter(o=>!o._villageDetail);m._villageDetails=false;m.finalize();
+ assert.deepEqual(Array.from(G.nav.walkGrid(m)),grid);
+ G.villageDetails.populate(m);m.finalize();assert.equal(signature(),initial);assert.deepEqual(Array.from(G.nav.walkGrid(m)),grid);
+});
 console.log(`ИТОГ дверей: ✔ ${passed}  ✘ ${failed}`);process.exitCode=failed?1:0;

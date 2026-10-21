@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.1.0', version: 'e883000b', date: '2026-10-21 05:16', debug: false };
+const BUILD = { release: '2.2.0', version: 'de8c5e73', date: '2026-10-21 06:23', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -9698,6 +9698,7 @@ G.buildgfx = (() => {
     if (H(seed, 26, 4) > 0.5 && W >= 40) {
       const cx = style === 'front' ? Math.round(W * 0.72) : 6 + Math.floor(H(seed, 27, 2) * (W * 0.3));
       const cy = Math.max(9, Math.round(h * 0.22));
+      o.chimney = { x: cx + 3, y: cy - 2 };
       px(c, cx - 1, cy - 1, P.ink, 9, 2); px(c, cx, cy + 1, P.ink, 7, 11); px(c, cx + 1, cy + 1, '#a85a42', 5, 10); px(c, cx + 1, cy + 1, '#c8806a', 5, 1);
       px(c, cx + 1, cy + 5, '#8a4a38', 5, 1);
       c.globalAlpha = 0.75; px(c, cx + 2, cy - 4, '#eceef4', 3, 3); px(c, cx + 4, cy - 7, '#eceef4', 3, 3); px(c, cx + 3, cy - 10, '#eceef4', 2, 2); c.globalAlpha = 1;
@@ -9866,7 +9867,18 @@ G.buildgfx = (() => {
     if (cache[key]) return cache[key];
     const an = art || (tpl.unique && G.houseArt.has(id) ? id : null);
     const sp = an && G.houseArt.sprite(an, tpl);
-    if (sp) return (cache[key] = sp);
+    if (sp) {
+      // Небольшая кирпичная труба у части обычных домов; исходный арт не меняем.
+      if (tpl.cat === 'house' && !tpl.unique && H(seed, 26, 4) > .65) {
+        const img = G.gfx.canvas(sp.w, sp.h), c = img.getContext('2d');
+        c.drawImage(sp.img, 0, 0);
+        const x = Math.round(sp.w * .65), y = Math.round(sp.h * .22);
+        px(c, x, y, P.ink, 6, 10); px(c, x + 1, y + 1, '#a85a42', 4, 8);
+        px(c, x - 1, y, '#583e3a', 8, 2); px(c, x + 1, y + 4, '#ce8a66', 4, 1);
+        return (cache[key] = Object.assign({}, sp, { img, chimney: { x: x + 3, y } }));
+      }
+      return (cache[key] = sp);
+    }
     const W = tpl.w * T, HF = tpl.h * T;
     let OV = tpl.ov || 16;
     if (id === 'hokage_tower') OV = 28;
@@ -9877,13 +9889,15 @@ G.buildgfx = (() => {
     const draw = SPECIAL[id] || GENERIC[tpl.cat] || GENERIC.house;
     glowList = []; eaves = { cv: c.canvas, list: [] };
     G.shade.defer(c);   // V9: свет и тени копятся и ложатся за одно чтение пикселей
-    draw(c, { id, tpl, W, HF, OV, seed, col: tpl.color, style });
+    const details = { id, tpl, W, HF, OV, seed, col: tpl.color, style };
+    draw(c, details);
     // V9: мягкая тень под карнизами — ложится на стену, окна и двери, сходит на нет за 9 px
     for (const [ex, ey, ew] of eaves.list) G.shade.tint(c, ex + 1, ey, ew - 2, 9, (u, v) => -0.6 * (1 - v) ** 1.6);
     G.shade.flush(c);
     eaves = null;
     G.gfx.smooth(c.canvas);
     const res = { img: c.canvas, ox: 0, oy: -OV, w: W, h: HF + OV };
+    if (details.chimney) res.chimney = details.chimney;
     if (glowList.length) {
       const g = G.gfx.canvas(W, HF + OV), gc = g.getContext('2d');
       gc.fillStyle = '#ffb860'; for (const [x, y, w, h] of glowList) gc.fillRect(x, y, w, h);
@@ -11637,7 +11651,7 @@ G.actors = {
     const b = this.feet(a, nx, ny);
     if (map.blockedRect(b)) return true;
     if (others) for (const o of others) {
-      if (o === a || o.roof || o.jump || Math.abs(o.x - nx) > 12 || Math.abs(o.y - ny) > 7) continue;
+      if (o === a || a._npcPass?.has(o) || o._npcPass?.has(a) || o.roof || o.jump || Math.abs(o.x - nx) > 12 || Math.abs(o.y - ny) > 7) continue;
       if (G.util.rectsOverlap(b, this.feet(o))) return true;
     }
     return false;
@@ -11661,6 +11675,33 @@ G.actors = {
       }
     }
     return moved;
+  },
+
+  // Секунда упора в конкретного жителя открывает проход только через него.
+  // Пропуск сохраняется до расхождения даже при отпускании кнопки внутри NPC.
+  playerContact(map, a, dx, dy, others, dt) {
+    if (a._contactMap !== map) {
+      a._contactMap = map; a._npcWait = new Map(); a._npcPass = new Set();
+    }
+    const pass = a._npcPass, wait = a._npcWait;
+    for (const o of pass) if (!others.includes(o) || Math.abs(a.x-o.x) > 12 || Math.abs(a.y-o.y) > 7) pass.delete(o);
+    const touching = new Set();
+    if ((dx || dy) && !a.roof && !a.jump) {
+      const bx = this.feet(a, a.x + Math.sign(dx), a.y);
+      const by = this.feet(a, a.x, a.y + Math.sign(dy));
+      for (const o of others) {
+        if (o === a || o.roof || o.jump || pass.has(o)) continue;
+        const feet = this.feet(o);
+        if ((dx && !map.blockedRect(bx) && G.util.rectsOverlap(bx, feet)) ||
+            (dy && !map.blockedRect(by) && G.util.rectsOverlap(by, feet))) {
+          touching.add(o);
+          const t = (wait.get(o) || 0) + dt;
+          if (t >= 1 - 1e-9) { pass.add(o); wait.delete(o); }
+          else wait.set(o, t);
+        }
+      }
+    }
+    for (const o of wait.keys()) if (!touching.has(o)) wait.delete(o);
   },
 
   // Плавное движение с накоплением дробной части
@@ -11689,6 +11730,7 @@ G.world = {
       const t0 = performance.now();
       const m = G.mapgen.konoha(G.KONOHA_DRAFT, this.SEED);
       this.populateKonoha(m);
+      if (G.villageDetails) G.villageDetails.populate(m);
       m.finalize();
       G.mapgen.pockets(m);
       this.maps.konoha = m;
@@ -14203,11 +14245,15 @@ G.worldMotion = (() => {
     if(kind==='wave'&&!n.moving){const dx=w.player.x-n.x,dy=w.player.y-n.y;n.dir=Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up';}
   }
   function actor(ctx,w,n,frame,lift){
-    if(!enabled(w)||n.roof||n.jump)return false;
+    if(G.storage.settings.fx===false||n.roof||n.jump)return false;
     ctx.save();
     const sheet=G.chars.sheet(n.id,n._look),sy=G.chars.DIRS.indexOf(n.dir)*20,sx=frame*16;
+    // Редкий короткий жест свободного жителя; занятие и разговор важнее.
+    const idle=phase(w.time,n.x*.17+n.y*.09,19);
+    const spontaneous=enabled(w)&&n!==w.player&&!n.moving&&!n._street&&!n._daily?.busy&&idle<.075;
     const g=n._gesture,gesturing=g&&g.until>w.time&&!n.moving&&(!n._daily?.busy||g.kind==='wave')&&n.dir!=='up';
     const wave=gesturing&&g.kind==='wave'&&n.dir==='down'&&['villager_m','villager_f'].includes(n.id);
+    const stride=n.moving?Math.abs(Math.sin(n.anim*Math.PI))*.65:0;
     const breath=!n.moving&&!n._street?Math.sin(w.time*2.4+(n._daily?.seed||n.x))*.45:0;
     const x=Math.round(n.x-8),y=Math.round(n.y-19-lift);
     if(wave){
@@ -14220,11 +14266,11 @@ G.worldMotion = (() => {
       ctx.save();ctx.translate(x+arm+1,y+11);ctx.rotate(-1.9+Math.sin(w.time*8)*.18);ctx.drawImage(sheet,sx+arm,sy+11,3,6,-1,0,3,6);ctx.restore();
     }else{
       // В профиль и у детей используем небольшое движение из их собственного листа кадров.
-      const upper=gesturing?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
-      ctx.drawImage(sheet,upper,sy,16,16,x,y-breath,16,16+breath);
+      const upper=gesturing||spontaneous?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
+      ctx.drawImage(sheet,upper,sy,16,16,x,y-breath-stride,16,16+breath+stride);
       ctx.drawImage(sheet,sx,sy+16,16,4,x,y+16,16,4);
     }
-    if(n.moving&&!n._street){
+    if(enabled(w)&&n.moving&&!n._street){
       const rain=G.life.raining(),id=w.map.get(n.x/16|0,n.y/16|0),p=phase(n.anim,0,2);
       if(rain){ctx.strokeStyle='rgba(188,213,220,.5)';ctx.lineWidth=.6;ctx.beginPath();ctx.ellipse(n.x,n.y-1,1+p*5,.5+p*1.7,0,0,Math.PI*2);ctx.stroke();}
       else if([G.tiles.ID.PATH,G.tiles.ID.DIRT,G.tiles.ID.SAND].includes(id)){
@@ -14299,7 +14345,100 @@ G.worldMotion = (() => {
       ctx.save();ctx.globalAlpha*=Math.sin(p*Math.PI)*(isWater?.32:.4);ctx.strokeStyle=isWater?'#d5ece4':'#becbd0';ctx.lineWidth=.65;ctx.beginPath();ctx.ellipse(x,y,1+p*5,.5+p*2,0,0,Math.PI*2);ctx.stroke();ctx.restore();
     }
   }
-  return{enabled,gesture,actor,petPose,animal,object,ground};
+  // Частицы привязаны к объектам, а не к камере: при прогулке не скачут.
+  // Только видимые объекты и фиксированный бюджет — без накопления в сохранении.
+  function atmosphere(ctx,w,vis){
+    if(!enabled(w))return;
+    const t=w.time,rain=G.life.raining(),hour=G.state.vars.min/60;
+    const night=hour>=19||hour<5,season=G.adventure.season().name;
+    let budget=36;
+    for(const o of vis){
+      if(budget<=0)break;
+      const seed=G.util.hash2(o.x,o.y,143),x=o.x+(o.ox||0),y=o.y+(o.oy||0);
+      if(o.spr?.chimney&&hour>=5&&hour<23){
+        const c=o.spr.chimney;
+        for(let i=0;i<3&&budget>0;i++,budget--){
+          const p=phase(t,seed*5+i*1.6,4.8),size=2+p*4;
+          ctx.save();ctx.globalAlpha*=Math.sin(p*Math.PI)*(rain?.12:.24);
+          ctx.fillStyle='#d7d5d0';ctx.beginPath();
+          ctx.ellipse(x+c.x+p*(rain?19:10)+Math.sin(t+p*4),y+c.y-p*24,size,size*.65,0,0,Math.PI*2);ctx.fill();ctx.restore();
+        }
+      }
+      if(rain||season==='Зима')continue;
+      if(night&&['bush','pond','lavender','flowerbed'].includes(o.kind)){
+        for(let i=0;i<2&&budget>0;i++,budget--){
+          const q=t*.8+seed*30+i*3,xp=o.x+Math.sin(q)*12,yp=y+5+Math.cos(q*.7)*6;
+          const glow=Math.max(0,Math.sin(t*1.8+seed*20+i*2));
+          ctx.save();ctx.globalAlpha*=glow*.18;ctx.fillStyle='#cde88b';ctx.fillRect(xp-2,yp-2,5,5);
+          ctx.globalAlpha*=4;ctx.fillStyle='#eef5ab';ctx.fillRect(xp,yp,1,1);ctx.restore();
+        }
+      }else if(!night&&['tree','sakura','maple','ginkgo'].includes(o.kind)){
+        for(let i=0;i<2&&budget>0;i++,budget--){
+          const p=phase(t,seed*9+i*4.5,9),xp=x+o.w*.45+p*20+Math.sin(t*1.8+seed*10+i)*4,yp=y+8+p*Math.max(16,o.h-8);
+          ctx.save();ctx.globalAlpha*=Math.sin(p*Math.PI)*.8;
+          ctx.fillStyle=o.kind==='sakura'?'#efb6ca':season==='Осень'?'#cf9652':'#9dbb69';
+          ctx.fillRect(xp,yp,Math.sin(t*5+i)>0?3:1,1);ctx.fillRect(xp+1,yp+1,1,1);ctx.restore();
+        }
+      }
+    }
+  }
+  return{enabled,gesture,actor,petPose,animal,object,ground,atmosphere};
+})();
+
+
+// ===== world/village_details.js =====
+// Бытовые детали у фасадов: только свободные места, без новых коллизий.
+G.villageDetails = (() => {
+  const home = [
+    ['flowerpot', 'Горшок с цветами. Земля ещё влажная: хозяева поливали их утром.'],
+    ['basket', 'Корзина с яблоками. Сверху лежит записка: «Для соседей».'],
+    ['pots', 'Глиняные горшки сушатся после мытья. Каждый немного отличается от остальных.'],
+    ['sacks', 'Мешочки риса для домашней кухни. На узелках завязаны цветные нитки.'],
+  ];
+  const shops = {
+    ichiraku: [['basket', 'Свежие овощи для бульона. Теучи забрал их на рынке ещё до рассвета.'], ['crate', 'Ящик с мисками. На крышке написано: «Осторожно, посуда».']],
+    dango: [['basket', 'Продукты для сладких данго. От лавки пахнет поджаренным тестом.']],
+    teahouse: [['pots', 'Кувшины с водой для чая. Рядом остались следы от мокрых чашек.']],
+    pharmacy: [['herb_bundle', 'Связки лекарственных трав перевязаны нитками разных цветов.']],
+    flowers: [['flowerpot', 'Молодые цветы ждут новых хозяев. На горшке нарисовано маленькое солнце.']],
+    books: [['bookpile', 'Книги для обмена. Между страницами одной из них засох кленовый лист.']],
+    library: [['bookpile', 'Возвращённые учебники. Кто-то оставил закладку на главе о контроле чакры.']],
+    academy: [['bookpile', 'Чьи-то конспекты с урока. На полях нарисованы кунаи и смешной Ирука.']],
+    weapons: [['crate', 'Ящик тренировочных мишеней. Все кунаи уже убрали в мастерскую.']],
+    market: [['basket', 'Последние яблоки с утреннего привоза. Самые румяные оставили сверху.'], ['sacks', 'Мешки с рисом. Счёт за доставку прижат маленьким камешком.']],
+    inuzuka_shop: [['basket', 'Корзинка с игрушками для нинкенов. Мячик уже основательно погрызен.']],
+  };
+  function safe(m, r) {
+    if(r.x<16||r.y<16||r.x+r.w>(m.w-1)*16||r.y+r.h>(m.h-1)*16)return false;
+    // Проверяем весь рисунок, а не только точку опоры предмета.
+    for(let y=Math.floor(r.y/16);y<=Math.floor((r.y+r.h-1)/16);y++)for(let x=Math.floor(r.x/16);x<=Math.floor((r.x+r.w-1)/16);x++){
+      if(m.solidTile(x,y)||[G.tiles.ID.MAINROAD,G.tiles.ID.PATH,G.tiles.ID.BRIDGE].includes(m.get(x,y)))return false;
+    }
+    if(m.warps.some(w=>G.util.rectsOverlap(r,{x:w.rect.x-24,y:w.rect.y-16,w:w.rect.w+48,h:w.rect.h+40})))return false;
+    if(m.npcs.some(n=>G.util.rectsOverlap(r,{x:n.x-14,y:n.y-20,w:28,h:28})))return false;
+    return !m.objects.some(o=>G.util.rectsOverlap(r,{x:o.x+o.ox-2,y:o.y+o.oy-2,w:o.w+4,h:o.h+4}));
+  }
+  function populate(m) {
+    if(m._villageDetails||m.id!=='konoha')return;
+    m._villageDetails=true;
+    let count=0;
+    for(const b of m.buildings){
+      if(count>=100)break;
+      const pool=shops[b.tplId]||(b.tplDef.cat==='house'?home:null);
+      if(!pool||!b.door)continue;
+      const seed=Math.floor(G.util.hash2(b.tx,b.ty,301)*1000);
+      const [kind,text]=pool[seed%pool.length],spr=G.tiles.object(kind);
+      const left=b.x+6,right=b.x+b.tw*16-6,bottom=b.y+b.th*16;
+      const points=[[left,bottom+18],[right,bottom+18],[left-14,bottom-4],[right+14,bottom-4]];
+      if(seed%2)points.reverse();
+      for(const [x,y] of points){
+        const r={x:x+spr.ox,y:y+spr.oy,w:spr.w,h:spr.h};
+        if(!safe(m,r))continue;
+        m.addObject(kind,x,y,{box:null,talk:[text],_villageDetail:true});count++;break;
+      }
+    }
+  }
+  return {populate,safe};
 })();
 
 
@@ -14955,6 +15094,7 @@ G.scenes.register('world', (pos) => {
       if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast(v.food <= 0 ? 'Голодный — не до бега' : 'Нет сил бежать'); }
       const run = I.held('b') && !tired;
       const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * (G.state.flags.adv_runner?1.08:1) * dt;
+      G.actors.playerContact(m, p, ax.x, ax.y, this.others, dt);
       p.moving = !!(ax.x || ax.y);
       if (p.moving) {
         if (ax.x && ax.y) {
@@ -14965,6 +15105,7 @@ G.scenes.register('world', (pos) => {
         if (!(G.roofs && G.roofs.move(this, p, ax, speed))) G.actors.move(m, p, ax.x * speed, ax.y * speed, this.others);
         // упёрся в стену или в человека — стоим на месте: без шагов и без анимации ходьбы
         const shifted = Math.abs(p.x - px) + Math.abs(p.y - py) > speed * 0.25;
+        p.moving = shifted;
         if (shifted) {
           p.anim += dt * (run ? 12 : 8);
           p.stepT -= dt;
@@ -15378,6 +15519,7 @@ G.scenes.register('world', (pos) => {
         if (alpha < 1) ctx.globalAlpha = 1;
       }
 
+      if(G.worldMotion)G.worldMotion.atmosphere(ctx,this,vis);
       if(G.roofPatrol)G.roofPatrol.draw(ctx,this,cx,cy,W,VH);
       if(G.adventure)G.adventure.draw(ctx,this);
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
@@ -15661,12 +15803,17 @@ G.scenes.register('world', (pos) => {
 
     drawActor(ctx, a) {
       if (G.lighting) G.lighting.actor(ctx, a, this.map, G.state.vars.min);
-      G.shade.shadow(ctx, a.x + 1, a.y - 1, 6, 2, 0.34);   // V9: мягкая тень под ногами
+      const bounce = a.moving ? Math.abs(Math.sin(a.anim * Math.PI)) : 0;
+      G.shade.shadow(ctx, a.x + 1, a.y - 1, 6 - bounce * .5, 2, 0.28);
+      G.shade.shadow(ctx, a.x, a.y - 1, 3, 1, 0.23);   // V9: мягкая тень под ногами
       const frame = a.moving ? G.chars.WALK[Math.floor(a.anim) % 4] : 0;
       // жители: у каждого своя расцветка одежды (по номеру в списке жителей карты — одинаково между кадрами и загрузками)
       if (a._look === undefined) a._look = (a.id === 'villager_m' || a.id === 'villager_f') ? Math.floor(G.util.hash2(this.map.npcs.indexOf(a), 7, 91) * G.chars.LOOKS) : 0;
       const lift=G.villageDaily?G.villageDaily.lift(a,this.time):0;
+      ctx.save();
+      if (a._npcPass?.size) ctx.globalAlpha *= .65;
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
+      ctx.restore();
       if(G.villageDaily)G.villageDaily.drawActorExtras(ctx,this,a);
     },
 

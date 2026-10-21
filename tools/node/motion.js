@@ -30,4 +30,30 @@ test('Круги дождя ограничены видимой областью
 test('Анимации деревни не появляются в комнатах, на новых картах и у прыгающего героя',w=>{
  const c=h.recordingCtx(),o=w.map.objects.find(o=>o.kind==='tree');w.player.jump={};assert.equal(G.worldMotion.actor(c,w,w.player,0,0),false);for(const id of ['inside:test','adv:forest']){w.map={id};assert.equal(G.worldMotion.object(c,w,o,o.img),false);G.worldMotion.ground(c,w);}assert.equal(c.log.length,0);
 });
+test('Дыхание в интерьере и движение корпуса не сдвигают ноги и коллизии',w=>{
+ const n=w.npcs.find(G.villageDaily.generic);w.map={id:'inside:test'};n.moving=false;
+ const a=h.recordingCtx(),b=h.recordingCtx(),before=[n.x,n.y];
+ w.time=0;G.worldMotion.actor(a,w,n,0,0);w.time=.7;G.worldMotion.actor(b,w,n,0,0);
+ assert.notDeepEqual(a.log,b.log);assert.deepEqual([n.x,n.y],before);
+ assert.equal(a.log.filter(s=>s.startsWith('drawImage')).at(-1),b.log.filter(s=>s.startsWith('drawImage')).at(-1));
+ n.moving=true;n.anim=.5;const c=h.recordingCtx();G.worldMotion.actor(c,w,n,0,0);assert.ok(!c.log.some(s=>s.includes('NaN')));
+});
+test('Листья и светлячки зависят от времени, дождя и настройки эффектов',w=>{
+ const rain=G.life.raining,season=G.adventure.season;
+ const vis=[{kind:'sakura',x:50,y:60,ox:0,oy:-20,w:32,h:40},{kind:'bush',x:90,y:80,w:20,h:15}];
+ try{
+  G.life.raining=()=>false;G.adventure.season=()=>({name:'Лето'});w.time=2.4;
+  const before=JSON.stringify(G.state),day=h.recordingCtx();G.worldMotion.atmosphere(day,w,vis);assert.ok(day.log.length>0);assert.equal(JSON.stringify(G.state),before);
+  G.state.vars.min=1200;const night=h.recordingCtx();G.worldMotion.atmosphere(night,w,vis);assert.notDeepEqual(day.log,night.log);
+  G.life.raining=()=>true;const wet=h.recordingCtx();G.worldMotion.atmosphere(wet,w,vis);assert.equal(wet.log.length,0);
+  G.life.raining=()=>false;G.adventure.season=()=>({name:'Зима'});const winter=h.recordingCtx();G.worldMotion.atmosphere(winter,w,vis);assert.equal(winter.log.length,0);
+  G.storage.settings.fx=false;const off=h.recordingCtx();G.worldMotion.atmosphere(off,w,vis);assert.equal(off.log.length,0);
+ }finally{G.life.raining=rain;G.adventure.season=season;}
+});
+test('Дым привязан к настоящим трубам; бюджет частиц ограничен',w=>{
+ const buildings=w.map.buildings.filter(b=>b.spr.chimney);assert.ok(buildings.length>0);
+ const c=h.recordingCtx();w.time=2;G.worldMotion.atmosphere(c,w,Array(100).fill(buildings[0]));
+ const particles=c.log.filter(s=>s.startsWith('ellipse('));assert.equal(particles.length,36);assert.ok(!c.log.some(s=>s.includes('NaN')));
+ const off=h.recordingCtx();w.map={id:'inside:test'};G.worldMotion.atmosphere(off,w,buildings);assert.equal(off.log.length,0);
+});
 console.log(`ИТОГ анимаций: ✔ ${passed}  ✘ ${failed}`);process.exitCode=failed?1:0;

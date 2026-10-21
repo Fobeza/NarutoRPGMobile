@@ -9,11 +9,15 @@ G.worldMotion = (() => {
     if(kind==='wave'&&!n.moving){const dx=w.player.x-n.x,dy=w.player.y-n.y;n.dir=Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up';}
   }
   function actor(ctx,w,n,frame,lift){
-    if(!enabled(w)||n.roof||n.jump)return false;
+    if(G.storage.settings.fx===false||n.roof||n.jump)return false;
     ctx.save();
     const sheet=G.chars.sheet(n.id,n._look),sy=G.chars.DIRS.indexOf(n.dir)*20,sx=frame*16;
+    // Редкий короткий жест свободного жителя; занятие и разговор важнее.
+    const idle=phase(w.time,n.x*.17+n.y*.09,19);
+    const spontaneous=enabled(w)&&n!==w.player&&!n.moving&&!n._street&&!n._daily?.busy&&idle<.075;
     const g=n._gesture,gesturing=g&&g.until>w.time&&!n.moving&&(!n._daily?.busy||g.kind==='wave')&&n.dir!=='up';
     const wave=gesturing&&g.kind==='wave'&&n.dir==='down'&&['villager_m','villager_f'].includes(n.id);
+    const stride=n.moving?Math.abs(Math.sin(n.anim*Math.PI))*.65:0;
     const breath=!n.moving&&!n._street?Math.sin(w.time*2.4+(n._daily?.seed||n.x))*.45:0;
     const x=Math.round(n.x-8),y=Math.round(n.y-19-lift);
     if(wave){
@@ -26,11 +30,11 @@ G.worldMotion = (() => {
       ctx.save();ctx.translate(x+arm+1,y+11);ctx.rotate(-1.9+Math.sin(w.time*8)*.18);ctx.drawImage(sheet,sx+arm,sy+11,3,6,-1,0,3,6);ctx.restore();
     }else{
       // В профиль и у детей используем небольшое движение из их собственного листа кадров.
-      const upper=gesturing?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
-      ctx.drawImage(sheet,upper,sy,16,16,x,y-breath,16,16+breath);
+      const upper=gesturing||spontaneous?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
+      ctx.drawImage(sheet,upper,sy,16,16,x,y-breath-stride,16,16+breath+stride);
       ctx.drawImage(sheet,sx,sy+16,16,4,x,y+16,16,4);
     }
-    if(n.moving&&!n._street){
+    if(enabled(w)&&n.moving&&!n._street){
       const rain=G.life.raining(),id=w.map.get(n.x/16|0,n.y/16|0),p=phase(n.anim,0,2);
       if(rain){ctx.strokeStyle='rgba(188,213,220,.5)';ctx.lineWidth=.6;ctx.beginPath();ctx.ellipse(n.x,n.y-1,1+p*5,.5+p*1.7,0,0,Math.PI*2);ctx.stroke();}
       else if([G.tiles.ID.PATH,G.tiles.ID.DIRT,G.tiles.ID.SAND].includes(id)){
@@ -105,5 +109,42 @@ G.worldMotion = (() => {
       ctx.save();ctx.globalAlpha*=Math.sin(p*Math.PI)*(isWater?.32:.4);ctx.strokeStyle=isWater?'#d5ece4':'#becbd0';ctx.lineWidth=.65;ctx.beginPath();ctx.ellipse(x,y,1+p*5,.5+p*2,0,0,Math.PI*2);ctx.stroke();ctx.restore();
     }
   }
-  return{enabled,gesture,actor,petPose,animal,object,ground};
+  // Частицы привязаны к объектам, а не к камере: при прогулке не скачут.
+  // Только видимые объекты и фиксированный бюджет — без накопления в сохранении.
+  function atmosphere(ctx,w,vis){
+    if(!enabled(w))return;
+    const t=w.time,rain=G.life.raining(),hour=G.state.vars.min/60;
+    const night=hour>=19||hour<5,season=G.adventure.season().name;
+    let budget=36;
+    for(const o of vis){
+      if(budget<=0)break;
+      const seed=G.util.hash2(o.x,o.y,143),x=o.x+(o.ox||0),y=o.y+(o.oy||0);
+      if(o.spr?.chimney&&hour>=5&&hour<23){
+        const c=o.spr.chimney;
+        for(let i=0;i<3&&budget>0;i++,budget--){
+          const p=phase(t,seed*5+i*1.6,4.8),size=2+p*4;
+          ctx.save();ctx.globalAlpha*=Math.sin(p*Math.PI)*(rain?.12:.24);
+          ctx.fillStyle='#d7d5d0';ctx.beginPath();
+          ctx.ellipse(x+c.x+p*(rain?19:10)+Math.sin(t+p*4),y+c.y-p*24,size,size*.65,0,0,Math.PI*2);ctx.fill();ctx.restore();
+        }
+      }
+      if(rain||season==='Зима')continue;
+      if(night&&['bush','pond','lavender','flowerbed'].includes(o.kind)){
+        for(let i=0;i<2&&budget>0;i++,budget--){
+          const q=t*.8+seed*30+i*3,xp=o.x+Math.sin(q)*12,yp=y+5+Math.cos(q*.7)*6;
+          const glow=Math.max(0,Math.sin(t*1.8+seed*20+i*2));
+          ctx.save();ctx.globalAlpha*=glow*.18;ctx.fillStyle='#cde88b';ctx.fillRect(xp-2,yp-2,5,5);
+          ctx.globalAlpha*=4;ctx.fillStyle='#eef5ab';ctx.fillRect(xp,yp,1,1);ctx.restore();
+        }
+      }else if(!night&&['tree','sakura','maple','ginkgo'].includes(o.kind)){
+        for(let i=0;i<2&&budget>0;i++,budget--){
+          const p=phase(t,seed*9+i*4.5,9),xp=x+o.w*.45+p*20+Math.sin(t*1.8+seed*10+i)*4,yp=y+8+p*Math.max(16,o.h-8);
+          ctx.save();ctx.globalAlpha*=Math.sin(p*Math.PI)*.8;
+          ctx.fillStyle=o.kind==='sakura'?'#efb6ca':season==='Осень'?'#cf9652':'#9dbb69';
+          ctx.fillRect(xp,yp,Math.sin(t*5+i)>0?3:1,1);ctx.fillRect(xp+1,yp+1,1,1);ctx.restore();
+        }
+      }
+    }
+  }
+  return{enabled,gesture,actor,petPose,animal,object,ground,atmosphere};
 })();

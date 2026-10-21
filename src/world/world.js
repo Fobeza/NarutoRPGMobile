@@ -9,7 +9,7 @@ G.actors = {
     const b = this.feet(a, nx, ny);
     if (map.blockedRect(b)) return true;
     if (others) for (const o of others) {
-      if (o === a || o.roof || o.jump || Math.abs(o.x - nx) > 12 || Math.abs(o.y - ny) > 7) continue;
+      if (o === a || a._npcPass?.has(o) || o._npcPass?.has(a) || o.roof || o.jump || Math.abs(o.x - nx) > 12 || Math.abs(o.y - ny) > 7) continue;
       if (G.util.rectsOverlap(b, this.feet(o))) return true;
     }
     return false;
@@ -33,6 +33,33 @@ G.actors = {
       }
     }
     return moved;
+  },
+
+  // Секунда упора в конкретного жителя открывает проход только через него.
+  // Пропуск сохраняется до расхождения даже при отпускании кнопки внутри NPC.
+  playerContact(map, a, dx, dy, others, dt) {
+    if (a._contactMap !== map) {
+      a._contactMap = map; a._npcWait = new Map(); a._npcPass = new Set();
+    }
+    const pass = a._npcPass, wait = a._npcWait;
+    for (const o of pass) if (!others.includes(o) || Math.abs(a.x-o.x) > 12 || Math.abs(a.y-o.y) > 7) pass.delete(o);
+    const touching = new Set();
+    if ((dx || dy) && !a.roof && !a.jump) {
+      const bx = this.feet(a, a.x + Math.sign(dx), a.y);
+      const by = this.feet(a, a.x, a.y + Math.sign(dy));
+      for (const o of others) {
+        if (o === a || o.roof || o.jump || pass.has(o)) continue;
+        const feet = this.feet(o);
+        if ((dx && !map.blockedRect(bx) && G.util.rectsOverlap(bx, feet)) ||
+            (dy && !map.blockedRect(by) && G.util.rectsOverlap(by, feet))) {
+          touching.add(o);
+          const t = (wait.get(o) || 0) + dt;
+          if (t >= 1 - 1e-9) { pass.add(o); wait.delete(o); }
+          else wait.set(o, t);
+        }
+      }
+    }
+    for (const o of wait.keys()) if (!touching.has(o)) wait.delete(o);
   },
 
   // Плавное движение с накоплением дробной части
@@ -61,6 +88,7 @@ G.world = {
       const t0 = performance.now();
       const m = G.mapgen.konoha(G.KONOHA_DRAFT, this.SEED);
       this.populateKonoha(m);
+      if (G.villageDetails) G.villageDetails.populate(m);
       m.finalize();
       G.mapgen.pockets(m);
       this.maps.konoha = m;

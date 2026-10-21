@@ -220,6 +220,7 @@ G.buildgfx = (() => {
     if (H(seed, 26, 4) > 0.5 && W >= 40) {
       const cx = style === 'front' ? Math.round(W * 0.72) : 6 + Math.floor(H(seed, 27, 2) * (W * 0.3));
       const cy = Math.max(9, Math.round(h * 0.22));
+      o.chimney = { x: cx + 3, y: cy - 2 };
       px(c, cx - 1, cy - 1, P.ink, 9, 2); px(c, cx, cy + 1, P.ink, 7, 11); px(c, cx + 1, cy + 1, '#a85a42', 5, 10); px(c, cx + 1, cy + 1, '#c8806a', 5, 1);
       px(c, cx + 1, cy + 5, '#8a4a38', 5, 1);
       c.globalAlpha = 0.75; px(c, cx + 2, cy - 4, '#eceef4', 3, 3); px(c, cx + 4, cy - 7, '#eceef4', 3, 3); px(c, cx + 3, cy - 10, '#eceef4', 2, 2); c.globalAlpha = 1;
@@ -388,7 +389,18 @@ G.buildgfx = (() => {
     if (cache[key]) return cache[key];
     const an = art || (tpl.unique && G.houseArt.has(id) ? id : null);
     const sp = an && G.houseArt.sprite(an, tpl);
-    if (sp) return (cache[key] = sp);
+    if (sp) {
+      // Небольшая кирпичная труба у части обычных домов; исходный арт не меняем.
+      if (tpl.cat === 'house' && !tpl.unique && H(seed, 26, 4) > .65) {
+        const img = G.gfx.canvas(sp.w, sp.h), c = img.getContext('2d');
+        c.drawImage(sp.img, 0, 0);
+        const x = Math.round(sp.w * .65), y = Math.round(sp.h * .22);
+        px(c, x, y, P.ink, 6, 10); px(c, x + 1, y + 1, '#a85a42', 4, 8);
+        px(c, x - 1, y, '#583e3a', 8, 2); px(c, x + 1, y + 4, '#ce8a66', 4, 1);
+        return (cache[key] = Object.assign({}, sp, { img, chimney: { x: x + 3, y } }));
+      }
+      return (cache[key] = sp);
+    }
     const W = tpl.w * T, HF = tpl.h * T;
     let OV = tpl.ov || 16;
     if (id === 'hokage_tower') OV = 28;
@@ -399,13 +411,15 @@ G.buildgfx = (() => {
     const draw = SPECIAL[id] || GENERIC[tpl.cat] || GENERIC.house;
     glowList = []; eaves = { cv: c.canvas, list: [] };
     G.shade.defer(c);   // V9: свет и тени копятся и ложатся за одно чтение пикселей
-    draw(c, { id, tpl, W, HF, OV, seed, col: tpl.color, style });
+    const details = { id, tpl, W, HF, OV, seed, col: tpl.color, style };
+    draw(c, details);
     // V9: мягкая тень под карнизами — ложится на стену, окна и двери, сходит на нет за 9 px
     for (const [ex, ey, ew] of eaves.list) G.shade.tint(c, ex + 1, ey, ew - 2, 9, (u, v) => -0.6 * (1 - v) ** 1.6);
     G.shade.flush(c);
     eaves = null;
     G.gfx.smooth(c.canvas);
     const res = { img: c.canvas, ox: 0, oy: -OV, w: W, h: HF + OV };
+    if (details.chimney) res.chimney = details.chimney;
     if (glowList.length) {
       const g = G.gfx.canvas(W, HF + OV), gc = g.getContext('2d');
       gc.fillStyle = '#ffb860'; for (const [x, y, w, h] of glowList) gc.fillRect(x, y, w, h);
