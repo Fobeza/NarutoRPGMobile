@@ -91,7 +91,8 @@ with sync_playwright() as p:
     W(page, "G.outdoor.craftMenu(s); return 1"); time.sleep(0.3); key(page, "KeyZ"); time.sleep(0.3); close_dialogs(page)
     check(page.evaluate("G.game.count('ointment') + (G.state.chest.ointment || 0)") == 1 and inv(page, 'herb') == 0, "мазь из 3 трав сохранена в сумке или сундуке")
     page.evaluate("Object.assign(G.state.inv, { eel: 1, rice: 1 }); G.state.vars.food = 20")
-    W(page, "G.flow.cook({}, s); return 1"); time.sleep(0.3); key(page, "ArrowDown", 4); key(page, "KeyZ"); time.sleep(0.3); close_dialogs(page)
+    W(page, "G.flow.cook({}, s); return 1"); time.sleep(0.3)
+    pick(page, "Обычная готовка"); pick(page, "Унаги-дон"); close_dialogs(page)   # с 1.6 кухня сначала спрашивает: обычная или семейная
     check(inv(page, 'eel') == 0 and page.evaluate("G.state.vars.food") >= 75, "унаги-дон: сытость %d" % page.evaluate("Math.round(G.state.vars.food)"))
 
     print("— крыши")

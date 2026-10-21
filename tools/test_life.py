@@ -79,7 +79,8 @@ with sync_playwright() as p:
     W(page, "G.flow.scroll({ i: 3 }, s); return 1"); time.sleep(0.3); close_dialogs(page)
     check(page.evaluate("G.state.vars.scrolls") == 1, 'секретный свиток найден')
     page.evaluate("Object.assign(G.state.inv, { rice: 1, fish: 1, vegetables: 1 })")
-    W(page, "G.flow.cook({}, s); return 1"); time.sleep(0.3); key(page, 'ArrowDown'); key(page, 'KeyZ'); time.sleep(0.3); close_dialogs(page)
+    W(page, "G.flow.cook({}, s); return 1"); time.sleep(0.3)
+    pick(page, "Обычная готовка"); pick(page, "Бэнто: рис, рыба, овощи"); close_dialogs(page)   # с 1.6 — сначала выбор кухни
     check(page.evaluate("G.state.daily.bento") == 1, 'бэнто приготовлено')
     W(page, "G.flow.calendar({}, s); return 1"); time.sleep(0.4); shot(page, 'life_calendar'); key(page, 'KeyX'); time.sleep(0.3)
     page.evaluate("G.scenes.push(G.scenes.make('status'))"); time.sleep(0.4); shot(page, 'life_status'); key(page, 'KeyX'); time.sleep(0.3)
@@ -107,24 +108,31 @@ with sync_playwright() as p:
     close_dialogs(page)
     ex = page.evaluate("G.state.vars.exam")
     check(ex is not None and ex > 0, 'экзамен оценён: %s баллов, сдан=%s' % (ex, page.evaluate("G.state.vars.exam_pass")))
-    # ── 9. ночь Мизуки и концовка ──
-    page.evaluate("G.state.vars.min = 20 * 60 + 5"); time.sleep(0.6)
-    check(page.evaluate("G.state.flags.st_night") == 1, 'ночь Мизуки началась')
-    for _ in range(50):
-        if top(page) == 'battle': break
-        key(page, 'KeyZ', wait=0.25)
-    check(wait_top(page, 'battle', 5), 'финальный бой с Мизуки')
-    shot(page, 'life_mizuki')
-    B(page, "s.debugWin(); return 1"); time.sleep(2.2); key(page, 'KeyZ'); time.sleep(0.5)
+    # ── 9. ночь выпуска и концовка (2.0, data/first_promise.js) ──
+    # ночь наступает после расследования «Пропавшие лекарства»; дальше два боя: удержать проход у склада и Гэндо
+    page.evaluate("G.state.quests.promise_case = { st: 'done', step: 99, day: 40 }")
+    page.evaluate("G.state.vars.min = 20 * 60 + 5")
+    for _ in range(30):
+        if page.evaluate("G.state.flags.st_night") == 1: break
+        time.sleep(0.1)
+    check(page.evaluate("G.state.flags.st_night") == 1, 'ночь выпуска началась')
+    for stage, name in enumerate(['бой у склада: удержать проход', 'финальный бой с Гэндо']):
+        for _ in range(50):
+            if top(page) == 'battle': break
+            key(page, 'KeyZ', wait=0.25)
+        check(wait_top(page, 'battle', 5), name)
+        shot(page, 'life_final_%d' % stage)
+        B(page, "s.debugWin(); return 1"); time.sleep(2.2); key(page, 'KeyZ'); time.sleep(0.5)
     for _ in range(40):
         if top(page) == 'ending': break
         key(page, 'KeyZ', wait=0.25)
     time.sleep(1.0)
     check(top(page) == 'ending', 'концовка')
-    for i in range(6):
+    for i in range(12):   # 2.0: 7 страниц титров («Первое обещание»), затем игра продолжается
+        if top(page) != 'ending': break
         time.sleep(0.9); shot(page, 'life_end_%d' % i); key(page, 'KeyZ')
     time.sleep(1.2)
-    check(top(page) == 'title', 'после титров — титульный экран')
+    check(top(page) == 'world', 'после титров — игра продолжается в мире (%s)' % top(page))
     check(page.evaluate("(G.storage.load() || {flags:{}}).flags.game_clear") == 1, 'сохранение с флагом прохождения')
     b.close()
 report()

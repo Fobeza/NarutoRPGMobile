@@ -64,13 +64,23 @@ def walk_path(page, pts):
         if not walk_axis(page, axis, target): return False
     return True
 
+def menu_pick(page, label):
+    """Открыть меню (Escape) и выбрать пункт по подписи — новые пункты меню не сбивают счёт."""
+    key(page, "Escape"); time.sleep(0.3)
+    i = page.evaluate("G.scenes.top().name === 'menu' ? G.scenes.top().labels().indexOf(%r) : -1" % label)
+    if i > 0: key(page, "ArrowDown", i)
+    key(page, "KeyZ"); time.sleep(0.4)
+
 def wait_map(page, mid=None, prefix=None, t=3.0):
-    t0 = time.time()
+    # с 2.0 двери открываются только кнопкой A: у двери с подсказкой «Войти»/«Выйти» жмём её один раз
+    t0, pressed = time.time(), False
     while time.time() - t0 < t:
         try:
             if top(page) == "world" and not page.evaluate("G.scenes.busy"):
                 m = pos(page)["m"]
                 if (mid and m == mid) or (prefix and m.startswith(prefix)): return True
+                if not pressed and W(page, "const a = s.currentAction(); return a ? a.label : null;") in ("Войти", "Выйти"):
+                    page.keyboard.press("KeyZ"); pressed = True
         except Exception: pass
         time.sleep(0.1)
     return False
@@ -232,7 +242,8 @@ with sync_playwright() as p:
     check(page.evaluate("!!G.state.flags.met_iruka"), "разговор с Ирукой в классе")
     check(page.evaluate("(G.quests.curStep('day1')||{}).id") == "naruto", "шаг задания: найти Наруто")
     check(page.evaluate("G.quests.active('homework')"), "Ирука дал задание «Снаряжение к уроку»")
-    check(page.evaluate("G.game.clock()").startswith("12:3"), "часы сдвинулись на 12:30 (%s)" % page.evaluate("G.game.clock()"))
+    # 2.0 (first_promise.js): после теста Ирука зачисляет в класс, время больше не переводится на 12:30
+    check(page.evaluate("!!G.state.flags.enrolled"), "зачислен в класс Ируки")
 
     # ── Этап 3: сюжет первого дня ─────────────────────────────
     W(page, "s.setMap(G.world.outsideOf(G.world.konoha().buildings.find(b => b.tplId === 'academy')));")
@@ -318,7 +329,7 @@ with sync_playwright() as p:
     check(page.evaluate("G.quests.done('waterfall_scroll')") and page.evaluate("G.state.vars.money") == m0 + 160, "секрет водопада найден: +100 рё")
 
     # журнал заданий
-    key(page, "Escape"); time.sleep(0.3); key(page, "ArrowDown"); key(page, "KeyZ"); time.sleep(0.4)
+    menu_pick(page, "Задания")
     check(top(page) == "journal", "открылся журнал заданий")
     shot(page, "37_journal")
     key(page, "KeyZ"); time.sleep(0.3)
@@ -336,7 +347,11 @@ with sync_playwright() as p:
     page.evaluate("(() => { const s = G.scenes.top(); s.cx = %f; s.cy = %f; s.fitView(true); })()" % (ac2["x"], ac2["y"]))
     time.sleep(0.2)
     shot(page, "41_bigmap_x2")
+    # 2.0: близкие значки собраны в группу — A открывает выбор «Места рядом», в нём берём Ичираку
+    pick_i = page.evaluate("(() => { const s = G.scenes.top(), [sx, sy] = s.toScreen(s.cx, s.cy), m = s.clusterAt(sx, sy); return m && m.items && m.items.length > 1 ? m.items.findIndex(x => x.label === 'Ичираку рамен') : -1; })()")
     key(page, "KeyZ"); time.sleep(0.3)
+    if top(page) == "pick" and pick_i >= 0:
+        key(page, "ArrowDown", pick_i); key(page, "KeyZ"); time.sleep(0.3)
     check(page.evaluate("!!G.scenes.top().card"), "карточка места на карте")
     shot(page, "42_place_card")
     key(page, "ArrowDown"); key(page, "KeyZ"); time.sleep(0.3)
@@ -351,7 +366,7 @@ with sync_playwright() as p:
     page.evaluate("G.state.vars.min = 19*60 + 45")
 
     # сумка
-    key(page, "Escape"); time.sleep(0.3); key(page, "ArrowDown", 4); key(page, "KeyZ"); time.sleep(0.4)
+    menu_pick(page, "Сумка")
     check(top(page) == "bag", "открылась сумка")
     shot(page, "27_bag")
     key(page, "KeyX"); time.sleep(0.2); key(page, "KeyX"); time.sleep(0.3)
@@ -431,7 +446,7 @@ with sync_playwright() as p:
     shot(page, "57_rain")
     check(page.evaluate("G.life.raining()"), "дождливый день %d" % rd)
     # статус
-    key(page, "Escape"); time.sleep(0.3); key(page, "ArrowDown", 3); key(page, "KeyZ"); time.sleep(0.4)
+    menu_pick(page, "Статус")
     check(top(page) == "status", "экран «Статус»")
     shot(page, "58_status")
     key(page, "KeyX"); time.sleep(0.2); key(page, "KeyX"); time.sleep(0.3)

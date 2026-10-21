@@ -8,6 +8,7 @@ G.scenes.register('pick', (o, cb) => {
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {
     name: 'pick', transparent: true,
+    labels() { return opts.map((x) => x.label); },   // для тестов: выбор строки по подписи, а не по счёту
     choose(i) { G.scenes.pop(); cb && cb(i); },
     rows() { return Math.min(opts.length, Math.max(3, Math.floor((G.screen.H - 190) / ROW))); },
     geom() {

@@ -18,6 +18,13 @@ def key(page, k, n=1, wait=0.12):
 def top(page):
     return page.evaluate("G.scenes.top() && G.scenes.top().name")
 
+def pick(page, label, wait=0.3):
+    """В открытом меню выбора (pick, menu) — строка по подписи: стрелками вниз и A, как игрок."""
+    i = page.evaluate("(() => { const s = G.scenes.top(); return s && s.labels ? s.labels().indexOf(%r) : -1; })()" % label)
+    if i < 0: return False
+    key(page, "ArrowDown", i); key(page, "KeyZ"); time.sleep(wait)
+    return True
+
 def W(page, js):
     return page.evaluate("(() => { const s = G.scenes.stack.find(x => x.name === 'world'); " + js + " })()")
 

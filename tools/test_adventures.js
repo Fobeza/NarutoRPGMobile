@@ -23,7 +23,7 @@ const shots=path.join(__dirname,'shots','adventures');fs.mkdirSync(shots,{recurs
   async function board(index){await page.evaluate(()=>G.adventure.menu());await pick(0);await pick(index);await close();}
   async function shot(name){await page.screenshot({path:path.join(shots,name+'.png')});}
   // Вход из обычного меню паузы, затем выбор задания настоящими касаниями.
-  await page.keyboard.press('Escape');await idle();await page.keyboard.press('ArrowDown');await idle();await page.keyboard.press('ArrowDown');await idle();await page.keyboard.press('KeyZ');await idle();assert.equal(await page.evaluate('G.scenes.top().name'),'pick');await shot('hub');await pick(0);await pick(0);await close();
+  await page.keyboard.press('Escape');await idle();{const n=await page.evaluate(()=>G.scenes.top().labels().indexOf('Приключения'));for(let i=0;i<n;i++){await page.keyboard.press('ArrowDown');await idle();}}await page.keyboard.press('KeyZ');await idle();assert.equal(await page.evaluate('G.scenes.top().name'),'pick');await shot('hub');await pick(0);await pick(0);await close();
   await at('forest','tracks');await use();await close();await at('forest','prepare');await use();await pick(0);await close();await at('forest','cargo');await shot('forest');await use();await pick(0);await close();await board(0);
   assert.equal(await page.evaluate("G.quests.done('adv_cargo')&&G.state.flags.adv_cargo_peace===1&&G.state.vars.money===400"),true);console.log('✔ Мирная цепочка: разведка, подготовка, груз, отчёт — через A и касания');
   await board(1);await at('river','survey');await use();await close();await at('river','bridge');await use();await close();assert.equal(await page.evaluate("G.world.get('adv:river').get(18,14)===G.tiles.ID.PLANKS"),true);

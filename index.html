@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.0.0', version: 'ca4fb3c2', date: '2026-10-21 02:42', debug: false };
+const BUILD = { release: '2.0.0', version: '3d4a4f24', date: '2026-10-21 03:52', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -19192,6 +19192,7 @@ G.scenes.register('pick', (o, cb) => {
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {
     name: 'pick', transparent: true,
+    labels() { return opts.map((x) => x.label); },   // для тестов: выбор строки по подписи, а не по счёту
     choose(i) { G.scenes.pop(); cb && cb(i); },
     rows() { return Math.min(opts.length, Math.max(3, Math.floor((G.screen.H - 190) / ROW))); },
     geom() {
@@ -19522,6 +19523,7 @@ G.scenes.register('menu', () => {
   return {
     name: 'menu',
     transparent: true,
+    labels() { return items().map((x) => x.label); },   // для тестов: выбор пункта по подписи, а не по счёту
     update(dt) {
       const I = G.input;
       const list = items();

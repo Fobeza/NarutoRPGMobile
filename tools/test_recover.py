@@ -34,17 +34,18 @@ def press_until(page, name, n=50):
     return top(page) == name
 
 with sync_playwright() as p:
-    # ── 1. финал прерван → после «Продолжить» ночь Мизуки начинается заново ──
+    # ── 1. финал прерван → после «Продолжить» ночь выпуска начинается заново ──
+    # 2.0 (data/first_promise.js): ночь наступает после расследования promise_case, первый бой — у склада
     b, page = fresh(p)
-    page.evaluate("Object.assign(G.state.vars, { day: 54, min: 19*60+58, exam: 85, exam_pass: 1 }); Object.assign(G.state.flags, { st_exam: 1, graduated: 1, best: 1, tech_bunshin: 1 }); G.state.daily = { ev: 9 }")
+    page.evaluate("Object.assign(G.state.vars, { day: 54, min: 19*60+58, exam: 85, exam_pass: 1 }); Object.assign(G.state.flags, { st_exam: 1, graduated: 1, best: 1, tech_bunshin: 1 }); G.state.daily = { ev: 9 }; G.state.quests.promise_case = { st: 'done', step: 99, day: 40 }")
     page.evaluate("G.state.vars.min = 20*60+5"); time.sleep(0.8)
-    check(press_until(page, 'battle'), 'финал: бой с Мизуки начался')
+    check(press_until(page, 'battle'), 'финал: первый бой ночи выпуска начался')
     page.evaluate("G.storage.save(G.state)")
     r = saved_after_recover(page)
     check(not r['flags'].get('st_night') and 'ночь Мизуки' in r['fixes'], 'recover снимает st_night: %s' % r['fixes'])
     suspend_and_continue(page)
     page.evaluate("G.state.vars.min = 20*60+10"); time.sleep(0.8)
-    check(press_until(page, 'battle'), 'ночь Мизуки начинается заново (игру можно пройти)')
+    check(press_until(page, 'battle'), 'ночь выпуска начинается заново (игру можно пройти)')
     b.close()
 
     # ── 2. экзамен прерван → начинается заново ──

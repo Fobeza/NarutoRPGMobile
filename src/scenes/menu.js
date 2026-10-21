@@ -27,6 +27,7 @@ G.scenes.register('menu', () => {
   return {
     name: 'menu',
     transparent: true,
+    labels() { return items().map((x) => x.label); },   // для тестов: выбор пункта по подписи, а не по счёту
     update(dt) {
       const I = G.input;
       const list = items();
