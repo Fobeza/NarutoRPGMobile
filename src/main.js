@@ -46,6 +46,7 @@
       G.input.poll();
       G.debug.tick(dt);
       G.scenes.update(dt);
+      G.ambience.update(null, dt);   // фон деревни и музыка
       const ctx = G.screen.ctx;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, G.screen.W, G.screen.H);

@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.2.2', version: '8be17ca7', date: '2026-10-21 20:10', debug: false };
+const BUILD = { release: '2.2.2', version: '7575e9df', date: '2026-10-21 20:48', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -626,7 +626,8 @@ G.touch = (() => {
 
 
 // ===== engine/audio.js =====
-// Звук: синтез через Web Audio. Музыка — на этапе 10, сейчас только короткие эффекты.
+// Звук: синтез через Web Audio — короткие эффекты (G.audio.sfx), фон деревни и тихая музыка (engine/ambience.js).
+// Шины: master → эффекты напрямую, amb — фон деревни, mus — музыка; громкость шин меняет G.ambience.
 G.audio = {
   ctx: null,
   master: null,
@@ -649,6 +650,8 @@ G.audio = {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.volume;
     this.master.connect(this.ctx.destination);
+    this.amb = this.ctx.createGain(); this.amb.gain.value = 1; this.amb.connect(this.master);
+    this.mus = this.ctx.createGain(); this.mus.gain.value = 0; this.mus.connect(this.master);
     // «пустой» звук для разблокировки
     const b = this.ctx.createBuffer(1, 1, 22050);
     const s = this.ctx.createBufferSource();
@@ -703,17 +706,215 @@ G.audio = {
     s.start(t);
   },
 
+  // Белый шум (2 с) — общий источник для фильтрованных шумов и фоновых петель
+  whiteBuffer() {
+    if (this._white) return this._white;
+    const len = this.ctx.sampleRate * 2, buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return (this._white = buf);
+  },
+  // в стерео, если браузер умеет: звуки деревни слева и справа от героя
+  panner(pan, dest) {
+    if (!pan || !this.ctx.createStereoPanner) return dest;
+    const p = this.ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(dest); return p;
+  },
+  // Шум через фильтр с огибающей: шаги, ветер, всплеск. type — lowpass/highpass/bandpass
+  noiseF(dur, vol, freq, type = 'lowpass', { delay = 0, q = 1, attack = 0.004, slideTo = null, bus = null, pan = 0 } = {}) {
+    if (!this.ready()) { this.wake(); return; }
+    const t = this.ctx.currentTime + delay, s = this.ctx.createBufferSource(), f = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
+    s.buffer = this.whiteBuffer(); s.loop = true;
+    f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
+    if (slideTo) f.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.panner(pan, bus || this.master));
+    s.start(t, Math.random() * 1.5); s.stop(t + dur + 0.05);
+  },
+  // «Щипок» струны (кото, сямисэн): основной тон + тихая октава, быстрая атака и долгий спад
+  pluck(freq, dur = 1.2, vol = 0.06, { delay = 0, bus = null, pan = 0, type = 'triangle' } = {}) {
+    if (!this.ready()) return;
+    const t = this.ctx.currentTime + delay, out = this.panner(pan, bus || this.master);
+    for (const [k, v, w] of [[1, 1, type], [2, 0.25, 'sine'], [3.01, 0.08, 'sine']]) {
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = w; o.frequency.setValueAtTime(freq * k, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * v, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur / k);
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.05);
+    }
+  },
+  // Колокол: неровные обертоны и долгий хвост
+  bellTone(freq, dur = 3, vol = 0.05, { delay = 0, bus = null, pan = 0 } = {}) {
+    if (!this.ready()) return;
+    const t = this.ctx.currentTime + delay, out = this.panner(pan, bus || this.master);
+    for (const [k, v] of [[1, 1], [2.02, 0.45], [2.76, 0.3], [5.4, 0.12]]) {
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(freq * k, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol * v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur / Math.sqrt(k));
+      o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.05);
+    }
+  },
+
   // Готовые эффекты
   sfx: {
     blip()    { G.audio.tone(880, 0.025, 'square', 0.05); },
     select()  { G.audio.tone(660, 0.05, 'square', 0.1); },
     confirm() { G.audio.tone(660, 0.06, 'square', 0.12); G.audio.tone(990, 0.08, 'square', 0.12, null, 0.06); },
     cancel()  { G.audio.tone(440, 0.08, 'square', 0.1, 220); },
-    step()    { G.audio.noise(0.03, 0.03); },
+    // шаг по разной земле: трава шуршит, камень щёлкает, доски глухо стучат, по воде — плеск
+    step(ground) {
+      const A = G.audio;
+      if (ground === 'stone') { A.noiseF(0.035, 0.05, 2600, 'bandpass', { q: 1.4 }); A.tone(900 + Math.random() * 200, 0.012, 'square', 0.012); }
+      else if (ground === 'wood') { A.tone(150 + Math.random() * 30, 0.05, 'triangle', 0.07, 110); A.noiseF(0.03, 0.02, 900, 'lowpass'); }
+      else if (ground === 'water') A.noiseF(0.12, 0.045, 1800, 'bandpass', { q: 0.7, slideTo: 700 });
+      else if (ground === 'grass') A.noiseF(0.06, 0.035, 3800 + Math.random() * 900, 'highpass', { attack: 0.012 });
+      else A.noise(0.03, 0.03);
+    },
+    door()    { G.audio.noiseF(0.25, 0.04, 500, 'lowpass', { slideTo: 220, attack: 0.03 }); G.audio.tone(160, 0.07, 'triangle', 0.09, 120, 0.2); },
+    coin()    { G.audio.tone(1320, 0.06, 'square', 0.05); G.audio.tone(1980, 0.12, 'square', 0.05, null, 0.06); },
+    questDone() { [587, 659, 784, 880, 1175].forEach((f, i) => G.audio.pluck(f, 0.9, 0.07, { delay: i * 0.09 })); },
+    meow()    { G.audio.tone(620, 0.32, 'sawtooth', 0.025, 940); G.audio.tone(900, 0.2, 'sine', 0.03, 560, 0.18); },
+    bark()    { for (const d of [0, 0.22]) { G.audio.noiseF(0.09, 0.06, 700, 'bandpass', { delay: d, q: 2 }); G.audio.tone(330, 0.09, 'sawtooth', 0.035, 190, d); } },
+    jump()    { G.audio.tone(260, 0.16, 'sine', 0.06, 620); G.audio.noiseF(0.12, 0.02, 1800, 'highpass'); },
+    land()    { G.audio.noiseF(0.08, 0.06, 500, 'lowpass'); G.audio.tone(110, 0.06, 'sine', 0.06, 70); },
+    splash()  { G.audio.noiseF(0.45, 0.07, 2600, 'bandpass', { q: 0.6, slideTo: 600, attack: 0.01 }); },
+    bell()    { G.audio.bellTone(196, 4.5, 0.06); },
     puff()    { G.audio.noise(0.25, 0.2); G.audio.tone(300, 0.2, 'triangle', 0.1, 80); },
     error()   { G.audio.tone(160, 0.15, 'sawtooth', 0.1); },
   },
 };
+
+
+// ===== engine/ambience.js =====
+// Фон деревни и тихая музыка — всё синтезом Web Audio, без файлов (игра работает офлайн).
+//   G.ambience.update(world, dt) — каждый кадр из главного цикла: слои (ветер, дождь, вода, гомон) плавно
+//   подстраиваются под место и время, редкие события (птицы, сверчки, лягушки, собака, колокол Академии) — по расписанию.
+//   G.ambience.ground(map, x, y) — какая земля под ногами: для звука шагов.
+//   Настройки: settings.ambience (звуки деревни), settings.music (музыка); общий выключатель — settings.sound.
+G.ambience = (() => {
+  const A = G.audio, layers = {};
+  let clock = 0, slow = 0, lastMin = null, nextEvent = {}, musicT = 0, phrase = null;
+  const R = (a, b) => a + Math.random() * (b - a);
+  const on = (k) => G.storage.settings[k] !== false;
+
+  // Петля шума через фильтр; громкость меняется плавно (setTargetAtTime), источник не пересоздаётся
+  function layer(name, type, freq, q) {
+    if (layers[name]) return layers[name];
+    const c = A.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = A.whiteBuffer(); s.loop = true;
+    f.type = type; f.frequency.value = freq; f.Q.value = q || 0.7;
+    g.gain.value = 0;
+    s.connect(f); f.connect(g); g.connect(A.amb); s.start(0, Math.random() * 1.5);
+    return (layers[name] = { g, f, level: 0 });
+  }
+  function setLayer(name, type, freq, q, level, tau = 1.2) {
+    const L = layer(name, type, freq, q);
+    if (Math.abs(L.level - level) < 0.0005) return L;
+    L.level = level; L.g.gain.setTargetAtTime(level, A.ctx.currentTime, tau);
+    return L;
+  }
+
+  // Что вокруг героя: вода, деревья, люди — по клеткам и объектам рядом
+  function surroundings(w) {
+    const m = w.map, p = w.player, T = G.CONFIG.TILE, tx = p.x / T | 0, ty = p.y / T | 0, ID = G.tiles.ID;
+    let water = 0;
+    for (let y = ty - 6; y <= ty + 6; y += 2) for (let x = tx - 6; x <= tx + 6; x += 2) if (m.get(x, y) === ID.WATER) water++;
+    const objs = m.query({ x: p.x - 110, y: p.y - 90, w: 220, h: 180 });
+    const trees = objs.filter((o) => ['tree', 'pine', 'sakura', 'maple', 'ginkgo', 'bamboo', 'oak', 'birch'].some((k) => String(o.kind).includes(k))).length;
+    const people = w.npcs.filter((n) => Math.abs(n.x - p.x) < 130 && Math.abs(n.y - p.y) < 110).length;
+    const d = m.districtAt ? m.districtAt(tx, ty) : null;
+    return { water: Math.min(1, water / 12), trees, people, market: d && d.type === 'market' };
+  }
+
+  // Редкие звуки: каждое событие со своим таймером
+  function due(k, a, b) {
+    if (nextEvent[k] == null) nextEvent[k] = clock + R(a * 0.3, b);
+    if (clock < nextEvent[k]) return false;
+    nextEvent[k] = clock + R(a, b); return true;
+  }
+  const bus = () => A.amb;
+  function bird() {
+    const base = R(2200, 3600), n = 2 + (Math.random() * 3 | 0);
+    for (let i = 0; i < n; i++) A.tone(base * R(0.9, 1.15), 0.05, 'sine', 0.012, base * R(1.2, 1.5), i * R(0.08, 0.13));
+  }
+  function cricket(pan) {
+    const f = R(4200, 4900);
+    for (let k = 0; k < 3; k++) for (let i = 0; i < 6; i++) A.noiseF(0.018, 0.006, f, 'bandpass', { delay: k * 0.32 + i * 0.035, q: 12, bus: bus(), pan });
+  }
+  function frog(pan) { for (const d of [0, 0.18]) A.noiseF(0.12, 0.03, 260, 'bandpass', { delay: d, q: 3, slideTo: 170, bus: bus(), pan }); }
+  function crow(pan) { for (const d of [0, 0.45]) { A.noiseF(0.22, 0.02, 900, 'bandpass', { delay: d, q: 4, slideTo: 600, bus: bus(), pan }); } }
+  function chime(pan) { const f = R(1900, 2600); [1, 1.25, 1.5].forEach((k, i) => A.bellTone(f * k / 2, 1.6, 0.008, { delay: i * R(0.15, 0.35), bus: bus(), pan })); }
+
+  function events(w, s, hour, outdoor, rain) {
+    const pan = () => R(-0.8, 0.8);
+    if (!outdoor) return;
+    if (!rain && hour >= 5 && hour < 19 && s.trees > 1 && due('bird', 3, Math.max(4, 14 - s.trees))) bird();
+    if (!rain && (hour >= 20 || hour < 5) && due('cricket', 2, 6)) cricket(pan());
+    if (!rain && (hour >= 19 || hour < 4) && s.water > 0.15 && due('frog', 4, 11)) frog(pan());
+    if (!rain && hour >= 17 && hour < 19.5 && due('crow', 20, 45)) crow(pan());
+    if (hour >= 8 && hour < 20 && !rain && due('dog', 45, 110)) G.audio.sfx.bark();
+    if (!rain && hour >= 9 && hour < 18 && due('chime', 25, 60)) chime(pan());
+  }
+  // Колокол Академии: в 8:00 — к урокам, в 13:00 — перемена, в 18:00 — вечер
+  function bells(min) {
+    if (lastMin != null && min > lastMin) for (const h of [8, 13, 18]) if (lastMin < h * 60 && min >= h * 60) A.bellTone(147, 5, 0.05, { bus: A.amb });
+    lastMin = min;
+  }
+
+  // ── музыка: пентатоника, днём лад «ё», ночью «ин»; ноты с паузами, под ними тихий бурдон ──
+  const ROOT = 293.66, YO = [0, 2, 5, 7, 9], IN = [0, 1, 5, 7, 8];
+  const freqOf = (scale, deg) => ROOT * Math.pow(2, (scale[((deg % 5) + 5) % 5] + 12 * Math.floor(deg / 5)) / 12);
+  function music(dt, night, quiet) {
+    const want = on('music') && on('sound') ? (quiet ? 0.35 : 1) : 0;
+    A.mus.gain.setTargetAtTime(want, A.ctx.currentTime, 1.5);
+    if (!want) { phrase = null; return; }
+    musicT -= dt;
+    if (musicT > 0) return;
+    const scale = night ? IN : YO;
+    if (!phrase || !phrase.left) phrase = { deg: (Math.random() * 5 | 0) + 2, left: 6 + (Math.random() * 6 | 0), drone: true };
+    if (phrase.drone) { A.pluck(ROOT / (night ? 4 : 2), 5, 0.035, { bus: A.mus, type: 'sine' }); phrase.drone = false; }
+    phrase.deg = Math.max(0, Math.min(10, phrase.deg + [-2, -1, -1, 0, 1, 1, 2][Math.random() * 7 | 0]));
+    A.pluck(freqOf(scale, phrase.deg), night ? 1.8 : 1.3, night ? 0.035 : 0.045, { bus: A.mus, pan: R(-0.3, 0.3) });
+    if (Math.random() < 0.25) A.pluck(freqOf(scale, phrase.deg + 2), 1, 0.02, { bus: A.mus, delay: 0.12 });
+    phrase.left--;
+    musicT = (night ? 0.75 : 0.5) * [1, 1, 2, 2, 3][Math.random() * 5 | 0] + (phrase.left ? 0 : R(3, 7));   // после фразы — пауза
+  }
+
+  function update(world, dt) {
+    if (!A.ready()) return;
+    clock += dt; slow -= dt;
+    const top = G.scenes.top(), w = world || G.scenes.stack.find((x) => x.name === 'world');
+    const min = G.state ? G.state.vars.min : 12 * 60, hour = (min / 60) % 24, night = hour >= 19 || hour < 6;
+    const battle = top && top.name === 'battle';
+    music(dt, night, battle);
+    if (!w || !w.map || !on('ambience') || battle) {
+      for (const k of Object.keys(layers)) setLayer(k, 'lowpass', 1, 1, 0, 0.6);
+      return;
+    }
+    const outdoor = !!w.map.outdoor, rain = G.life.raining();
+    if (slow <= 0) {   // слои пересчитываем 4 раза в секунду: этого хватает для плавной смены
+      slow = 0.25;
+      const s = outdoor ? surroundings(w) : { water: 0, trees: 0, people: 0, market: false };
+      setLayer('wind', 'lowpass', 420, 0.6, outdoor ? 0.035 + (night ? 0.012 : 0) + (rain ? 0.03 : 0) : 0.006, 2);
+      setLayer('rain', 'highpass', 1100, 0.5, rain ? (outdoor ? 0.11 : 0.035) : 0, 1.5);
+      setLayer('water', 'bandpass', 780, 0.9, outdoor ? s.water * 0.07 : 0, 1);
+      // гомон: тише ночью, громче на рынке и в толпе; мерцает — люди говорят не хором
+      const crowd = outdoor && !night ? Math.min(0.06, s.people * 0.0035 + (s.market ? 0.02 : 0)) : 0;
+      setLayer('crowd', 'bandpass', 620, 1.3, crowd * R(0.6, 1.2) * (rain ? 0.3 : 1), 0.3);   // в дождь люди по домам
+      w._amb = s;
+      events(w, s, hour, outdoor, rain);
+    }
+    bells(min);
+  }
+
+  // Земля под ногами для шагов
+  function ground(m, x, y) {
+    const ID = G.tiles.ID, t = m.get(x / G.CONFIG.TILE | 0, y / G.CONFIG.TILE | 0);
+    if (t === ID.WATER) return 'water';
+    if ([ID.PLANKS, ID.FLOOR, ID.TATAMI, ID.MAT, ID.RUG, ID.STEPS].includes(t)) return 'wood';   // мосты — тоже доски
+    if ([ID.STONE, ID.MAINROAD, ID.BRICK, ID.COBBLE, ID.DARKSTONE, ID.PLAZA, ID.TILEFLOOR].includes(t)) return 'stone';
+    if ([ID.PATH, ID.DIRT, ID.GRAVEL, ID.SAND, ID.DUSTFLOOR].includes(t)) return 'dirt';
+    return m.outdoor ? 'grass' : 'wood';
+  }
+  return { update, ground, get layers() { return layers; } };
+})();
 
 
 // ===== engine/scenes.js =====
@@ -939,7 +1140,7 @@ G.storage = {
     } catch (_) { return false; }
   },
 
-  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true },
+  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true },
   loadSettings() {
     const s = this._get(this.KEY_SETTINGS);
     if (s) Object.assign(this.settings, s);
@@ -6260,6 +6461,7 @@ G.quests = (() => {
     complete(id) {
       const s = S()[id], d = Q()[id];
       s.st = 'done'; s.doneDay = G.state.vars.day;
+      G.audio.sfx.questDone();
       G.state.flags['q_' + id] = 1;
       const r = d.reward || {};
       if (r.money) G.game.earn(r.money);
@@ -9772,6 +9974,11 @@ G.VILLAGE_DAILY = {
     read:{label:'Читает у дома',verb:'Говорить',lines:['На этой странице я и остановился.','Тихий двор — лучшая библиотека.'],talk:'Рассказ о старом дозорном. Он каждый вечер возвращался домой одной и той же дорогой, пока однажды не услышал за стеной котёнка.'},
     play:{label:'Играет во дворе',verb:'Говорить',lines:['Лови! Теперь твоя очередь!','Не подглядывай, я ещё прячусь!'],talk:'У нас тренировка будущих ниндзя! Пока тренируем прыжки через лужи. После дождя будет следующий уровень.'},
     warm:{label:'Греет руки',verb:'Говорить',lines:['Пальцы совсем замёрзли.','Сейчас бы горячего чая.'],talk:'Холодно сегодня. Хорошо, что в чайной всегда есть горячая вода.'},
+    catch:{label:'Играет в мяч',verb:'Говорить',lines:['Лови! Высоко!','Опять мимо, давай ещё!'],talk:'Мы играем в мяч до сотни бросков. Пока досчитали до сорока одного!'},
+    tag:{label:'Играет в догонялки',verb:'Говорить',lines:['Не догонишь, не догонишь!','Ты водишь!'],talk:'Попробуй догони! Я быстрее всех в нашем переулке!'},
+    chat:{label:'Беседует с соседом',verb:'Говорить',lines:['А я ей и говорю…','Да что ты, правда?'],talk:'Мы тут с соседом обсуждаем, кто в этом году выиграет экзамен на чунина.'},
+    exercise:{label:'Делает зарядку',verb:'Говорить',lines:['Раз-два, руки вверх!','Утром зарядка — весь день бодрость.'],talk:'Каждое утро делаю зарядку, как шиноби. Ну, почти как шиноби.'},
+    tea:{label:'Пьёт чай',verb:'Говорить',lines:['Хороший чай, с дымком.','После обеда — только зелёный.'],talk:'Садись, налью и тебе. Чай с горных склонов, прошлогодний сбор.'},
   },
   conversations:[
     ['Ты видел, как цветёт сакура?','Мы вчера всей семьёй ходили смотреть.','После обеда опять туда загляну.'],
@@ -11530,7 +11737,7 @@ G.mapgen = (() => {
     // ---------- 5б. Россыпь мелкой природы: цветы (пятнами), кусты, камни, папоротники, грибы, камыш ----------
     {
       const FL = ['red', 'yellow', 'white', 'blue', 'pink', 'purple', 'orange'];
-      const FP = { park: 0.1, residential: 0.09, clan: 0.09, uchiha: 0.03, official: 0.07, market: 0.04, forest: 0.012, training: 0.008 };
+      const FP = { park: 0.1, residential: 0.05, clan: 0.06, uchiha: 0.03, official: 0.07, market: 0.04, forest: 0.012, training: 0.008 };   // в жилых кварталах цветы — пятнами, без россыпи
       const small = new Uint8Array(W * HH);
       const near = (x, y, f) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => f(m.get(x + a, y + b)));
       for (let y = 14; y < HH - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -11556,8 +11763,8 @@ G.mapgen = (() => {
         if (q < 0.012 && o === 0) { put(['bush_pink', 'bush_white', 'bush_red', 'bush_yellow'][Math.floor(r2 * 4)], true); continue; }
         if (q < 0.03 && o === 0) { put(r2 > 0.5 ? 'bush3' : 'bush', true); continue; }
         if (q < 0.045) { put(r2 > 0.6 ? 'shrub' : r2 > 0.3 ? 'lavender' : 'sunflower', false); continue; }
-        if (q < 0.058) { put('pebbles', false); continue; }
-        if (q < 0.064 && o === 0) { put('rock3', true); continue; }
+        if (q < 0.058 && dt !== 'residential' && dt !== 'clan') { put('pebbles', false); continue; }   // камешки — в лесу, парках и на полигонах
+        if (q < 0.064 && o === 0 && dt !== 'residential' && dt !== 'clan') { put('rock3', true); continue; }
         if (q < 0.0655 && o === 0 && dt !== 'residential') { put('rock2', true); continue; }
         if (q < 0.072 && (dt === 'park' || dt === 'forest')) { put('leafpile', false); continue; }
         if (near(x, y, (t) => t === ID.WATER) && r < 0.35) { put('reeds', false); continue; }
@@ -11582,6 +11789,34 @@ G.mapgen = (() => {
         const a = horiz ? [rr.x + i, rr.y - 1] : [rr.x - 1, rr.y + i];
         const b = horiz ? [rr.x + i, rr.y + rr.h] : [rr.x + rr.w, rr.y + i];
         for (const [x, y] of [a, b]) if (!KP(x, y) && (O(x, y) === 0 || (O(x, y) === 4 && m.get(x, y) === ID.STONE && O(x, y - 1) !== 2 && O(x, y + 1) !== 2))) tryObj(x, y, 'lamp', null, () => true);
+      }
+    }
+
+    // фонари на перекрёстках переулков и улиц: по углу перекрёстка, не чаще чем раз в 8 клеток; в кварталах кланов — каменные
+    {
+      const lamps = m.objects.filter((o) => o.kind === 'lamp' || o.kind === 'stonelamp').map((o) => [o.x / T | 0, o.y / T | 0]);
+      const roadAt = (x, y) => O(x, y) === 1;
+      for (let y = 15; y < HH - 2; y++) for (let x = 2; x < W - 2; x++) {
+        if (!roadAt(x, y) || [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => roadAt(x + a, y + b)).length < 3) continue;
+        if (lamps.some(([lx, ly]) => Math.max(Math.abs(lx - x), Math.abs(ly - y)) < 8)) continue;
+        for (const [a, b] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const lx = x + a, ly = y + b;
+          if (O(lx, ly) !== 0 || KP(lx, ly) || !grassy(lx, ly) || O(lx, ly + 1) === 2) continue;
+          const d = m.districtAt(lx, ly), kind = d && (d.type === 'clan' || d.type === 'uchiha') ? 'stonelamp' : 'lamp';
+          if (tryObj(lx, ly, kind)) { lamps.push([lx, ly]); break; }
+        }
+      }
+    }
+    // аллея вдоль реки: сакуры и клёны на берегу за набережной, через 4–5 клеток
+    {
+      const trees = [];
+      for (let y = 15; y < HH - 2; y++) for (let x = 2; x < W - 2; x++) {
+        if (m.get(x, y) !== ID.COBBLE || ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => m.get(x + a, y + b) === ID.WATER)) continue;
+        for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const tx = x + a * 2, ty = y + b * 2;
+          if (m.get(x + a, y + b) === ID.WATER || trees.some(([p, q]) => Math.abs(p - tx) + Math.abs(q - ty) < 5)) continue;
+          if (tryTree(tx, ty, H(tx, ty, 57) > 0.5 ? 'sakura' : 'maple')) { trees.push([tx, ty]); break; }
+        }
       }
     }
 
@@ -12628,27 +12863,17 @@ G.life2 = (() => {
     return;
   };
   // ── эмоции над головами ──
-  const EMO = ['...', '!', '?', '♥', '*'];
+  // Случайные эмоции жителей убраны (мешали): остаются только эмоции из сцен сюжета (G.cine задаёт n._em сама).
+  // Пары собеседников по-прежнему поворачиваются друг к другу.
   function npcTick(world, n, dt) {
-    if (world.map && world.map.outdoor === false && !n._chat && n.ai !== 'idle') return;
-    n._em = n._em || { t: 0, cd: 4 + Math.random() * 12, ch: '...' };
-    const e = n._em;
-    if (e.delay > 0) { e.delay = Math.max(0, e.delay - dt); return; }
-    if (e.t > 0) { e.t = Math.max(0, e.t - dt); return; }
-    e.cd -= dt;
-    if (e.cd > 0) return;
-    e.cd = 5 + Math.random() * 14;
-    let ch = pick(EMO);
-    if (n._fish) ch = pick(['...', '!', '~']);
-    if (n.id === 'shikamaru' || n.id === 'choji') ch = pick(['Zz', '...']);
-    if (n.id === 'sakura' || n.id === 'ino') ch = pick(['♥', '!', '...']);
-    if (n.id === 'naruto') ch = pick(['!', '!!', '...']);
-    if (n._chat) {
-      // «разговор»: собеседник отвечает через секунду
-      const other = world.npcs.find((o) => o !== n && o._chat && Math.abs(o.x - n.x) < 22 && Math.abs(o.y - n.y) < 10);
-      if (other) { n.dir = n.x < other.x ? 'right' : 'left'; other.dir = other.x < n.x ? 'right' : 'left'; other._em = other._em || { t: 0, cd: 0 }; other._em.ch = pick(['...', '!', '?', '♥']); other._em.t = 1.6; other._em.cd = 2 + Math.random() * 4; other._em.delay = 0.9; }
-    }
-    e.ch = ch; e.t = 1.6; e.delay = 0;
+    const e = n._em;   // эмоция из сцены: сначала задержка, потом время показа
+    if (e) { if (e.delay > 0) { e.delay = Math.max(0, e.delay - dt); return; } if (e.t > 0) { e.t = Math.max(0, e.t - dt); return; } }
+    if (!n._chat) return;
+    n._chatT = (n._chatT || 0) - dt;
+    if (n._chatT > 0) return;
+    n._chatT = 3 + Math.random() * 4;
+    const other = world.npcs.find((o) => o !== n && o._chat && Math.abs(o.x - n.x) < 22 && Math.abs(o.y - n.y) < 10);
+    if (other) { n.dir = n.x < other.x ? 'right' : 'left'; other.dir = other.x < n.x ? 'right' : 'left'; }
   }
   // Маленькие пиксельные эмоции не зависят от размера и состава шрифта.
   const emotePixels = {
@@ -13219,7 +13444,7 @@ G.residents = (() => {
           hm.npcs.push(n); hr = attach(r, hm, n);
         }
         r.homeRep = hr;
-        const work = (r.id === 'hokage' && r.reps.find((p) => p.map.building && p.map.building.tplId === 'hokage_tower')) || r.reps.find((p) => p !== hr && p.actor.shop) || r.reps.find((p) => p !== hr && !p.actor.cond) || r.reps.find((p) => p !== hr) || null;
+        let work = (r.id === 'hokage' && r.reps.find((p) => p.map.building && p.map.building.tplId === 'hokage_tower')) || r.reps.find((p) => p !== hr && p.actor.shop) || r.reps.find((p) => p !== hr && !p.actor.cond) || r.reps.find((p) => p !== hr) || null;
         r.work = work;
         const door = G.world.outsideOf(r.home);
         const market = k.landmarks.market || r.home;
@@ -13231,7 +13456,7 @@ G.residents = (() => {
           { from: 14 * 60, to: 20 * 60, label: work ? 'Дневные дела' : 'Прогулка по деревне', map: work ? work.map.id : 'konoha', x: work ? work.x : dest[0] * T + 8, y: work ? work.y : dest[1] * T + 12 },
           { from: 20 * 60, to: 30 * 60, label: 'Возвращается домой', map: hm.id, x: hr.x, y: hr.y },
         ];
-        if (r.role && !work) r.dailyRoute = familyRoute(k, r, hm, hr, door);
+        if (r.role && (!work || (work.map === k && !work.actor.shop))) { r.work = work = null; r.dailyRoute = familyRoute(k, r, hm, hr, door); }   // уличная «точка» семьи — не работа
         const shop = work && G.SHOPS[work.actor.shop || (work.map.building && work.map.building.tplId)];
         if (shop || r.id === 'hokage') {
           const hours = shop ? shop.hours : [8 * 60, 18 * 60];
@@ -13271,9 +13496,19 @@ G.residents = (() => {
     }
     return null;
   }
+  const queue = {};   // очередь в обед: первые шесть встают в ряд у входа, остальные — в другие закусочные
   function near(k, tpl, r, spread, fallback) {
     const b = k.landmarks[tpl];
     if (!b) return fallback;
+    if (tpl === 'ichiraku' && spread === 7) {
+      const q = queue[k.id] || (queue[k.id] = []), i = q.indexOf(r.uid) >= 0 ? q.indexOf(r.uid) : q.length;
+      if (i < 6) {
+        // очередь стоит прямо на улице, в линию влево от двери
+        const x = (b.door.tx - 1 - i) * T + 8, y = (b.door.ty + 1) * T + 12;
+        if (!k.blockedRect(G.actors.feet({}, x, y)) && k.reach && k.reach[(b.door.ty + 1) * k.w + b.door.tx - 1 - i]) { if (q.indexOf(r.uid) < 0) q.push(r.uid); return { x, y }; }
+      }
+      return near(k, 'dango', r, 7, fallback);
+    }
     const s = r.serial * 7919, p = clearTile(k, b.tx + (s % spread) - (spread >> 1) + (b.tw >> 1), b.ty + b.th + 3 + (Math.floor(s / spread) % 4), true);
     return p ? { x: p[0] * T + 8, y: p[1] * T + 12 } : fallback;
   }
@@ -13326,6 +13561,8 @@ G.residents = (() => {
       return min >= hours[0] && min < hours[1] ? r.work : r.homeRep;
     }
     const stop = r.dailyRoute.find((s) => min >= s.from && min < s.to) || r.dailyRoute[0];
+    // в дождь дети и гуляющие по кварталу сидят дома; на работу и за покупками идут под зонтом
+    if (G.life.raining() && r.role && (r.id === 'kid_m' || r.id === 'kid_f' || stop.label === 'Гуляет по кварталу' || stop.label === 'Отдыхает у дома')) return r.homeRep;
     if (stop.map === r.homeRep.map.id) return r.homeRep;
     if (r.work && stop.map === r.work.map.id) return r.work;
     return { map: village, actor: travelRep(r, village).actor, x: stop.x, y: stop.y };
@@ -13399,7 +13636,7 @@ G.residents = (() => {
     if (!path || !path.length) { nextLeg(r); world.refreshNpcs(); return true; }
     const [tx, ty] = path[0], x = tx * T + 8, y = ty * T + 12, dx = x - n.x, dy = y - n.y;
     if (Math.hypot(dx, dy) < 1.5) { path.shift(); return true; }
-    const len = Math.hypot(dx, dy), speed = Math.min(len, 30 * dt);
+    const len = Math.hypot(dx, dy), speed = Math.min(len, (G.life.raining() ? 44 : 30) * dt);   // под дождём спешат
     n.dir = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 'right' : 'left' : dy > 0 ? 'down' : 'up';
     const oldX = n.x, oldY = n.y;
     G.actors.move(world.map, n, dx / len * speed, dy / len * speed, world.others);
@@ -13485,13 +13722,13 @@ G.roofs = {
     const d = Math.hypot(x1 - p.x, y1 - p.y);
     p.jump = { t: 0, dur: 0.28 + d / 260, x0: p.x, y0: p.y, x1, y1, toRoof, h: 10 + Math.min(16, d / 4) };
     p.roof = false; p.moving = false;
-    G.audio.tone ? G.audio.tone(700, 0.08, 'triangle', 0.06, 1100) : G.audio.sfx.blip();
+    G.audio.sfx.jump();
   },
   updateJump(world, dt) {
     const p = world.player, j = p.jump; if (!j) return;
     j.t += dt; const k = Math.min(1, j.t / j.dur);
     p.x = j.x0 + (j.x1 - j.x0) * k; p.y = j.y0 + (j.y1 - j.y0) * k;
-    if (k >= 1) { p.jump = null; p.roof = j.toRoof; G.audio.sfx.step(); }
+    if (k >= 1) { p.jump = null; p.roof = j.toRoof; G.audio.sfx.land(); }
   },
   // движение по крышам; true — обработано
   move(world, p, ax, speed) {
@@ -13650,6 +13887,83 @@ G.roofPatrol = (() => {
 })();
 
 
+// ===== world/guards.js =====
+// Стража Конохи на земле: пары патрульных ходят по маршрутам между ориентирами (ворота — резиденция, рынок, кварталы).
+// Днём патрулей больше; ночью — меньше, зато с бумажными фонарями, свет которых виден в темноте.
+// Патрульные — декорация, как шиноби на крышах (world/roof_patrol.js): не мешают проходу и не попадают в сохранение.
+G.guards = (() => {
+  const T = 16;
+  const ROUTES = [   // [откуда, куда, днём, ночью]
+    ['gate', 'hokage_tower', true, true], ['market', 'teahouse', true, false], ['clan_hyuga', 'uchiha_police', true, true],
+    ['academy', 'hospital', true, false], ['night_alley', 'hero_home', false, true], ['clan_inuzuka', 'clan_akimichi', true, true],
+  ];
+  function point(map, tpl) {
+    const b = map.buildings.find((x) => x.tplId === tpl) || (map.spots && map.spots[tpl]);
+    if (!b) return null;
+    const p = b.door ? G.world.outsideOf(b) : { x: (b.tx + 1) * T + 8, y: (b.ty + b.th + 1) * T + 12 };
+    const f = G.world.freeTile(map, p.x / T | 0, (p.y / T | 0) + 1);
+    return f ? { x: f[0] * T + 8, y: f[1] * T + 12 } : null;
+  }
+  function build(map) {
+    if (map._guards) return map._guards;
+    const patrols = [];
+    ROUTES.forEach(([a, b, day, night], i) => {
+      const A = point(map, a), B = point(map, b);
+      if (!A || !B) return;
+      const path = G.nav.path(map, A.x, A.y, B.x, B.y, 60000);
+      if (!path || path.length < 8) return;
+      const pts = path.map(([x, y]) => ({ x: x * T + 8, y: y * T + 12 }));
+      for (let k = 0; k < 2; k++) patrols.push({ id: 'chunin', name: 'Стража', pts, i: Math.max(0, 10 * i % pts.length - k * 2), step: 1, x: pts[0].x, y: pts[0].y,
+        dir: 'down', anim: 0, moving: true, day, night, serial: i * 2 + k, wait: k * 0.45, _guard: true });
+    });
+    return (map._guards = { patrols });
+  }
+  const night = () => { const m = G.state.vars.min % 1440; return m >= 20 * 60 || m < 6 * 60; };
+  const onDuty = (p) => (night() ? p.night : p.day);
+  function update(world, dt) {
+    if (!world.map || world.map.id !== 'konoha') return;
+    for (const p of build(world.map).patrols) {
+      if (!onDuty(p)) continue;
+      if (p.wait > 0) { p.wait -= dt; p.moving = false; continue; }
+      const q = p.pts[p.i], dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy), sp = 26 * dt;
+      if (d <= sp) {
+        p.x = q.x; p.y = q.y; p.i += p.step;
+        if (p.i >= p.pts.length || p.i < 0) { p.step = -p.step; p.i = Math.max(0, Math.min(p.pts.length - 1, p.i + 2 * p.step)); p.wait = 2.5; }   // у ориентира — короткая остановка, потом обратно
+        continue;
+      }
+      p.x += dx / d * sp; p.y += dy / d * sp; p.moving = true; p.anim += dt * 6;
+      p.dir = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 'right' : 'left' : dy > 0 ? 'down' : 'up';
+    }
+  }
+  // кто сейчас на экране — для общей сортировки по глубине вместе с жителями
+  function actors(world) {
+    if (!world.map || world.map.id !== 'konoha') return [];
+    const c = world.cam, W = G.screen.W / (world.z || 1), H = world.viewH() / (world.z || 1);
+    return build(world.map).patrols.filter((p) => onDuty(p) && p.x > c.x - 24 && p.x < c.x + W + 24 && p.y > c.y - 8 && p.y < c.y + H + 30);
+  }
+  // бумажный фонарь в руке ночью (рисуется вместе с патрульным)
+  function lantern(ctx, a) {
+    if (!a._guard || !night()) return;
+    const side = a.dir === 'left' ? -1 : 1, x = Math.round(a.x + side * 7), y = Math.round(a.y - 12 + (a.moving ? Math.sin(a.anim * 2) : 0));
+    ctx.fillStyle = '#5a3a24'; ctx.fillRect(x, y - 6, 1, 4);
+    ctx.fillStyle = '#e8a040'; ctx.fillRect(x - 2, y - 2, 5, 6); ctx.fillStyle = '#ffd890'; ctx.fillRect(x - 1, y - 1, 3, 4);
+    ctx.fillStyle = '#7a2a20'; ctx.fillRect(x - 2, y - 2, 5, 1); ctx.fillRect(x - 2, y + 3, 5, 1);
+  }
+  // тёплое пятно света вокруг фонаря — поверх ночного затемнения
+  function glow(ctx, world) {
+    if (!night() || G.storage.settings.fx === false) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (const a of actors(world)) {
+      const x = a.x + (a.dir === 'left' ? -7 : 7), y = a.y - 10, g = ctx.createRadialGradient(x, y, 1, x, y, 30);
+      g.addColorStop(0, 'rgba(255,190,100,0.35)'); g.addColorStop(1, 'rgba(255,150,60,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - 30, y - 30, 60, 60);
+    }
+    ctx.restore();
+  }
+  return { build, update, actors, lantern, glow };
+})();
+
+
 // ===== world/fx.js =====
 // Визуальные эффекты мира: тени от зданий и деревьев по положению солнца, светящиеся ночью окна,
 // падающие лепестки, светлячки и мягкая виньетка. Всё включается настройкой «Эффекты» (S.fx !== false).
@@ -13750,13 +14064,23 @@ G.fx = (() => {
   }
 
   // Окна светятся тёплым светом ночью (карта окон хранится в спрайте здания: spr.glow)
+  // Ритм вечера: окна зажигаются по очереди с 17:30 до 19:30, гаснут с 21:30 до половины первого;
+  // у ранних пташек свет горит и с 5:30 до рассвета. У каждого дома своё время.
+  function lightsOn(o) {
+    if (!G.state || !o.tplDef || o.tplDef.unique) return true;   // большие здания светятся всю ночь
+    const m = G.state.vars.min % 1440, on = 1050 + H(o.tx, o.ty, 81) * 120, off = 1290 + H(o.tx, o.ty, 82) * 180;
+    if (m >= on && m < Math.min(off, 1440)) return true;
+    if (off > 1440 && m < off - 1440) return true;
+    const early = H(o.tx, o.ty, 83);
+    return early > 0.55 && m >= 330 + early * 40 && m < 420;
+  }
   function windows(ctx, vis, map, k, time) {
     if (!enabled() || !map.outdoor || k <= 0.02) return;
     ctx.globalCompositeOperation = 'lighter';
     for (const o of vis) {
       if (!o.isBuilding || !o.spr || !o.spr.glow) continue;
       const lit = H(o.tx, o.ty, 77);
-      if (lit < 0.28) continue;
+      if (lit < 0.28 || !lightsOn(o)) continue;
       const flick = lit > 0.9 ? 0.85 + 0.15 * Math.sin(time * 7 + o.tx) : 1;
       ctx.globalAlpha = Math.min(1, k) * 0.62 * flick;
       ctx.drawImage(o.spr.glow, o.x + o.spr.ox, o.y + o.spr.oy);
@@ -14592,21 +14916,45 @@ G.villageDaily = (() => {
       if(a.timer<=0){const q=animalTarget(w,a);a.path=q?q.path:[];a.timer=3;}
     }
   }
+  function daily(n){if(!n._daily||n._daily.owner!==G.state){const seed=hash(n.uid);n._daily={owner:G.state,seed,cooldown:.6+(seed%30)/10,busy:0,role:'parcel',phase:0,path:[],center:{x:n.x,y:n.y}};}return n._daily;}
+  const kid=n=>n.id==='kid_m'||n.id==='kid_f';
+  // свободный сосед рядом: стоит, не занят, не идёт по делам, той же «породы» (ребёнок к ребёнку, взрослый к взрослому)
+  function partnerFor(w,n,maxD){
+    return w.npcs.find(o=>o!==n&&generic(o)&&kid(o)===kid(n)&&!o.moving&&!o._routePath?.length&&!(o._daily?.busy>0)&&!o._daily?.path?.length
+      &&Math.hypot(o.x-n.x,o.y-n.y)<maxD&&Math.hypot(o.x-n.x,o.y-n.y)>12&&Math.abs(o.y-n.y)<24);
+  }
+  // парное занятие: оба заняты одинаково долго и смотрят друг на друга
+  function pair(w,n,o,role){
+    const a=daily(n),b=daily(o),busy=role==='chat'?8+a.seed%5:9+a.seed%4;
+    a.partner=o;b.partner=n;a.lead=true;b.lead=false;a.busy=b.busy=busy;b.role=role;b.phase=0;b.path=[];o.moving=false;o.path=null;
+    n.dir=n.x<o.x?'right':'left';o.dir=o.x<n.x?'right':'left';
+    if(role==='chat'&&G.worldMotion){G.worldMotion.gesture(w,n,'talk',busy);G.worldMotion.gesture(w,o,'talk',busy);}
+    return role;
+  }
   function roleFor(w,n,seed){
-    const hour=G.state.vars.min/60,winter=G.adventure.season().name==='Зима';
+    const hour=G.state.vars.min/60,winter=G.adventure.season().name==='Зима',d=n._daily;d.partner=null;d.lead=false;
     if(winter)return'warm';
-    if(n.id==='kid_m'||n.id==='kid_f')return'play';
+    if(kid(n)){
+      const o=partnerFor(w,n,52);
+      if(o)return pair(w,n,o,seed%2?'catch':'tag');   // мяч или догонялки — вдвоём
+      return'play';
+    }
+    if(hour<8&&seed%2)return'exercise';                      // утренняя зарядка во дворе
     const plant=w.map.query({x:n.x-26,y:n.y-26,w:52,h:52}).find(o=>plants.has(o.kind)&&Math.hypot(o.x-n.x,o.y-n.y)<27);
-    if(plant&&!G.life.raining()){n._daily.plant=plant;return'water';}
+    if(plant&&!G.life.raining()){d.plant=plant;return'water';}
+    if(seed%3===0){const o=partnerFor(w,n,40);if(o)return pair(w,n,o,'chat');}   // соседи заговорились у калитки
+    if(hour>=15&&hour<18&&seed%4===1)return'tea';
     return hour<11?'sweep':['sweep','read','parcel'][seed%3];
   }
   function tickNpc(w,n,dt){
     if(!active(w)||!generic(n))return false;
-    if(!n._daily||n._daily.owner!==G.state){const seed=hash(n.uid);n._daily={owner:G.state,seed,cooldown:.6+(seed%30)/10,busy:0,role:'parcel',phase:0,path:[],center:{x:n.x,y:n.y}};}
-    const d=n._daily;d.phase+=dt;
+    const d=daily(n);d.phase+=dt;
     if(n._routePath?.length){d.busy=0;d.path=[];return false;}
     const hour=G.state.vars.min/60;
     if(G.life.raining()||hour<6||hour>=20){if(d.path.length){n.moving=false;n.anim=0;}d.busy=0;d.path=[];return false;}
+    // пара распалась (партнёр ушёл или уступил дорогу герою) — занятие заканчивается
+    if(d.partner&&d.busy>0&&!(d.partner._daily?.busy>0)){d.busy=0;d.path=[];d.partner=null;n.moving=false;d.cooldown=2;return true;}
+    if(d.role==='tag'&&d.busy>0&&d.path.length){d.busy=Math.max(0,d.busy-dt);if(!d.busy){d.path=[];n.moving=false;d.cooldown=3;return true;}}
     if(d.path.length){
       const q=d.path[0],x=q[0]*T+8,y=q[1]*T+12,dx=x-n.x,dy=y-n.y,distance=Math.hypot(dx,dy),speed=(n.id.startsWith('kid_')?42:24)*dt;
       if(distance<1){d.path.shift();if(!d.path.length){n.moving=false;d.cooldown=1;d.wantWalk=false;}return true;}
@@ -14620,7 +14968,13 @@ G.villageDaily = (() => {
       // На тесной тропе житель сразу уступает герою и продолжает свой обычный путь.
       if(Math.hypot(w.player.x-n.x,w.player.y-n.y)<18){d.busy=0;d.cooldown=.3;d.wantWalk=true;return false;}
       d.busy=Math.max(0,d.busy-dt);n.moving=false;n.anim=0;
-      if(!d.busy){d.cooldown=4+d.seed%5;d.wantWalk=true;n.aiT=0;}
+      if(!d.busy){d.cooldown=4+d.seed%5;d.wantWalk=true;n.aiT=0;return true;}
+      // догонялки: ведущий убегает на пару клеток, второй бежит к нему
+      if(d.role==='tag'&&d.partner&&!d.path.length&&d.phase>.4){
+        d.phase=0;const o=d.partner,rng=G.util.rng(d.seed+Math.floor(d.busy*10));
+        const goal=d.lead?{x:d.center.x+rng.int(-2,2)*T,y:d.center.y+rng.int(-1,1)*T}:{x:o.x,y:o.y};
+        if(safe(w.map,goal.x,goal.y)&&Math.hypot(goal.x-n.x,goal.y-n.y)>8){const path=G.nav.path(w.map,n.x,n.y,goal.x,goal.y,300);if(path&&path.length>1&&path.length<8)d.path=path.slice(1);}
+      }
       return true;
     }
     d.cooldown-=dt;if(d.cooldown>0||n.moving||n.path?.length)return false;
@@ -14634,7 +14988,7 @@ G.villageDaily = (() => {
     // Двери и узкие коридоры остаются свободными даже во время короткой работы.
     const tx=n.x/T|0,ty=n.y/T|0,free=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>safe(w.map,(tx+dx)*T+8,(ty+dy)*T+12)).length;
     if(free<3||w.map.warps.some(v=>Math.hypot(v.rect.x-n.x,v.rect.y-n.y)<28)){d.cooldown=6;return false;}
-    d.role=roleFor(w,n,d.seed);d.busy=4+d.seed%4;d.phase=0;n.moving=false;n.path=null;
+    d.busy=4+d.seed%4;d.phase=0;d.role=roleFor(w,n,d.seed);n.moving=false;n.path=null;
     if(n._em)n._em.t=0;
     if(d.role==='water'&&d.plant)n.dir=d.plant.x>=n.x?'right':'left';
     return true;
@@ -14660,7 +15014,7 @@ G.villageDaily = (() => {
       }
     }
     for(const q of s.tracks)q.t-=dt;s.tracks=s.tracks.filter(q=>q.t>0).slice(-44);
-    s.greet-=dt;s.chat-=dt;s.workTalk-=dt;s.sound-=dt;
+    s.greet-=dt;s.chat-=dt;s.workTalk-=dt;
     if(!s.bubble&&(!w._streetScene||w._streetScene.alpha<.3)&&!w.player.roof&&!w.player.jump){
       const nearby=w.npcs.filter(n=>generic(n)&&Math.hypot(n.x-w.player.x,n.y-w.player.y)<68&&!G.quests.iconFor(n.id));
       if(s.workTalk<=0){const n=nearby.find(n=>n._daily?.busy>1);s.workTalk=9;if(n){const lines=D.jobs[n._daily.role].lines;bubble(w,[n],[lines[(n._daily.seed+G.state.vars.day)%lines.length]],3.5);}}
@@ -14676,16 +15030,6 @@ G.villageDaily = (() => {
           a.dir=a.x<b.x?'right':'left';b.dir=b.x<a.x?'right':'left';bubble(w,[a,b],D.conversations[(hash(a.uid)+G.state.vars.day)%D.conversations.length],8);break;}
       }
     }
-    if(s.sound<=0){s.sound=8+(G.state.vars.day%4);ambience(w);}
-  }
-  function ambience(w){
-    if(!G.audio.ready()||G.storage.settings.ambience===false)return false;
-    const hour=G.state.vars.min/60;
-    if(G.life.raining()){G.audio.noise(.11,.012);return true;}
-    if(hour<6||hour>=21)return false;
-    const p=w.player,near= w.map.query({x:p.x-60,y:p.y-60,w:120,h:120}).some(o=>['tree','pine','sakura','pond','bush'].includes(o.kind));
-    if(near){G.audio.tone(1750,.06,'sine',.012,2400);G.audio.tone(2100,.045,'sine',.009,1650,.11);return true;}
-    return false;
   }
   function label(n){const d=n._daily;return d?.busy>0&&(d.role==='water'||d.role==='sweep')&&!G.state.daily['daily_help_'+n.uid]?'Помочь':null;}
   function help(n,w){
@@ -14717,6 +15061,7 @@ G.villageDaily = (() => {
     if(!active(w)||a.type==='bird'||a.alpha<.2||Math.hypot(w.player.x-a.x,w.player.y-a.y)>32)return false;
     a.path=[];a.moving=false;a.pet=5;a.timer=6;
     if(!G.state.daily.daily_pet){G.state.daily.daily_pet=1;G.game.mood(2);}
+    if(a.type==='dog')G.audio.sfx.bark();else G.audio.sfx.meow();
     w.showToast(a.type==='dog'?'Пёс радостно виляет хвостом':'Кошка щурится и тихонько мурчит');return true;
   }
   function lift(n,time){return fx()&&n._daily?.busy>0&&n._daily.role==='play'?Math.max(0,Math.sin(time*4+n._daily.seed))*2.5:0;}
@@ -14737,7 +15082,7 @@ G.villageDaily = (() => {
     if(w.map.id!=='konoha')return;
     const d=n._daily,t=w.time,side=n.dir==='left'?-1:1;
     ctx.save();ctx.translate(n.x,n.y-(fx()&&n.moving?Math.sin(n.anim*2)*.7:0));
-    if(G.life.raining()&&generic(n)&&hash(n.uid)%3===0){
+    if(G.life.raining()&&generic(n)&&!kid(n)){   // под дождём у каждого взрослого свой зонт
       ctx.fillStyle='#70583e';ctx.fillRect(5,-30,1,20);ctx.fillStyle=['#b89877','#738d88','#9b6e73'][hash(n.uid)%3];
       ctx.beginPath();ctx.moveTo(-8,-25);ctx.quadraticCurveTo(1,-42,13,-25);ctx.closePath();ctx.fill();ctx.fillStyle='#d8c8a4';ctx.fillRect(1,-32,1,7);ctx.fillRect(0,-34,3,1);
     }
@@ -14749,6 +15094,16 @@ G.villageDaily = (() => {
       if(d.role==='read'){ctx.fillStyle='#ead8a3';ctx.fillRect(-5,-8,10,5);ctx.fillStyle='#805c42';ctx.fillRect(-1,-8,1,5);ctx.fillStyle='#a99872';ctx.fillRect(-4,-6,2,1);ctx.fillRect(1,-6,3,1);if(fx()){const p=(t+d.seed)%3;if(p<.7){ctx.fillStyle='#fff1c9';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(4-10*p,-9-Math.sin(p/.7*Math.PI));ctx.lineTo(4-10*p,-5);ctx.lineTo(0,-3);ctx.fill();}}}
 
       if(d.role==='play'){const bounce=fx()?Math.abs(Math.sin(t*4+d.seed)):0,y=-3-bounce*9;ctx.save();ctx.globalAlpha*=.3;ctx.fillStyle='#4a5140';ctx.fillRect(8,2,7-bounce*2,1);ctx.restore();ctx.fillStyle='#d8944f';ctx.fillRect(9,y,5,5);ctx.fillStyle='#f4d8a2';ctx.fillRect(10,y+1,2,1);}
+      if(d.role==='catch'&&d.lead&&d.partner){   // мяч летит дугой от одного к другому
+        const o=d.partner,k=fx()?(t*.8+d.seed%7/7)%1:0,back=Math.floor(t*.8+d.seed%7/7)%2,f=back?1-k:k;
+        const bx=(o.x-n.x)*f+side*4*(1-2*f),by=(o.y-n.y)*f-14-Math.sin(Math.PI*f)*16;
+        ctx.save();ctx.globalAlpha*=.25;ctx.fillStyle='#3a3a2a';ctx.fillRect(bx-2,(o.y-n.y)*f,4,1);ctx.restore();
+        ctx.fillStyle='#e05a3a';ctx.fillRect(bx-2,by-2,4,4);ctx.fillStyle='#fff3d8';ctx.fillRect(bx-1,by-2,1,1);
+      }
+      if(d.role==='exercise'){const up=fx()?Math.sin(t*3+d.seed)>0:true;ctx.fillStyle='#efd9b2';
+        if(up){ctx.fillRect(-7,-30,2,8);ctx.fillRect(5,-30,2,8);}else{ctx.fillRect(-10,-19,4,2);ctx.fillRect(6,-19,4,2);}}
+      if(d.role==='tea'){const x=side*6;ctx.fillStyle='#d9d0bb';ctx.fillRect(x-2,-12,4,3);ctx.fillStyle='#6f8a5a';ctx.fillRect(x-2,-12,4,1);
+        if(fx()){ctx.fillStyle='rgba(235,235,225,.45)';const sy=(t*6+d.seed)%6;ctx.fillRect(x-1+Math.sin(t*2)*1,-15-sy,1,2);}}
       if(d.role==='warm'){const rub=fx()?Math.sin(t*15)*1.2:0;ctx.fillStyle='#efd9b2';ctx.fillRect(-4+rub,-10,4,2);ctx.fillRect(-rub,-9,4,2);if(fx()){ctx.fillStyle='rgba(220,237,228,.4)';ctx.fillRect(4,-16+(t*3)%4,3,1);}}
     }
     ctx.restore();
@@ -14813,7 +15168,7 @@ G.villageDaily = (() => {
     const x=G.util.clamp(n.x-bw/2,w.cam.x+4,w.cam.x+G.screen.W/(w.z||1)-bw-4),y=n.y-32-bh;
     ctx.save();ctx.globalAlpha=Math.min(1,b.t*4,(b.duration-b.t)*3);G.ui.panel(ctx,x,y,bw,bh,'tag');lines.forEach((ln,j)=>F.draw(ctx,ln,x+6,y+4+j*11,{color:'#f0e5c7'}));ctx.restore();
   }
-  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawCargo,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,ambience,generic,animalScale};
+  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawCargo,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,generic,animalScale};
 })();
 
 
@@ -15727,6 +16082,7 @@ G.scenes.register('world', (pos) => {
     enterBuilding(b) {
       if (!b.interior) { this.showToast('Заперто.'); G.audio.sfx.error(); return; }
       if (b.tplId === 'hero_home' && !G.state.flags.home_seen) { G.state.flags.home_seen = 1; this.pendingTalk = 'home_first'; }   // первый раз в новом доме
+      G.audio.sfx.door();
       this.goTo({ map: b.interior.id, entry: true });
       if (b.occupantNames) this.showToast('Здесь живут: ' + b.occupantNames.join(', '));
     },
@@ -15734,6 +16090,7 @@ G.scenes.register('world', (pos) => {
     exitBuilding() {
       const b = this.map.building;
       if (!b) return;
+      G.audio.sfx.door();
       this.goTo(G.world.outsideOf(b));
     },
 
@@ -15809,7 +16166,7 @@ G.scenes.register('world', (pos) => {
         if (shifted) {
           p.anim += dt * (run ? 12 : 8);
           p.stepT -= dt;
-          if (p.stepT <= 0) { G.audio.sfx.step(); p.stepT = run ? 0.18 : 0.28; }
+          if (p.stepT <= 0) { G.audio.sfx.step(G.ambience.ground(this.map, p.x, p.y)); p.stepT = run ? 0.18 : 0.28; }
         } else { p.anim = 0; p.stepT = 0.06; }
       } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
 
@@ -15831,6 +16188,7 @@ G.scenes.register('world', (pos) => {
       if (G.villageStories) G.villageStories.update(this,dt);
       if (G.villageDaily) G.villageDaily.update(this,dt);
       if (G.roofPatrol) G.roofPatrol.update(this,dt);
+      if (G.guards) G.guards.update(this, dt);
       this.updateCamera();
       this.updatePlace(false);
       this.savePos();
@@ -16194,6 +16552,7 @@ G.scenes.register('world', (pos) => {
       if(G.streetLife)list.push(...G.streetLife.actors(this));
       if(G.villageStories)list.push(...G.villageStories.actors(this));
       if(G.villageDaily)list.push(...G.villageDaily.actors(this));
+      if(G.guards)list.push(...G.guards.actors(this));
       for (const a of this.others) {
         if (a.x < cx - 16 || a.x > cx + W + 16 || a.y < cy - 4 || a.y > cy + VH + 24) continue;
         list.push(a);
@@ -16245,6 +16604,7 @@ G.scenes.register('world', (pos) => {
       this.drawTrail(ctx);
 
       this.drawLight(ctx, vis, cx, cy, W, VH);
+      if (G.guards) G.guards.glow(ctx, this);
       G.fx.particles(ctx, cx, cy, W, VH, m, G.state.vars.min, this.time);
       if (this.map.outdoor && G.life.raining()) this.drawRain(ctx, cx, cy, W, VH);
 
@@ -16502,6 +16862,7 @@ G.scenes.register('world', (pos) => {
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
       ctx.restore();
       if(G.villageDaily){G.villageDaily.drawCargo(ctx,this,a);G.villageDaily.drawActorExtras(ctx,this,a);}
+      if(a._guard)G.guards.lantern(ctx,a);
     },
 
     drawHud(ctx) {
@@ -17016,6 +17377,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     if (it.pouch && g.pouchUsed() + qty > g.pouchMax()) { G.audio.sfx.error(); say('Подсумок полон!', true); return; }
     if (it.cat === 'food' && it.effect.food && G.state.vars.food >= 95) { G.audio.sfx.error(); say('Ты уже сыт. Больше не влезет.', true); return; }
     g.pay(total);
+    G.audio.sfx.coin();
     if (it.cat === 'food' || it.cat === 'service') {
       const e = it.effect || {};
       if (e.food) g.eat(e.food);
@@ -20445,6 +20807,8 @@ G.scenes.register('settings', () => {
   const onoff = (v) => (v ? 'ВКЛ' : 'ВЫКЛ');
   const items = () => [
     { label: 'Звук', value: onoff(S.sound), act: () => { S.sound = !S.sound; G.audio.setEnabled(S.sound); G.storage.saveSettings(); } },
+    { label: 'Музыка', value: onoff(S.music !== false), act: () => { S.music = S.music === false; G.storage.saveSettings(); } },
+    { label: 'Звуки деревни', value: onoff(S.ambience !== false), act: () => { S.ambience = S.ambience === false; G.storage.saveSettings(); } },
     { label: 'Текст', value: SPEED_NAMES[S.textSpeed], act: () => { S.textSpeed = (S.textSpeed + 1) % 4; G.storage.saveSettings(); } },
     { label: 'Карта и метки', act: () => G.scenes.push(G.scenes.make('mapsettings')) },
     { label: 'Эффекты', value: onoff(S.fx !== false), act: () => { S.fx = S.fx === false; G.storage.saveSettings(); } },
@@ -21323,6 +21687,7 @@ end
       G.input.poll();
       G.debug.tick(dt);
       G.scenes.update(dt);
+      G.ambience.update(null, dt);   // фон деревни и музыка
       const ctx = G.screen.ctx;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, G.screen.W, G.screen.H);

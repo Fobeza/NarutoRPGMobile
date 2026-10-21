@@ -608,7 +608,7 @@ G.mapgen = (() => {
     // ---------- 5б. Россыпь мелкой природы: цветы (пятнами), кусты, камни, папоротники, грибы, камыш ----------
     {
       const FL = ['red', 'yellow', 'white', 'blue', 'pink', 'purple', 'orange'];
-      const FP = { park: 0.1, residential: 0.09, clan: 0.09, uchiha: 0.03, official: 0.07, market: 0.04, forest: 0.012, training: 0.008 };
+      const FP = { park: 0.1, residential: 0.05, clan: 0.06, uchiha: 0.03, official: 0.07, market: 0.04, forest: 0.012, training: 0.008 };   // в жилых кварталах цветы — пятнами, без россыпи
       const small = new Uint8Array(W * HH);
       const near = (x, y, f) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => f(m.get(x + a, y + b)));
       for (let y = 14; y < HH - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -634,8 +634,8 @@ G.mapgen = (() => {
         if (q < 0.012 && o === 0) { put(['bush_pink', 'bush_white', 'bush_red', 'bush_yellow'][Math.floor(r2 * 4)], true); continue; }
         if (q < 0.03 && o === 0) { put(r2 > 0.5 ? 'bush3' : 'bush', true); continue; }
         if (q < 0.045) { put(r2 > 0.6 ? 'shrub' : r2 > 0.3 ? 'lavender' : 'sunflower', false); continue; }
-        if (q < 0.058) { put('pebbles', false); continue; }
-        if (q < 0.064 && o === 0) { put('rock3', true); continue; }
+        if (q < 0.058 && dt !== 'residential' && dt !== 'clan') { put('pebbles', false); continue; }   // камешки — в лесу, парках и на полигонах
+        if (q < 0.064 && o === 0 && dt !== 'residential' && dt !== 'clan') { put('rock3', true); continue; }
         if (q < 0.0655 && o === 0 && dt !== 'residential') { put('rock2', true); continue; }
         if (q < 0.072 && (dt === 'park' || dt === 'forest')) { put('leafpile', false); continue; }
         if (near(x, y, (t) => t === ID.WATER) && r < 0.35) { put('reeds', false); continue; }
@@ -660,6 +660,34 @@ G.mapgen = (() => {
         const a = horiz ? [rr.x + i, rr.y - 1] : [rr.x - 1, rr.y + i];
         const b = horiz ? [rr.x + i, rr.y + rr.h] : [rr.x + rr.w, rr.y + i];
         for (const [x, y] of [a, b]) if (!KP(x, y) && (O(x, y) === 0 || (O(x, y) === 4 && m.get(x, y) === ID.STONE && O(x, y - 1) !== 2 && O(x, y + 1) !== 2))) tryObj(x, y, 'lamp', null, () => true);
+      }
+    }
+
+    // фонари на перекрёстках переулков и улиц: по углу перекрёстка, не чаще чем раз в 8 клеток; в кварталах кланов — каменные
+    {
+      const lamps = m.objects.filter((o) => o.kind === 'lamp' || o.kind === 'stonelamp').map((o) => [o.x / T | 0, o.y / T | 0]);
+      const roadAt = (x, y) => O(x, y) === 1;
+      for (let y = 15; y < HH - 2; y++) for (let x = 2; x < W - 2; x++) {
+        if (!roadAt(x, y) || [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([a, b]) => roadAt(x + a, y + b)).length < 3) continue;
+        if (lamps.some(([lx, ly]) => Math.max(Math.abs(lx - x), Math.abs(ly - y)) < 8)) continue;
+        for (const [a, b] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+          const lx = x + a, ly = y + b;
+          if (O(lx, ly) !== 0 || KP(lx, ly) || !grassy(lx, ly) || O(lx, ly + 1) === 2) continue;
+          const d = m.districtAt(lx, ly), kind = d && (d.type === 'clan' || d.type === 'uchiha') ? 'stonelamp' : 'lamp';
+          if (tryObj(lx, ly, kind)) { lamps.push([lx, ly]); break; }
+        }
+      }
+    }
+    // аллея вдоль реки: сакуры и клёны на берегу за набережной, через 4–5 клеток
+    {
+      const trees = [];
+      for (let y = 15; y < HH - 2; y++) for (let x = 2; x < W - 2; x++) {
+        if (m.get(x, y) !== ID.COBBLE || ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => m.get(x + a, y + b) === ID.WATER)) continue;
+        for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const tx = x + a * 2, ty = y + b * 2;
+          if (m.get(x + a, y + b) === ID.WATER || trees.some(([p, q]) => Math.abs(p - tx) + Math.abs(q - ty) < 5)) continue;
+          if (tryTree(tx, ty, H(tx, ty, 57) > 0.5 ? 'sakura' : 'maple')) { trees.push([tx, ty]); break; }
+        }
       }
     }
 

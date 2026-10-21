@@ -112,6 +112,7 @@ G.scenes.register('world', (pos) => {
     enterBuilding(b) {
       if (!b.interior) { this.showToast('Заперто.'); G.audio.sfx.error(); return; }
       if (b.tplId === 'hero_home' && !G.state.flags.home_seen) { G.state.flags.home_seen = 1; this.pendingTalk = 'home_first'; }   // первый раз в новом доме
+      G.audio.sfx.door();
       this.goTo({ map: b.interior.id, entry: true });
       if (b.occupantNames) this.showToast('Здесь живут: ' + b.occupantNames.join(', '));
     },
@@ -119,6 +120,7 @@ G.scenes.register('world', (pos) => {
     exitBuilding() {
       const b = this.map.building;
       if (!b) return;
+      G.audio.sfx.door();
       this.goTo(G.world.outsideOf(b));
     },
 
@@ -194,7 +196,7 @@ G.scenes.register('world', (pos) => {
         if (shifted) {
           p.anim += dt * (run ? 12 : 8);
           p.stepT -= dt;
-          if (p.stepT <= 0) { G.audio.sfx.step(); p.stepT = run ? 0.18 : 0.28; }
+          if (p.stepT <= 0) { G.audio.sfx.step(G.ambience.ground(this.map, p.x, p.y)); p.stepT = run ? 0.18 : 0.28; }
         } else { p.anim = 0; p.stepT = 0.06; }
       } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
 
@@ -216,6 +218,7 @@ G.scenes.register('world', (pos) => {
       if (G.villageStories) G.villageStories.update(this,dt);
       if (G.villageDaily) G.villageDaily.update(this,dt);
       if (G.roofPatrol) G.roofPatrol.update(this,dt);
+      if (G.guards) G.guards.update(this, dt);
       this.updateCamera();
       this.updatePlace(false);
       this.savePos();
@@ -579,6 +582,7 @@ G.scenes.register('world', (pos) => {
       if(G.streetLife)list.push(...G.streetLife.actors(this));
       if(G.villageStories)list.push(...G.villageStories.actors(this));
       if(G.villageDaily)list.push(...G.villageDaily.actors(this));
+      if(G.guards)list.push(...G.guards.actors(this));
       for (const a of this.others) {
         if (a.x < cx - 16 || a.x > cx + W + 16 || a.y < cy - 4 || a.y > cy + VH + 24) continue;
         list.push(a);
@@ -630,6 +634,7 @@ G.scenes.register('world', (pos) => {
       this.drawTrail(ctx);
 
       this.drawLight(ctx, vis, cx, cy, W, VH);
+      if (G.guards) G.guards.glow(ctx, this);
       G.fx.particles(ctx, cx, cy, W, VH, m, G.state.vars.min, this.time);
       if (this.map.outdoor && G.life.raining()) this.drawRain(ctx, cx, cy, W, VH);
 
@@ -887,6 +892,7 @@ G.scenes.register('world', (pos) => {
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
       ctx.restore();
       if(G.villageDaily){G.villageDaily.drawCargo(ctx,this,a);G.villageDaily.drawActorExtras(ctx,this,a);}
+      if(a._guard)G.guards.lantern(ctx,a);
     },
 
     drawHud(ctx) {

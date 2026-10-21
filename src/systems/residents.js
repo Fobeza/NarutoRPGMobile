@@ -156,7 +156,7 @@ G.residents = (() => {
           hm.npcs.push(n); hr = attach(r, hm, n);
         }
         r.homeRep = hr;
-        const work = (r.id === 'hokage' && r.reps.find((p) => p.map.building && p.map.building.tplId === 'hokage_tower')) || r.reps.find((p) => p !== hr && p.actor.shop) || r.reps.find((p) => p !== hr && !p.actor.cond) || r.reps.find((p) => p !== hr) || null;
+        let work = (r.id === 'hokage' && r.reps.find((p) => p.map.building && p.map.building.tplId === 'hokage_tower')) || r.reps.find((p) => p !== hr && p.actor.shop) || r.reps.find((p) => p !== hr && !p.actor.cond) || r.reps.find((p) => p !== hr) || null;
         r.work = work;
         const door = G.world.outsideOf(r.home);
         const market = k.landmarks.market || r.home;
@@ -168,7 +168,7 @@ G.residents = (() => {
           { from: 14 * 60, to: 20 * 60, label: work ? 'Дневные дела' : 'Прогулка по деревне', map: work ? work.map.id : 'konoha', x: work ? work.x : dest[0] * T + 8, y: work ? work.y : dest[1] * T + 12 },
           { from: 20 * 60, to: 30 * 60, label: 'Возвращается домой', map: hm.id, x: hr.x, y: hr.y },
         ];
-        if (r.role && !work) r.dailyRoute = familyRoute(k, r, hm, hr, door);
+        if (r.role && (!work || (work.map === k && !work.actor.shop))) { r.work = work = null; r.dailyRoute = familyRoute(k, r, hm, hr, door); }   // уличная «точка» семьи — не работа
         const shop = work && G.SHOPS[work.actor.shop || (work.map.building && work.map.building.tplId)];
         if (shop || r.id === 'hokage') {
           const hours = shop ? shop.hours : [8 * 60, 18 * 60];
@@ -208,9 +208,19 @@ G.residents = (() => {
     }
     return null;
   }
+  const queue = {};   // очередь в обед: первые шесть встают в ряд у входа, остальные — в другие закусочные
   function near(k, tpl, r, spread, fallback) {
     const b = k.landmarks[tpl];
     if (!b) return fallback;
+    if (tpl === 'ichiraku' && spread === 7) {
+      const q = queue[k.id] || (queue[k.id] = []), i = q.indexOf(r.uid) >= 0 ? q.indexOf(r.uid) : q.length;
+      if (i < 6) {
+        // очередь стоит прямо на улице, в линию влево от двери
+        const x = (b.door.tx - 1 - i) * T + 8, y = (b.door.ty + 1) * T + 12;
+        if (!k.blockedRect(G.actors.feet({}, x, y)) && k.reach && k.reach[(b.door.ty + 1) * k.w + b.door.tx - 1 - i]) { if (q.indexOf(r.uid) < 0) q.push(r.uid); return { x, y }; }
+      }
+      return near(k, 'dango', r, 7, fallback);
+    }
     const s = r.serial * 7919, p = clearTile(k, b.tx + (s % spread) - (spread >> 1) + (b.tw >> 1), b.ty + b.th + 3 + (Math.floor(s / spread) % 4), true);
     return p ? { x: p[0] * T + 8, y: p[1] * T + 12 } : fallback;
   }
@@ -263,6 +273,8 @@ G.residents = (() => {
       return min >= hours[0] && min < hours[1] ? r.work : r.homeRep;
     }
     const stop = r.dailyRoute.find((s) => min >= s.from && min < s.to) || r.dailyRoute[0];
+    // в дождь дети и гуляющие по кварталу сидят дома; на работу и за покупками идут под зонтом
+    if (G.life.raining() && r.role && (r.id === 'kid_m' || r.id === 'kid_f' || stop.label === 'Гуляет по кварталу' || stop.label === 'Отдыхает у дома')) return r.homeRep;
     if (stop.map === r.homeRep.map.id) return r.homeRep;
     if (r.work && stop.map === r.work.map.id) return r.work;
     return { map: village, actor: travelRep(r, village).actor, x: stop.x, y: stop.y };
@@ -336,7 +348,7 @@ G.residents = (() => {
     if (!path || !path.length) { nextLeg(r); world.refreshNpcs(); return true; }
     const [tx, ty] = path[0], x = tx * T + 8, y = ty * T + 12, dx = x - n.x, dy = y - n.y;
     if (Math.hypot(dx, dy) < 1.5) { path.shift(); return true; }
-    const len = Math.hypot(dx, dy), speed = Math.min(len, 30 * dt);
+    const len = Math.hypot(dx, dy), speed = Math.min(len, (G.life.raining() ? 44 : 30) * dt);   // под дождём спешат
     n.dir = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 'right' : 'left' : dy > 0 ? 'down' : 'up';
     const oldX = n.x, oldY = n.y;
     G.actors.move(world.map, n, dx / len * speed, dy / len * speed, world.others);

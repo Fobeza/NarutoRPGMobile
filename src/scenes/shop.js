@@ -30,6 +30,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     if (it.pouch && g.pouchUsed() + qty > g.pouchMax()) { G.audio.sfx.error(); say('Подсумок полон!', true); return; }
     if (it.cat === 'food' && it.effect.food && G.state.vars.food >= 95) { G.audio.sfx.error(); say('Ты уже сыт. Больше не влезет.', true); return; }
     g.pay(total);
+    G.audio.sfx.coin();
     if (it.cat === 'food' || it.cat === 'service') {
       const e = it.effect || {};
       if (e.food) g.eat(e.food);

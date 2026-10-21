@@ -97,13 +97,23 @@ G.fx = (() => {
   }
 
   // Окна светятся тёплым светом ночью (карта окон хранится в спрайте здания: spr.glow)
+  // Ритм вечера: окна зажигаются по очереди с 17:30 до 19:30, гаснут с 21:30 до половины первого;
+  // у ранних пташек свет горит и с 5:30 до рассвета. У каждого дома своё время.
+  function lightsOn(o) {
+    if (!G.state || !o.tplDef || o.tplDef.unique) return true;   // большие здания светятся всю ночь
+    const m = G.state.vars.min % 1440, on = 1050 + H(o.tx, o.ty, 81) * 120, off = 1290 + H(o.tx, o.ty, 82) * 180;
+    if (m >= on && m < Math.min(off, 1440)) return true;
+    if (off > 1440 && m < off - 1440) return true;
+    const early = H(o.tx, o.ty, 83);
+    return early > 0.55 && m >= 330 + early * 40 && m < 420;
+  }
   function windows(ctx, vis, map, k, time) {
     if (!enabled() || !map.outdoor || k <= 0.02) return;
     ctx.globalCompositeOperation = 'lighter';
     for (const o of vis) {
       if (!o.isBuilding || !o.spr || !o.spr.glow) continue;
       const lit = H(o.tx, o.ty, 77);
-      if (lit < 0.28) continue;
+      if (lit < 0.28 || !lightsOn(o)) continue;
       const flick = lit > 0.9 ? 0.85 + 0.15 * Math.sin(time * 7 + o.tx) : 1;
       ctx.globalAlpha = Math.min(1, k) * 0.62 * flick;
       ctx.drawImage(o.spr.glow, o.x + o.spr.ox, o.y + o.spr.oy);

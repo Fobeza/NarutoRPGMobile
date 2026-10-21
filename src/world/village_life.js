@@ -99,27 +99,17 @@ G.life2 = (() => {
     return;
   };
   // ── эмоции над головами ──
-  const EMO = ['...', '!', '?', '♥', '*'];
+  // Случайные эмоции жителей убраны (мешали): остаются только эмоции из сцен сюжета (G.cine задаёт n._em сама).
+  // Пары собеседников по-прежнему поворачиваются друг к другу.
   function npcTick(world, n, dt) {
-    if (world.map && world.map.outdoor === false && !n._chat && n.ai !== 'idle') return;
-    n._em = n._em || { t: 0, cd: 4 + Math.random() * 12, ch: '...' };
-    const e = n._em;
-    if (e.delay > 0) { e.delay = Math.max(0, e.delay - dt); return; }
-    if (e.t > 0) { e.t = Math.max(0, e.t - dt); return; }
-    e.cd -= dt;
-    if (e.cd > 0) return;
-    e.cd = 5 + Math.random() * 14;
-    let ch = pick(EMO);
-    if (n._fish) ch = pick(['...', '!', '~']);
-    if (n.id === 'shikamaru' || n.id === 'choji') ch = pick(['Zz', '...']);
-    if (n.id === 'sakura' || n.id === 'ino') ch = pick(['♥', '!', '...']);
-    if (n.id === 'naruto') ch = pick(['!', '!!', '...']);
-    if (n._chat) {
-      // «разговор»: собеседник отвечает через секунду
-      const other = world.npcs.find((o) => o !== n && o._chat && Math.abs(o.x - n.x) < 22 && Math.abs(o.y - n.y) < 10);
-      if (other) { n.dir = n.x < other.x ? 'right' : 'left'; other.dir = other.x < n.x ? 'right' : 'left'; other._em = other._em || { t: 0, cd: 0 }; other._em.ch = pick(['...', '!', '?', '♥']); other._em.t = 1.6; other._em.cd = 2 + Math.random() * 4; other._em.delay = 0.9; }
-    }
-    e.ch = ch; e.t = 1.6; e.delay = 0;
+    const e = n._em;   // эмоция из сцены: сначала задержка, потом время показа
+    if (e) { if (e.delay > 0) { e.delay = Math.max(0, e.delay - dt); return; } if (e.t > 0) { e.t = Math.max(0, e.t - dt); return; } }
+    if (!n._chat) return;
+    n._chatT = (n._chatT || 0) - dt;
+    if (n._chatT > 0) return;
+    n._chatT = 3 + Math.random() * 4;
+    const other = world.npcs.find((o) => o !== n && o._chat && Math.abs(o.x - n.x) < 22 && Math.abs(o.y - n.y) < 10);
+    if (other) { n.dir = n.x < other.x ? 'right' : 'left'; other.dir = other.x < n.x ? 'right' : 'left'; }
   }
   // Маленькие пиксельные эмоции не зависят от размера и состава шрифта.
   const emotePixels = {

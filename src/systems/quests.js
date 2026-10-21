@@ -52,6 +52,7 @@ G.quests = (() => {
     complete(id) {
       const s = S()[id], d = Q()[id];
       s.st = 'done'; s.doneDay = G.state.vars.day;
+      G.audio.sfx.questDone();
       G.state.flags['q_' + id] = 1;
       const r = d.reward || {};
       if (r.money) G.game.earn(r.money);

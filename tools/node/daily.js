@@ -52,6 +52,30 @@ test('Деревенская жизнь не переносится в комн�
   const w=world(),s=G.villageDaily.ensure(w);s.animals[0].pet=5;w.setMap({map:'adv:outpost',entry:true});G.villageDaily.update(w,1);assert.equal(w._dailyLife,null);assert.deepEqual(G.villageDaily.actors(w),[]);G.game.newState();G.state.started=true;G.state.flags.hosp_done=1;w.setMap(G.world.outsideOf(G.world.heroHome()));const fresh=G.villageDaily.ensure(w);assert.notEqual(fresh,s);assert.ok(fresh.animals.every(a=>a.pet===0));
 });
 test('Фоновые звуки не пытаются включить заблокированное аудио',()=>{
-  const w=world(),ready=G.audio.ready,tone=G.audio.tone,noise=G.audio.noise;let calls=0;G.audio.ready=()=>false;G.audio.tone=G.audio.noise=()=>calls++;try{assert.equal(G.villageDaily.ambience(w),false);assert.equal(calls,0);}finally{G.audio.ready=ready;G.audio.tone=tone;G.audio.noise=noise;}
+  const w=world(),A=G.audio,keep={ready:A.ready,tone:A.tone,noise:A.noise,noiseF:A.noiseF,pluck:A.pluck,bellTone:A.bellTone};let calls=0;
+  A.ready=()=>false;A.tone=A.noise=A.noiseF=A.pluck=A.bellTone=()=>calls++;
+  try{for(let i=0;i<40;i++)G.ambience.update(w,.5);assert.equal(calls,0);}finally{Object.assign(A,keep);}
+});
+test('Жители сами по себе эмоций не показывают; у каждого занятия есть реплики и подпись',()=>{
+  const w=world();for(const n of w.npcs.slice(0,60))for(let i=0;i<40;i++)G.life2.npcTick(w,n,.5);
+  assert.ok(w.npcs.slice(0,60).every(n=>!n._em||n._em.t<=0),'случайная эмоция');
+  for(const role of ['sweep','water','parcel','read','play','warm','catch','tag','chat','exercise','tea']){const j=G.VILLAGE_DAILY.jobs[role];assert.ok(j&&j.label&&j.lines.length&&j.talk,role);}
+});
+test('Дети играют парами, соседи беседуют: оба заняты и смотрят друг на друга',()=>{
+  const w=world();G.state.vars.min=15*60;let pairs=0;
+  for(const n of w.npcs.filter(G.villageDaily.generic)){n.moving=false;n.path=null;for(let i=0;i<8;i++)G.villageDaily.tickNpc(w,n,1);
+    const d=n._daily;if(d?.partner&&d.busy>0&&['catch','tag','chat'].includes(d.role)){assert.equal(d.partner._daily.partner,n);assert.equal(d.partner._daily.role,d.role);pairs++;}}
+  assert.ok(pairs>=2,'пар: '+pairs);
+});
+test('Стража ходит парами; фонари в руках только ночью',()=>{
+  const w=world(),P=G.guards.build(w.map).patrols;assert.ok(P.length>=8);G.state.vars.min=11*60;
+  const before=P.map(p=>p.x+','+p.y);for(let i=0;i<120;i++)G.guards.update(w,1/10);assert.ok(P.some((p,i)=>p.x+','+p.y!==before[i]));
+  const ctx=h.recordingCtx(),a=P.find(p=>p.day);G.guards.lantern(ctx,a);assert.equal(ctx.log.length,0);
+  G.state.vars.min=22*60;G.guards.lantern(ctx,P.find(p=>p.night));assert.ok(ctx.log.length>0);
+});
+test('Шаги звучат по земле: камень, доски, вода, трава',()=>{
+  const w=world(),m=w.map,ID=G.tiles.ID,find=t=>{for(let y=0;y<m.h;y++)for(let x=0;x<m.w;x++)if(m.get(x,y)===t)return[x*16+8,y*16+8];};
+  assert.equal(G.ambience.ground(m,...find(ID.MAINROAD)),'stone');assert.equal(G.ambience.ground(m,...find(ID.PLANKS)),'wood');
+  assert.equal(G.ambience.ground(m,...find(ID.WATER)),'water');assert.equal(G.ambience.ground(m,...find(ID.GRASS)),'grass');
 });
 console.log(`ИТОГ повседневности: ✔ ${passed}  ✘ ${failed}`);process.exitCode=failed?1:0;

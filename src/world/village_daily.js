@@ -72,21 +72,45 @@ G.villageDaily = (() => {
       if(a.timer<=0){const q=animalTarget(w,a);a.path=q?q.path:[];a.timer=3;}
     }
   }
+  function daily(n){if(!n._daily||n._daily.owner!==G.state){const seed=hash(n.uid);n._daily={owner:G.state,seed,cooldown:.6+(seed%30)/10,busy:0,role:'parcel',phase:0,path:[],center:{x:n.x,y:n.y}};}return n._daily;}
+  const kid=n=>n.id==='kid_m'||n.id==='kid_f';
+  // свободный сосед рядом: стоит, не занят, не идёт по делам, той же «породы» (ребёнок к ребёнку, взрослый к взрослому)
+  function partnerFor(w,n,maxD){
+    return w.npcs.find(o=>o!==n&&generic(o)&&kid(o)===kid(n)&&!o.moving&&!o._routePath?.length&&!(o._daily?.busy>0)&&!o._daily?.path?.length
+      &&Math.hypot(o.x-n.x,o.y-n.y)<maxD&&Math.hypot(o.x-n.x,o.y-n.y)>12&&Math.abs(o.y-n.y)<24);
+  }
+  // парное занятие: оба заняты одинаково долго и смотрят друг на друга
+  function pair(w,n,o,role){
+    const a=daily(n),b=daily(o),busy=role==='chat'?8+a.seed%5:9+a.seed%4;
+    a.partner=o;b.partner=n;a.lead=true;b.lead=false;a.busy=b.busy=busy;b.role=role;b.phase=0;b.path=[];o.moving=false;o.path=null;
+    n.dir=n.x<o.x?'right':'left';o.dir=o.x<n.x?'right':'left';
+    if(role==='chat'&&G.worldMotion){G.worldMotion.gesture(w,n,'talk',busy);G.worldMotion.gesture(w,o,'talk',busy);}
+    return role;
+  }
   function roleFor(w,n,seed){
-    const hour=G.state.vars.min/60,winter=G.adventure.season().name==='Зима';
+    const hour=G.state.vars.min/60,winter=G.adventure.season().name==='Зима',d=n._daily;d.partner=null;d.lead=false;
     if(winter)return'warm';
-    if(n.id==='kid_m'||n.id==='kid_f')return'play';
+    if(kid(n)){
+      const o=partnerFor(w,n,52);
+      if(o)return pair(w,n,o,seed%2?'catch':'tag');   // мяч или догонялки — вдвоём
+      return'play';
+    }
+    if(hour<8&&seed%2)return'exercise';                      // утренняя зарядка во дворе
     const plant=w.map.query({x:n.x-26,y:n.y-26,w:52,h:52}).find(o=>plants.has(o.kind)&&Math.hypot(o.x-n.x,o.y-n.y)<27);
-    if(plant&&!G.life.raining()){n._daily.plant=plant;return'water';}
+    if(plant&&!G.life.raining()){d.plant=plant;return'water';}
+    if(seed%3===0){const o=partnerFor(w,n,40);if(o)return pair(w,n,o,'chat');}   // соседи заговорились у калитки
+    if(hour>=15&&hour<18&&seed%4===1)return'tea';
     return hour<11?'sweep':['sweep','read','parcel'][seed%3];
   }
   function tickNpc(w,n,dt){
     if(!active(w)||!generic(n))return false;
-    if(!n._daily||n._daily.owner!==G.state){const seed=hash(n.uid);n._daily={owner:G.state,seed,cooldown:.6+(seed%30)/10,busy:0,role:'parcel',phase:0,path:[],center:{x:n.x,y:n.y}};}
-    const d=n._daily;d.phase+=dt;
+    const d=daily(n);d.phase+=dt;
     if(n._routePath?.length){d.busy=0;d.path=[];return false;}
     const hour=G.state.vars.min/60;
     if(G.life.raining()||hour<6||hour>=20){if(d.path.length){n.moving=false;n.anim=0;}d.busy=0;d.path=[];return false;}
+    // пара распалась (партнёр ушёл или уступил дорогу герою) — занятие заканчивается
+    if(d.partner&&d.busy>0&&!(d.partner._daily?.busy>0)){d.busy=0;d.path=[];d.partner=null;n.moving=false;d.cooldown=2;return true;}
+    if(d.role==='tag'&&d.busy>0&&d.path.length){d.busy=Math.max(0,d.busy-dt);if(!d.busy){d.path=[];n.moving=false;d.cooldown=3;return true;}}
     if(d.path.length){
       const q=d.path[0],x=q[0]*T+8,y=q[1]*T+12,dx=x-n.x,dy=y-n.y,distance=Math.hypot(dx,dy),speed=(n.id.startsWith('kid_')?42:24)*dt;
       if(distance<1){d.path.shift();if(!d.path.length){n.moving=false;d.cooldown=1;d.wantWalk=false;}return true;}
@@ -100,7 +124,13 @@ G.villageDaily = (() => {
       // На тесной тропе житель сразу уступает герою и продолжает свой обычный путь.
       if(Math.hypot(w.player.x-n.x,w.player.y-n.y)<18){d.busy=0;d.cooldown=.3;d.wantWalk=true;return false;}
       d.busy=Math.max(0,d.busy-dt);n.moving=false;n.anim=0;
-      if(!d.busy){d.cooldown=4+d.seed%5;d.wantWalk=true;n.aiT=0;}
+      if(!d.busy){d.cooldown=4+d.seed%5;d.wantWalk=true;n.aiT=0;return true;}
+      // догонялки: ведущий убегает на пару клеток, второй бежит к нему
+      if(d.role==='tag'&&d.partner&&!d.path.length&&d.phase>.4){
+        d.phase=0;const o=d.partner,rng=G.util.rng(d.seed+Math.floor(d.busy*10));
+        const goal=d.lead?{x:d.center.x+rng.int(-2,2)*T,y:d.center.y+rng.int(-1,1)*T}:{x:o.x,y:o.y};
+        if(safe(w.map,goal.x,goal.y)&&Math.hypot(goal.x-n.x,goal.y-n.y)>8){const path=G.nav.path(w.map,n.x,n.y,goal.x,goal.y,300);if(path&&path.length>1&&path.length<8)d.path=path.slice(1);}
+      }
       return true;
     }
     d.cooldown-=dt;if(d.cooldown>0||n.moving||n.path?.length)return false;
@@ -114,7 +144,7 @@ G.villageDaily = (() => {
     // Двери и узкие коридоры остаются свободными даже во время короткой работы.
     const tx=n.x/T|0,ty=n.y/T|0,free=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>safe(w.map,(tx+dx)*T+8,(ty+dy)*T+12)).length;
     if(free<3||w.map.warps.some(v=>Math.hypot(v.rect.x-n.x,v.rect.y-n.y)<28)){d.cooldown=6;return false;}
-    d.role=roleFor(w,n,d.seed);d.busy=4+d.seed%4;d.phase=0;n.moving=false;n.path=null;
+    d.busy=4+d.seed%4;d.phase=0;d.role=roleFor(w,n,d.seed);n.moving=false;n.path=null;
     if(n._em)n._em.t=0;
     if(d.role==='water'&&d.plant)n.dir=d.plant.x>=n.x?'right':'left';
     return true;
@@ -140,7 +170,7 @@ G.villageDaily = (() => {
       }
     }
     for(const q of s.tracks)q.t-=dt;s.tracks=s.tracks.filter(q=>q.t>0).slice(-44);
-    s.greet-=dt;s.chat-=dt;s.workTalk-=dt;s.sound-=dt;
+    s.greet-=dt;s.chat-=dt;s.workTalk-=dt;
     if(!s.bubble&&(!w._streetScene||w._streetScene.alpha<.3)&&!w.player.roof&&!w.player.jump){
       const nearby=w.npcs.filter(n=>generic(n)&&Math.hypot(n.x-w.player.x,n.y-w.player.y)<68&&!G.quests.iconFor(n.id));
       if(s.workTalk<=0){const n=nearby.find(n=>n._daily?.busy>1);s.workTalk=9;if(n){const lines=D.jobs[n._daily.role].lines;bubble(w,[n],[lines[(n._daily.seed+G.state.vars.day)%lines.length]],3.5);}}
@@ -156,16 +186,6 @@ G.villageDaily = (() => {
           a.dir=a.x<b.x?'right':'left';b.dir=b.x<a.x?'right':'left';bubble(w,[a,b],D.conversations[(hash(a.uid)+G.state.vars.day)%D.conversations.length],8);break;}
       }
     }
-    if(s.sound<=0){s.sound=8+(G.state.vars.day%4);ambience(w);}
-  }
-  function ambience(w){
-    if(!G.audio.ready()||G.storage.settings.ambience===false)return false;
-    const hour=G.state.vars.min/60;
-    if(G.life.raining()){G.audio.noise(.11,.012);return true;}
-    if(hour<6||hour>=21)return false;
-    const p=w.player,near= w.map.query({x:p.x-60,y:p.y-60,w:120,h:120}).some(o=>['tree','pine','sakura','pond','bush'].includes(o.kind));
-    if(near){G.audio.tone(1750,.06,'sine',.012,2400);G.audio.tone(2100,.045,'sine',.009,1650,.11);return true;}
-    return false;
   }
   function label(n){const d=n._daily;return d?.busy>0&&(d.role==='water'||d.role==='sweep')&&!G.state.daily['daily_help_'+n.uid]?'Помочь':null;}
   function help(n,w){
@@ -197,6 +217,7 @@ G.villageDaily = (() => {
     if(!active(w)||a.type==='bird'||a.alpha<.2||Math.hypot(w.player.x-a.x,w.player.y-a.y)>32)return false;
     a.path=[];a.moving=false;a.pet=5;a.timer=6;
     if(!G.state.daily.daily_pet){G.state.daily.daily_pet=1;G.game.mood(2);}
+    if(a.type==='dog')G.audio.sfx.bark();else G.audio.sfx.meow();
     w.showToast(a.type==='dog'?'Пёс радостно виляет хвостом':'Кошка щурится и тихонько мурчит');return true;
   }
   function lift(n,time){return fx()&&n._daily?.busy>0&&n._daily.role==='play'?Math.max(0,Math.sin(time*4+n._daily.seed))*2.5:0;}
@@ -217,7 +238,7 @@ G.villageDaily = (() => {
     if(w.map.id!=='konoha')return;
     const d=n._daily,t=w.time,side=n.dir==='left'?-1:1;
     ctx.save();ctx.translate(n.x,n.y-(fx()&&n.moving?Math.sin(n.anim*2)*.7:0));
-    if(G.life.raining()&&generic(n)&&hash(n.uid)%3===0){
+    if(G.life.raining()&&generic(n)&&!kid(n)){   // под дождём у каждого взрослого свой зонт
       ctx.fillStyle='#70583e';ctx.fillRect(5,-30,1,20);ctx.fillStyle=['#b89877','#738d88','#9b6e73'][hash(n.uid)%3];
       ctx.beginPath();ctx.moveTo(-8,-25);ctx.quadraticCurveTo(1,-42,13,-25);ctx.closePath();ctx.fill();ctx.fillStyle='#d8c8a4';ctx.fillRect(1,-32,1,7);ctx.fillRect(0,-34,3,1);
     }
@@ -229,6 +250,16 @@ G.villageDaily = (() => {
       if(d.role==='read'){ctx.fillStyle='#ead8a3';ctx.fillRect(-5,-8,10,5);ctx.fillStyle='#805c42';ctx.fillRect(-1,-8,1,5);ctx.fillStyle='#a99872';ctx.fillRect(-4,-6,2,1);ctx.fillRect(1,-6,3,1);if(fx()){const p=(t+d.seed)%3;if(p<.7){ctx.fillStyle='#fff1c9';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(4-10*p,-9-Math.sin(p/.7*Math.PI));ctx.lineTo(4-10*p,-5);ctx.lineTo(0,-3);ctx.fill();}}}
 
       if(d.role==='play'){const bounce=fx()?Math.abs(Math.sin(t*4+d.seed)):0,y=-3-bounce*9;ctx.save();ctx.globalAlpha*=.3;ctx.fillStyle='#4a5140';ctx.fillRect(8,2,7-bounce*2,1);ctx.restore();ctx.fillStyle='#d8944f';ctx.fillRect(9,y,5,5);ctx.fillStyle='#f4d8a2';ctx.fillRect(10,y+1,2,1);}
+      if(d.role==='catch'&&d.lead&&d.partner){   // мяч летит дугой от одного к другому
+        const o=d.partner,k=fx()?(t*.8+d.seed%7/7)%1:0,back=Math.floor(t*.8+d.seed%7/7)%2,f=back?1-k:k;
+        const bx=(o.x-n.x)*f+side*4*(1-2*f),by=(o.y-n.y)*f-14-Math.sin(Math.PI*f)*16;
+        ctx.save();ctx.globalAlpha*=.25;ctx.fillStyle='#3a3a2a';ctx.fillRect(bx-2,(o.y-n.y)*f,4,1);ctx.restore();
+        ctx.fillStyle='#e05a3a';ctx.fillRect(bx-2,by-2,4,4);ctx.fillStyle='#fff3d8';ctx.fillRect(bx-1,by-2,1,1);
+      }
+      if(d.role==='exercise'){const up=fx()?Math.sin(t*3+d.seed)>0:true;ctx.fillStyle='#efd9b2';
+        if(up){ctx.fillRect(-7,-30,2,8);ctx.fillRect(5,-30,2,8);}else{ctx.fillRect(-10,-19,4,2);ctx.fillRect(6,-19,4,2);}}
+      if(d.role==='tea'){const x=side*6;ctx.fillStyle='#d9d0bb';ctx.fillRect(x-2,-12,4,3);ctx.fillStyle='#6f8a5a';ctx.fillRect(x-2,-12,4,1);
+        if(fx()){ctx.fillStyle='rgba(235,235,225,.45)';const sy=(t*6+d.seed)%6;ctx.fillRect(x-1+Math.sin(t*2)*1,-15-sy,1,2);}}
       if(d.role==='warm'){const rub=fx()?Math.sin(t*15)*1.2:0;ctx.fillStyle='#efd9b2';ctx.fillRect(-4+rub,-10,4,2);ctx.fillRect(-rub,-9,4,2);if(fx()){ctx.fillStyle='rgba(220,237,228,.4)';ctx.fillRect(4,-16+(t*3)%4,3,1);}}
     }
     ctx.restore();
@@ -293,5 +324,5 @@ G.villageDaily = (() => {
     const x=G.util.clamp(n.x-bw/2,w.cam.x+4,w.cam.x+G.screen.W/(w.z||1)-bw-4),y=n.y-32-bh;
     ctx.save();ctx.globalAlpha=Math.min(1,b.t*4,(b.duration-b.t)*3);G.ui.panel(ctx,x,y,bw,bh,'tag');lines.forEach((ln,j)=>F.draw(ctx,ln,x+6,y+4+j*11,{color:'#f0e5c7'}));ctx.restore();
   }
-  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawCargo,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,ambience,generic,animalScale};
+  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawCargo,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,generic,animalScale};
 })();
