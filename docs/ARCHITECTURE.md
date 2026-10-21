@@ -138,3 +138,17 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 Сцена — объект `{ name, update(dt), draw(ctx), enter?, exit?, resume?, transparent? }`, регистрируется
 `G.scenes.register('имя', (...args) => сцена)`. Ввод: `G.input.pressed('a'|'b'|'menu'|'map'|'goal'|'up'…)`,
 `G.input.repeat(...)`, касания — `G.input.tapNow {x, y}`. Размер экрана — `G.screen.W/H` (логические пиксели).
+
+
+## Отдельный редактор карты
+
+`tools/build_phone_editor.py` собирает `src/editor/phone.html` и `phone.js`
+с выбранными общими графическими модулями в корневой `map-editor.html`.
+Сборщик вызывается также из `build.py`. Это не игровой движок и не старый
+служебный `tools/map_editor.html`: последний сохраняется как инструмент разработки.
+
+Редактор использует JSON `naruto-phone-map` v2 (читает v1), собственный ключ
+`naruto-phone-map-v1` и не подключает игровые системы сохранений/сюжета.
+36 новых изображений декодирует `G.editorArt`, совместимый `G.villageArt`
+оставлен для укреплений и тестов. Данные не входят в игровую сборку.
+Конвейер: [EDITOR_ART_REGEN](EDITOR_ART_REGEN.md), формат: [MAP_EDITOR](MAP_EDITOR.md).

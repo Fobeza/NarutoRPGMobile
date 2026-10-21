@@ -6,7 +6,7 @@
 ## Команды
 
 ```bash
-python3 build.py                     # src/ → index.html + sw.js (корень репозитория = сайт GitHub Pages)
+python3 build.py                     # src/ → index.html + sw.js + map-editor.html (корень репозитория = сайт GitHub Pages)
 python3 -m http.server 8765          # локальный сервер из корня → http://localhost:8765/?debug=1
 python3 tools/check_node.py          # быстрые проверки без браузера (~12 с, нужен Node.js) — после любой правки
 python3 tools/check_all.py --quick   # сборка + Node-проверки + быстрые браузерные тесты
@@ -38,7 +38,7 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
    Рефакторинг боя/сцен — только со снятыми отпечатками: `node tools/node/golden.js` до и после, `diff` пустой.
 9. Перед коммитом: `python3 tools/check_all.py` зелёный (без Playwright — `--node`), запись в `docs/CHANGELOG.md`.
 10. Полировка (вид, ощущение, мелочи) — по памятке `.claude/skills/polish/SKILL.md`: цикл «скриншот до → правка → проверки → скриншот после».
-11. Публикация: `git push` в `main` — GitHub Pages обновится сам за 1–2 минуты.
+11. Публикация: работать в назначенной рабочей ветке, открыть PR в `main`; после merge дождаться успешного GitHub Pages. Не переключать/переименовывать ветку сессии.
 
 ## Карта кода (кратко)
 
@@ -50,3 +50,10 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 - `src/scenes/` — экраны: `world.js` (карта, NPC, камера), `battle.js` (+ `battle_fx.js` эффекты и `battle_ai.js` ИИ врага),
   `train.js` (мини-игры), меню, календарь и др.
 - Подробно — `docs/ARCHITECTURE.md`.
+
+## Документация редактора
+
+Указатель: `docs/README.md`. Актуальные инструкции: `docs/MAP_EDITOR.md` и
+`docs/EDITOR_ART_REGEN.md`; текущие задачи: `docs/TODO.md`. Генерация и подключение
+всех 36 новых мастеров завершены. Полный прогон требует и `check_all.py`, и
+отдельного последовательного запуска `tools/test_*.js` — см. `docs/TESTING.md`.
