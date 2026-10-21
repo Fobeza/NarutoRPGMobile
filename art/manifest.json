@@ -457,6 +457,19 @@
       "maxSize": 512,
       "bytes": 390654,
       "sha256": "8e5b2f4f4e607b2d20be6ee3f31aafe7c699b2781c8f0a9a9a002a514fd4aed7"
+    },
+    {
+      "file": "art/terrain/stone/street.webp",
+      "kind": "terrain",
+      "sourceCroppedSize": [
+        1254,
+        1254
+      ],
+      "width": 512,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 290906,
+      "sha256": "8b7fb24da74cb5f7f4b666177bfe26591e91d7cf47ab98db465e5d6d5483cb21"
     }
   ]
 }

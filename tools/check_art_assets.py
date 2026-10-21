@@ -15,8 +15,8 @@ def main():
     assert manifest['status'] == 'integrated'
     assets = manifest['assets']
     paths = {a['file'] for a in assets}
-    assert len(assets) == len(paths) == 35
-    actual = {p.relative_to(ROOT).as_posix() for folder in ('art/environment','art/terrain/path')
+    assert len(assets) == len(paths) == 36
+    actual = {p.relative_to(ROOT).as_posix() for folder in ('art/environment','art/terrain/path','art/terrain/stone')
               for p in (ROOT / folder).iterdir() if p.suffix.lower() in ('.png','.webp')}
     assert paths == actual, (paths-actual, actual-paths)
     total = 0
@@ -42,7 +42,7 @@ def main():
             else:
                 assert a['kind'] == 'terrain' and (w,h) == (512,512)
     assert total <= 8*1024*1024, 'Бюджет набора превышен'
-    print(f'✔ Арт: 35 файлов, прозрачность 30/30, пропорции, SHA-256, лимиты; {total:,} байт')
+    print(f'✔ Арт: 36 файлов, прозрачность 30/30, пропорции, SHA-256, лимиты; {total:,} байт')
     print('✔ Мастер-изображения подключены через встроенные спрайты; размеры игровых объектов заданы отдельно')
 
 if __name__ == '__main__':

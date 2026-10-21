@@ -64,6 +64,18 @@ def main():
                         t=(4-d)/4;a=a*(1-t)+target*t
                 out.putpixel((x,y),tuple(round(c*(1-a)+v*a) for c,v in zip(grass.getpixel((x,y)),earth.getpixel((x,y)))))
         sprites['ground-'+name]=encode(out)
+    # Большой повторяемый каменный материал: один период на 4×4 игровых клетки.
+    stone=Image.open(ROOT/'art/terrain/stone/street.webp').convert('RGB').resize((128,128),Image.Resampling.BOX)
+    for axis in (0,1):
+        old=stone.copy()
+        for k in range(6):
+            weight=(6-k)/6
+            for j in range(128):
+                a,b=((k,j),(127-k,j)) if axis==0 else ((j,k),(j,127-k))
+                ca,cb=old.getpixel(a),old.getpixel(b);mid=[(v+w)//2 for v,w in zip(ca,cb)]
+                for pos,col in [(a,ca),(b,cb)]:
+                    stone.putpixel(pos,tuple(round(v*(1-weight)+m*weight) for v,m in zip(col,mid)))
+    sprites['ground-street']=encode(stone)
     data={'bindings':BINDINGS,'sprites':sprites}
     out=ROOT/'src/gfx/environment_art_data.js'
     out.write_text('// СГЕНЕРИРОВАНО tools/import_environment.py. Не редактировать вручную.\nG.ENVIRONMENT_ART='+json.dumps(data,separators=(',',':'))+';\n')
