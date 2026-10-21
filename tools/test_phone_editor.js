@@ -40,7 +40,7 @@ try{for(const [label,width,height]of [['small320',320,568],['15Pro',393,759],['P
  await p.click('#files');await p.setInputFiles('#file',{name:'broken.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...expected,version:99}))});await p.waitForTimeout(100);assert.deepEqual(await p.evaluate(()=>mapEditor.export()),expected,'Ошибочный импорт не должен менять карту');await p.locator('#menu [data-close]').click();
  await p.waitForTimeout(650);await p.reload();await p.waitForFunction(()=>window.mapEditor);assert.deepEqual(await p.evaluate(()=>mapEditor.export()),expected);
  assert.ok(fs.statSync('map-editor.html').size<5*1024*1024,'Автономный файл <5 МиБ');
- const validation=await p.evaluate(()=>{const base=mapEditor.export(),bad=[{...base,version:2},{...base,w:10000},{...base,ground:[999]},{...base,objects:[{kind:'prop',id:'__proto__',x:2,y:2}]},{...base,objects:[{kind:'prop',id:'tree',x:-1,y:0}]}];return bad.every(v=>{try{mapEditor.validate(v);return false;}catch{return true;}});});assert.ok(validation);
+ const validation=await p.evaluate(()=>{const base=mapEditor.export(),bad=[{...base,version:99},{...base,w:10000},{...base,ground:[999]},{...base,objects:[{kind:'prop',id:'__proto__',x:2,y:2}]},{...base,objects:[{kind:'prop',id:'tree',x:-1,y:0}]}];return bad.every(v=>{try{mapEditor.validate(v);return false;}catch{return true;}});});assert.ok(validation);
  // Скачанный HTML запускается без сервера и без сети. Окно меню не должно застрять открытым.
  if(label==='15Pro'){
   await p.click('#files');const promise=p.waitForEvent('download');await p.click('#download');const html=await promise;await html.saveAs('tools/shots/editor/standalone.html');
