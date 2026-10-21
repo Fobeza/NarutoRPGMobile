@@ -54,6 +54,9 @@ def open_page(p, url):
     page.on("console", lambda m: m.type == "error" and errors.append(m.text))
     page.goto(url + ("&" if "?" in url else "?") + "t=%d" % time.time())
     page.evaluate("localStorage.clear()"); page.reload(); time.sleep(0.8)
+    # Сценарии написаны под раскладку «мелко» (392 точки на этом экране). Без выбора игрока плотность
+    # подбирается по размеру точки (engine/screen.js: autoDensity) — её проверяет tools/node/regressions.js.
+    page.evaluate("G.storage.settings.density = 'fine'; G.storage.saveSettings(); G.screen.resize()")
     return b, page
 
 def seed(page, extra_js=""):

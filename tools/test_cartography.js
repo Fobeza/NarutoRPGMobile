@@ -8,7 +8,7 @@ const shots=path.join(__dirname,'shots','cartography');fs.mkdirSync(shots,{recur
  await page.evaluate(()=>{
   const st=G.game.newState();st.started=true;st.hero.name='Кайто';st.hero.stats={tai:6,nin:5,gen:4,chakra:5,ctrl:5,spd:6,end:5,know:4};st.hero.skills=[];
   Object.assign(st.flags,{hosp_done:1,enrolled:1,day2_intro:1,roofs:1,home_seen:1,naruto_invited:1,ramen_done:1,frd_init:1,tip_clock:1});st.vars.day=6;st.vars.min=900;st.vars.friend_naruto=3;st.vars.friend_sakura=3;st.daily.lesson=1;st.quests.day1={st:'done',step:5,day:1};
-  G.life.RATE=0;G.story.poll=()=>false;G.audio.enabled=false;G.debug.on=false;Object.assign(G.storage.settings,{mapDetail:'detailed',mapMarkerSize:1,mapLabels:true});
+  G.life.RATE=0;G.story.poll=()=>false;G.audio.enabled=false;G.debug.on=false;Object.assign(G.storage.settings,{mapDetail:'detailed',mapMarkerSize:1,mapLabels:true,density:'fine'});G.screen.resize();
   G.scenes.stack.length=0;G.scenes.fade={a:0,dir:0,speed:3,then:null};G.scenes.push(G.scenes.make('world',G.world.outsideOf(G.world.heroHome())));
  });
  const idle=()=>page.waitForTimeout(130),shot=async name=>page.screenshot({path:path.join(shots,name+'.png')});
