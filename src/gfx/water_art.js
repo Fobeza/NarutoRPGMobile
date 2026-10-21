@@ -25,11 +25,18 @@ G.waterArt=(()=>{
     const grain=G.util.hash2(Math.floor(x),Math.floor(y),903);
     // Узкая кромка, четыре уровня с лёгким пиксельным дизерингом вместо размытого ореола.
     const k=Math.floor((1-smooth(d/5))*4+grain)/4;
-    const gx=Math.floor(x/11),gy=Math.floor(y/7),seed=G.util.hash2(gx,gy,931);
-    const lx=x-gx*11,ly=y-gy*7;
-    const ripple=seed>.42&&Math.floor(ly)===1+Math.floor(seed*4)&&lx>=1+Math.floor(seed*3)&&lx<4+Math.floor(seed*5);
-    const texture=ripple?5:Math.floor(grain*3)-1;
-    return [61+19*k+texture,123+19*k+texture,153+7*k+texture];
+    // Широкие ломаные гребни вместо точек: фаза общая для всей карты.
+    const gx=Math.floor(x/32),gy=Math.floor(y/14),seed=G.util.hash2(gx,gy,931);
+    const lx=x-gx*32,ly=y-gy*14,start=2+Math.floor(seed*8),len=9+Math.floor(seed*12);
+    const row=3+Math.floor(G.util.hash2(gx,gy,932)*6)+Math.round(Math.sin((lx-start)*.36+seed*6));
+    const span=lx>=start&&lx<start+len;
+    const crest=span&&Math.floor(ly)===row;
+    const trough=span&&Math.floor(ly)===row+2;
+    const ends=span?Math.min(1,(lx-start+1)/3,(start+len-lx)/3):0;
+    const band=Math.round((Math.sin(x*.035+y*.016)+Math.sin(y*.063-x*.012))*1.5)*2;
+    const grainTone=Math.floor(grain*3)-1;
+    const light=crest?Math.round(16*ends):trough?-5:0;
+    return [48+22*k+band+grainTone+light,119+20*k+band+grainTone+light,153+8*k+band+grainTone+light];
   }
   function draw(ctx,map,tx,ty,x,y,ID){
     if(!map.outdoor||map.get(tx,ty)!==ID.WATER)return false;
@@ -64,9 +71,9 @@ G.waterArt=(()=>{
     if(G.storage.settings.fx===false)return;
     const seed=G.util.hash2(tx,ty,923);if(seed<.64)return;
     const phase=time*.55+seed*Math.PI*2;
-    const xx=3+Math.floor(G.util.hash2(tx,ty,924)*7+Math.sin(phase)*.8),yy=4+Math.floor(G.util.hash2(tx,ty,925)*8);
-    ctx.save();ctx.globalAlpha*=.17+.09*Math.sin(phase);ctx.fillStyle='#c2d9d3';
-    ctx.fillRect(x+xx,y+yy,seed>.9?4:3,1);ctx.restore();
+    const xx=2+Math.floor(G.util.hash2(tx,ty,924)*5+Math.sin(phase)*.8),yy=4+Math.floor(G.util.hash2(tx,ty,925)*8);
+    ctx.save();ctx.globalAlpha*=.13+.07*Math.sin(phase);ctx.fillStyle='#c2d9d3';
+    ctx.fillRect(x+xx,y+yy,seed>.9?7:5,1);ctx.restore();
   }
   return {draw,overlay,sample};
 })();
