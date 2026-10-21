@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "2.0.0"                            # новый сюжет, тактический план и свет Конохи
+RELEASE = "2.1.0"                            # полировка под все iPhone: экран, бой, касания, тесты
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
