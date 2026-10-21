@@ -4,8 +4,9 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=requ
 const h=require('./node/harness.js');h.seed();
 const m=h.G.world.get('konoha');
 const geometry={ground:[...m.ground],block:[...m.block],objects:m.objects.map(o=>({kind:o.kind,x:o.x,y:o.y,w:o.w,h:o.h,ox:o.ox,oy:o.oy,box:o.box,sortY:o.sortY}))};
-// Снято до замены графики, версия 2.2.2 / 0c43f8c1. Хеш не содержит картинок.
-assert.equal(crypto.createHash('sha256').update(JSON.stringify(geometry)).digest('hex'),'1294f83b73785766e01a5ff372c0dd957df3d92cab7a00e3ba683921415ee569');
+// Снято на плотной Конохе (раскладка 3, tools/plan_konoha.py seed 2027). Хеш не содержит картинок: меняется только
+// вместе с раскладкой или генератором карты — тогда снимите заново и отметьте причину в CHANGELOG.
+assert.equal(crypto.createHash('sha256').update(JSON.stringify(geometry)).digest('hex'),'9399ffe52bc2279b4a53d33bf2c5fda998d261d418fd0782e69cd796fb49a26d');
 console.log('✔ Клетки, размеры, опоры, сортировка и коллизии всей Конохи совпали с исходной сборкой');
 (async()=>{const browser=await chromium.launch(),errors=[],requests=[];
 try{

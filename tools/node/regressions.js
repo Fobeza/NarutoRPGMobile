@@ -105,7 +105,14 @@ test('Меню и карточки магазина помещаются в ми
 test('Каждое жильё заселено, у всех NPC свой дом и распорядок', () => {
   const k = G.world.konoha(), people = G.residents.list();
   const homes = k.buildings.filter(b => b.interior && (b.tplDef.cat === 'house' || /^(clan_|sasuke_home|uchiha_house|uchiha_small)/.test(b.tplId)));
-  assert.ok(homes.length > 150); assert.ok(homes.every(b => b.residents.length));
+  assert.ok(homes.length > 150); assert.ok(homes.every(b => b.tplId === 'uchiha_small' ? !b.residents.length : b.residents.length));
+  // обычный дом — семья: отец, мать и двое детей; в квартале Учиха после трагедии живёт только Саске
+  const P = G.residents.people, family = homes.filter(b => b.tplDef.cat === 'house' && !b.tplDef.unique);
+  assert.ok(family.length > 120);
+  for (const b of family) {
+    const ids = b.residents.map(id => P.get(id)).filter(r => ['villager_m','villager_f','kid_m','kid_f'].includes(r.id)).map(r => r.id);
+    assert.deepEqual([ids.filter(i => i === 'villager_m').length, ids.filter(i => i === 'villager_f').length, ids.filter(i => i[0] === 'k').length], [1, 1, 2], b.name);
+  }
   assert.equal(new Set(people.map(r => r.uid)).size, people.length);
   assert.equal(new Set(people.map(r => r.name)).size, people.length);
   assert.ok(people.every(r => r.home.residents.includes(r.uid) && r.dailyRoute.length >= 3));
@@ -131,6 +138,17 @@ test('Старые позиции в интерьерах мигрируют к 
   const n = G.LEGACY_BUILDINGS.findIndex(b => b.tpl === 'naruto_flat');
   delete G.state.layoutVersion; G.state.pos = {map:'in:'+n,x:50,y:50,dir:'down'}; G.game.fix(G.state);
   assert.equal(G.state.pos.map, G.world.konoha().landmarks.naruto_flat.interior.id);
+  assert.ok(G.storage.valid({state:G.state}));
+});
+test('Сохранения раскладки 2 переезжают в плотную Коноху: комната — в то же здание, улица — на свободную клетку', () => {
+  const k = G.world.konoha(), n = Object.keys(G.LEGACY_ROOMS_V2).find(i => G.LEGACY_ROOMS_V2[i] === 'market');
+  G.state.layoutVersion = 2; G.state.pos = {map:'in:'+n,x:50,y:50,dir:'down'}; G.game.fix(G.state);
+  assert.equal(G.state.pos.map, k.landmarks.market.interior.id); assert.equal(G.state.layoutVersion, 3);
+  const house = k.buildings.find(b => b.tplId === 'house_s');
+  G.state.layoutVersion = 2; G.state.pos = {map:'konoha',x:(house.tx + 1) * 16 + 8,y:(house.ty + 1) * 16 + 12,dir:'down'}; G.game.fix(G.state);
+  assert.equal(G.state.pos.map, 'konoha'); assert.ok(!k.blockedRect(G.actors.feet({}, G.state.pos.x, G.state.pos.y)));
+  G.state.layoutVersion = 2; G.state.pos = {map:'adv:parkour',x:72,y:144,dir:'right'}; G.game.fix(G.state);
+  assert.equal(G.state.pos.map, 'adv:parkour');
   assert.ok(G.storage.valid({state:G.state}));
 });
 test('Плотность по умолчанию: точка не меньше 1.25 CSS, выбор игрока не трогаем, экран заполняется по высоте', () => {

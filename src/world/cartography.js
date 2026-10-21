@@ -65,7 +65,8 @@ G.cartography=(()=>{
     if(w.trail){ctx.strokeStyle='#b4e9e6';ctx.lineWidth=1;ctx.beginPath();w.trail.pts.forEach(([x,y],i)=>{const [sx,sy]=pos(x*T+8,y*T+10);if(i)ctx.lineTo(sx,sy);else ctx.moveTo(sx,sy);});ctx.stroke();}
     const points=[];
     for(const b of m.buildings){const kind=b.tplId==='hero_home'?'home':G.SHOPS[b.tplId]?(b.tplDef?.cat==='food'?'food':'shop'):null;if(!b.door||!kind)continue;const [x,y]=pos(b.door.tx*T+8,(b.door.ty+1)*T);if(inside(x,y))points.push({x,y,kind,priority:kind==='home'?4:1});}
-    for(const n of w.npcs){const ic=G.quests.iconFor(n.id),kind=ic?(ic==='!'?'offer':'quest'):(G.state.vars['friend_'+n.id]||0)>=2?'friend':null;if(!kind)continue;const [x,y]=pos(n.x,n.y);if(inside(x,y))points.push({x,y,kind,priority:3});}
+    const icons=new Map();   // значок зависит только от персонажа, а жителей — сотни: считаем один раз на кадр
+    for(const n of w.npcs){if(!icons.has(n.id))icons.set(n.id,G.quests.iconFor(n.id));const ic=icons.get(n.id),kind=ic?(ic==='!'?'offer':'quest'):(G.state.vars['friend_'+n.id]||0)>=2?'friend':null;if(!kind)continue;const [x,y]=pos(n.x,n.y);if(inside(x,y))points.push({x,y,kind,priority:3});}
     for(const q of cluster(points,6).slice(0,12))pin(ctx,q.x,q.y,q.kind,{small:true});
     const target=w.navHop();if(target){const [x,y]=pos(target.h.x,target.h.y),xx=G.util.clamp(x,x0+3,x0+S-4),yy=G.util.clamp(y,y0+3,y0+S-4);pin(ctx,xx,yy,'target',{small:true});if(xx!==x||yy!==y){ctx.fillStyle=colors.target;ctx.fillRect(xx+Math.sign(x-xx)*2,yy+Math.sign(y-yy)*2,1,1);}}
     const [px,py]=pos(p.x,p.y);pin(ctx,px,py,'hero',{small:true,dir:p.dir});ctx.restore();

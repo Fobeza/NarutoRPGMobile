@@ -585,6 +585,7 @@
   }
   // Перекраска одежды (жители): вариант v сдвигает оттенок всего ниже головы, кроме кожи (светлые тёплые тона). v = 0 — как нарисовано.
   const LOOKS = 8, HUE = [0, 45, 100, 160, 205, 255, 305, 345];
+  const LOOK_HEAD = { kid_m: 24, kid_f: 24 };   // у детских спрайтов голова ниже: перекрашиваем только одежду
   function rgb2hsl(r, g, b) {
     r /= 255; g /= 255; b /= 255;
     const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
@@ -608,7 +609,7 @@
     // Копируем физические пиксели: обычный drawImage(hiCanvas, x, y) уменьшает лист вдвое.
     const sx = src.getContext('2d'); sx.drawImage(base, 0, 0, W, H);
     const img = sx.getImageData(0, 0, W, H), d = img.data, dh = HUE[v % LOOKS];
-    const rowH = FHH, headRows = 17 * (W / (FWH * 3));   // голова — верхние 17 строк кадра (масштаб листа учтён)
+    const rowH = FHH, headRows = (LOOK_HEAD[id] || 17) * (W / (FWH * 3));   // голова — верхние 17 строк кадра (у детей ниже; масштаб листа учтён)
     for (let y = 0; y < H; y++) {
       if ((y % rowH) < headRows) continue;
       for (let x = 0; x < W; x++) {

@@ -46,7 +46,7 @@ G.storage = {
     if (st.started != null && typeof st.started !== 'boolean') return false;
     if (st.goal != null && typeof st.goal !== 'string') return false;
     if (st.tracked != null && (typeof st.tracked !== 'string' || !G.QUESTS[st.tracked])) return false;
-    if (st.layoutVersion != null && ![1, 2].includes(st.layoutVersion)) return false;
+    if (st.layoutVersion != null && ![1, 2, 3].includes(st.layoutVersion)) return false;
     const finite = (n) => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) <= 1e12;
     const qty = (n) => Number.isSafeInteger(n) && n >= 0 && n <= 1000000;
     if (Object.values(st.vars).some((n) => !finite(n))) return false;
