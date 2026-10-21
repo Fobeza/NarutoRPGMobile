@@ -15,7 +15,8 @@ G.worldMotion = (() => {
     // Редкий короткий жест свободного жителя; занятие и разговор важнее.
     const idle=phase(w.time,n.x*.17+n.y*.09,19);
     const spontaneous=enabled(w)&&n!==w.player&&!n.moving&&!n._street&&!n._daily?.busy&&idle<.075;
-    const g=n._gesture,gesturing=g&&g.until>w.time&&!n.moving&&(!n._daily?.busy||g.kind==='wave')&&n.dir!=='up';
+    const carrying=n._daily?.role==='parcel'&&G.villageDaily.generic(n)&&!n.id.startsWith('kid_');
+    const g=n._gesture,gesturing=!carrying&&g&&g.until>w.time&&!n.moving&&(!n._daily?.busy||g.kind==='wave')&&n.dir!=='up';
     const wave=gesturing&&g.kind==='wave'&&n.dir==='down'&&['villager_m','villager_f'].includes(n.id);
     const stride=n.moving?Math.abs(Math.sin(n.anim*Math.PI))*.65:0;
     const breath=!n.moving&&!n._street?Math.sin(w.time*2.4+(n._daily?.seed||n.x))*.45:0;
@@ -30,7 +31,7 @@ G.worldMotion = (() => {
       ctx.save();ctx.translate(x+arm+1,y+11);ctx.rotate(-1.9+Math.sin(w.time*8)*.18);ctx.drawImage(sheet,sx+arm,sy+11,3,6,-1,0,3,6);ctx.restore();
     }else{
       // В профиль и у детей используем небольшое движение из их собственного листа кадров.
-      const upper=gesturing||spontaneous?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
+      const upper=gesturing||(spontaneous&&!carrying)?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
       ctx.drawImage(sheet,upper,sy,16,16,x,y-breath-stride,16,16+breath+stride);
       ctx.drawImage(sheet,sx,sy+16,16,4,x,y+16,16,4);
     }

@@ -104,7 +104,8 @@ G.life2 = (() => {
     if (world.map && world.map.outdoor === false && !n._chat && n.ai !== 'idle') return;
     n._em = n._em || { t: 0, cd: 4 + Math.random() * 12, ch: '...' };
     const e = n._em;
-    if (e.t > 0) { e.t -= dt; return; }
+    if (e.delay > 0) { e.delay = Math.max(0, e.delay - dt); return; }
+    if (e.t > 0) { e.t = Math.max(0, e.t - dt); return; }
     e.cd -= dt;
     if (e.cd > 0) return;
     e.cd = 5 + Math.random() * 14;
@@ -120,19 +121,32 @@ G.life2 = (() => {
     }
     e.ch = ch; e.t = 1.6; e.delay = 0;
   }
+  // Маленькие пиксельные эмоции не зависят от размера и состава шрифта.
+  const emotePixels = {
+    '...':['000000000','000000000','000000000','000000000','110110110'],
+    '!':['010','010','010','000','010'],
+    '?':['110','001','010','000','010'],
+    '♥':['0110110','1111111','1111111','0111110','0011100','0001000'],
+    '*':['00100','10101','01110','10101','00100'],
+    '~':['000000','011001','100110','000000'],
+    'Zz':['11110000','00100000','01000111','11110010','00000111'],
+    '!!':['010010','010010','010010','000000','010010'],
+  };
   function drawEmotes(ctx, world, cx, cy, W, VH) {
     for (const n of world.npcs) {
       const e = n._em;
       if (!e || e.t <= 0 || n.x < cx - 8 || n.x > cx + W + 8 || n.y < cy || n.y > cy + VH + 30) continue;
-      if (e.delay > 0) { e.delay -= 0.016; continue; }
-      const k = e.t > 1.4 ? (1.6 - e.t) / 0.2 : e.t < 0.3 ? e.t / 0.3 : 1, rise = (1 - k) * 4;
-      const x = Math.round(n.x), y = Math.round(n.y - 25 - rise);
-      const w = Math.max(11, G.font.width ? G.font.width(e.ch) + 6 : e.ch.length * 5 + 6);
-      ctx.save(); ctx.globalAlpha = Math.min(1, k);
-      ctx.fillStyle = '#fffaf0'; ctx.fillRect(x - Math.floor(w / 2), y - 5, w, 10); ctx.fillRect(x - 1, y + 5, 3, 2);
-      ctx.fillStyle = P.ink; ctx.fillRect(x - Math.floor(w / 2), y - 6, w, 1); ctx.fillRect(x - Math.floor(w / 2), y + 5, w, 1);
-      ctx.restore(); ctx.save(); ctx.globalAlpha = Math.min(1, k);
-      G.font.draw(ctx, e.ch, x, y - 3, { color: e.ch === '♥' ? '#e8506a' : P.ink, align: 'center' });
+      if (e.delay > 0) continue;
+      const pixels=emotePixels[e.ch]||emotePixels['...'];
+      const k=Math.max(0,Math.min(1,(1.6-e.t)/.2,e.t/.3));
+      if(k<=0)continue;
+      const x=Math.round(n.x),y=Math.round(n.y-26-(1-k)*4),pw=pixels[0].length;
+      const w=Math.max(11,pw+6),height=pixels.length+6,left=x-Math.floor(w/2);
+      ctx.save();ctx.globalAlpha*=k;
+      ctx.fillStyle=P.ink;ctx.fillRect(left-1,y-1,w+2,height+2);
+      ctx.fillStyle='#fffaf0';ctx.fillRect(left,y,w,height);ctx.fillRect(x-1,y+height,3,2);
+      ctx.fillStyle=e.ch==='♥'?'#e8506a':P.ink;
+      for(let row=0;row<pixels.length;row++)for(let col=0;col<pw;col++)if(pixels[row][col]==='1')ctx.fillRect(x-Math.floor(pw/2)+col,y+3+row,1,1);
       ctx.restore();
     }
   }

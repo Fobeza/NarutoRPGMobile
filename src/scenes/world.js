@@ -362,6 +362,7 @@ G.scenes.register('world', (pos) => {
           else this.talk(best.talk);
         } };
       }
+      if(G.streetLife){const action=G.streetLife.probe(this);if(action)return action;}
       // объекты с описанием
       const near = m.query({ x: fx - 10, y: fy - 10, w: 20, h: 20 });
       let bo = null, bdist = 99;
@@ -576,6 +577,7 @@ G.scenes.register('world', (pos) => {
         if (o.layer === 'floor') { ctx.drawImage(o.img, o.x + o.ox, o.y + o.oy); continue; }
         list.push(o);
       }
+      if(G.streetLife)list.push(...G.streetLife.actors(this));
       if(G.villageStories)list.push(...G.villageStories.actors(this));
       if(G.villageDaily)list.push(...G.villageDaily.actors(this));
       for (const a of this.others) {
@@ -611,6 +613,7 @@ G.scenes.register('world', (pos) => {
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
       if(G.villageStories)G.villageStories.draw(ctx,this);
       if(G.villageDaily)G.villageDaily.draw(ctx,this,vis);
+      if(G.streetLife)G.streetLife.draw(ctx,this);
       this.drawActionHint(ctx);
 
       // значки над NPC: ! — новое задание, ? — можно сдать, 💬 — новое знакомство
@@ -843,24 +846,7 @@ G.scenes.register('world', (pos) => {
     // Освещение по времени суток + свет фонарей ночью
     // Дождь: серый тон и косые струи (в координатах экрана)
     drawRain(ctx, cx, cy, W, VH) {
-      ctx.fillStyle = 'rgba(40,50,80,0.16)'; ctx.fillRect(cx, cy, W, VH);
-      ctx.fillStyle = 'rgba(190,210,255,0.55)';
-      const t = this.time;
-      for (let i = 0; i < 70; i++) {
-        const sp = 160 + (i % 5) * 25;
-        const x = cx + ((i * 53 + t * sp * 0.35) % (W + 20)) - 10;
-        const y = cy + ((i * 97 + t * sp) % (VH + 20)) - 10;
-        ctx.fillRect(Math.round(x), Math.round(y), 1, 4);
-        ctx.fillRect(Math.round(x) - 1, Math.round(y) + 4, 1, 2);
-      }
-      // брызги
-      ctx.fillStyle = 'rgba(200,220,255,0.35)';
-      for (let i = 0; i < 14; i++) {
-        const ph = (t * 3 + i * 0.37) % 1;
-        if (ph > 0.3) continue;
-        const x = cx + (i * 71 + Math.floor(t * 3 + i * 0.37) * 29) % W, y = cy + (i * 43 + Math.floor(t * 3 + i * 0.37) * 61) % VH;
-        ctx.fillRect(Math.round(x) - 1, Math.round(y), 3, 1);
-      }
+      G.fx.rain(ctx,cx,cy,W,VH,this.map,this.time);
     },
 
     drawLight(ctx, vis, cx, cy, W, VH) {
@@ -898,9 +884,10 @@ G.scenes.register('world', (pos) => {
       const lift=G.villageDaily?G.villageDaily.lift(a,this.time):0;
       ctx.save();
       if (a._npcPass?.size) ctx.globalAlpha *= .65;
+      if(G.villageDaily)G.villageDaily.drawCargo(ctx,this,a,true);
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
       ctx.restore();
-      if(G.villageDaily)G.villageDaily.drawActorExtras(ctx,this,a);
+      if(G.villageDaily){G.villageDaily.drawCargo(ctx,this,a);G.villageDaily.drawActorExtras(ctx,this,a);}
     },
 
     drawHud(ctx) {

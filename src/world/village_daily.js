@@ -141,8 +141,9 @@ G.villageDaily = (() => {
       if(s.workTalk<=0){const n=nearby.find(n=>n._daily?.busy>1);s.workTalk=9;if(n){const lines=D.jobs[n._daily.role].lines;bubble(w,[n],[lines[(n._daily.seed+G.state.vars.day)%lines.length]],3.5);}}
       if(s.greet<=0){
         s.greet=14;
-        const n=nearby.find(n=>Math.hypot(n.x-w.player.x,n.y-w.player.y)<34&&(!n._dailyGreet||w.time-n._dailyGreet>90));
-        if(n){n._dailyGreet=w.time;const h=G.state.vars.min/60,key=G.life.raining()?'rain':h<11?'morning':h>=18?'evening':'day',pool=D.greetings[key];bubble(w,[n],[pool[(hash(n.uid)+G.state.vars.day)%pool.length]],3);}
+        const personal=w.npcs.filter(n=>G.streetLife?.reaction(n)&&!G.quests.iconFor(n.id));
+        const n=[...personal,...nearby].find(n=>Math.hypot(n.x-w.player.x,n.y-w.player.y)<34&&(!n._dailyGreet||w.time-n._dailyGreet>90)&&!G.state.daily['street_greet_'+(n.uid||n.id)]);
+        if(n){n._dailyGreet=w.time;const h=G.state.vars.min/60,key=G.life.raining()?'rain':h<11?'morning':h>=18?'evening':'day',pool=D.greetings[key];const reply=G.streetLife?.reaction(n);bubble(w,[n],[reply||pool[(hash(n.uid)+G.state.vars.day)%pool.length]],reply?5:3);if(reply)G.state.daily['street_greet_'+(n.uid||n.id)]=1;}
       }
       if(!s.bubble&&s.chat<=0){
         s.chat=13;
@@ -165,16 +166,18 @@ G.villageDaily = (() => {
   function help(n,w){
     const d=n._daily,key='daily_help_'+n.uid;
     if(!active(w)||!w.npcs.includes(n)||!d||d.busy<=0||!['water','sweep'].includes(d.role)||G.state.daily[key])return false;
+    G.state.streetLife.helped[n.uid]=1;
     G.state.daily[key]=1;G.game.advance(3);G.game.mood(3);d.busy=0;d.cooldown=20;
     G.game.note('Помог соседу: '+D.jobs[d.role].label.toLowerCase());return true;
   }
   function talk(n,w){
     const d=n._daily;if(!active(w)||!generic(n)||!d||d.busy<=0)return false;
     const job=D.jobs[d.role];
-    if(!label(n)){w.talk([{who:n.id,name:n.name,text:job.talk}]);return true;}
-    G.scenes.push(G.scenes.make('pick',{title:n.name||'Сосед',text:job.talk,options:[{label:'Помочь на минутку',desc:'Три игровые минуты. Сосед будет рад.'},{label:'Поболтать'}]},i=>{
-      if(i===0){if(help(n,w)){w.talk([{who:n.id,name:n.name,text:'Спасибо! Вместе гораздо легче.'},{text:job.help}]);w.savePos();G.storage.save(G.state);}}
-      else if(i===1)w.talk([{who:n.id,name:n.name,text:job.talk}]);
+    const conversation=()=> (G.DAILY_DIALOGUES[d.role]||[job.talk]).map(line=>typeof line==='string'?{who:n.id,name:n.name,text:line}:{...line});
+    if(!label(n)){w.talk(conversation());return true;}
+    G.scenes.push(G.scenes.make('pick',{title:n.name||'Сосед',text:job.lines[0],options:[{label:'Помочь на минутку',desc:'Три игровые минуты. Сосед будет рад.'},{label:'Поболтать'}]},i=>{
+      if(i===0){if(help(n,w)){w.talk([{who:n.id,name:n.name,text:d.role==='water'?'Спасибо. Теперь хватит воды и этому горшку у края. Я всё боялся про него забыть.':'Спасибо! До поворота уже чисто. Соседке сегодня не придётся обходить по дороге.'},{text:job.help}]);w.savePos();G.storage.save(G.state);}}
+      else if(i===1)w.talk(conversation());
     }));return true;
   }
   function actors(w){return active(w)&&w._dailyLife?w._dailyLife.animals.filter(a=>a.alpha>.02&&!a.flight&&Math.abs(a.x-w.player.x)<360&&Math.abs(a.y-w.player.y)<360):[];}
@@ -192,6 +195,19 @@ G.villageDaily = (() => {
     w.showToast(a.type==='dog'?'Пёс радостно виляет хвостом':'Кошка щурится и тихонько мурчит');return true;
   }
   function lift(n,time){return fx()&&n._daily?.busy>0&&n._daily.role==='play'?Math.max(0,Math.sin(time*4+n._daily.seed))*2.5:0;}
+  // Груз принадлежит занятию, а не кадру ходьбы: остановка его не скрывает.
+  function drawCargo(ctx,w,n,behind=false){
+    if(w.map.id!=='konoha'||!generic(n)||n._daily?.role!=='parcel'||n.id.startsWith('kid_')||(n.dir==='up')!==behind)return;
+    const x=n.dir==='left'?-6:n.dir==='right'?6:0;
+    const bob=fx()&&n.moving?Math.abs(Math.sin(n.anim*Math.PI))*.65:0;
+    ctx.save();ctx.translate(n.x+x,n.y-bob);
+    ctx.fillStyle='#62462f';ctx.fillRect(-5,-12,10,8);
+    ctx.fillStyle='#a7794e';ctx.fillRect(-4,-11,8,6);
+    ctx.fillStyle='#dec38d';ctx.fillRect(-4,-11,8,1);ctx.fillRect(-1,-11,2,6);
+    // Руки держат коробку по краям, а не оставляют её висеть сбоку.
+    if(!behind){ctx.fillStyle='#e5bd95';ctx.fillRect(-5,-8,2,2);ctx.fillRect(3,-8,2,2);}
+    ctx.restore();
+  }
   function drawActorExtras(ctx,w,n){
     if(w.map.id!=='konoha')return;
     const d=n._daily,t=w.time,side=n.dir==='left'?-1:1;
@@ -206,11 +222,9 @@ G.villageDaily = (() => {
       if(d.role==='sweep'){const x=side*(8+phase*3);ctx.strokeStyle='#8d633c';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(side*4,-11);ctx.lineTo(x,0);ctx.stroke();ctx.fillStyle='#d4b56f';ctx.fillRect(x-3,0,6,2);if(fx()){ctx.fillStyle='rgba(211,187,132,.45)';ctx.fillRect(x+4+phase*2,1,2,1);}}
       if(d.role==='water'){const x=side*8;ctx.fillStyle='#66979a';ctx.fillRect(x-3,-8,6,6);ctx.fillRect(x+side*4-1,-6,4,1);ctx.strokeStyle='#cad3ba';ctx.beginPath();ctx.arc(x,-8,3,3.1,6.3);ctx.stroke();if(fx()){ctx.fillStyle='#9bcbd8';for(let i=0;i<3;i++)ctx.fillRect(x+side*(6+i*2),-5+(t*10+i*2)%7,1,1);}}
       if(d.role==='read'){ctx.fillStyle='#ead8a3';ctx.fillRect(-5,-8,10,5);ctx.fillStyle='#805c42';ctx.fillRect(-1,-8,1,5);ctx.fillStyle='#a99872';ctx.fillRect(-4,-6,2,1);ctx.fillRect(1,-6,3,1);if(fx()){const p=(t+d.seed)%3;if(p<.7){ctx.fillStyle='#fff1c9';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(4-10*p,-9-Math.sin(p/.7*Math.PI));ctx.lineTo(4-10*p,-5);ctx.lineTo(0,-3);ctx.fill();}}}
-      if(d.role==='parcel'){ctx.fillStyle='#9d7045';ctx.fillRect(side*7-4,-9,8,7);ctx.fillStyle='#dec38d';ctx.fillRect(side*7-4,-8,8,1);ctx.fillRect(side*7-1,-9,2,7);}
+
       if(d.role==='play'){const bounce=fx()?Math.abs(Math.sin(t*4+d.seed)):0,y=-3-bounce*9;ctx.save();ctx.globalAlpha*=.3;ctx.fillStyle='#4a5140';ctx.fillRect(8,2,7-bounce*2,1);ctx.restore();ctx.fillStyle='#d8944f';ctx.fillRect(9,y,5,5);ctx.fillStyle='#f4d8a2';ctx.fillRect(10,y+1,2,1);}
       if(d.role==='warm'){const rub=fx()?Math.sin(t*15)*1.2:0;ctx.fillStyle='#efd9b2';ctx.fillRect(-4+rub,-10,4,2);ctx.fillRect(-rub,-9,4,2);if(fx()){ctx.fillStyle='rgba(220,237,228,.4)';ctx.fillRect(4,-16+(t*3)%4,3,1);}}
-    }else if(generic(n)&&n.moving&&hash(n.uid)%3!==0&&!G.life.raining()){
-      ctx.fillStyle='#9d7045';ctx.fillRect(side*7-4,-9,8,7);ctx.fillStyle='#dec38d';ctx.fillRect(side*7-4,-8,8,1);ctx.fillRect(side*7-1,-9,2,7);
     }
     ctx.restore();
   }
@@ -274,5 +288,5 @@ G.villageDaily = (() => {
     const x=G.util.clamp(n.x-bw/2,w.cam.x+4,w.cam.x+G.screen.W/(w.z||1)-bw-4),y=n.y-32-bh;
     ctx.save();ctx.globalAlpha=Math.min(1,b.t*4,(b.duration-b.t)*3);G.ui.panel(ctx,x,y,bw,bh,'tag');lines.forEach((ln,j)=>F.draw(ctx,ln,x+6,y+4+j*11,{color:'#f0e5c7'}));ctx.restore();
   }
-  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,ambience,generic,animalScale};
+  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawCargo,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,ambience,generic,animalScale};
 })();

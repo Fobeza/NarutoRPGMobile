@@ -111,33 +111,50 @@ G.fx = (() => {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
-  // Лепестки днём, светлячки ночью (в мировых координатах вокруг камеры)
-  function particles(ctx, cx, cy, W, VH, map, min, time) {
-    if (!enabled() || !map.outdoor || G.life.raining()) return;
-    const { sun: s } = sun(min);
-    if (s > 0.3) {
-      for (let i = 0; i < 16; i++) {
-        const sp = 9 + (i % 5) * 4;
-        const x = cx + ((i * 47 + time * sp) % (W + 24)) - 12 + Math.sin(time * 1.6 + i) * 4;
-        const y = cy + ((i * 83 + time * (14 + (i % 4) * 4)) % (VH + 24)) - 12;
-        ctx.fillStyle = i % 3 ? '#f8c0d4' : '#fff0f6';
-        ctx.globalAlpha = 0.85;
-        ctx.fillRect(Math.round(x), Math.round(y), 2, 1); ctx.fillRect(Math.round(x) + 1, Math.round(y) + 1, 1, 1);
+  // Камера выбирает ячейки мира, но не участвует в координатах частиц.
+  // Одинаковая ячейка в двух перекрывающихся кадрах рисуется одинаково.
+  function cells(cx,cy,W,VH,map,draw){
+    const size=64;
+    for(let y=Math.max(0,Math.floor((cy-24)/size));y<=Math.min(Math.ceil(map.h*16/size)-1,Math.floor((cy+VH+24)/size));y++)
+      for(let x=Math.max(0,Math.floor((cx-24)/size));x<=Math.min(Math.ceil(map.w*16/size)-1,Math.floor((cx+W+24)/size));x++)draw(x*size,y*size,G.util.hash2(x,y,917));
+  }
+  function particles(ctx,cx,cy,W,VH,map,min,time){
+    if(!enabled()||!map.outdoor||G.life.raining())return;
+    const day=sun(min).sun>.3;
+    ctx.save();
+    cells(cx,cy,W,VH,map,(x,y,seed)=>{
+      if(seed<.65)return;
+      if(day){
+        const p=(time*(.12+seed*.08)+seed)%1;
+        const px=x+seed*40+p*18+Math.sin(time*1.6+seed*20)*4,py=y+p*64;
+        ctx.globalAlpha=Math.sin(p*Math.PI)*.85;ctx.fillStyle=seed>.85?'#fff0f6':'#f8c0d4';
+        ctx.fillRect(Math.round(px),Math.round(py),2,1);ctx.fillRect(Math.round(px)+1,Math.round(py)+1,1,1);
+      }else{
+        const px=x+32+Math.sin(time*.5+seed*20)*18,py=y+32+Math.sin(time*.8+seed*31)*6;
+        const tx=Math.floor(px/16),ty=Math.floor(py/16);
+        if(map.solidTile(tx,ty)&&map.get(tx,ty)!==G.tiles.ID.WATER)return;
+        const glow=.5+.5*Math.sin(time*(1.2+seed)+seed*21);
+        if(glow<.25)return;
+        ctx.globalCompositeOperation='lighter';
+        const gr=ctx.createRadialGradient(px,py,0,px,py,6);
+        gr.addColorStop(0,`rgba(210,255,120,${(.8*glow).toFixed(2)})`);gr.addColorStop(1,'rgba(160,255,80,0)');
+        ctx.fillStyle=gr;ctx.fillRect(px-6,py-6,12,12);
       }
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 14; i++) {
-        const bl = 0.5 + 0.5 * Math.sin(time * (1.2 + (i % 4) * 0.3) + i * 2.1);
-        if (bl < 0.25) continue;
-        const x = cx + ((i * 61 + Math.sin(time * 0.5 + i) * 18 + 400) % W);
-        const y = cy + VH * 0.35 + ((i * 37) % (VH * 0.6)) + Math.sin(time * 0.8 + i * 1.7) * 6;
-        const gr = ctx.createRadialGradient(x, y, 0, x, y, 6);
-        gr.addColorStop(0, `rgba(210,255,120,${(0.8 * bl).toFixed(2)})`); gr.addColorStop(1, 'rgba(160,255,80,0)');
-        ctx.fillStyle = gr; ctx.fillRect(x - 6, y - 6, 12, 12);
+    });ctx.restore();
+  }
+  function rain(ctx,cx,cy,W,VH,map,time){
+    if(!enabled()||!map.outdoor)return;
+    ctx.save();ctx.fillStyle='rgba(40,50,80,.16)';ctx.fillRect(cx,cy,W,VH);
+    cells(cx,cy,W,VH,map,(x,y,seed)=>{
+      ctx.fillStyle='rgba(190,210,255,.55)';
+      for(let i=0;i<5;i++){
+        const p=(time*(2.5+seed)+seed+i*.2)%1;
+        const px=Math.round(x+(seed*47+i*13)%48+p*16),py=Math.round(y+p*64);
+        ctx.fillRect(px,py,1,4);ctx.fillRect(px-1,py+4,1,2);
       }
-      ctx.globalCompositeOperation = 'source-over';
-    }
+      const p=(time*3+seed*7)%1,px=x+seed*48+8,py=y+seed*37+12;
+      if(p<.3&&!map.solidTile(Math.floor(px/16),Math.floor(py/16))){ctx.fillStyle='rgba(200,220,255,.35)';ctx.fillRect(Math.round(px)-1,Math.round(py),3,1);}
+    });ctx.restore();
   }
 
   // Мягкое затемнение по краям (в экранных координатах)
@@ -154,5 +171,5 @@ G.fx = (() => {
     ctx.drawImage(vig, 0, y0);
   }
 
-  return { sun, shadows, roomSunlight, windows, particles, vignette, enabled };
+  return { sun, shadows, roomSunlight, windows, particles, rain, vignette, enabled };
 })();

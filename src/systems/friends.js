@@ -87,7 +87,9 @@ G.friends = {
         const line = pool[Math.floor(Math.random() * pool.length)];
         if (!d['talk_' + id]) { d['talk_' + id] = 1; this.add(id, 1, 'talk'); }
         if (npc.talk && typeof npc.talk === 'string' && !d['story_' + id] && G.script.library[npc.talk]) { d['story_' + id] = 1; world.talk(npc.talk); return; }
-        world.talk([{ who: id, text: G.util.fmt(line, { name: G.state.hero.name }) }]);
+        const conversation=G.FRIEND_DIALOGUES?.[id]?.[lvl>=4?2:lvl>=2?1:0];
+        if(conversation)world.talk(conversation.map((text,i)=>({who:i===1?'hero':id,text})));
+        else world.talk([{ who: id, text: G.util.fmt(line, { name: G.state.hero.name }) }]);
       } else if (a === 'gift') {
         const gopts = gifts.map((k) => ({ label: G.ITEMS[k].name, sub: 'x' + G.state.inv[k], k }));
         G.scenes.push(G.scenes.make('pick', { title: 'Подарок для: ' + name, options: gopts }, (j) => {
