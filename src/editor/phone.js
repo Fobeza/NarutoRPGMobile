@@ -5,10 +5,13 @@ G.storage={settings:{fx:false}};
 const $=id=>document.getElementById(id),KEY='naruto-phone-map-v1',FORMAT='naruto-phone-map',MAX_OBJECTS=1500,MAX_SIDE=96;
 const grounds=[[0,'Трава'],[3,'Тропинка'],[9,'Земля'],[17,'Каменная улица'],[28,'Площадь'],[4,'Вода'],[5,'Песок'],[6,'Доски'],[25,'Гравий'],[8,'Тёмная трава']];
 const props=[['tree','Дерево'],['pine','Хвойное дерево'],['sakura','Сакура'],['maple','Клён'],['bush','Куст'],['rock','Камень'],['rock2','Мшистый камень'],['bench','Скамейка'],['lamp','Фонарь'],['fence','Забор'],['well','Колодец'],['barrel','Бочка'],['crate','Ящик'],['mailbox','Почта'],['sign','Указатель'],['village_board','Доска объявлений'],['fl_white','Белые цветы'],['fl_yellow','Жёлтые цветы'],['fl_red','Красные цветы'],['fl_blue','Синие цветы'],['fl_pink','Розовые цветы']];
+props.push(['ginkgo','Гинкго'],['bamboo','Бамбук'],['laundry','Бельё на верёвке'],['woodpile','Поленница'],['pots','Горшки'],['raintank','Бак для воды'],['shrine','Святилище'],['hedge','Живая изгородь'],['bamboofence','Бамбуковый забор'],['sacks','Мешки'],['redlantern','Красный фонарь'],['banner','Знамя'],['bicycle','Велосипед'],['tallgrass','Высокая трава'],['flowerbed','Клумба'],['lavender','Лаванда'],['sunflower','Подсолнух'],['shrub','Кустарник'],['fern','Папоротник'],['mushroom','Грибы'],['pebbles','Галька'],['rock3','Большой камень'],['reeds','Камыш'],['leafpile','Опавшие листья'],['stall','Торговый прилавок'],['stonelamp','Каменный фонарь'],['planter','Кашпо'],['flowerbox','Ящик с цветами'],['swing','Качели'],['log','Бревно'],['stump','Пень'],['vwall_h','Стена · горизонталь 2 клетки'],['vwall_v','Стена · глубина 2 клетки'],['vwall_corner','Стена · угол'],['vwall_end','Стена · торец'],['vgate','Главные ворота · 8 клеток']);
+
 const houses=Object.entries(G.HOUSE_ART.art).map(([id,a],i)=>[id,`${G.BUILDINGS[a.tpl]?.name||'Дом '+(i+1)} · ${a.w}×${a.h}`]);
 const palettes={ground:grounds,prop:props,building:houses};
 let model,undo=[],redo=[],tool='paint',category='ground',selected='0',zoom=2,ox=0,oy=0,ground=null,dirty=true,pending=null,queued=false;
 let stroke=null,lastCell=null,pointers=new Map(),gesture=null,saveTimer;
+let spacePan=false,mousePan=null;
 let picked=-1,drag=null,options={scale:1,flipX:false,flipY:false};
 const cv=$('view'),ctx=cv.getContext('2d'),stage=$('stage');
 const clone=v=>JSON.parse(JSON.stringify(v));
@@ -28,7 +31,7 @@ function valid(v){
  }
  return clean;
 }
-function sprite(o){return o.kind==='building'?G.houseArt.sprite(o.id):G.tiles.object(o.id);}
+function sprite(o){return o.kind==='building'?G.houseArt.sprite(o.id):(G.villageArt.sprite(o.id)||G.tiles.object(o.id));}
 function bounds(o){const s=sprite(o),a=o.kind==='building'?G.houseArt.spec(o.id):null;
  const k=o.scale??1;return {x:o.x*16+(a?0:8)+s.ox*k,y:o.y*16+(a?0:16)+s.oy*k,w:(s.w||s.img.lw)*k,h:(s.h||s.img.lh)*k};}
 function footprint(o){const b=bounds(o),x=Math.floor(b.x/16),y=Math.floor(b.y/16);return{x,y,w:Math.ceil((b.x+b.w)/16)-x,h:Math.ceil((b.y+b.h)/16)-y};}
@@ -42,7 +45,7 @@ function info(o){const f=footprint(o),a=o.kind==='building'?G.houseArt.spec(o.id
  return `Рисунок: ${f.w}×${f.h} клеток`+(a?` • участок: ${Math.ceil(a.w*k)}×${Math.ceil(a.h*k)}`:'');}
 function controls(){const o=model.objects[picked];if(o)options={scale:o.scale??1,flipX:!!o.flipX,flipY:!!o.flipY};
  $('object-scale').value=String(options.scale);$('flip-x').setAttribute('aria-pressed',options.flipX);$('flip-y').setAttribute('aria-pressed',options.flipY);
- const active=!!o||category!=='ground';for(const id of ['object-scale','flip-x','flip-y'])$(id).disabled=!active;$('unselect').disabled=picked<0;
+ const active=!!o||category!=='ground';for(const id of ['object-scale','flip-x','flip-y'])$(id).disabled=!active;$('unselect').disabled=picked<0;$('delete-object').disabled=picked<0;
  $('object-info').textContent=o?'Выбран • '+info(o):category==='ground'?'Выбери объект или дом; тяни его рисунок на карту.':'Новый • '+info({kind:category,id:selected,x:8,y:8,...options});
 }
 function transform(field,value){if(drag)return;const o=model.objects[picked];if(o){const before=snapshot(),next={...o,[field]:value};if(!fits(next)){note('Новый размер выходит за карту. Сначала передвинь объект.');controls();return;}model.objects[picked]=next;history(before);}
@@ -134,21 +137,21 @@ function finishDrag(cancel=false){if(!drag)return;const d=drag;drag=null;
  }else{note(cancel?'Перенос отменён.':'Не помещается: объект оставлен на прежнем месте.');controls();}
  render();
 }
-cv.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();cv.setPointerCapture(e.pointerId);const p=local(e);if(palPointer!==null){palPointer=null;finishDrag(true);return;}pointers.set(e.pointerId,p);
+cv.addEventListener('pointerdown',e=>{if(e.button===1||(e.button===0&&spacePan)){e.preventDefault();finishDrag(true);endStroke();mousePan={id:e.pointerId,p:local(e)};cv.setPointerCapture(e.pointerId);return;}if(e.button!==0)return;e.preventDefault();cv.setPointerCapture(e.pointerId);const p=local(e);if(palPointer!==null){palPointer=null;finishDrag(true);return;}pointers.set(e.pointerId,p);
  if(pointers.size===2){finishDrag(true);if(stroke){model=stroke;stroke=null;dirty=true;render();persist();}lastCell=null;gesture=pinch();return;}
  if(pointers.size!==1)return;
  if(tool==='select'){const i=pickAt(p);selectObject(i);if(i>=0)startDrag(p,i);return;}
  if(tool==='paint'&&category!=='ground'){startDrag(p);return;}
  if(tool!=='pan'){stroke=snapshot();lastCell=cell(p);apply(lastCell.x,lastCell.y);}
 });
-cv.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId),p=local(e);pointers.set(e.pointerId,p);
+cv.addEventListener('pointermove',e=>{if(mousePan?.id===e.pointerId){const p=local(e);ox+=p.x-mousePan.p.x;oy+=p.y-mousePan.p.y;mousePan.p=p;render();return;}if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId),p=local(e);pointers.set(e.pointerId,p);
  if(pointers.size>=2){const g=pinch();if(gesture){ox+=g.x-gesture.x;oy+=g.y-gesture.y;scale(g.d/gesture.d,g.x,g.y);}gesture=g;return;}
  if(gesture)return;
  if(drag){updateDrag(p);return;}
  if(tool==='pan'){ox+=p.x-old.x;oy+=p.y-old.y;render();}
  else if(stroke&&(category==='ground'||tool==='erase')){const next=cell(p);if(next.x!==lastCell.x||next.y!==lastCell.y){line(lastCell,next);lastCell=next;}}
 });
-function release(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(!pointers.size){finishDrag(e.type!=='pointerup');gesture=null;endStroke();}render();}
+function release(e){if(mousePan?.id===e.pointerId){mousePan=null;return;}if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(!pointers.size){finishDrag(e.type!=='pointerup');gesture=null;endStroke();}render();}
 cv.addEventListener('pointerup',release);cv.addEventListener('pointercancel',release);cv.addEventListener('lostpointercapture',release);
 const pal=$('preview');let palPointer=null;
 pal.addEventListener('pointerdown',e=>{if(category==='ground'||e.button!==0)return;e.preventDefault();finishDrag(true);picked=-1;palPointer=e.pointerId;pal.setPointerCapture(e.pointerId);startDrag(local(e),-1,true);});
@@ -173,7 +176,25 @@ $('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f
 $('new').onclick=()=>{if(!confirm('Создать пустую карту? Текущую можно вернуть кнопкой отмены.'))return;const before=snapshot();model=fresh(+$('size').value);picked=-1;controls();history(before,true);$('menu').close();fit();};
 $('png').onclick=()=>{draw();const out=G.gfx.canvas(model.w*16,model.h*16),c=out.getContext('2d');c.drawImage(ground,0,0);for(const o of [...model.objects].sort((a,b)=>{const aa=bounds(a),bb=bounds(b);return aa.y+aa.h-bb.y-bb.h;})){paintObject(c,o);}out.toBlob(b=>{if(b)download(b,filename('png'));else note('Не удалось создать PNG.');});};
 $('download').onclick=()=>{const copy=document.documentElement.cloneNode(true);copy.querySelectorAll('dialog').forEach(d=>d.removeAttribute('open'));download(new Blob(['<!doctype html>\n'+copy.outerHTML],{type:'text/html'}),'map-editor.html');};
-window.addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();travel(e.shiftKey?redo:undo,e.shiftKey?undo:redo);}});
+function removePicked(){if(picked<0||drag)return;const before=snapshot();model.objects.splice(picked,1);picked=-1;history(before);controls();render();}
+$('delete-object').onclick=removePicked;
+window.addEventListener('keyup',e=>{if(e.code==='Space')spacePan=false;});
+window.addEventListener('blur',()=>{spacePan=false;mousePan=null;finishDrag(true);pointers.clear();gesture=null;endStroke();});
+window.addEventListener('keydown',e=>{
+ if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;
+ const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
+ if(mod&&key==='z'){e.preventDefault();travel(e.shiftKey?redo:undo,e.shiftKey?undo:redo);return;}
+ if(mod&&key==='y'){e.preventDefault();travel(redo,undo);return;}
+ if(mod||e.altKey)return;
+ if(e.code==='Space'){e.preventDefault();spacePan=true;return;}
+ if(key==='escape'){finishDrag(true);picked=-1;controls();render();return;}
+ if(drag||stroke||mousePan)return;
+ if(key==='delete'||key==='backspace'){e.preventDefault();removePicked();return;}
+ const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+ if(delta){e.preventDefault();const o=model.objects[picked];if(o){const step=e.shiftKey?4:1,next={...o,x:o.x+delta[0]*step,y:o.y+delta[1]*step};if(fits(next)){const before=snapshot();model.objects[picked]=next;history(before);render();}}return;}
+ const modes={v:'select',b:'paint',h:'pan',e:'erase'};
+ if(modes[key])mode(modes[key]);else if(key==='f')fit();else if(key==='+'||key==='=')scale(1.3);else if(key==='-')scale(1/1.3);
+});
 window.addEventListener('resize',render);document.addEventListener('visibilitychange',()=>{if(document.hidden){finishDrag(true);pointers.clear();gesture=null;endStroke();try{localStorage.setItem(KEY,JSON.stringify(model));}catch{}}});
 let warning='';try{const saved=localStorage.getItem(KEY);model=saved?valid(JSON.parse(saved)):fresh(32);}catch{model=fresh(32);warning='Черновик не восстановлен. Открой сохранённый JSON.';}
 palette();fit();$('name').value=model.name;if(warning)note(warning);
