@@ -19,12 +19,23 @@ try{
   for(const edge of [32,64,96])for(let j=0;j<128;j++)for(let k=0;k<3;k++){
    jump=Math.max(jump,Math.abs(px[(j*128+edge)*4+k]-px[(j*128+edge-1)*4+k]),Math.abs(px[(edge*128+j)*4+k]-px[((edge-1)*128+j)*4+k]));
   }
-  if(jump>4)failures.push('Шов внутри воды '+jump);
+  // Контраст короткого штриха — до 6 единиц; отдельно сверяем мировую фазу каждого пикселя.
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+   const expected=G.waterArt.sample([],-32+(x+.5)/2,-32+(y+.5)/2);
+   if(expected.some((v,k)=>v!==px[(y*128+x)*4+k]))throw Error('Сдвиг фактуры на границе тайла');
+  }
+  if(jump>7)failures.push('Шов внутри воды '+jump);
   if(G.waterArt.draw(ctx,{outdoor:false,get(){return ID.WATER;}},0,0,0,0,ID))failures.push('Изменён интерьер');
   if(G.waterArt.draw(ctx,{outdoor:true,get(){return ID.STONE;}},0,0,0,0,ID))failures.push('Изменена суша');
   const shore={outdoor:true,get(x,y){return y<0?ID.GRASS:ID.WATER;}};
   G.waterArt.draw(ctx,shore,0,0,0,0,ID);const near=ctx.getImageData(16,1,1,1).data,deep=ctx.getImageData(16,31,1,1).data;
-  if(near[1]<=deep[1]+10||near[0]<=deep[0]+20)failures.push('Нет мелководья');
+  if(near[1]<=deep[1]+8||near[0]>deep[0]+24||near[2]<=near[1])failures.push('Нет сдержанного голубого мелководья');
+  const natural=[{x:0,y:-16,natural:true}],stone=[{x:0,y:-16,natural:false}];
+  for(let y=.25;y<16;y+=.5)for(let x=.25;x<16;x+=.5){
+   const a=G.waterArt.sample(natural,x,y),b=G.waterArt.sample(stone,x,y);
+   if(a.some((v,i)=>v!==b[i]))throw Error('Переключение палитры у разных берегов');
+   if(y>=5&&a.some((v,i)=>v!==G.waterArt.sample([],x,y)[i]))throw Error('Слишком широкий ореол');
+  }
   const ripple=G.gfx.canvas(64,64),rc=ripple.getContext('2d');
   const animate=t=>{rc.clearRect(0,0,64,64);for(let y=0;y<4;y++)for(let x=0;x<4;x++)G.waterArt.overlay(rc,x*16,y*16,x,y,t);return rc.getImageData(0,0,128,128).data;};
   G.storage.settings.fx=false;if(animate(7).some(v=>v))failures.push('Рябь при выключенных эффектах');
