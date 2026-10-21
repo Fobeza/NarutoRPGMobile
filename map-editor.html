@@ -1,13 +1,14 @@
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#192b29"><title>Моя деревня — редактор карты</title><style>
-*{box-sizing:border-box}body{margin:0;background:#142522;color:#f5efdb;font:14px/1.4 system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}button,select,input{font:inherit}button,select{min-width:44px;min-height:44px;border:1px solid #52625a;border-radius:10px;color:inherit;background:#293e37;padding:8px 12px;cursor:pointer}button:disabled{opacity:.35;cursor:default}button[aria-pressed=true],button.primary{background:#e5ba69;color:#172b25;border-color:#e5ba69}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f4cf83;outline-offset:2px}header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #42564b}h1{font-size:19px;margin:0;letter-spacing:-.5px}header small{color:#afc1aa;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}.top-actions{display:flex;gap:6px}.tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 44px 44px;gap:5px;overflow-x:auto;flex-shrink:0;padding:8px 10px;background:#1c302a}.tools button{white-space:nowrap;min-width:0;padding:8px 4px;font-size:13px}#stage{position:relative;flex:1;min-height:110px;overflow:hidden;background:#101d1b}#view{display:block;width:100%;height:100%;touch-action:none;image-rendering:pixelated}#zoom{position:absolute;right:10px;top:10px;display:flex;gap:5px}#zoom button{background:#192b29e8;width:44px;padding:0}#zoom button:last-child{width:auto;padding:0 10px}#coords{position:absolute;left:10px;bottom:10px;pointer-events:none;padding:7px 10px;background:#192b29df;border:1px solid #40554b;border-radius:8px;color:#d3dfc2;font-size:12px}#notice{padding:6px 12px;min-height:30px;color:#c6d4bc;background:#1c302a;font-size:12px;flex-shrink:0}footer{padding:9px 10px calc(10px + env(safe-area-inset-bottom));background:#21372e;border-top:1px solid #455b48;flex-shrink:0}.palette{display:grid;grid-template-columns:58px 1fr;gap:9px;align-items:center}#preview{width:58px;height:58px;background:#13221e;border:1px solid #597152;border-radius:8px;image-rendering:pixelated}.choices{display:flex;gap:6px;min-width:0}.choices select{min-width:0;width:40%;background:#1a3027}.choices select:last-child{width:60%}.hint{font-size:11px;color:#aebeaa;margin:6px 0 0}dialog{width:min(440px,calc(100% - 20px));max-height:90dvh;overflow:auto;background:#20362e;color:#f5efdb;border:1px solid #82966a;border-radius:16px;padding:20px}dialog::backdrop{background:#000a}dialog h2{margin:0 0 12px;font-size:22px}dialog p{color:#c9d6c0}dialog .row{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}dialog .row>*{flex:1}dialog button{min-height:48px}dialog label{display:block;margin:10px 0}dialog input,dialog select{display:block;width:100%;padding:10px;background:#172c23;color:inherit;border:1px solid #5e7655;border-radius:8px;min-height:44px}#file{display:none}@media(min-width:750px){header,.tools,footer,#notice{padding-left:24px;padding-right:24px}.palette{max-width:680px;margin:auto}.hint{text-align:center}.tools{display:flex;justify-content:center}.tools button{flex:0 0 auto;min-width:110px}}@media(max-height:500px){header small,.hint{display:none}header{padding:4px 10px}footer{padding:4px 10px}#preview{height:44px;width:44px}.palette{grid-template-columns:44px 1fr}.tools{padding:4px 10px}}
+*{box-sizing:border-box}body{margin:0;background:#142522;color:#f5efdb;font:14px/1.4 system-ui,sans-serif;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}button,select,input{font:inherit}button,select{min-width:44px;min-height:44px;border:1px solid #52625a;border-radius:10px;color:inherit;background:#293e37;padding:8px 12px;cursor:pointer}button:disabled{opacity:.35;cursor:default}button[aria-pressed=true],button.primary{background:#e5ba69;color:#172b25;border-color:#e5ba69}button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #f4cf83;outline-offset:2px}header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #42564b}h1{font-size:19px;margin:0;letter-spacing:-.5px}header small{color:#afc1aa;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}.top-actions{display:flex;gap:6px}.tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 44px 44px;gap:5px;overflow-x:auto;flex-shrink:0;padding:8px 10px;background:#1c302a}.tools button{white-space:nowrap;min-width:0;padding:8px 4px;font-size:13px}#stage{position:relative;flex:1;min-height:110px;overflow:hidden;background:#101d1b}#view{display:block;width:100%;height:100%;touch-action:none;image-rendering:pixelated}#zoom{position:absolute;right:10px;top:10px;display:flex;gap:5px}#zoom button{background:#192b29e8;width:44px;padding:0}#zoom button:last-child{width:auto;padding:0 10px}#coords{position:absolute;left:10px;bottom:10px;pointer-events:none;padding:7px 10px;background:#192b29df;border:1px solid #40554b;border-radius:8px;color:#d3dfc2;font-size:12px}#notice{padding:6px 12px;min-height:30px;color:#c6d4bc;background:#1c302a;font-size:12px;flex-shrink:0}footer{padding:9px 10px calc(10px + env(safe-area-inset-bottom));background:#21372e;border-top:1px solid #455b48;flex-shrink:0}.palette{display:grid;grid-template-columns:58px 1fr;gap:9px;align-items:center}#preview{touch-action:none;cursor:grab;width:58px;height:58px;background:#13221e;border:1px solid #597152;border-radius:8px;image-rendering:pixelated}.choices{display:flex;gap:6px;min-width:0}.choices select{min-width:0;width:40%;background:#1a3027}.choices select:last-child{width:60%}.hint{font-size:11px;color:#aebeaa;margin:6px 0 0}dialog{width:min(440px,calc(100% - 20px));max-height:90dvh;overflow:auto;background:#20362e;color:#f5efdb;border:1px solid #82966a;border-radius:16px;padding:20px}dialog::backdrop{background:#000a}dialog h2{margin:0 0 12px;font-size:22px}dialog p{color:#c9d6c0}dialog .row{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}dialog .row>*{flex:1}dialog button{min-height:48px}dialog label{display:block;margin:10px 0}dialog input,dialog select{display:block;width:100%;padding:10px;background:#172c23;color:inherit;border:1px solid #5e7655;border-radius:8px;min-height:44px}#file{display:none}@media(min-width:750px){header,.tools,footer,#notice{padding-left:24px;padding-right:24px}.palette{max-width:680px;margin:auto}.hint{text-align:center}.tools{display:flex;justify-content:center}.tools button{flex:0 0 auto;min-width:110px}}@media(max-height:500px){header small,.hint{display:none}header{padding:4px 10px}footer{padding:4px 10px}#preview{height:44px;width:44px}.palette{grid-template-columns:44px 1fr}.tools{padding:4px 10px}}
+.object-tools{display:grid;grid-template-columns:minmax(66px,1fr) 44px 44px 76px 44px;gap:4px;margin-top:6px}.object-tools button,.object-tools select{padding:6px 3px;min-width:0;font-size:12px}.object-tools select{width:100%}#object-info{margin:4px 0 0;font-size:11px;color:#d4dfbc;height:32px;line-height:16px}#coords{max-width:calc(100% - 20px)}@media(min-width:750px){.object-tools,#object-info{max-width:680px;margin-left:auto;margin-right:auto}}
 </style></head><body>
 <header><div><small>Воля Огня · мастерская</small><h1>Моя деревня</h1></div><div class="top-actions"><button id="files">Файл</button><button id="help" aria-label="Как пользоваться">?</button></div></header>
 <nav class="tools" aria-label="Инструменты"><button data-tool="paint" aria-pressed="true">Кисть</button><button data-tool="pan" aria-pressed="false">Двигать</button><button data-tool="erase" aria-pressed="false">Ластик</button><button id="undo" aria-label="Отменить действие">↶</button><button id="redo" aria-label="Повторить действие">↷</button></nav>
 <main id="stage"><canvas id="view" aria-label="Карта: рисуйте пальцем в режиме Кисть, перемещайтесь в режиме Двигать"></canvas><div id="coords">32 × 32</div><div id="zoom"><button id="out" aria-label="Уменьшить">−</button><button id="in" aria-label="Увеличить">+</button><button id="fit">Вся карта</button></div></main>
 <div id="notice" role="status" aria-live="polite">Выбери покрытие и рисуй пальцем.</div>
-<footer><div class="palette"><canvas id="preview" width="116" height="116" aria-label="Выбранный элемент"></canvas><div class="choices"><select id="category" aria-label="Категория"><option value="ground">Земля</option><option value="prop">Объекты</option><option value="building">Дома</option></select><select id="item" aria-label="Элемент"></select></div></div><p class="hint">Два пальца — перемещение и масштаб. Кисть — рисовать, ластик — удалить.</p></footer>
-<dialog id="menu"><h2>Твоя карта</h2><label>Название<input id="name" maxlength="40" value="Моя деревня"></label><div class="row"><button id="save" class="primary">Скачать JSON</button><button id="load">Открыть JSON</button></div><div class="row"><button id="png">Картинка PNG</button><button id="download">Сам редактор HTML</button></div><hr><label>Размер новой карты<select id="size"><option value="24">24 × 24 — небольшая</option><option value="32" selected>32 × 32 — обычная</option><option value="48">48 × 48 — большая</option><option value="64">64 × 64 — огромная</option></select></label><button id="new">Новая пустая карта</button><p>Черновик сохраняется только в этом браузере. Для надёжного хранения скачивай JSON. Карта не заменяет игровую Коноху: подключение к игре — отдельный этап.</p><button data-close>Вернуться к карте</button></dialog>
-<dialog id="guide"><h2>Собери свою деревню</h2><p>1. Внизу выбери землю, воду или дорогу. Проведи пальцем по карте.</p><p>2. Выбери «Объекты» или «Дома», затем элемент. Коснись места, где он должен стоять. Дома ставятся от верхнего левого угла их участка; деревья — у основания.</p><p>3. «Двигать» перемещает вид одним пальцем. Двумя пальцами можно перемещать и масштабировать в любом режиме. Кнопки + / − тоже меняют масштаб.</p><p>4. Ластик удаляет объект под пальцем; на пустом месте возвращает траву. Переставить объект можно, удалив его и разместив заново. ↶ отменяет целый мазок, ↷ возвращает его.</p><p>5. «Файл → Скачать JSON» сохраняет карту. Через «Открыть JSON» можно продолжить работу или прислать этот файл для подключения к игре. PNG — только картинка.</p><p>На iPhone удобнее открывать опубликованную страницу в Safari: предпросмотр HTML в «Файлах» может не запускать JavaScript.</p><button data-close>Понятно</button></dialog><input id="file" type="file" accept=".json,application/json">
+<footer><div class="palette"><canvas id="preview" width="116" height="116" aria-label="Выбранный элемент"></canvas><div class="choices"><select id="category" aria-label="Категория"><option value="ground">Земля</option><option value="prop">Декор</option><option value="building">Дома</option></select><select id="item" aria-label="Элемент"></select></div></div><div class="object-tools"><button data-tool="select" aria-pressed="false">Выбрать</button><button id="flip-x" aria-label="Отразить по горизонтали" aria-pressed="false">↔</button><button id="flip-y" aria-label="Отразить по вертикали" aria-pressed="false">↕</button><select id="object-scale" aria-label="Размер объекта"><option value="0.5">50%</option><option value="0.75">75%</option><option value="1" selected>100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="1.75">175%</option><option value="2">200%</option></select><button id="unselect" aria-label="Снять выделение">×</button></div><p id="object-info">Выбери объект или дом; тяни его рисунок на карту.</p></footer>
+<dialog id="menu"><h2>Твоя карта</h2><label>Название<input id="name" maxlength="40" value="Моя деревня"></label><div class="row"><button id="save" class="primary">Скачать JSON</button><button id="load">Открыть JSON</button></div><div class="row"><button id="png">Картинка PNG</button><button id="download">Сам редактор HTML</button></div><hr><h3>Размер текущей карты</h3><div class="row"><label>Ширина<input id="map-width" type="number" min="16" max="96" step="1" value="32"></label><label>Высота<input id="map-height" type="number" min="16" max="96" step="1" value="32"></label></div><button id="resize-map">Изменить размер</button><p>16–96 клеток по каждой стороне. Добавляется трава справа и снизу; существующие клетки и объекты остаются на месте. Уменьшение требует подтверждения обрезки.</p><hr><label>Размер новой карты<select id="size"><option value="24">24 × 24 — небольшая</option><option value="32" selected>32 × 32 — обычная</option><option value="48">48 × 48 — большая</option><option value="64">64 × 64 — огромная</option></select></label><button id="new">Новая пустая карта</button><p>Черновик сохраняется только в этом браузере. Для надёжного хранения скачивай JSON. Карта не заменяет игровую Коноху: подключение к игре — отдельный этап.</p><button data-close>Вернуться к карте</button></dialog>
+<dialog id="guide"><h2>Собери свою деревню</h2><p>1. Внизу выбери землю, воду или дорогу. Проведи пальцем по карте.</p><p>2. Выбери «Декор» или «Дома», затем элемент. Тяни рисунок из палитры на карту или коснись карты и двигай палец перед отпусканием. Зелёная сетка показывает занимаемые рисунком клетки; красная — выход за границу. Отпускание за картой отменяет размещение. Дома ставятся от верхнего левого угла их участка; деревья — у основания.</p><p>3. «Двигать» перемещает вид одним пальцем. Двумя пальцами можно перемещать и масштабировать в любом режиме. Кнопки + / − тоже меняют масштаб.</p><p>4. Ластик удаляет объект под пальцем; на пустом месте возвращает траву. Нажми «Выбрать» и перетащи объект на карте. Внизу можно изменить его размер, отразить ↔ / ↕ или снять выделение ×. ↶ отменяет целый мазок, ↷ возвращает его.</p><p>В меню «Файл» можно увеличить или уменьшить текущую карту. При обрезке появится предупреждение. Отмена возвращает прежние размеры и удалённые объекты.</p><p>5. «Файл → Скачать JSON» сохраняет карту. Через «Открыть JSON» можно продолжить работу или прислать этот файл для подключения к игре. PNG — только картинка.</p><p>На iPhone удобнее открывать опубликованную страницу в Safari: предпросмотр HTML в «Файлах» может не запускать JavaScript.</p><button data-close>Понятно</button></dialog><input id="file" type="file" accept=".json,application/json">
 <script>// Глобальное пространство имён игры. Все модули добавляют себя в G.
 const G = (typeof window !== 'undefined' ? window : globalThis).G = {};
 
@@ -2877,37 +2878,63 @@ G.houseArt = (() => {
 (()=>{
 'use strict';
 G.storage={settings:{fx:false}};
-const $=id=>document.getElementById(id),KEY='naruto-phone-map-v1',FORMAT='naruto-phone-map',MAX_OBJECTS=1500;
+const $=id=>document.getElementById(id),KEY='naruto-phone-map-v1',FORMAT='naruto-phone-map',MAX_OBJECTS=1500,MAX_SIDE=96;
 const grounds=[[0,'Трава'],[3,'Тропинка'],[9,'Земля'],[17,'Каменная улица'],[28,'Площадь'],[4,'Вода'],[5,'Песок'],[6,'Доски'],[25,'Гравий'],[8,'Тёмная трава']];
 const props=[['tree','Дерево'],['pine','Хвойное дерево'],['sakura','Сакура'],['maple','Клён'],['bush','Куст'],['rock','Камень'],['rock2','Мшистый камень'],['bench','Скамейка'],['lamp','Фонарь'],['fence','Забор'],['well','Колодец'],['barrel','Бочка'],['crate','Ящик'],['mailbox','Почта'],['sign','Указатель'],['village_board','Доска объявлений'],['fl_white','Белые цветы'],['fl_yellow','Жёлтые цветы'],['fl_red','Красные цветы'],['fl_blue','Синие цветы'],['fl_pink','Розовые цветы']];
 const houses=Object.entries(G.HOUSE_ART.art).map(([id,a],i)=>[id,`${G.BUILDINGS[a.tpl]?.name||'Дом '+(i+1)} · ${a.w}×${a.h}`]);
 const palettes={ground:grounds,prop:props,building:houses};
 let model,undo=[],redo=[],tool='paint',category='ground',selected='0',zoom=2,ox=0,oy=0,ground=null,dirty=true,pending=null,queued=false;
 let stroke=null,lastCell=null,pointers=new Map(),gesture=null,saveTimer;
+let picked=-1,drag=null,options={scale:1,flipX:false,flipY:false};
 const cv=$('view'),ctx=cv.getContext('2d'),stage=$('stage');
 const clone=v=>JSON.parse(JSON.stringify(v));
-const fresh=n=>({format:FORMAT,version:1,name:'Моя деревня',w:n,h:n,ground:Array(n*n).fill(0),objects:[]});
+const fresh=n=>({format:FORMAT,version:2,name:'Моя деревня',w:n,h:n,ground:Array(n*n).fill(0),objects:[]});
 function note(s){$('notice').textContent=s;}
 function valid(v){
- if(!v||v.format!==FORMAT||v.version!==1)throw Error('Нужен JSON этого редактора, версия 1.');
- if(!Number.isInteger(v.w)||!Number.isInteger(v.h)||v.w<16||v.h<16||v.w>64||v.h>64)throw Error('Размер карты: от 16 до 64 клеток.');
+ if(!v||v.format!==FORMAT||![1,2].includes(v.version))throw Error('Нужен JSON этого редактора, версия 1 или 2.');
+ if(!Number.isInteger(v.w)||!Number.isInteger(v.h)||v.w<16||v.h<16||v.w>MAX_SIDE||v.h>MAX_SIDE)throw Error('Размер карты: от 16 до 96 клеток.');
  if(!Array.isArray(v.ground)||v.ground.length!==v.w*v.h||v.ground.some(id=>!grounds.some(g=>g[0]===id)))throw Error('Повреждены покрытия карты.');
  if(!Array.isArray(v.objects)||v.objects.length>MAX_OBJECTS)throw Error('Слишком много объектов.');
- const clean={format:FORMAT,version:1,name:typeof v.name==='string'?v.name.slice(0,40):'Моя деревня',w:v.w,h:v.h,ground:[...v.ground],objects:[]};
+ const clean={format:FORMAT,version:2,name:typeof v.name==='string'?v.name.slice(0,40):'Моя деревня',w:v.w,h:v.h,ground:[...v.ground],objects:[]};
  for(const o of v.objects){
   if(!o||!['prop','building'].includes(o.kind)||!palettes[o.kind].some(p=>p[0]===o.id)||!Number.isInteger(o.x)||!Number.isInteger(o.y))throw Error('Неизвестный объект.');
-  const item={kind:o.kind,id:o.id,x:o.x,y:o.y};if(!fits(item,clean))throw Error('Объект выходит за карту.');clean.objects.push(item);
+  const scale=o.scale??1,flipX=o.flipX??false,flipY=o.flipY??false;
+  if(![.5,.75,1,1.25,1.5,1.75,2].includes(scale)||typeof flipX!=='boolean'||typeof flipY!=='boolean')throw Error('Неверный размер или отражение объекта.');
+  const item={kind:o.kind,id:o.id,x:o.x,y:o.y,scale,flipX,flipY};if(!fits(item,clean))throw Error('Объект выходит за карту.');clean.objects.push(item);
  }
  return clean;
 }
 function sprite(o){return o.kind==='building'?G.houseArt.sprite(o.id):G.tiles.object(o.id);}
 function bounds(o){const s=sprite(o),a=o.kind==='building'?G.houseArt.spec(o.id):null;
- return {x:o.x*16+(a?0:8)+s.ox,y:o.y*16+(a?0:16)+s.oy,w:s.w||s.img.lw,h:s.h||s.img.lh};}
-function fits(o,m=model){const b=bounds(o);return o.x>=0&&o.y>=0&&o.x<m.w&&o.y<m.h&&b.x>=0&&b.y>=0&&b.x+b.w<=m.w*16&&b.y+b.h<=m.h*16;}
+ const k=o.scale??1;return {x:o.x*16+(a?0:8)+s.ox*k,y:o.y*16+(a?0:16)+s.oy*k,w:(s.w||s.img.lw)*k,h:(s.h||s.img.lh)*k};}
+function footprint(o){const b=bounds(o),x=Math.floor(b.x/16),y=Math.floor(b.y/16);return{x,y,w:Math.ceil((b.x+b.w)/16)-x,h:Math.ceil((b.y+b.h)/16)-y};}
+function fits(o,m=model){const b=bounds(o);
+ return o.x>=0&&o.y>=0&&o.x<m.w&&o.y<m.h&&b.x>=0&&b.y>=0&&b.x+b.w<=m.w*16&&b.y+b.h<=m.h*16;}
+function paintObject(c,o){const b=bounds(o),s=sprite(o);c.save();c.translate(b.x+(o.flipX?b.w:0),b.y+(o.flipY?b.h:0));c.scale(o.flipX?-1:1,o.flipY?-1:1);c.drawImage(s.img,0,0,b.w,b.h);c.restore();}
+function sortedObjects(){return model.objects.map((o,i)=>({o,i})).sort((a,b)=>{const aa=bounds(a.o),bb=bounds(b.o);return aa.y+aa.h-bb.y-bb.h;});}
+function pickAt(p){const x=(p.x-ox)/zoom,y=(p.y-oy)/zoom;
+ for(const {o,i} of sortedObjects().reverse()){const b=bounds(o);if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return i;}return -1;}
+function info(o){const f=footprint(o),a=o.kind==='building'?G.houseArt.spec(o.id):null,k=o.scale??1;
+ return `Рисунок: ${f.w}×${f.h} клеток`+(a?` • участок: ${Math.ceil(a.w*k)}×${Math.ceil(a.h*k)}`:'');}
+function controls(){const o=model.objects[picked];if(o)options={scale:o.scale??1,flipX:!!o.flipX,flipY:!!o.flipY};
+ $('object-scale').value=String(options.scale);$('flip-x').setAttribute('aria-pressed',options.flipX);$('flip-y').setAttribute('aria-pressed',options.flipY);
+ const active=!!o||category!=='ground';for(const id of ['object-scale','flip-x','flip-y'])$(id).disabled=!active;$('unselect').disabled=picked<0;
+ $('object-info').textContent=o?'Выбран • '+info(o):category==='ground'?'Выбери объект или дом; тяни его рисунок на карту.':'Новый • '+info({kind:category,id:selected,x:8,y:8,...options});
+}
+function transform(field,value){if(drag)return;const o=model.objects[picked];if(o){const before=snapshot(),next={...o,[field]:value};if(!fits(next)){note('Новый размер выходит за карту. Сначала передвинь объект.');controls();return;}model.objects[picked]=next;history(before);}
+ options[field]=value;controls();preview();render();}
+function selectObject(i){picked=i;const o=model.objects[i];if(o){category=o.kind;selected=o.id;$('category').value=category;fillItems();$('item').value=selected;}controls();preview();render();}
+function resizeMap(w,h){if(!Number.isInteger(w)||!Number.isInteger(h)||w<16||h<16||w>MAX_SIDE||h>MAX_SIDE){alert('Размер каждой стороны: целое число от 16 до 96.');return;}
+ if(w===model.w&&h===model.h)return;
+ const retained=model.objects.filter(o=>fits(o,{w,h})),removed=model.objects.length-retained.length;
+ if((w<model.w||h<model.h)&&!confirm(`Обрезать карту до ${w}×${h}? Будут удалены клетки справа/снизу и объектов: ${removed}. Действие можно отменить.`))return;
+ const before=snapshot(),cells=Array(w*h).fill(0);for(let y=0;y<Math.min(h,model.h);y++)for(let x=0;x<Math.min(w,model.w);x++)cells[y*w+x]=model.ground[y*model.w+x];
+ model={...model,w,h,ground:cells,objects:retained};picked=-1;history(before,true);controls();$('menu').close();fit();note(`Карта ${w}×${h}. Новые клетки заполнены травой.`);
+}
 function snapshot(){return clone(model);}
 function history(before,full=false){if(JSON.stringify(before)===JSON.stringify(model))return;undo.push(before);if(undo.length>50)undo.shift();redo=[];changed(full);}
 function changed(full=true){if(full)dirty=true;render();persist();$('name').value=model.name;}
-function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(model));note('Черновик сохранён в браузере. Скачай JSON для резервной копии.');}catch{note('Браузер не сохранил черновик. Скачай JSON через «Файл».');}},500);}
+function persist(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(model));if(!drag)note('Черновик сохранён в браузере. Скачай JSON для резервной копии.');}catch{note('Браузер не сохранил черновик. Скачай JSON через «Файл».');}},500);}
 function render(){if(!queued){queued=true;requestAnimationFrame(draw);}}
 function draw(){queued=false;
  if(dirty||pending){
@@ -2922,19 +2949,25 @@ function draw(){queued=false;
  if(cv.width!==Math.round(r.width*dpr)||cv.height!==Math.round(r.height*dpr)){cv.width=Math.round(r.width*dpr);cv.height=Math.round(r.height*dpr);}
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,r.width,r.height);
  ctx.save();ctx.translate(ox,oy);ctx.scale(zoom,zoom);ctx.drawImage(ground,0,0);
- if(zoom>=1.2){ctx.strokeStyle='#112c2330';ctx.lineWidth=.5/zoom;ctx.beginPath();for(let x=0;x<=model.w;x++){ctx.moveTo(x*16,0);ctx.lineTo(x*16,model.h*16);}for(let y=0;y<=model.h;y++){ctx.moveTo(0,y*16);ctx.lineTo(model.w*16,y*16);}ctx.stroke();}
- const sorted=[...model.objects].sort((a,b)=>{const aa=bounds(a),bb=bounds(b);return aa.y+aa.h-bb.y-bb.h;});
- for(const o of sorted){const s=sprite(o),b=bounds(o);ctx.drawImage(s.img,b.x,b.y);}
+ if(zoom>=1.2||drag||picked>=0){ctx.strokeStyle='#112c2330';ctx.lineWidth=.5/zoom;ctx.beginPath();for(let x=0;x<=model.w;x++){ctx.moveTo(x*16,0);ctx.lineTo(x*16,model.h*16);}for(let y=0;y<=model.h;y++){ctx.moveTo(0,y*16);ctx.lineTo(model.w*16,y*16);}ctx.stroke();}
+ for(const {o,i} of sortedObjects()){if(drag&&drag.index===i)continue;paintObject(ctx,o);}
+ const focus=drag?.o||model.objects[picked];
+ if(focus){if(drag){ctx.save();ctx.globalAlpha=.65;paintObject(ctx,focus);ctx.restore();}
+  const f=footprint(focus),ok=fits(focus);ctx.fillStyle=ok?'#91d48b33':'#ec655955';ctx.strokeStyle=ok?'#b9ed9e':'#ff8075';ctx.lineWidth=1/zoom;
+  ctx.fillRect(f.x*16,f.y*16,f.w*16,f.h*16);for(let y=0;y<f.h;y++)for(let x=0;x<f.w;x++)ctx.strokeRect((f.x+x)*16,(f.y+y)*16,16,16);
+  $('object-info').textContent=(drag?(ok?'Отпусти для размещения • ':'Не помещается • '):'Выбран • ')+info(focus);
+ }
  ctx.restore();$('coords').textContent=`${model.w} × ${model.h} · ${Math.round(zoom*100)}%`;
  $('undo').disabled=!undo.length;$('redo').disabled=!redo.length;
 }
-function fit(){const r=stage.getBoundingClientRect();zoom=Math.max(.25,Math.min(3,(r.width-24)/(model.w*16),(r.height-24)/(model.h*16)));ox=(r.width-model.w*16*zoom)/2;oy=(r.height-model.h*16*zoom)/2;render();}
-function scale(k,cx=stage.clientWidth/2,cy=stage.clientHeight/2){const z=Math.max(.25,Math.min(5,zoom*k));ox=cx-(cx-ox)*z/zoom;oy=cy-(cy-oy)*z/zoom;zoom=z;render();}
-function mode(m){tool=m;document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===m));note(m==='pan'?'Перемещай карту пальцем.':m==='erase'?'Коснись объекта, чтобы удалить. Пустая клетка станет травой.':'Выбери элемент внизу и рисуй на карте.');}
-function palette(){category=$('category').value;const list=palettes[category];$('item').replaceChildren(...list.map(([id,name])=>{const o=document.createElement('option');o.value=id;o.textContent=name;return o;}));selected=String(list[0][0]);preview();mode('paint');}
+function fit(){const r=stage.getBoundingClientRect();zoom=Math.max(.08,Math.min(3,(r.width-24)/(model.w*16),(r.height-24)/(model.h*16)));ox=(r.width-model.w*16*zoom)/2;oy=(r.height-model.h*16*zoom)/2;render();}
+function scale(k,cx=stage.clientWidth/2,cy=stage.clientHeight/2){const z=Math.max(.08,Math.min(5,zoom*k));ox=cx-(cx-ox)*z/zoom;oy=cy-(cy-oy)*z/zoom;zoom=z;render();}
+function mode(m){tool=m;if(m!=='select')picked=-1;controls();render();document.querySelectorAll('[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===m));note(m==='select'?'Коснись объекта и тяни пальцем.':m==='pan'?'Перемещай карту пальцем.':m==='erase'?'Коснись объекта, чтобы удалить. Пустая клетка станет травой.':'Выбери элемент внизу и рисуй на карте.');}
+function fillItems(){const list=palettes[category];$('item').replaceChildren(...list.map(([id,name])=>{const o=document.createElement('option');o.value=id;o.textContent=name;return o;}));}
+function palette(){picked=-1;category=$('category').value;fillItems();selected=String(palettes[category][0][0]);preview();mode('paint');controls();}
 function preview(){const p=$('preview'),c=p.getContext('2d');c.clearRect(0,0,116,116);c.imageSmoothingEnabled=false;
  let image,w,h;if(category==='ground'){const t=G.gfx.canvas(16,16),m={outdoor:true,get(){return +selected;}};G.tiles.renderTile(t.getContext('2d'),m,0,0,0,0);image=t;w=h=16;}else{const s=sprite({kind:category,id:selected});image=s.img;w=s.w||image.lw;h=s.h||image.lh;}
- const k=Math.min(100/w,100/h);c.drawImage(image,(116-w*k)/2,(116-h*k)/2,w*k,h*k);
+ const k=Math.min(100/w,100/h),flipX=category!=='ground'&&options.flipX,flipY=category!=='ground'&&options.flipY;c.save();c.translate(58,58);c.scale(flipX?-1:1,flipY?-1:1);c.drawImage(image,-w*k/2,-h*k/2,w*k,h*k);c.restore();
 }
 function local(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
 function cell(p){return{x:Math.floor((p.x-ox)/zoom/16),y:Math.floor((p.y-oy)/zoom/16)};}
@@ -2949,7 +2982,7 @@ function apply(x,y){if(x<0||y<0||x>=model.w||y>=model.h)return;
   if(found>=0)model.objects.splice(found,1);else {model.ground[y*model.w+x]=0;invalidate(x,y);}
  }else if(category==='ground'){model.ground[y*model.w+x]=+selected;invalidate(x,y);}
  else{
-  const o={kind:category,id:selected,x,y};if(!fits(o)){note('Элемент не помещается: отступи от края карты.');return;}
+  const o={kind:category,id:selected,x,y,...options};if(!fits(o)){note('Элемент не помещается: отступи от края карты.');return;}
   if(model.objects.length>=MAX_OBJECTS){note('Лимит: 1500 объектов.');return;}
   if(!model.objects.some(a=>a.x===x&&a.y===y&&a.kind===o.kind&&a.id===o.id))model.objects.push(o);
  }
@@ -2961,40 +2994,66 @@ function line(a,b){let x=a.x,y=a.y;const dx=Math.abs(b.x-x),sx=x<b.x?1:-1,dy=-Ma
 }
 function endStroke(){if(stroke){history(stroke);stroke=null;}lastCell=null;}
 function pinch(){const [a,b]=[...pointers.values()];return{x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y))};}
-cv.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();cv.setPointerCapture(e.pointerId);const p=local(e);pointers.set(e.pointerId,p);
- if(pointers.size===2){if(stroke){model=stroke;stroke=null;dirty=true;render();persist();}lastCell=null;gesture=pinch();return;}
+function inside(p){return p.x>=0&&p.y>=0&&p.x<stage.clientWidth&&p.y<stage.clientHeight;}
+function startDrag(p,index=-1,fromPalette=false){const at=cell(p),original=model.objects[index];
+ const o=original?clone(original):{kind:category,id:selected,x:at.x,y:at.y,...options};
+ drag={o,index,dx:original?original.x-at.x:0,dy:original?original.y-at.y:0,palette:fromPalette};
+ if(original)selectObject(index);updateDrag(p);
+}
+function updateDrag(p){const at=cell(p);drag.o.x=at.x+drag.dx;drag.o.y=at.y+drag.dy;drag.inside=inside(p);render();}
+function finishDrag(cancel=false){if(!drag)return;const d=drag;drag=null;
+ if(!cancel&&d.inside&&fits(d.o)){
+  const before=snapshot();if(d.index>=0){model.objects[d.index]=d.o;picked=d.index;}
+  else if(model.objects.length<MAX_OBJECTS){model.objects.push(d.o);picked=model.objects.length-1;}
+  else note('Лимит: 1500 объектов.');
+  history(before);controls();
+ }else{note(cancel?'Перенос отменён.':'Не помещается: объект оставлен на прежнем месте.');controls();}
+ render();
+}
+cv.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();cv.setPointerCapture(e.pointerId);const p=local(e);if(palPointer!==null){palPointer=null;finishDrag(true);return;}pointers.set(e.pointerId,p);
+ if(pointers.size===2){finishDrag(true);if(stroke){model=stroke;stroke=null;dirty=true;render();persist();}lastCell=null;gesture=pinch();return;}
  if(pointers.size!==1)return;
+ if(tool==='select'){const i=pickAt(p);selectObject(i);if(i>=0)startDrag(p,i);return;}
+ if(tool==='paint'&&category!=='ground'){startDrag(p);return;}
  if(tool!=='pan'){stroke=snapshot();lastCell=cell(p);apply(lastCell.x,lastCell.y);}
 });
 cv.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const old=pointers.get(e.pointerId),p=local(e);pointers.set(e.pointerId,p);
  if(pointers.size>=2){const g=pinch();if(gesture){ox+=g.x-gesture.x;oy+=g.y-gesture.y;scale(g.d/gesture.d,g.x,g.y);}gesture=g;return;}
  if(gesture)return;
+ if(drag){updateDrag(p);return;}
  if(tool==='pan'){ox+=p.x-old.x;oy+=p.y-old.y;render();}
  else if(stroke&&(category==='ground'||tool==='erase')){const next=cell(p);if(next.x!==lastCell.x||next.y!==lastCell.y){line(lastCell,next);lastCell=next;}}
 });
-function release(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(!pointers.size){gesture=null;endStroke();}render();}
+function release(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(!pointers.size){finishDrag(e.type!=='pointerup');gesture=null;endStroke();}render();}
 cv.addEventListener('pointerup',release);cv.addEventListener('pointercancel',release);cv.addEventListener('lostpointercapture',release);
+const pal=$('preview');let palPointer=null;
+pal.addEventListener('pointerdown',e=>{if(category==='ground'||e.button!==0)return;e.preventDefault();finishDrag(true);picked=-1;palPointer=e.pointerId;pal.setPointerCapture(e.pointerId);startDrag(local(e),-1,true);});
+pal.addEventListener('pointermove',e=>{if(e.pointerId===palPointer&&drag)updateDrag(local(e));});
+function releasePalette(e){if(e.pointerId!==palPointer)return;palPointer=null;finishDrag(e.type!=='pointerup');}
+pal.addEventListener('pointerup',releasePalette);pal.addEventListener('pointercancel',releasePalette);pal.addEventListener('lostpointercapture',releasePalette);
 cv.addEventListener('wheel',e=>{e.preventDefault();const p=local(e);scale(e.deltaY<0?1.15:1/1.15,p.x,p.y);},{passive:false});
-function travel(from,to){endStroke();if(!from.length)return;to.push(snapshot());model=from.pop();changed();}
+function travel(from,to){finishDrag(true);endStroke();picked=-1;if(!from.length)return;to.push(snapshot());model=from.pop();controls();changed();note(`Карта ${model.w}×${model.h}: действие ${from===undo?'отменено':'повторено'}.`);}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function filename(ext){return (model.name.replace(/[^\p{L}\p{N}_-]/gu,'_').slice(0,40)||'map')+'.'+ext;}
-$('files').onclick=()=>{endStroke();$('name').value=model.name;$('menu').showModal();};$('help').onclick=()=>$('guide').showModal();
+$('files').onclick=()=>{finishDrag(true);endStroke();$('map-width').value=model.w;$('map-height').value=model.h;$('name').value=model.name;$('menu').showModal();};$('help').onclick=()=>$('guide').showModal();
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{endStroke();mode(b.dataset.tool);});
-$('category').onchange=palette;$('item').onchange=()=>{selected=$('item').value;preview();};
+$('category').onchange=palette;$('item').onchange=()=>{picked=-1;selected=$('item').value;controls();preview();mode('paint');};
+$('flip-x').onclick=()=>transform('flipX',!options.flipX);$('flip-y').onclick=()=>transform('flipY',!options.flipY);$('object-scale').onchange=()=>transform('scale',+$('object-scale').value);$('unselect').onclick=()=>{picked=-1;controls();render();};
+$('resize-map').onclick=()=>resizeMap(+$('map-width').value,+$('map-height').value);
 $('undo').onclick=()=>travel(undo,redo);$('redo').onclick=()=>travel(redo,undo);$('in').onclick=()=>scale(1.3);$('out').onclick=()=>scale(1/1.3);$('fit').onclick=fit;
 $('name').onchange=()=>{const before=snapshot();model.name=$('name').value.trim().slice(0,40)||'Моя деревня';history(before);};
 $('save').onclick=()=>{download(new Blob([JSON.stringify(model,null,2)],{type:'application/json'}),filename('json'));note('JSON подготовлен. Проверь загрузки браузера.');};
 $('load').onclick=()=>$('file').click();
-$('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f)return;try{if(f.size>4*1024*1024)throw Error('Файл больше 4 МБ.');const next=valid(JSON.parse(await f.text()));if(!confirm('Заменить текущую карту? Её можно будет вернуть кнопкой отмены.'))return;const before=snapshot();model=next;history(before,true);$('menu').close();fit();}catch(e){note('Не удалось открыть: '+e.message);alert('Не удалось открыть: '+e.message);}};
-$('new').onclick=()=>{if(!confirm('Создать пустую карту? Текущую можно вернуть кнопкой отмены.'))return;const before=snapshot();model=fresh(+$('size').value);history(before,true);$('menu').close();fit();};
-$('png').onclick=()=>{draw();const out=G.gfx.canvas(model.w*16,model.h*16),c=out.getContext('2d');c.drawImage(ground,0,0);for(const o of [...model.objects].sort((a,b)=>{const aa=bounds(a),bb=bounds(b);return aa.y+aa.h-bb.y-bb.h;})){const s=sprite(o),b=bounds(o);c.drawImage(s.img,b.x,b.y);}out.toBlob(b=>{if(b)download(b,filename('png'));else note('Не удалось создать PNG.');});};
+$('file').onchange=async()=>{const f=$('file').files[0];$('file').value='';if(!f)return;try{if(f.size>4*1024*1024)throw Error('Файл больше 4 МБ.');const next=valid(JSON.parse(await f.text()));if(!confirm('Заменить текущую карту? Её можно будет вернуть кнопкой отмены.'))return;const before=snapshot();model=next;picked=-1;controls();history(before,true);$('menu').close();fit();}catch(e){note('Не удалось открыть: '+e.message);alert('Не удалось открыть: '+e.message);}};
+$('new').onclick=()=>{if(!confirm('Создать пустую карту? Текущую можно вернуть кнопкой отмены.'))return;const before=snapshot();model=fresh(+$('size').value);picked=-1;controls();history(before,true);$('menu').close();fit();};
+$('png').onclick=()=>{draw();const out=G.gfx.canvas(model.w*16,model.h*16),c=out.getContext('2d');c.drawImage(ground,0,0);for(const o of [...model.objects].sort((a,b)=>{const aa=bounds(a),bb=bounds(b);return aa.y+aa.h-bb.y-bb.h;})){paintObject(c,o);}out.toBlob(b=>{if(b)download(b,filename('png'));else note('Не удалось создать PNG.');});};
 $('download').onclick=()=>{const copy=document.documentElement.cloneNode(true);copy.querySelectorAll('dialog').forEach(d=>d.removeAttribute('open'));download(new Blob(['<!doctype html>\n'+copy.outerHTML],{type:'text/html'}),'map-editor.html');};
 window.addEventListener('keydown',e=>{if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)||document.querySelector('dialog[open]'))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();travel(e.shiftKey?redo:undo,e.shiftKey?undo:redo);}});
-window.addEventListener('resize',render);document.addEventListener('visibilitychange',()=>{if(document.hidden){endStroke();try{localStorage.setItem(KEY,JSON.stringify(model));}catch{}}});
+window.addEventListener('resize',render);document.addEventListener('visibilitychange',()=>{if(document.hidden){finishDrag(true);pointers.clear();gesture=null;endStroke();try{localStorage.setItem(KEY,JSON.stringify(model));}catch{}}});
 let warning='';try{const saved=localStorage.getItem(KEY);model=saved?valid(JSON.parse(saved)):fresh(32);}catch{model=fresh(32);warning='Черновик не восстановлен. Открой сохранённый JSON.';}
 palette();fit();$('name').value=model.name;if(warning)note(warning);
 // Только состояние редактора; удобно для регрессий и диагностики импортируемого формата.
-window.mapEditor={export:()=>clone(model),validate:valid};
+window.mapEditor={export:()=>clone(model),validate:valid,geometry:o=>({bounds:bounds(o),cells:footprint(o)}),view:()=>({zoom,ox,oy}),selection:()=>picked};
 })();
 </script></body></html>
