@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.2.1', version: 'ac75bc27', date: '2026-10-21 07:38', debug: false };
+const BUILD = { release: '2.2.1', version: '682254d0', date: '2026-10-21 08:21', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -17422,16 +17422,23 @@ G.scenes.register('status', () => {
   const FRIENDS = Object.keys(G.FRIENDS);
   let scroll = 0;
   let buffer = null;
-  const contentH = () => Math.max(G.screen.H - 24, 330 + Math.ceil(FRIENDS.filter((id) => G.state.flags['met_' + id]).length / 2) * 16);
-  const maxScroll = () => Math.max(0, contentH() - G.screen.H + 24);
+  const compact = () => G.screen.W < 260;
+  const footer = () => Math.max(24,Math.ceil(44/(G.screen.scale||1)))+4;
+  const contentH = () => {
+    const skills=(G.state.hero.skills||[]).map(id=>G.SKILLS.find(s=>s.id===id)?.name).filter(Boolean).join(', ')||'—';
+    const extra=Math.max(0,G.font.small.wrap('Навыки: '+skills,G.screen.W-24).length-1)*12;
+    return Math.max(G.screen.H-footer(),330+(compact()?60:0)+extra+Math.ceil(FRIENDS.filter(id=>G.state.flags['met_'+id]).length/2)*16);
+  };
+  const maxScroll = () => Math.max(0, contentH() - G.screen.H + footer());
   return {
     name: 'status',
+    layout() { return {footer:footer(),maxScroll:maxScroll(),scroll,gaugeWidth:compact()?G.screen.W-28:G.screen.W-180}; },
     update(dt) {
       const I = G.input;
       if (I.pressed('b') || I.pressed('a') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.repeat('up', dt)) scroll -= 48;
       if (I.repeat('down', dt)) scroll += 48;
-      if (I.tapNow && I.tapNow.y >= G.screen.H - 24) scroll += I.tapNow.x < G.screen.W / 2 ? -80 : 80;
+      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -80 : 80;G.audio.sfx.select(); }
       scroll = G.util.clamp(scroll, 0, maxScroll());
     },
     draw(ctx) {
@@ -17441,10 +17448,13 @@ G.scenes.register('status', () => {
       const c = buffer;
       this.drawContent(c.getContext('2d'), contentH());
       U.backdrop(ctx);
-      ctx.save(); ctx.beginPath(); ctx.rect(0, 20, W, H - 44); ctx.clip(); ctx.drawImage(c, 0, -scroll); ctx.restore();
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 20, W, H - 20 - footer()); ctx.clip(); ctx.drawImage(c, 0, -scroll); ctx.restore();
       U.title(ctx, 'СТАТУС', W / 2, 3, 80);
-      U.button(ctx, 4, H - 23, (W - 12) / 2, 20, '▲ Выше', scroll > 0 ? 'normal' : 'dis');
-      U.button(ctx, W / 2 + 2, H - 23, (W - 12) / 2, 20, '▼ Ниже', scroll < maxScroll() ? 'normal' : 'dis');
+      if(maxScroll()>0){
+        U.button(ctx,4,H-footer()+2,(W-12)/2,footer()-4,'▲ Выше',scroll>0?'normal':'dis');
+        U.button(ctx,W/2+2,H-footer()+2,(W-12)/2,footer()-4,'▼ Ниже',scroll<maxScroll()?'normal':'dis');
+        U.scrollbar(ctx,W-5,24,H-24-footer(),scroll/maxScroll(),Math.min(1,(H-20-footer())/(contentH()-20)));
+      }else G.font.small.draw(ctx,'Все сведения',W/2,H-footer()/2-4,{align:'center',color:U.C.paperHi});
     },
     drawContent(ctx, H) {
       const W = G.screen.W, F = G.font, S = G.font.small, U = G.ui, C = U.C, g = G.game, v = g.v;
@@ -17463,15 +17473,16 @@ G.scenes.register('status', () => {
       y += 48;
       // нужды: бамбуковые шкалы
       const bars = [['Здоровье', v.hp, C.hp], ['Чакра', v.chakra, C.chakra], ['Сытость', v.food, C.food], ['Энергия', v.energy, C.energy], ['Настроение', v.mood, '#a860c0']];
-      U.panel(ctx, 4, y, W - 8, bars.length * 16 + 12, 'frame');
+      const barRow=compact()?28:16;
+      U.panel(ctx, 4, y, W - 8, bars.length * barRow + 12, 'frame');
       bars.forEach(([nm, val, col], i) => {
-        const yy = y + 9 + i * 16;
+        const yy = y + 9 + i * barRow;
         S.draw(ctx, nm, 14, yy, { color: C.ink });
-        const bw = W - 8 - 14 * 2 - 82 - 62;
-        U.gauge(ctx, 14 + 82, yy + 1, bw, 7, Math.max(0, Math.min(100, val)) / 100, col);
+        const bw = compact()?W-28:W-180;
+        U.gauge(ctx, compact()?14:96, yy + (compact()?12:1), bw, 7, Math.max(0, Math.min(100, val)) / 100, col);
         S.draw(ctx, i === 4 ? g.moodName() : String(Math.round(val)), W - 14, yy, { align: 'right', color: val < 20 ? C.err : C.ink });
       });
-      y += bars.length * 16 + 16;
+      y += bars.length * barRow + 16;
       // характеристики
       const rows = Math.ceil(G.STATS.length / 2);
       U.panel(ctx, 4, y, W - 8, rows * 15 + 14, 'well');
@@ -19932,7 +19943,17 @@ G.scenes.register('ending', () => {
 // Окно — свиток «Свитки и дерево» (G.ui.menu).
 G.scenes.register('menu', () => {
   let idx = 0;
-  const W = 156;
+  let first = 0;
+  // Размер строки считается в CSS-пикселях, а не в точках игрового холста.
+  function layout() {
+    const sc=G.screen.scale||1,z=sc<1.25?2:1,row=Math.max(22,Math.ceil(44/sc));
+    const header=24*z,n=items().length,available=G.screen.H-header-24;
+    const paged=n*row>available,rows=Math.max(1,Math.min(n,Math.floor(available/row)-(paged?1:0)));
+    const w=Math.min(G.screen.W-12,Math.max(156*z,Math.ceil(280/sc))),h=header+rows*row+(paged?row:0)+12;
+    const x=Math.floor((G.screen.W-w)/2),y=Math.max(12,Math.floor((G.screen.H-h)/2));
+    return {x,y,w,h,row,rows,z,top:y+header,paged};
+  }
+  function reveal(g){first=G.util.clamp(first,Math.max(0,idx-g.rows+1),idx);first=Math.min(first,items().length-g.rows);}
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
@@ -19957,7 +19978,9 @@ G.scenes.register('menu', () => {
   return {
     name: 'menu',
     transparent: true,
-    labels() { return items().map((x) => x.label); },   // для тестов: выбор пункта по подписи, а не по счёту
+    labels() { return items().map((x) => x.label); },
+    layout,
+    visibleRows() { const g=layout();reveal(g);return items().slice(first,first+g.rows).map((it,i)=>({label:it.label,index:first+i,x:g.x+6,y:g.top+i*g.row,w:g.w-12,h:g.row})); },   // для тестов: выбор пункта по подписи, а не по счёту
     update(dt) {
       const I = G.input;
       const list = items();
@@ -19965,13 +19988,30 @@ G.scenes.register('menu', () => {
       if (I.repeat('down', dt)) { idx = (idx + 1) % list.length; G.audio.sfx.select(); }
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.tapNow) {
-        const i = G.ui.menu.hit(I.tapNow, list.length, W);
-        if (i >= 0) { idx = i; G.audio.sfx.confirm(); list[i].act(); }
+        const g=layout();reveal(g);const t=I.tapNow;
+        const hit=this.visibleRows().find(r=>t.x>=r.x&&t.x<r.x+r.w&&t.y>=r.y&&t.y<r.y+r.h);
+        if(hit){idx=hit.index;G.audio.sfx.confirm();list[idx].act();}
+        else if(g.paged&&t.x>=g.x+6&&t.x<g.x+g.w-6&&t.y>=g.top+g.rows*g.row&&t.y<g.top+(g.rows+1)*g.row){
+          idx=G.util.clamp(idx+(t.x<g.x+g.w/2?-g.rows:g.rows),0,list.length-1);reveal(g);G.audio.sfx.select();
+        }
         return;
       }
       if (I.pressed('a')) { G.audio.sfx.confirm(); list[idx].act(); }
     },
-    draw(ctx) { G.ui.menu.draw(ctx, 'МЕНЮ', items(), idx, W); },
+    draw(ctx) {
+      const U=G.ui,g=layout();reveal(g);
+      ctx.save();ctx.globalAlpha*=.65;ctx.fillStyle='#0a0604';ctx.fillRect(0,0,G.screen.W,G.screen.H);ctx.restore();
+      U.panel(ctx,g.x,g.y,g.w,g.h,'frame');U.title(ctx,'МЕНЮ',G.screen.W/2,g.y-7,0);
+      this.visibleRows().forEach(r=>{
+        const selected=r.index===idx;U.row(ctx,r.x,r.y+1,r.w,r.h-2,selected);
+        ctx.save();ctx.translate(r.x+8,r.y+Math.floor((r.h-G.font.CAP*g.z)/2));ctx.scale(g.z,g.z);
+        G.font.draw(ctx,r.label,0,0,{color:selected?'#f8eed0':U.C.ink,shadow:selected?'#5a1408':null,maxW:(r.w-16)/g.z});ctx.restore();
+      });
+      if(g.paged){const y=g.top+g.rows*g.row,bw=(g.w-14)/2;
+        U.button(ctx,g.x+6,y,bw,g.row,'▲ Выше',first>0?'normal':'dis');
+        U.button(ctx,g.x+8+bw,y,bw,g.row,'▼ Ниже',first+g.rows<items().length?'normal':'dis');
+      }
+    },
   };
 });
 
