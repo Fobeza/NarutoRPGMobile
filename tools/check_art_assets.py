@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     manifest = json.loads((ROOT / 'art/manifest.json').read_text())
     assert manifest['release'] == '2.2.2'
-    assert manifest['status'] == 'not_integrated'
+    assert manifest['status'] == 'integrated'
     assets = manifest['assets']
     paths = {a['file'] for a in assets}
     assert len(assets) == len(paths) == 35
@@ -43,7 +43,7 @@ def main():
                 assert a['kind'] == 'terrain' and (w,h) == (512,512)
     assert total <= 8*1024*1024, 'Бюджет набора превышен'
     print(f'✔ Арт: 35 файлов, прозрачность 30/30, пропорции, SHA-256, лимиты; {total:,} байт')
-    print('✔ Новые изображения не назначают размеры игровых объектов и не включены в рендер')
+    print('✔ Мастер-изображения подключены через встроенные спрайты; размеры игровых объектов заданы отдельно')
 
 if __name__ == '__main__':
     main()
