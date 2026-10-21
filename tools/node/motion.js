@@ -56,4 +56,35 @@ test('Дым привязан к настоящим трубам; бюджет �
  const particles=c.log.filter(s=>s.startsWith('ellipse('));assert.equal(particles.length,36);assert.ok(!c.log.some(s=>s.includes('NaN')));
  const off=h.recordingCtx();w.map={id:'inside:test'};G.worldMotion.atmosphere(off,w,buildings);assert.equal(off.log.length,0);
 });
+test('Дождь и светлячки не смещаются при перемещении камеры внутри набора ячеек',w=>{
+ const rain=G.life.raining;G.life.raining=()=>false;
+ const map={outdoor:true,w:100,h:100,solidTile:()=>false,get:()=>G.tiles.ID.GRASS};
+ try{for(const mode of ['rain','day','night']){
+  const a=h.recordingCtx(),b=h.recordingCtx();
+  const draw=(c,x,y)=>mode==='rain'?G.fx.rain(c,x,y,160,160,map,2.3):G.fx.particles(c,x,y,160,160,map,mode==='day'?720:1380,2.3);
+  draw(a,90,90);draw(b,91,91);
+  // Затемнение дождя покрывает экран; сами капли остаются на прежнем месте.
+  const points=c=>c.log.filter(v=>v.startsWith('fillRect(')&&!v.endsWith(',160,160)'));
+  assert.ok(points(a).length>0,mode);assert.deepEqual(points(a),points(b),mode);
+  const again=h.recordingCtx();draw(again,90,90);assert.deepEqual(a.log,again.log);
+ }}finally{G.life.raining=rain;}
+});
+test('Коробка остаётся у курьера при паузе, дожде и смене направления',w=>{
+ const n=w.npcs.find(n=>G.villageDaily.generic(n)&&!n.id.startsWith('kid_'));
+ n._daily={role:'parcel',busy:0};n.dir='down';n.anim=0;
+ const a=h.recordingCtx(),b=h.recordingCtx();n.moving=true;G.villageDaily.drawCargo(a,w,n);n.moving=false;G.villageDaily.drawCargo(b,w,n);assert.deepEqual(a.log,b.log);assert.ok(a.log.length>0);
+ const rain=G.life.raining;try{G.life.raining=()=>true;const c=h.recordingCtx();G.villageDaily.drawCargo(c,w,n);assert.deepEqual(a.log,c.log);}finally{G.life.raining=rain;}
+ for(const dir of ['left','right','up','down']){n.dir=dir;const front=h.recordingCtx(),back=h.recordingCtx();G.villageDaily.drawCargo(front,w,n);G.villageDaily.drawCargo(back,w,n,true);assert.ok((front.log.length>0)!==(back.log.length>0));}
+ n._daily.role='read';const c=h.recordingCtx();G.villageDaily.drawCargo(c,w,n,true);assert.equal(c.log.length,0);
+});
+test('Все эмоции имеют пиксели, а отрисовка не расходует задержку',w=>{
+ const n=w.npcs[0];w.npcs=[n];n.x=40;n.y=50;
+ for(const ch of ['...','!','?','♥','*','~','Zz','!!','неизвестно']){
+  n._em={ch,t:1,cd:5,delay:0};const c=h.recordingCtx();G.life2.drawEmotes(c,w,0,0,160,160);
+  assert.ok(c.log.filter(s=>s.startsWith('fillRect(')&&s.endsWith(',1,1)')).length>0,ch);
+ }
+ n._em={ch:'♥',t:1.6,cd:5,delay:.9};const before=JSON.stringify(n._em);
+ for(let i=0;i<120;i++)G.life2.drawEmotes(h.recordingCtx(),w,0,0,160,160);
+ assert.equal(JSON.stringify(n._em),before);G.life2.npcTick(w,n,.3);assert.ok(Math.abs(n._em.delay-.6)<1e-9);assert.equal(n._em.t,1.6);
+});
 console.log(`ИТОГ анимаций: ✔ ${passed}  ✘ ${failed}`);process.exitCode=failed?1:0;

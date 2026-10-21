@@ -29,6 +29,7 @@ G.game = (() => {
       frQueue: [],
       makeupQ: [],
       battleCheckpoint: null, // независимый снимок до боя; незавершённый бой откатывается целиком
+      streetLife: { events: {}, apples: 0, helped: {} }, // необязательные истории и память соседей
       learning: {},        // выполненные упражнения и памятка наставников
       goal: null,
       pos: null,

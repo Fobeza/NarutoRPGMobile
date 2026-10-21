@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.2.0', version: 'de8c5e73', date: '2026-10-21 06:23', debug: false };
+const BUILD = { release: '2.2.1', version: 'ac75bc27', date: '2026-10-21 07:38', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -5044,6 +5044,7 @@ G.game = (() => {
       frQueue: [],
       makeupQ: [],
       battleCheckpoint: null, // независимый снимок до боя; незавершённый бой откатывается целиком
+      streetLife: { events: {}, apples: 0, helped: {} }, // необязательные истории и память соседей
       learning: {},        // выполненные упражнения и памятка наставников
       goal: null,
       pos: null,
@@ -6632,7 +6633,9 @@ G.friends = {
         const line = pool[Math.floor(Math.random() * pool.length)];
         if (!d['talk_' + id]) { d['talk_' + id] = 1; this.add(id, 1, 'talk'); }
         if (npc.talk && typeof npc.talk === 'string' && !d['story_' + id] && G.script.library[npc.talk]) { d['story_' + id] = 1; world.talk(npc.talk); return; }
-        world.talk([{ who: id, text: G.util.fmt(line, { name: G.state.hero.name }) }]);
+        const conversation=G.FRIEND_DIALOGUES?.[id]?.[lvl>=4?2:lvl>=2?1:0];
+        if(conversation)world.talk(conversation.map((text,i)=>({who:i===1?'hero':id,text})));
+        else world.talk([{ who: id, text: G.util.fmt(line, { name: G.state.hero.name }) }]);
       } else if (a === 'gift') {
         const gopts = gifts.map((k) => ({ label: G.ITEMS[k].name, sub: 'x' + G.state.inv[k], k }));
         G.scenes.push(G.scenes.make('pick', { title: 'Подарок для: ' + name, options: gopts }, (j) => {
@@ -9475,6 +9478,127 @@ G.VILLAGE_DAILY = {
 };
 
 
+// ===== data/street_events.js =====
+// Необязательные истории без срока, штрафов и ежедневного повторения наград.
+G.STREET_EVENTS = [
+  {id:'apples',tpl:'market',title:'Рассыпанные яблоки',who:'merchant',name:'Торговец яблоками',
+    intro:'Поможешь собрать три упавших яблока?',
+    task:'Собрать яблоки',thanks:'Спасибо за яблоки! Теперь я закрепляю корзину двумя ремнями.',reward:25},
+  {id:'notebook',tpl:'library',title:'Забытый конспект',who:'grandma',name:'Соседка у библиотеки',
+    intro:'Отнесёшь забытый конспект к Академии?',
+    task:'Отнести конспект',thanks:'Спасибо, что вернул конспект. Ученик теперь подписывает свои тетради.',reward:25},
+  {id:'practice',tpl:'dojo',title:'Спор учеников',who:'kid_m',name:'Ученик у додзё',
+    intro:'Что важнее: больше чакры или контроль?',
+    task:'Подсказать',thanks:'Мы попробовали твой совет! Медленно, зато теперь получается одинаково.',reward:20},
+];
+G.STREET_REACTIONS = {
+  naruto:'{name}! После тренировки заглядывай на рамен!',
+  sasuke:'{name}. Не забрасывай тренировки.',
+  sakura:'Привет, {name}! Вместе готовиться к урокам веселее.',
+  hinata:'{name}... Рада тебя видеть!',
+  shikamaru:'О, {name}. Найдёшь минуту для шоги?',
+  lee:'{name}! Сегодня отличный день для тренировки!',
+};
+
+
+// ===== data/village_dialogues.js =====
+// Реплики разделены по ситуации: справка, согласие, отказ, результат и новая встреча.
+// Строка — речь текущего жителя; объект позволяет сменить собеседника.
+G.STREET_DIALOGUES = {
+  apples:{
+    question:'Как это случилось?',
+    explain:['Ремень лопнул. Я всё собирался его заменить, да думал: ещё один рейс выдержит.',{who:'hero',text:'Корзину придержать?'},'Корзина уже никуда не денется. А вот три яблока укатились — гляди под ноги, они рядом.'],
+    accept:[{who:'hero',text:'Я соберу. А ты пока проверь второй ремень.'},'Справедливо. Вот ведь: всем говорю выбирать хорошие яблоки, а сам на верёвке экономлю.'],
+    decline:['Бежишь по делам? Тогда не задерживаю. Только осторожнее: яблоки под ногами.'],
+    complete:['Все три! Спасибо. Одно с вмятиной... Это оставлю себе, на пирог.',{who:'hero',text:'А ремень?'},'Уже завязал новый узел. Держи за помощь — и за то, что напомнил.'],
+    after:['Видишь два ремня? Один держит корзину, второй — моё обещание больше не лениться.',{who:'hero',text:'А пирог получился?'},'До вечера не дожил. Это хороший отзыв.'],
+  },
+  notebook:{
+    question:'Чей это конспект?',
+    explain:['Нашла его на скамейке. Между страниц торчит листок с печатями, а на обложке имени нет.',{who:'hero',text:'Как тогда найти владельца?'},'У Академии дежурит ученица. Она искала именно такую тетрадь — с перечёркнутой лисой на обложке.'],
+    accept:['Спасибо. Отнеси дежурной ученице возле Академии. И не вырывай листок: возможно, на нём самое важное.',{who:'hero',text:'Даже если там опять нарисована лиса?'},'Особенно тогда. Ошибки тоже стоит хранить.'],
+    decline:['Понимаю. Конспект пока побудет у меня. Если освободишься — загляни.'],
+    complete:[{who:'kid_f',name:'Дежурная ученица',text:'Нашёлся! Я уже решила, что придётся всё переписывать.'},{who:'hero',text:'Соседка у библиотеки нашла. Сказала не вырывать листок.'},{who:'kid_f',name:'Дежурная ученица',text:'На нём Ирука исправил мои печати. Теперь я понимаю, где путалась. Спасибо вам обоим. Вот, возьми за хлопоты.'}],
+    after:['Ученица приходила благодарить. Первым делом подписала тетрадь — так крупно, что мне очки не понадобились.'],
+    deliveryAfter:[{who:'kid_f',name:'Дежурная ученица',text:'Имя на обложке, конспект в сумке. Проверяю каждый раз перед уходом. Только лису всё-таки оставила.'}],
+  },
+  practice:{
+    question:'Покажите, где не выходит',
+    explain:['Первый раз клон почти получился. Во второй я вложил больше чакры — и он сразу развалился.',{who:'kid_f',name:'Ученица у додзё',text:'А я говорю: сначала повтори первый раз. Но он каждый раз меняет всё сразу.'},{who:'hero',text:'Тогда трудно понять, что именно помогло.'}],
+    accept:[],decline:[{who:'kid_f',name:'Ученица у додзё',text:'Ладно, попробуем ещё по очереди. Если заметишь ошибку — скажи.'}],
+    wrong:[{who:'kid_m',name:'Ученик у додзё',text:'Я так уже пробовал. Потом даже пальцы дрожали.'},{who:'kid_f',name:'Ученица у додзё',text:'Может, дело не в том, сколько чакры? У меня её меньше, а клон простоял дольше.'}],
+    complete:[{who:'hero',text:'Сначала контроль. Повтори с небольшим количеством чакры. Получится одинаково три раза — тогда добавишь.'},'Три одинаковых раза? Я обычно после первого сразу усложнял.',{who:'kid_f',name:'Ученица у додзё',text:'Я считаю попытки, ты следишь за печатями. Потом меняемся.'},'Договорились. Вот наша награда за совет. И... спасибо, что не стал смеяться.'],
+    after:['Сегодня считаем не удачные клоны, а одинаковые попытки.',{who:'kid_f',name:'Ученица у додзё',text:'Пока две. Третью он опять торопится сделать.'},'Не тороплюсь. Просто очень медленно спешу.'],
+  },
+};
+// [знакомство, доверие, близкая дружба]; внутри каждой темы говорит и герой.
+G.FRIEND_DIALOGUES = {
+  naruto:[
+    ['Опять сказали: «Наруто, не отвлекай остальных». Я ведь только спросил!', 'Во время объяснения?', 'Ну... да. В следующий раз спрошу после. Если не забуду вопрос.'],
+    ['Я оставил тебе место у стойки. Там Теучи первым ставит миски.', 'Ты уже вычислил порядок?', 'Конечно! Это наблюдение. Между прочим, важный навык шиноби.'],
+    ['Если однажды все скажут, что у меня ничего не выйдет... ты тоже так подумаешь?', 'Я скажу, где ты ошибся. А потом попробуем ещё раз.', 'Вот поэтому с тобой и стоит тренироваться. Только никому не рассказывай, что я спросил.'],
+  ],
+  sasuke:[
+    ['Ты наступаешь слишком громко.', 'Я вообще-то подошёл поговорить.', 'Я заметил. Ещё у поворота.'],
+    ['Вчера последний бросок был лучше остальных.', 'Ты смотрел?', 'Мишень рядом. Попробуй вспомнить, как стояла нога, а не как сильно ты бросил.'],
+    ['Если увидишь ошибку в моей стойке — скажи сразу.', 'Даже посреди тренировки?', 'Особенно тогда. От тебя я услышу замечание, а не повод покрасоваться.'],
+  ],
+  sakura:[
+    ['У тебя записана последняя печать? На доске её стёрли раньше, чем я успела.', 'Давай сравним конспекты.', 'Хорошо. Только не переписывай мою стрелку: я её как раз неправильно поставила.'],
+    ['Я могу объяснить технику наизусть. А когда пробую — всё делаю быстрее, чем нужно.', 'Буду считать темп. Без подсказок, пока сама не попросишь.', 'Вот это было бы полезно. Обычно мне начинают объяснять раньше, чем я ошибусь.'],
+    ['Сегодня получилось. И первым делом я подумала: надо тебе рассказать.', 'Тогда рассказывай с начала.', 'С той попытки, где ничего не вышло? Ладно. Она, кажется, самая важная.'],
+  ],
+  hinata:[
+    ['Ты... не потерял эту ленту? Нашла у мишеней.', 'Не моя. Но спасибо, что спросила.', 'Тогда оставлю у входа. Вдруг хозяин вернётся.'],
+    ['Я хотела попросить тебя посмотреть одну стойку. Только не сейчас, если спешишь.', 'Я не спешу. Что именно проверить?', 'Не опускаю ли плечо после поворота. Сама не всегда замечаю.'],
+    ['Раньше я репетировала, что скажу, прежде чем подойти.', 'А сейчас?', 'Сейчас тоже немного. Но уже не ухожу, если забыла слова.'],
+  ],
+  shikamaru:[
+    ['Обойди доску справа. Слева фигуры стоят на самом краю.', 'Ты играешь один?', 'Пока да. Один из соперников хотя бы не спорит с правилами.'],
+    ['Не делай ход только потому, что долго думал.', 'Жалко потраченного времени.', 'Ещё больше будет жалко фигуру. Можно передумать — доска не обидится.'],
+    ['Я оставил партию незаконченной.', 'Ждал меня?', 'Ну не ветер же. Он в прошлый раз проиграл три пешки под скамейку. Садись.'],
+  ],
+  kiba:[
+    ['Акамару тебя обнюхивает. Не дёргайся.', 'Я ему чем-то не нравлюсь?', 'Наоборот. Если бы не нравился, он бы уже отошёл.'],
+    ['Сегодня он первым нашёл след, а похвалили меня.', 'Ты сказал, кто нашёл?', 'Конечно. Но награду всё равно пришлось делить. Мою половину он тоже выпросил.'],
+    ['Если потеряешься в лесу, оставь вещь на видном месте и не бегай кругами.', 'Вы с Акамару найдёте?', 'Найдём. Я сейчас не хвастаюсь. Просто запомни.'],
+  ],
+  shino:[
+    ['На рукаве жук. Не стряхивай.', 'Он опасный?', 'Нет. Поэтому можно просто подставить лист.'],
+    ['Ты сегодня заметил меня раньше остальных.', 'Ты стоял рядом с дверью.', 'Обычно это не помогает.'],
+    ['Если будешь собирать компанию, скажи мне заранее.', 'Ты хочешь пойти?', 'Да. Я предпочитаю отвечать на приглашение, а не узнавать о нём потом.'],
+  ],
+  choji:[
+    ['Будешь чипсы? Только эти острые.', 'А ты почему их взял?', 'Перепутал пачки. Теперь ем медленно и делаю вид, что так и хотел.'],
+    ['Отец говорит, что после тренировки еда вкуснее.', 'Проверял?', 'Много раз. Но для точности надо бы повторить. Пойдём?'],
+    ['Я тебе оставил последний кусочек.', 'Ты же обычно его никому не отдаёшь.', 'Обычно. Не заставляй меня передумать, пока объясняю.'],
+  ],
+  ino:[
+    ['Не бери цветы за лепестки. Вот, держи ниже.', 'Ты каждого покупателя учишь?', 'Только тех, кто хочет донести букет, а не отдельные стебли.'],
+    ['Сакура сказала, что ей всё равно, какие цветы. А сама дважды посмотрела на эти.', 'Ты запомнила?', 'Я же работаю в цветочной лавке. Смотреть — часть работы.'],
+    ['Скажи честно: я иногда слишком решаю за других?', 'Иногда стоит сначала спросить.', 'Ладно. Тогда спрошу: хочешь помочь с букетом? Можно отказаться.'],
+  ],
+  lee:[
+    ['Осталось десять повторений!', 'Ты уже говорил это минуту назад.', 'Тогда я считал подходы. Теперь — последние десять. Правда!'],
+    ['Гай-сенсей велел сегодня отдохнуть. Это оказалось сложнее тренировки.', 'Можно просто пройтись.', 'Хорошо. Но ты скажи, если я опять начну ускоряться.'],
+    ['Сегодня я отстал от собственного результата.', 'Завтра попробуешь ещё?', 'Да. Но сначала высплюсь. Мне понадобилось время, чтобы перестать считать это отговоркой.'],
+  ],
+  iruka:[
+    ['Есть вопрос по уроку? Если нет — я наконец допью чай.', 'А если вопрос короткий?', 'Короткие обычно заканчиваются второй доской. Но спрашивай.'],
+    ['Ты стал чаще проверять результат, прежде чем повторять технику.', 'Раньше я просто пытался сильнее.', 'Это заметно. Теперь попробуй объяснить свою ошибку товарищу — поймёшь ещё лучше.'],
+    ['Сегодня ученик пересказал мне твой совет. Не дословно, но смысл понял.', 'Надеюсь, я ничего не перепутал.', 'Он перестал бояться спрашивать. Хорошее начало. За правильностью печатей я ещё присмотрю.'],
+  ],
+};
+G.DAILY_DIALOGUES = {
+  sweep:['До обеда подметаю листья, после обеда ветер приносит новые.',{who:'hero',text:'Тогда зачем спешить?'},'Чтобы соседка могла дойти до лавки, пока сухо. У неё трость скользит на листьях.'],
+  water:['Этот горшок всё время сохнет первым. Тень от крыши до него не дотягивается.',{who:'hero',text:'Может, переставить?'},'Вечером попрошу сына. А пока поливаю понемногу, чтобы корни не залить.'],
+  parcel:['На коробке написано «верх». Очень полезно, если успел прочитать до того, как взял её.',{who:'hero',text:'Что внутри?'},'Чашки для сестры. Одну она наверняка отдаст мне — если донесу остальные целыми.'],
+  read:['В книге дозорный третий вечер слышит шаги за стеной.',{who:'hero',text:'И не пошёл проверить?'},'Пошёл. Но на следующей странице. А её прошлый читатель залил чаем. Теперь изучаю пятно.'],
+  play:['Мы решили, что лужа — это река. Перепрыгнул — прошёл испытание.',{who:'hero',text:'А кто проверяет результат?'},'Мама. По мокрым носкам. Она пока ни одной ошибки не пропустила.'],
+  warm:['Руки замёрзли так, что ключ в замок не попадает.',{who:'hero',text:'Подержать покупки?'},'Спасибо, я уже отогрел пальцы. В следующий раз варежки возьму, а не буду смотреть на погоду из окна.'],
+};
+
+
 // ===== world/buildgfx.js =====
 // Спрайты зданий, нарисованные кодом по шаблону из G.BUILDINGS.
 // Вид 3/4: снизу — фасад (стена с дверью и окнами), выше — крыша. Крыша выступает на OV пикселей
@@ -12210,7 +12334,8 @@ G.life2 = (() => {
     if (world.map && world.map.outdoor === false && !n._chat && n.ai !== 'idle') return;
     n._em = n._em || { t: 0, cd: 4 + Math.random() * 12, ch: '...' };
     const e = n._em;
-    if (e.t > 0) { e.t -= dt; return; }
+    if (e.delay > 0) { e.delay = Math.max(0, e.delay - dt); return; }
+    if (e.t > 0) { e.t = Math.max(0, e.t - dt); return; }
     e.cd -= dt;
     if (e.cd > 0) return;
     e.cd = 5 + Math.random() * 14;
@@ -12226,19 +12351,32 @@ G.life2 = (() => {
     }
     e.ch = ch; e.t = 1.6; e.delay = 0;
   }
+  // Маленькие пиксельные эмоции не зависят от размера и состава шрифта.
+  const emotePixels = {
+    '...':['000000000','000000000','000000000','000000000','110110110'],
+    '!':['010','010','010','000','010'],
+    '?':['110','001','010','000','010'],
+    '♥':['0110110','1111111','1111111','0111110','0011100','0001000'],
+    '*':['00100','10101','01110','10101','00100'],
+    '~':['000000','011001','100110','000000'],
+    'Zz':['11110000','00100000','01000111','11110010','00000111'],
+    '!!':['010010','010010','010010','000000','010010'],
+  };
   function drawEmotes(ctx, world, cx, cy, W, VH) {
     for (const n of world.npcs) {
       const e = n._em;
       if (!e || e.t <= 0 || n.x < cx - 8 || n.x > cx + W + 8 || n.y < cy || n.y > cy + VH + 30) continue;
-      if (e.delay > 0) { e.delay -= 0.016; continue; }
-      const k = e.t > 1.4 ? (1.6 - e.t) / 0.2 : e.t < 0.3 ? e.t / 0.3 : 1, rise = (1 - k) * 4;
-      const x = Math.round(n.x), y = Math.round(n.y - 25 - rise);
-      const w = Math.max(11, G.font.width ? G.font.width(e.ch) + 6 : e.ch.length * 5 + 6);
-      ctx.save(); ctx.globalAlpha = Math.min(1, k);
-      ctx.fillStyle = '#fffaf0'; ctx.fillRect(x - Math.floor(w / 2), y - 5, w, 10); ctx.fillRect(x - 1, y + 5, 3, 2);
-      ctx.fillStyle = P.ink; ctx.fillRect(x - Math.floor(w / 2), y - 6, w, 1); ctx.fillRect(x - Math.floor(w / 2), y + 5, w, 1);
-      ctx.restore(); ctx.save(); ctx.globalAlpha = Math.min(1, k);
-      G.font.draw(ctx, e.ch, x, y - 3, { color: e.ch === '♥' ? '#e8506a' : P.ink, align: 'center' });
+      if (e.delay > 0) continue;
+      const pixels=emotePixels[e.ch]||emotePixels['...'];
+      const k=Math.max(0,Math.min(1,(1.6-e.t)/.2,e.t/.3));
+      if(k<=0)continue;
+      const x=Math.round(n.x),y=Math.round(n.y-26-(1-k)*4),pw=pixels[0].length;
+      const w=Math.max(11,pw+6),height=pixels.length+6,left=x-Math.floor(w/2);
+      ctx.save();ctx.globalAlpha*=k;
+      ctx.fillStyle=P.ink;ctx.fillRect(left-1,y-1,w+2,height+2);
+      ctx.fillStyle='#fffaf0';ctx.fillRect(left,y,w,height);ctx.fillRect(x-1,y+height,3,2);
+      ctx.fillStyle=e.ch==='♥'?'#e8506a':P.ink;
+      for(let row=0;row<pixels.length;row++)for(let col=0;col<pw;col++)if(pixels[row][col]==='1')ctx.fillRect(x-Math.floor(pw/2)+col,y+3+row,1,1);
       ctx.restore();
     }
   }
@@ -13216,33 +13354,50 @@ G.fx = (() => {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
-  // Лепестки днём, светлячки ночью (в мировых координатах вокруг камеры)
-  function particles(ctx, cx, cy, W, VH, map, min, time) {
-    if (!enabled() || !map.outdoor || G.life.raining()) return;
-    const { sun: s } = sun(min);
-    if (s > 0.3) {
-      for (let i = 0; i < 16; i++) {
-        const sp = 9 + (i % 5) * 4;
-        const x = cx + ((i * 47 + time * sp) % (W + 24)) - 12 + Math.sin(time * 1.6 + i) * 4;
-        const y = cy + ((i * 83 + time * (14 + (i % 4) * 4)) % (VH + 24)) - 12;
-        ctx.fillStyle = i % 3 ? '#f8c0d4' : '#fff0f6';
-        ctx.globalAlpha = 0.85;
-        ctx.fillRect(Math.round(x), Math.round(y), 2, 1); ctx.fillRect(Math.round(x) + 1, Math.round(y) + 1, 1, 1);
+  // Камера выбирает ячейки мира, но не участвует в координатах частиц.
+  // Одинаковая ячейка в двух перекрывающихся кадрах рисуется одинаково.
+  function cells(cx,cy,W,VH,map,draw){
+    const size=64;
+    for(let y=Math.max(0,Math.floor((cy-24)/size));y<=Math.min(Math.ceil(map.h*16/size)-1,Math.floor((cy+VH+24)/size));y++)
+      for(let x=Math.max(0,Math.floor((cx-24)/size));x<=Math.min(Math.ceil(map.w*16/size)-1,Math.floor((cx+W+24)/size));x++)draw(x*size,y*size,G.util.hash2(x,y,917));
+  }
+  function particles(ctx,cx,cy,W,VH,map,min,time){
+    if(!enabled()||!map.outdoor||G.life.raining())return;
+    const day=sun(min).sun>.3;
+    ctx.save();
+    cells(cx,cy,W,VH,map,(x,y,seed)=>{
+      if(seed<.65)return;
+      if(day){
+        const p=(time*(.12+seed*.08)+seed)%1;
+        const px=x+seed*40+p*18+Math.sin(time*1.6+seed*20)*4,py=y+p*64;
+        ctx.globalAlpha=Math.sin(p*Math.PI)*.85;ctx.fillStyle=seed>.85?'#fff0f6':'#f8c0d4';
+        ctx.fillRect(Math.round(px),Math.round(py),2,1);ctx.fillRect(Math.round(px)+1,Math.round(py)+1,1,1);
+      }else{
+        const px=x+32+Math.sin(time*.5+seed*20)*18,py=y+32+Math.sin(time*.8+seed*31)*6;
+        const tx=Math.floor(px/16),ty=Math.floor(py/16);
+        if(map.solidTile(tx,ty)&&map.get(tx,ty)!==G.tiles.ID.WATER)return;
+        const glow=.5+.5*Math.sin(time*(1.2+seed)+seed*21);
+        if(glow<.25)return;
+        ctx.globalCompositeOperation='lighter';
+        const gr=ctx.createRadialGradient(px,py,0,px,py,6);
+        gr.addColorStop(0,`rgba(210,255,120,${(.8*glow).toFixed(2)})`);gr.addColorStop(1,'rgba(160,255,80,0)');
+        ctx.fillStyle=gr;ctx.fillRect(px-6,py-6,12,12);
       }
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 14; i++) {
-        const bl = 0.5 + 0.5 * Math.sin(time * (1.2 + (i % 4) * 0.3) + i * 2.1);
-        if (bl < 0.25) continue;
-        const x = cx + ((i * 61 + Math.sin(time * 0.5 + i) * 18 + 400) % W);
-        const y = cy + VH * 0.35 + ((i * 37) % (VH * 0.6)) + Math.sin(time * 0.8 + i * 1.7) * 6;
-        const gr = ctx.createRadialGradient(x, y, 0, x, y, 6);
-        gr.addColorStop(0, `rgba(210,255,120,${(0.8 * bl).toFixed(2)})`); gr.addColorStop(1, 'rgba(160,255,80,0)');
-        ctx.fillStyle = gr; ctx.fillRect(x - 6, y - 6, 12, 12);
+    });ctx.restore();
+  }
+  function rain(ctx,cx,cy,W,VH,map,time){
+    if(!enabled()||!map.outdoor)return;
+    ctx.save();ctx.fillStyle='rgba(40,50,80,.16)';ctx.fillRect(cx,cy,W,VH);
+    cells(cx,cy,W,VH,map,(x,y,seed)=>{
+      ctx.fillStyle='rgba(190,210,255,.55)';
+      for(let i=0;i<5;i++){
+        const p=(time*(2.5+seed)+seed+i*.2)%1;
+        const px=Math.round(x+(seed*47+i*13)%48+p*16),py=Math.round(y+p*64);
+        ctx.fillRect(px,py,1,4);ctx.fillRect(px-1,py+4,1,2);
       }
-      ctx.globalCompositeOperation = 'source-over';
-    }
+      const p=(time*3+seed*7)%1,px=x+seed*48+8,py=y+seed*37+12;
+      if(p<.3&&!map.solidTile(Math.floor(px/16),Math.floor(py/16))){ctx.fillStyle='rgba(200,220,255,.35)';ctx.fillRect(Math.round(px)-1,Math.round(py),3,1);}
+    });ctx.restore();
   }
 
   // Мягкое затемнение по краям (в экранных координатах)
@@ -13259,7 +13414,7 @@ G.fx = (() => {
     ctx.drawImage(vig, 0, y0);
   }
 
-  return { sun, shadows, roomSunlight, windows, particles, vignette, enabled };
+  return { sun, shadows, roomSunlight, windows, particles, rain, vignette, enabled };
 })();
 
 
@@ -14096,8 +14251,9 @@ G.villageDaily = (() => {
       if(s.workTalk<=0){const n=nearby.find(n=>n._daily?.busy>1);s.workTalk=9;if(n){const lines=D.jobs[n._daily.role].lines;bubble(w,[n],[lines[(n._daily.seed+G.state.vars.day)%lines.length]],3.5);}}
       if(s.greet<=0){
         s.greet=14;
-        const n=nearby.find(n=>Math.hypot(n.x-w.player.x,n.y-w.player.y)<34&&(!n._dailyGreet||w.time-n._dailyGreet>90));
-        if(n){n._dailyGreet=w.time;const h=G.state.vars.min/60,key=G.life.raining()?'rain':h<11?'morning':h>=18?'evening':'day',pool=D.greetings[key];bubble(w,[n],[pool[(hash(n.uid)+G.state.vars.day)%pool.length]],3);}
+        const personal=w.npcs.filter(n=>G.streetLife?.reaction(n)&&!G.quests.iconFor(n.id));
+        const n=[...personal,...nearby].find(n=>Math.hypot(n.x-w.player.x,n.y-w.player.y)<34&&(!n._dailyGreet||w.time-n._dailyGreet>90)&&!G.state.daily['street_greet_'+(n.uid||n.id)]);
+        if(n){n._dailyGreet=w.time;const h=G.state.vars.min/60,key=G.life.raining()?'rain':h<11?'morning':h>=18?'evening':'day',pool=D.greetings[key];const reply=G.streetLife?.reaction(n);bubble(w,[n],[reply||pool[(hash(n.uid)+G.state.vars.day)%pool.length]],reply?5:3);if(reply)G.state.daily['street_greet_'+(n.uid||n.id)]=1;}
       }
       if(!s.bubble&&s.chat<=0){
         s.chat=13;
@@ -14120,16 +14276,18 @@ G.villageDaily = (() => {
   function help(n,w){
     const d=n._daily,key='daily_help_'+n.uid;
     if(!active(w)||!w.npcs.includes(n)||!d||d.busy<=0||!['water','sweep'].includes(d.role)||G.state.daily[key])return false;
+    G.state.streetLife.helped[n.uid]=1;
     G.state.daily[key]=1;G.game.advance(3);G.game.mood(3);d.busy=0;d.cooldown=20;
     G.game.note('Помог соседу: '+D.jobs[d.role].label.toLowerCase());return true;
   }
   function talk(n,w){
     const d=n._daily;if(!active(w)||!generic(n)||!d||d.busy<=0)return false;
     const job=D.jobs[d.role];
-    if(!label(n)){w.talk([{who:n.id,name:n.name,text:job.talk}]);return true;}
-    G.scenes.push(G.scenes.make('pick',{title:n.name||'Сосед',text:job.talk,options:[{label:'Помочь на минутку',desc:'Три игровые минуты. Сосед будет рад.'},{label:'Поболтать'}]},i=>{
-      if(i===0){if(help(n,w)){w.talk([{who:n.id,name:n.name,text:'Спасибо! Вместе гораздо легче.'},{text:job.help}]);w.savePos();G.storage.save(G.state);}}
-      else if(i===1)w.talk([{who:n.id,name:n.name,text:job.talk}]);
+    const conversation=()=> (G.DAILY_DIALOGUES[d.role]||[job.talk]).map(line=>typeof line==='string'?{who:n.id,name:n.name,text:line}:{...line});
+    if(!label(n)){w.talk(conversation());return true;}
+    G.scenes.push(G.scenes.make('pick',{title:n.name||'Сосед',text:job.lines[0],options:[{label:'Помочь на минутку',desc:'Три игровые минуты. Сосед будет рад.'},{label:'Поболтать'}]},i=>{
+      if(i===0){if(help(n,w)){w.talk([{who:n.id,name:n.name,text:d.role==='water'?'Спасибо. Теперь хватит воды и этому горшку у края. Я всё боялся про него забыть.':'Спасибо! До поворота уже чисто. Соседке сегодня не придётся обходить по дороге.'},{text:job.help}]);w.savePos();G.storage.save(G.state);}}
+      else if(i===1)w.talk(conversation());
     }));return true;
   }
   function actors(w){return active(w)&&w._dailyLife?w._dailyLife.animals.filter(a=>a.alpha>.02&&!a.flight&&Math.abs(a.x-w.player.x)<360&&Math.abs(a.y-w.player.y)<360):[];}
@@ -14147,6 +14305,19 @@ G.villageDaily = (() => {
     w.showToast(a.type==='dog'?'Пёс радостно виляет хвостом':'Кошка щурится и тихонько мурчит');return true;
   }
   function lift(n,time){return fx()&&n._daily?.busy>0&&n._daily.role==='play'?Math.max(0,Math.sin(time*4+n._daily.seed))*2.5:0;}
+  // Груз принадлежит занятию, а не кадру ходьбы: остановка его не скрывает.
+  function drawCargo(ctx,w,n,behind=false){
+    if(w.map.id!=='konoha'||!generic(n)||n._daily?.role!=='parcel'||n.id.startsWith('kid_')||(n.dir==='up')!==behind)return;
+    const x=n.dir==='left'?-6:n.dir==='right'?6:0;
+    const bob=fx()&&n.moving?Math.abs(Math.sin(n.anim*Math.PI))*.65:0;
+    ctx.save();ctx.translate(n.x+x,n.y-bob);
+    ctx.fillStyle='#62462f';ctx.fillRect(-5,-12,10,8);
+    ctx.fillStyle='#a7794e';ctx.fillRect(-4,-11,8,6);
+    ctx.fillStyle='#dec38d';ctx.fillRect(-4,-11,8,1);ctx.fillRect(-1,-11,2,6);
+    // Руки держат коробку по краям, а не оставляют её висеть сбоку.
+    if(!behind){ctx.fillStyle='#e5bd95';ctx.fillRect(-5,-8,2,2);ctx.fillRect(3,-8,2,2);}
+    ctx.restore();
+  }
   function drawActorExtras(ctx,w,n){
     if(w.map.id!=='konoha')return;
     const d=n._daily,t=w.time,side=n.dir==='left'?-1:1;
@@ -14161,11 +14332,9 @@ G.villageDaily = (() => {
       if(d.role==='sweep'){const x=side*(8+phase*3);ctx.strokeStyle='#8d633c';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(side*4,-11);ctx.lineTo(x,0);ctx.stroke();ctx.fillStyle='#d4b56f';ctx.fillRect(x-3,0,6,2);if(fx()){ctx.fillStyle='rgba(211,187,132,.45)';ctx.fillRect(x+4+phase*2,1,2,1);}}
       if(d.role==='water'){const x=side*8;ctx.fillStyle='#66979a';ctx.fillRect(x-3,-8,6,6);ctx.fillRect(x+side*4-1,-6,4,1);ctx.strokeStyle='#cad3ba';ctx.beginPath();ctx.arc(x,-8,3,3.1,6.3);ctx.stroke();if(fx()){ctx.fillStyle='#9bcbd8';for(let i=0;i<3;i++)ctx.fillRect(x+side*(6+i*2),-5+(t*10+i*2)%7,1,1);}}
       if(d.role==='read'){ctx.fillStyle='#ead8a3';ctx.fillRect(-5,-8,10,5);ctx.fillStyle='#805c42';ctx.fillRect(-1,-8,1,5);ctx.fillStyle='#a99872';ctx.fillRect(-4,-6,2,1);ctx.fillRect(1,-6,3,1);if(fx()){const p=(t+d.seed)%3;if(p<.7){ctx.fillStyle='#fff1c9';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(4-10*p,-9-Math.sin(p/.7*Math.PI));ctx.lineTo(4-10*p,-5);ctx.lineTo(0,-3);ctx.fill();}}}
-      if(d.role==='parcel'){ctx.fillStyle='#9d7045';ctx.fillRect(side*7-4,-9,8,7);ctx.fillStyle='#dec38d';ctx.fillRect(side*7-4,-8,8,1);ctx.fillRect(side*7-1,-9,2,7);}
+
       if(d.role==='play'){const bounce=fx()?Math.abs(Math.sin(t*4+d.seed)):0,y=-3-bounce*9;ctx.save();ctx.globalAlpha*=.3;ctx.fillStyle='#4a5140';ctx.fillRect(8,2,7-bounce*2,1);ctx.restore();ctx.fillStyle='#d8944f';ctx.fillRect(9,y,5,5);ctx.fillStyle='#f4d8a2';ctx.fillRect(10,y+1,2,1);}
       if(d.role==='warm'){const rub=fx()?Math.sin(t*15)*1.2:0;ctx.fillStyle='#efd9b2';ctx.fillRect(-4+rub,-10,4,2);ctx.fillRect(-rub,-9,4,2);if(fx()){ctx.fillStyle='rgba(220,237,228,.4)';ctx.fillRect(4,-16+(t*3)%4,3,1);}}
-    }else if(generic(n)&&n.moving&&hash(n.uid)%3!==0&&!G.life.raining()){
-      ctx.fillStyle='#9d7045';ctx.fillRect(side*7-4,-9,8,7);ctx.fillStyle='#dec38d';ctx.fillRect(side*7-4,-8,8,1);ctx.fillRect(side*7-1,-9,2,7);
     }
     ctx.restore();
   }
@@ -14229,7 +14398,7 @@ G.villageDaily = (() => {
     const x=G.util.clamp(n.x-bw/2,w.cam.x+4,w.cam.x+G.screen.W/(w.z||1)-bw-4),y=n.y-32-bh;
     ctx.save();ctx.globalAlpha=Math.min(1,b.t*4,(b.duration-b.t)*3);G.ui.panel(ctx,x,y,bw,bh,'tag');lines.forEach((ln,j)=>F.draw(ctx,ln,x+6,y+4+j*11,{color:'#f0e5c7'}));ctx.restore();
   }
-  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,ambience,generic,animalScale};
+  return{ensure,clear,update,tickNpc,travelling,actors,probe,pet,label,talk,help,lift,drawCargo,drawActorExtras,drawAnimal,drawUnder,drawObject,draw,ambience,generic,animalScale};
 })();
 
 
@@ -14251,7 +14420,8 @@ G.worldMotion = (() => {
     // Редкий короткий жест свободного жителя; занятие и разговор важнее.
     const idle=phase(w.time,n.x*.17+n.y*.09,19);
     const spontaneous=enabled(w)&&n!==w.player&&!n.moving&&!n._street&&!n._daily?.busy&&idle<.075;
-    const g=n._gesture,gesturing=g&&g.until>w.time&&!n.moving&&(!n._daily?.busy||g.kind==='wave')&&n.dir!=='up';
+    const carrying=n._daily?.role==='parcel'&&G.villageDaily.generic(n)&&!n.id.startsWith('kid_');
+    const g=n._gesture,gesturing=!carrying&&g&&g.until>w.time&&!n.moving&&(!n._daily?.busy||g.kind==='wave')&&n.dir!=='up';
     const wave=gesturing&&g.kind==='wave'&&n.dir==='down'&&['villager_m','villager_f'].includes(n.id);
     const stride=n.moving?Math.abs(Math.sin(n.anim*Math.PI))*.65:0;
     const breath=!n.moving&&!n._street?Math.sin(w.time*2.4+(n._daily?.seed||n.x))*.45:0;
@@ -14266,7 +14436,7 @@ G.worldMotion = (() => {
       ctx.save();ctx.translate(x+arm+1,y+11);ctx.rotate(-1.9+Math.sin(w.time*8)*.18);ctx.drawImage(sheet,sx+arm,sy+11,3,6,-1,0,3,6);ctx.restore();
     }else{
       // В профиль и у детей используем небольшое движение из их собственного листа кадров.
-      const upper=gesturing||spontaneous?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
+      const upper=gesturing||(spontaneous&&!carrying)?G.chars.WALK[Math.floor(w.time*4)%4]*16:sx;
       ctx.drawImage(sheet,upper,sy,16,16,x,y-breath-stride,16,16+breath+stride);
       ctx.drawImage(sheet,sx,sy+16,16,4,x,y+16,16,4);
     }
@@ -14439,6 +14609,121 @@ G.villageDetails = (() => {
     }
   }
   return {populate,safe};
+})();
+
+
+// ===== world/street_events.js =====
+// Уличные события: только добровольное действие A. Прогресс переживает сон и загрузку.
+G.streetLife = (() => {
+  const active=w=>w.map.id==='konoha'&&G.state.started&&!!(G.state.flags.hosp_done||G.state.flags.day2_intro);
+  const state=()=>G.state.streetLife;
+  const progress=id=>state().events[id]||0;
+  function save(w){w._actionKey=null;w.savePos();G.storage.save(G.state);}
+  function lines(def,stage){
+    return (G.STREET_DIALOGUES[def.id]?.[stage]||[def.thanks]).map(line=>typeof line==='string'?{who:def.who,name:def.name,text:line}:{...line});
+  }
+  function finish(w,def){
+    if(progress(def.id)===9)return false;
+    state().events[def.id]=9;G.state.vars.money+=def.reward;G.game.mood(2);
+    G.game.note('Помощь в деревне: '+def.title);save(w);
+    w.talk([...lines(def,'complete'),{text:'Награда: '+def.reward+' рё.'}]);return true;
+  }
+  function point(m,tpl,dx,dy,used){
+    const b=m.buildings.find(b=>b.tplId===tpl);if(!b?.door)return null;
+    const origin=G.world.outsideOf(b);
+    for(let r=0;r<=8;r++)for(let ox=-r;ox<=r;ox++)for(let oy=-r;oy<=r;oy++){
+      if(Math.abs(ox)+Math.abs(oy)!==r)continue;
+      const x=(b.door.tx+dx+ox)*16+8,y=(b.door.ty+dy+oy)*16+12;
+      if(m.blockedRect({x:x-8,y:y-5,w:16,h:6}))continue;
+      if(used.some(q=>Math.hypot(q.x-x,q.y-y)<20))continue;
+      if(m.warps.some(q=>Math.hypot(q.rect.x+8-x,q.rect.y-y)<30))continue;
+      if(m.npcs.some(q=>Math.hypot(q.x-x,q.y-y)<18))continue;
+      if(m.query({x:x-8,y:y-20,w:16,h:22}).some(o=>o.sortY>=y&&G.util.rectsOverlap(m.drawRect(o),{x:x-8,y:y-20,w:16,h:22})))continue;
+      const path=G.nav.path(m,origin.x,origin.y,x,y,6000);
+      if(!path?.length)continue;
+      const q={x,y};used.push(q);return q;
+    }
+    return null;
+  }
+  function ensure(w){
+    if(!active(w))return [];
+    if(w._streetEvents?.map===w.map)return w._streetEvents.nodes;
+    const nodes=[],used=[];
+    for(const def of G.STREET_EVENTS){
+      const start=point(w.map,def.tpl,-3,3,used);if(!start)continue;
+      const group=[];
+      const npc=(p,id,name,part)=>Object.assign(G.actors.make(id,p.x,p.y),{name,_look:0,_streetEvent:def.id,part,ai:'none'});
+      group.push(npc(start,def.who,def.name,'start'));
+      if(def.id==='apples')for(let i=0;i<3;i++){
+        const p=point(w.map,def.tpl,i*2-3,5,used);if(!p)continue;
+        const img=G.gfx.canvas(8,8),c=img.getContext('2d');
+        c.fillStyle='#743b30';c.fillRect(2,2,5,5);c.fillStyle='#cf5b45';c.fillRect(1,3,6,3);c.fillStyle='#f6bb79';c.fillRect(2,3,2,1);c.fillStyle='#8caa61';c.fillRect(4,0,3,2);
+        group.push({...p,img,ox:-4,oy:-7,w:8,h:8,sortY:p.y,kind:'street_apple',_streetEvent:def.id,part:'apple',index:i});
+      }
+      if(def.id==='notebook'){
+        const p=point(w.map,'academy',3,3,used);if(p)group.push(npc(p,'kid_f','Дежурная ученица','delivery'));
+      }
+      if(def.id==='practice'){
+        const p=point(w.map,def.tpl,-1,3,used);if(p)group.push(npc(p,'kid_f','Ученица у додзё','start'));
+      }
+      // Событие не появляется, если нельзя безопасно поставить все его точки.
+      if(group.length===(def.id==='apples'?4:2))nodes.push(...group);
+    }
+    w._streetEvents={map:w.map,nodes};return nodes;
+  }
+  function visible(n){
+    const p=progress(n._streetEvent);
+    if(n.part==='apple')return p>0&&p<9&&!(state().apples&(1<<n.index));
+    if(n.part==='delivery')return p===1||p===9;
+    return true;
+  }
+  function actors(w){return ensure(w).filter(n=>visible(n)&&Math.abs(n.x-w.player.x)<320&&Math.abs(n.y-w.player.y)<320);}
+  function interact(w,n){
+    if(!active(w)||!ensure(w).includes(n)||!visible(n)||Math.hypot(w.player.x-n.x,w.player.y-n.y)>34)return false;
+    const def=G.STREET_EVENTS.find(d=>d.id===n._streetEvent),p=progress(def.id);
+    if(p===9){w.talk(lines(def,n.part==='delivery'?'deliveryAfter':'after'));return true;}
+    if(n.part==='apple'){
+      state().apples|=1<<n.index;
+      if(state().apples===7)finish(w,def);else{save(w);w.showToast('Собрано яблок: '+[1,2,4].filter(b=>state().apples&b).length+' из 3');}
+      return true;
+    }
+    if(n.part==='delivery'){finish(w,def);return true;}
+    if(p===1){w.talk([{who:def.who,name:def.name,text:def.id==='apples'?'Яблоки лежат рядом. Осталось собрать: '+(3-[1,2,4].filter(b=>state().apples&b).length)+'.':'Дежурная ученица ждёт возле Академии. Конспект у тебя, в сумку его класть не нужно.'}]);return true;}
+    const quiz=def.id==='practice';
+    G.scenes.push(G.scenes.make('pick',{title:def.title,text:def.intro,options:quiz?
+      [{label:'Сначала контроль'},{label:'Сразу всю чакру'},{label:'Пока не вмешиваться'},{label:G.STREET_DIALOGUES[def.id].question}]:
+      [{label:def.task,desc:'Без срока и штрафов. Награда: '+def.reward+' рё.'},{label:'Может быть, позже'},{label:G.STREET_DIALOGUES[def.id].question}]},i=>{
+      if(!active(w)||progress(def.id)!==0)return;
+      if(i===0){if(quiz)finish(w,def);else{state().events[def.id]=1;G.game.note('Уличное событие: '+def.title+' — '+def.task);save(w);w.talk(lines(def,'accept'));w.showToast(def.id==='apples'?'Собери три яблока рядом с торговцем':'Отнеси конспект дежурной у Академии');}}
+      else if(quiz&&i===1)w.talk(lines(def,'wrong'));
+      else if(i===(quiz?3:2))w.talk(lines(def,'explain'));
+      else if(i===(quiz?2:1))w.talk(lines(def,'decline'));
+    }));return true;
+  }
+  function probe(w){
+    if(!active(w)||w.player.roof||w.player.jump)return null;
+    const p=w.player,v=G.actors.DIRV[p.dir],fx=p.x+v[0]*12,fy=p.y+v[1]*12;
+    const n=actors(w).filter(n=>Math.hypot(n.x-fx,n.y-fy)<18).sort((a,b)=>Math.hypot(a.x-fx,a.y-fy)-Math.hypot(b.x-fx,b.y-fy))[0];
+    if(!n)return null;
+    return {show:true,label:n.part==='apple'?'Поднять':n.part==='delivery'&&progress(n._streetEvent)!==9?'Вернуть':'Говорить',title:n.name||'Упавшее яблоко',targetRect:{x:n.x-8,y:n.y-20,w:16,h:22},run:()=>interact(w,n)};
+  }
+  function draw(ctx,w){
+    for(const n of actors(w)){
+      if(n.part==='apple'||progress(n._streetEvent)===9)continue;
+      const def=G.STREET_EVENTS.find(d=>d.id===n._streetEvent);
+      G.font.small.draw(ctx,progress(def.id)?'?':'!',n.x,n.y-33+Math.round(Math.sin(w.time*3)),{align:'center',color:'#f2cd79',outline:G.PAL.ink});
+    }
+  }
+  function reaction(n){
+    const name=G.state.hero.name||'сосед',mem=state().helped[n.uid];
+    if(mem)return name+', спасибо за помощь! Во дворе теперь гораздо уютнее.';
+    if(n.id==='iruka'&&Object.keys(G.state.learning).some(k=>k.startsWith('tr_')&&G.state.learning[k]))return name+', я вижу, ты не бросаешь упражнения. Продолжай в том же духе!';
+    const friendship=G.state.vars['friend_'+n.id]||0;
+    if(friendship>=5)return (G.STREET_REACTIONS[n.id]||'Привет, {name}! Рад снова тебя видеть.').replace('{name}',name);
+    if(G.state.flags['met_'+n.id])return 'Привет, '+name+'! Удачного дня!';
+    return null;
+  }
+  return {active,ensure,actors,probe,interact,draw,reaction,progress,lines};
 })();
 
 
@@ -15276,6 +15561,7 @@ G.scenes.register('world', (pos) => {
           else this.talk(best.talk);
         } };
       }
+      if(G.streetLife){const action=G.streetLife.probe(this);if(action)return action;}
       // объекты с описанием
       const near = m.query({ x: fx - 10, y: fy - 10, w: 20, h: 20 });
       let bo = null, bdist = 99;
@@ -15490,6 +15776,7 @@ G.scenes.register('world', (pos) => {
         if (o.layer === 'floor') { ctx.drawImage(o.img, o.x + o.ox, o.y + o.oy); continue; }
         list.push(o);
       }
+      if(G.streetLife)list.push(...G.streetLife.actors(this));
       if(G.villageStories)list.push(...G.villageStories.actors(this));
       if(G.villageDaily)list.push(...G.villageDaily.actors(this));
       for (const a of this.others) {
@@ -15525,6 +15812,7 @@ G.scenes.register('world', (pos) => {
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
       if(G.villageStories)G.villageStories.draw(ctx,this);
       if(G.villageDaily)G.villageDaily.draw(ctx,this,vis);
+      if(G.streetLife)G.streetLife.draw(ctx,this);
       this.drawActionHint(ctx);
 
       // значки над NPC: ! — новое задание, ? — можно сдать, 💬 — новое знакомство
@@ -15757,24 +16045,7 @@ G.scenes.register('world', (pos) => {
     // Освещение по времени суток + свет фонарей ночью
     // Дождь: серый тон и косые струи (в координатах экрана)
     drawRain(ctx, cx, cy, W, VH) {
-      ctx.fillStyle = 'rgba(40,50,80,0.16)'; ctx.fillRect(cx, cy, W, VH);
-      ctx.fillStyle = 'rgba(190,210,255,0.55)';
-      const t = this.time;
-      for (let i = 0; i < 70; i++) {
-        const sp = 160 + (i % 5) * 25;
-        const x = cx + ((i * 53 + t * sp * 0.35) % (W + 20)) - 10;
-        const y = cy + ((i * 97 + t * sp) % (VH + 20)) - 10;
-        ctx.fillRect(Math.round(x), Math.round(y), 1, 4);
-        ctx.fillRect(Math.round(x) - 1, Math.round(y) + 4, 1, 2);
-      }
-      // брызги
-      ctx.fillStyle = 'rgba(200,220,255,0.35)';
-      for (let i = 0; i < 14; i++) {
-        const ph = (t * 3 + i * 0.37) % 1;
-        if (ph > 0.3) continue;
-        const x = cx + (i * 71 + Math.floor(t * 3 + i * 0.37) * 29) % W, y = cy + (i * 43 + Math.floor(t * 3 + i * 0.37) * 61) % VH;
-        ctx.fillRect(Math.round(x) - 1, Math.round(y), 3, 1);
-      }
+      G.fx.rain(ctx,cx,cy,W,VH,this.map,this.time);
     },
 
     drawLight(ctx, vis, cx, cy, W, VH) {
@@ -15812,9 +16083,10 @@ G.scenes.register('world', (pos) => {
       const lift=G.villageDaily?G.villageDaily.lift(a,this.time):0;
       ctx.save();
       if (a._npcPass?.size) ctx.globalAlpha *= .65;
+      if(G.villageDaily)G.villageDaily.drawCargo(ctx,this,a,true);
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
       ctx.restore();
-      if(G.villageDaily)G.villageDaily.drawActorExtras(ctx,this,a);
+      if(G.villageDaily){G.villageDaily.drawCargo(ctx,this,a);G.villageDaily.drawActorExtras(ctx,this,a);}
     },
 
     drawHud(ctx) {
