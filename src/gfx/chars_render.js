@@ -32,7 +32,6 @@
   const OR = (...f) => (x, y) => f.some((g) => g(x, y));
   const AND = (a, b) => (x, y) => a(x, y) && b(x, y);
   const SUB = (a, b) => (x, y) => a(x, y) && !b(x, y);
-  const MIR = (f, cx = 16) => (x, y) => f(2 * cx - x, y);          // зеркало формы относительно вертикали x = cx
   const SH = (f, dx, dy) => (x, y) => f(x - dx, y - dy);            // сдвиг формы
 
   // ---------- холст пикселей ----------
@@ -296,7 +295,6 @@
         if (!fat) { flat(B, R(10, 29.4 + b, 22, 30.4 + b), T); }
       } else if (st.top === 'vest') {
         fill(B, PO([[13.4, 21.8 + b], [18.6, 21.8 + b], [16, 25.4 + b]]), st.inner || T, { flat: true });
-        const vc = mix(rgb(t), [255, 255, 255], 0);
         fill(B, RR(10.6, 24.4 + b, 14.8, 28.6 + b, 0.8), T, { seam: true }); fill(B, RR(17.2, 24.4 + b, 21.4, 28.6 + b, 0.8), T, { seam: true });
         flat(B, R(15.4, 25.6 + b, 16.6, torsoBot - 1 + b), T);
       } else if (st.top === 'apron') {

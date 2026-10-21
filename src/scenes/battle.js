@@ -340,7 +340,6 @@ G.scenes.register('battle', (opts, onEnd) => {
     else if (Math.random() < 0.25) bubble('hurt');
     then(true, d);
   }
-  const strongish = (d) => d >= 11;
 
   // ── действия героя ──
   const endTurn = (w, delay = 0.6) => { P.t += w * fac(P.spd); wait(delay, () => { if (!validAct(E.plan, dist())) plan(); nextTurn(); }); };

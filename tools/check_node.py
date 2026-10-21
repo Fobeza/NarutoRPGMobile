@@ -16,6 +16,7 @@ import os, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECKS = os.path.join(ROOT, "tools", "node", "checks.js")
+SUITES = ["regressions.js", "village.js", "adventures.js", "daily.js", "motion.js", "entries.js", "cartography.js", "release2.js", "street.js"]
 
 
 def main():
@@ -36,25 +37,13 @@ def main():
     if r.returncode and not bad:
         print("  ✘ проверки завершились с кодом %d" % r.returncode)
         return 1
-    regressions = subprocess.run([node, os.path.join(ROOT, "tools", "node", "regressions.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((regressions.stdout or "") + (regressions.stderr or ""))
-    village = subprocess.run([node, os.path.join(ROOT, "tools", "node", "village.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((village.stdout or "") + (village.stderr or ""))
-    adventures = subprocess.run([node, os.path.join(ROOT, "tools", "node", "adventures.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((adventures.stdout or "") + (adventures.stderr or ""))
-    daily = subprocess.run([node, os.path.join(ROOT, "tools", "node", "daily.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((daily.stdout or "") + (daily.stderr or ""))
-    motion = subprocess.run([node, os.path.join(ROOT, "tools", "node", "motion.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((motion.stdout or "") + (motion.stderr or ""))
-    entries = subprocess.run([node, os.path.join(ROOT, "tools", "node", "entries.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((entries.stdout or "") + (entries.stderr or ""))
-    cartography = subprocess.run([node, os.path.join(ROOT, "tools", "node", "cartography.js")], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((cartography.stdout or "") + (cartography.stderr or ""))
-    release2 = subprocess.run([node, os.path.join(ROOT, 'tools', 'node', 'release2.js')], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((release2.stdout or '') + (release2.stderr or ''))
-    street = subprocess.run([node, os.path.join(ROOT, 'tools', 'node', 'street.js')], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
-    print((street.stdout or '') + (street.stderr or ''))
-    return 1 if (bad or r.returncode or regressions.returncode or village.returncode or adventures.returncode or daily.returncode or motion.returncode or entries.returncode or cartography.returncode or release2.returncode or street.returncode) else 0
+    # Отдельные Node-наборы: запускаются все подряд, даже если какой-то упал; порядок вывода — как в списке
+    failed = False
+    for name in SUITES:
+        sub = subprocess.run([node, os.path.join(ROOT, "tools", "node", name)], cwd=ROOT, env=env, capture_output=True, text=True, timeout=120)
+        print((sub.stdout or "") + (sub.stderr or ""))
+        failed = failed or sub.returncode != 0
+    return 1 if (bad or r.returncode or failed) else 0
 
 
 if __name__ == "__main__":
