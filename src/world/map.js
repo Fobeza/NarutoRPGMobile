@@ -190,7 +190,7 @@ G.WorldMap = class {
     const tx0 = Math.max(0, Math.floor(camX / T)), tx1 = Math.min(this.w - 1, Math.floor((camX + vw) / T));
     const ty0 = Math.max(0, Math.floor(camY / T)), ty1 = Math.min(this.h - 1, Math.floor((camY + vh) / T));
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      if (this.ground[ty * this.w + tx] === W) G.tiles.waterOverlay(ctx, tx * T, ty * T, tx, ty, time);
+      if (this.ground[ty * this.w + tx] === W) G.tiles.waterOverlay(ctx, tx * T, ty * T, tx, ty, time, this);
     }
   }
 

@@ -350,9 +350,10 @@ G.tiles = (() => {
     const id = map.get(tx, ty);
     if (id < 0) return;
     const vs = map.outdoor ? VAR[id] : null, hv = vs ? H(tx, ty, 555) : 1;
+    const drawnWater=G.waterArt.draw(ctx,map,tx,ty,x,y,ID);
     const drawnStreet=G.streetArt.draw(ctx,map,tx,ty,x,y,ID);
     const drawnPath=!drawnStreet&&G.terrainArt.draw(ctx,map,tx,ty,x,y,ID,GRASSY);
-    if(drawnStreet||drawnPath){}
+    if(drawnWater||drawnStreet||drawnPath){}
     else if (id === ID.FLOOR || id === ID.DUSTFLOOR) G.environment.floor(ctx, x, y, tx, ty, id === ID.DUSTFLOOR);
     else if (id === ID.TATAMI) G.environment.tatami(ctx, x, y, tx, ty);
     else if (id === ID.MAINROAD) G.environment.stone(ctx, x, y, Math.floor(tx / 2) + ty * 3, true);
@@ -378,9 +379,9 @@ G.tiles = (() => {
       }
     }
     // плавные переходы: более «живая» поверхность соседа заходит рваным краем с дизерингом
-    if(!drawnPath&&!drawnStreet)blendEdges(ctx, map, tx, ty, x, y, id);
+    if(!drawnWater&&!drawnPath&&!drawnStreet)blendEdges(ctx, map, tx, ty, x, y, id);
     // берег
-    if (id === ID.WATER) {
+    if (id === ID.WATER && !drawnWater) {
       if (LAND(up) || up === ID.CLIFF) { px(ctx, x, y, P.waterDark, 16, 2); px(ctx, x, y + 2, P.waterLight, 16, 1); }
       if (LAND(dn)) px(ctx, x, y + 15, P.waterLight, 16, 1);
       if (LAND(lf)) px(ctx, x, y, P.waterLight, 1, 16);
@@ -415,7 +416,9 @@ G.tiles = (() => {
   }
 
   // Анимированные блики на воде (рисуются поверх запечённого чанка)
-  function waterOverlay(ctx, x, y, tx, ty, time) {
+  function waterOverlay(ctx, x, y, tx, ty, time, map) {
+    if(map?.outdoor){G.waterArt.overlay(ctx,x,y,tx,ty,time);return;}
+    if(G.storage.settings.fx===false)return;
     const ph = time * 0.8 + H(tx, ty, 77) * 6;
     const k = Math.floor(ph) % 4;
     const xx = Math.floor(H(tx, ty, 78) * 10) + k;
