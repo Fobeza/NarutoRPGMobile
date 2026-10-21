@@ -22,10 +22,12 @@ G.villageDaily = (() => {
         for(let i=0;i<(def.count||1);i++){
           const p=G.world.freeTile(m,b.tx+def.dx+i%2,b.ty+b.th+def.dy+Math.floor(i/2));if(!p)continue;
           let x=p[0]*T+8,y=p[1]*T+12;
-          if(def.type!=='bird'&&!visibleSpot(m,x,y)){
-            search:for(let r=1;r<=4;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+          // зверь не садится на жителя: в плотных кварталах у лавок всегда кто-то стоит
+          const crowded=(qx,qy)=>m.npcs.some(n=>Math.hypot(n.x-qx,n.y-qy)<36);
+          if(def.type!=='bird'&&(!visibleSpot(m,x,y)||crowded(x,y))){
+            search:for(let pass=0;pass<2;pass++)for(let r=1;r<=4;r++)for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
               if(Math.abs(dx)+Math.abs(dy)!==r)continue;const nx=(p[0]+dx)*T+8,ny=(p[1]+dy)*T+12;
-              if(safe(m,nx,ny)&&visibleSpot(m,nx,ny)&&G.nav.path(m,x,y,nx,ny,160)?.length){x=nx;y=ny;break search;}
+              if(safe(m,nx,ny)&&visibleSpot(m,nx,ny)&&(pass||!crowded(nx,ny))&&G.nav.path(m,x,y,nx,ny,160)?.length){x=nx;y=ny;break search;}
             }
           }
           const a={...def,x,y,home:{x,y},serial:index++,dir:'right',timer:1+i*.5,alpha:0,moving:false,path:[],anim:0,pet:0,flight:null,_dailyAnimal:true};
@@ -48,9 +50,9 @@ G.villageDaily = (() => {
     for(const q of candidates){const path=G.nav.path(m,a.x,a.y,q.x,q.y,500);if(path&&path.length>1)return{...q,path:path.slice(1)};}
     return null;
   }
+  function awakeNow(a){const hour=G.state.vars.min/60;return a.type==='bird'?!G.life.raining()&&hour>=6&&hour<19:hour>=6&&hour<23;}
   function updateAnimal(w,a,dt){
-    const hour=G.state.vars.min/60,rain=G.life.raining(),bird=a.type==='bird';
-    const awake=bird?!rain&&hour>=6&&hour<19:hour>=6&&hour<23;
+    const rain=G.life.raining(),bird=a.type==='bird',awake=awakeNow(a);
     a.alpha=G.util.clamp(a.alpha+(awake?dt*1.7:-dt*1.4),0,1);a.pet=Math.max(0,a.pet-dt);
     if(!a.alpha)return;
     if(a.flight){const j=a.flight;j.t=Math.min(j.dur,j.t+dt);const k=j.t/j.dur;a.x=j.x0+(j.x1-j.x0)*k;a.y=j.y0+(j.y1-j.y0)*k;if(k===1){a.flight=null;a.timer=3;}return;}
@@ -126,7 +128,10 @@ G.villageDaily = (() => {
   }
   function update(w,dt){
     const s=ensure(w);if(!s)return;
-    for(const a of s.animals)if(Math.abs(a.x-w.player.x)<340&&Math.abs(a.y-w.player.y)<340||a.flight)updateAnimal(w,a,dt);
+    for(const a of s.animals){
+      if(Math.abs(a.x-w.player.x)<340&&Math.abs(a.y-w.player.y)<340||a.flight)updateAnimal(w,a,dt);
+      else if(a.alpha&&!awakeNow(a))a.alpha=0;   // вдали от героя ночью или в дождь зверь сразу уходит, без угасания
+    }
     if(s.bubble){s.bubble.t+=dt;if(s.bubble.t>s.bubble.duration||s.bubble.people.some(n=>!w.npcs.includes(n)))s.bubble=null;}
     if(fx()&&G.life.raining()){
       for(const n of [w.player,...w.npcs]){

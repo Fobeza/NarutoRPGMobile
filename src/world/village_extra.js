@@ -32,7 +32,8 @@
     obj('stump', ...an('water', [138, 104]), 'train_water');
     obj('stump', ...an('stealth', [16, 30]), 'train_stealth');
     // 20 секретных свитков (план §5.9): спрятаны по всей деревне
-    const rnd = G.util.rng(2024), pts = m.spawnPoints.slice();
+    // свиток не кладём туда, где уже стоит житель: бочка или камень на его клетке запирают его в стене
+    const rnd = G.util.rng(2024), pts = m.spawnPoints.filter((p) => !m.npcs.some((n) => Math.hypot(n.x - p.x, n.y - p.y) < 24));
     const kinds = ['barrel', 'crate', 'stump', 'rock'];
     const used = [];
     for (let i = 0; i < 20 && pts.length; i++) {

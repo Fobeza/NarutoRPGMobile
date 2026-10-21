@@ -19,7 +19,7 @@ G.game = (() => {
   function defaults() {
     return {
       started: false,
-      layoutVersion: 2,
+      layoutVersion: 3,
       hero: { name: '', stats: null, skills: [] },
       flags: {},
       vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, energy: 90, food: 60, mood: 60, spent: 0, injury: 0, poison: 0 },
@@ -53,25 +53,28 @@ G.game = (() => {
         for (const k of Object.keys(st)) delete st[k];
         Object.assign(st, before, { battleCheckpoint: null });
       }
-      const oldLayout = !st.layoutVersion;
+      const layout = st.layoutVersion || 1;   // 1 — до увеличения зданий, 2 — до плотной Конохи (2026-10-21), 3 — текущая
       const d = defaults();
       for (const k of Object.keys(d)) if (st[k] == null) st[k] = d[k];
       for (const k of Object.keys(d.vars)) if (st.vars[k] == null) st.vars[k] = d.vars[k];
       for (const k of Object.keys(d.hero)) if (st.hero[k] === undefined) st.hero[k] = d.hero[k];
-      if (oldLayout && st.pos && G.LEGACY_BUILDINGS) {
+      if (layout < 3 && st.pos && G.LEGACY_BUILDINGS) {
+        // раскладка сменилась: комната «in:N» — по старому номеру здания, на улице — ближайшая свободная клетка
         const k = G.world.konoha(), p = st.pos;
-        if (p.map !== 'konoha') {
-          const old = G.LEGACY_BUILDINGS[Number(p.map.split(':')[1])];
-          const home = (old && k.landmarks[old.tpl] && k.landmarks[old.tpl].interior ? k.landmarks[old.tpl] : null) || G.world.heroHome();
+        if (String(p.map).startsWith('in:')) {
+          const n = Number(String(p.map).split(':')[1]);
+          const tpl = layout === 1 ? (G.LEGACY_BUILDINGS[n] || {}).tpl : (G.LEGACY_ROOMS_V2 || {})[n];
+          const home = (tpl && k.landmarks[tpl] && k.landmarks[tpl].interior ? k.landmarks[tpl] : null) || G.world.heroHome();
           const room = G.world.get(home.interior.id);
           st.pos = { map: room.id, dir: 'down', ...room.spawn };
-        } else if (k.blockedRect(G.actors.feet({}, p.x, p.y))) {
+        } else if (p.map === 'konoha' && k.blockedRect(G.actors.feet({}, p.x, p.y))) {
           const free = G.world.freeTile(k, Math.floor(p.x / 16), Math.floor(p.y / 16));
           if (free) { p.x = free[0] * 16 + 8; p.y = free[1] * 16 + 12; }
           else st.pos = { map: G.world.heroHome().interior.id, dir: 'down', ...G.world.get(G.world.heroHome().interior.id).spawn };
         }
         st.marker = null;
       }
+      st.layoutVersion = 3;
       // сохранение до этапа 3.5 (цели без заданий) → задание «Первый день»
       if (st.started && !Object.keys(st.quests).length) {
         const f = st.flags;

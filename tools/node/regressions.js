@@ -133,6 +133,17 @@ test('Старые позиции в интерьерах мигрируют к 
   assert.equal(G.state.pos.map, G.world.konoha().landmarks.naruto_flat.interior.id);
   assert.ok(G.storage.valid({state:G.state}));
 });
+test('Сохранения раскладки 2 переезжают в плотную Коноху: комната — в то же здание, улица — на свободную клетку', () => {
+  const k = G.world.konoha(), n = Object.keys(G.LEGACY_ROOMS_V2).find(i => G.LEGACY_ROOMS_V2[i] === 'market');
+  G.state.layoutVersion = 2; G.state.pos = {map:'in:'+n,x:50,y:50,dir:'down'}; G.game.fix(G.state);
+  assert.equal(G.state.pos.map, k.landmarks.market.interior.id); assert.equal(G.state.layoutVersion, 3);
+  const house = k.buildings.find(b => b.tplId === 'house_s');
+  G.state.layoutVersion = 2; G.state.pos = {map:'konoha',x:(house.tx + 1) * 16 + 8,y:(house.ty + 1) * 16 + 12,dir:'down'}; G.game.fix(G.state);
+  assert.equal(G.state.pos.map, 'konoha'); assert.ok(!k.blockedRect(G.actors.feet({}, G.state.pos.x, G.state.pos.y)));
+  G.state.layoutVersion = 2; G.state.pos = {map:'adv:parkour',x:72,y:144,dir:'right'}; G.game.fix(G.state);
+  assert.equal(G.state.pos.map, 'adv:parkour');
+  assert.ok(G.storage.valid({state:G.state}));
+});
 test('Плотность по умолчанию: точка не меньше 1.25 CSS, выбор игрока не трогаем, экран заполняется по высоте', () => {
   const wrap = document.getElementById('screen-wrap'), keep = [wrap.clientWidth, wrap.clientHeight, globalThis.devicePixelRatio, G.storage.settings.density];
   const size = (w, h, dpr) => { wrap.clientWidth = w; wrap.clientHeight = h; globalThis.devicePixelRatio = dpr; G.screen.resize(); return [G.screen.W, G.screen.H, G.screen.scale]; };

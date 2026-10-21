@@ -170,7 +170,10 @@ my_room(info) {
 
 Шаблон — `data/buildings.js` (`name, w, h, cat, door: [dx, dy], ...`), рисунок — `world/buildgfx.js`.
 Где стоит — `data/konoha_layout.js` (генерируется): правь `tools/plan_konoha.py` (список `KEY` — ключевые здания и их
-примерные места, `CL` — кланы, `SHOP_SPOTS` — рядовые лавки, `ROADS` — дороги, `RIVERS`/`LAKES` — вода) и запусти его.
+примерные места, `CLANS` — кварталы кланов и места особняков, `MARKETS`/`OFFICIAL`/`PARKS`/`FOREST`/`TRAINING`/`PLAZAS` —
+районы, `POOLS` — какие картинки домов где ставить, `ROADS` — проспекты, `RIVERS`/`LAKES` — вода) и запусти его.
+Рядовые дома ставятся сами: сетка улиц и переулков (`make_grid`), ряды домов дверью к дороге (`frontage`), добор во дворах.
+`PLAN_LOOSE=1` — дорисовать схему `tools/shots/konoha_plan.png`, даже если ключевому зданию не хватило прохода.
 Новая картинка здания — в `art/` + строка в `tools/art_catalog.json`, затем `python3 tools/import_art.py`.
 Проверка: `python3 tools/render_map.py /tmp/map.png` — `unreachableDoors` и `unreachableTalk` должны быть пустыми.
 

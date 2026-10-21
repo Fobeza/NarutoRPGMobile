@@ -89,10 +89,14 @@ G.roofs = {
     else if (p.dir === 'up') y = b.ty * T - 4;
     else if (p.dir === 'left') x = b.tx * T - 8;
     else x = (b.tx + b.tw) * T + 8;
+    const free = (fx, fy) => !m.blockedRect(G.actors.feet(p, fx, fy)) && !this.inFootprint(m, fx, fy);
     for (const [ox, oy] of [[0, 0], [0, 6], [0, -6], [6, 0], [-6, 0], [0, 12], [12, 0], [-12, 0], [0, -12], [v[0] * 10, v[1] * 10]]) {
       const fx = x + ox, fy = y + oy;
-      if (!m.blockedRect(G.actors.feet(p, fx, fy)) && !this.inFootprint(m, fx, fy)) return {x:fx,y:fy};
+      if (free(fx, fy)) return {x:fx,y:fy};
     }
+    // в плотном ряду сбоку стоит соседний дом: спрыгиваем вперёд, на улицу перед фасадом
+    const fy = (b.ty + b.th) * T + 8;
+    for (const ox of [0, 6, -6, 12, -12]) if (free(p.x + ox, fy)) return {x:p.x + ox,y:fy};
     return null;
   },
   action(world) {
