@@ -145,6 +145,13 @@ def build(debug=False):
     with open(os.path.join(DEV, "map_editor.html"), "w", encoding="utf-8") as f:
         f.write(ed)
 
+    # Публичный мобильный редактор — автономный файл, без игровых сохранений.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('phone_editor', os.path.join(ROOT, 'tools/build_phone_editor.py'))
+    phone_editor = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(phone_editor)
+    phone_editor.build()
+
     size = os.path.getsize(os.path.join(OUT, "index.html"))
     print(f"OK  версия {RELEASE} ({version})  index.html = {size/1024:.1f} КБ  ({len(JS_FILES)} модулей)")
 
