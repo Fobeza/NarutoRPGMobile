@@ -1,0 +1,462 @@
+{
+  "release": "2.2.2",
+  "status": "not_integrated",
+  "note": "Размеры мастеров не задают игровые размеры. Тайл игры 16 точек, HI=2. Границы земли ещё не согласованы.",
+  "assets": [
+    {
+      "file": "art/environment/konoha-barrel.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        874,
+        1115
+      ],
+      "width": 401,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 191262,
+      "sha256": "81c4ae54cb5ba7ba443b9ffa369afa9e8f676b7d979c9e8976f7c86a9876a69c"
+    },
+    {
+      "file": "art/environment/konoha-bench.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        828,
+        685
+      ],
+      "width": 512,
+      "height": 424,
+      "maxSize": 512,
+      "bytes": 148202,
+      "sha256": "35baada26ccfa45592066db52abe6ed4f30fe6982d815e3781c912eb781698d3"
+    },
+    {
+      "file": "art/environment/konoha-bush.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        892,
+        767
+      ],
+      "width": 512,
+      "height": 440,
+      "maxSize": 512,
+      "bytes": 234206,
+      "sha256": "8bd17f5903f4b864e4c7e5a6aed6de9ec570ae33a27b2e2dc33c03f846cf9860"
+    },
+    {
+      "file": "art/environment/konoha-crate.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        786,
+        913
+      ],
+      "width": 441,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 220616,
+      "sha256": "949f7aacd0d8bfd2904102ba905e76b1911927484f1d0f18fc4f7b036ed6470f"
+    },
+    {
+      "file": "art/environment/konoha-fence.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        850,
+        702
+      ],
+      "width": 512,
+      "height": 423,
+      "maxSize": 512,
+      "bytes": 133866,
+      "sha256": "27bdd8005a739064d3fe677ba3fe5a8bc92033d169c903c0c4e50d970c3bc033"
+    },
+    {
+      "file": "art/environment/konoha-fern.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        961,
+        825
+      ],
+      "width": 512,
+      "height": 440,
+      "maxSize": 512,
+      "bytes": 186762,
+      "sha256": "3d2117fd737d234d2dda04e93e6d3820cb55adfc20b4bd32519d87aaf77f53c0"
+    },
+    {
+      "file": "art/environment/konoha-flowers-blue.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        861,
+        761
+      ],
+      "width": 256,
+      "height": 226,
+      "maxSize": 256,
+      "bytes": 52040,
+      "sha256": "98ff41b05ec04cb40bfbb180d44596caa9b67498224695e95aa4d8b6aacb54a3"
+    },
+    {
+      "file": "art/environment/konoha-flowers-pink.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        972,
+        911
+      ],
+      "width": 256,
+      "height": 240,
+      "maxSize": 256,
+      "bytes": 58834,
+      "sha256": "c90880a29796184007a81b31d170c16d311c632e5df7ae085e10eb75b41f49ed"
+    },
+    {
+      "file": "art/environment/konoha-flowers-red.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        953,
+        753
+      ],
+      "width": 256,
+      "height": 202,
+      "maxSize": 256,
+      "bytes": 49140,
+      "sha256": "9c64bed549b3a11fcda22bddd4e802065b041d3bfda2a4f9dbe8a8ebdedbfa3c"
+    },
+    {
+      "file": "art/environment/konoha-flowers-white.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        897,
+        818
+      ],
+      "width": 256,
+      "height": 233,
+      "maxSize": 256,
+      "bytes": 52812,
+      "sha256": "6991579c96087d99a02d60e1ab714bdf7b84979b85bb57c449968c22db38a057"
+    },
+    {
+      "file": "art/environment/konoha-flowers-yellow.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        747,
+        659
+      ],
+      "width": 256,
+      "height": 226,
+      "maxSize": 256,
+      "bytes": 60554,
+      "sha256": "c974479aedfee8a81cead3153848debdc9ba8693bd74bebdac93978f0a9247ec"
+    },
+    {
+      "file": "art/environment/konoha-lamp.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        272,
+        924
+      ],
+      "width": 151,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 38078,
+      "sha256": "221a0c2878a9cd4203375b7530ecd8aceed96a93f0de6268731da4a445c44aff"
+    },
+    {
+      "file": "art/environment/konoha-mailbox.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        674,
+        1022
+      ],
+      "width": 338,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 114572,
+      "sha256": "fb22d5fba4ecaec04166007c2507fd1e22bf0eeb227a88b2f58e59f47a0e58d1"
+    },
+    {
+      "file": "art/environment/konoha-noticeboard.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        931,
+        872
+      ],
+      "width": 512,
+      "height": 480,
+      "maxSize": 512,
+      "bytes": 172578,
+      "sha256": "c0c99c4d582391274788353b757b838f529d0fdf27a4a69737a43936743bc80c"
+    },
+    {
+      "file": "art/environment/konoha-planter.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1019,
+        979
+      ],
+      "width": 512,
+      "height": 492,
+      "maxSize": 512,
+      "bytes": 233664,
+      "sha256": "01848df5289cad817246849ca95415112d81ed97d04245a6039d816882c2fe4e"
+    },
+    {
+      "file": "art/environment/konoha-rock-cluster.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1046,
+        600
+      ],
+      "width": 512,
+      "height": 294,
+      "maxSize": 512,
+      "bytes": 114074,
+      "sha256": "dc923239d87e750db445a144fb72aa0a7abba828293e06bd387b44b477d8268b"
+    },
+    {
+      "file": "art/environment/konoha-rock-flat.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1044,
+        1008
+      ],
+      "width": 512,
+      "height": 494,
+      "maxSize": 512,
+      "bytes": 133706,
+      "sha256": "86660ddcdb4401c8ca9ae4bc6e59131b02983e51fc5b79bbc9146e72899a48dd"
+    },
+    {
+      "file": "art/environment/konoha-rock-moss.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1046,
+        1008
+      ],
+      "width": 512,
+      "height": 493,
+      "maxSize": 512,
+      "bytes": 203832,
+      "sha256": "12ebe76dc030e322fbb7dc2ba10818edc4b9f313b8b91ab9cb6bc4c7fc1a5d12"
+    },
+    {
+      "file": "art/environment/konoha-rock.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        875,
+        843
+      ],
+      "width": 512,
+      "height": 493,
+      "maxSize": 512,
+      "bytes": 162452,
+      "sha256": "579a79440a0a8f456303a1b74889adb999756922276416ec1c217cb9d2b351bb"
+    },
+    {
+      "file": "art/environment/konoha-signpost.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        960,
+        1115
+      ],
+      "width": 441,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 102352,
+      "sha256": "0890678225d43307effc34860b13b0b0c584ab4bc834767b531e6e3ea9a999c0"
+    },
+    {
+      "file": "art/environment/konoha-stonelamp.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        774,
+        1008
+      ],
+      "width": 393,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 132166,
+      "sha256": "2dbd3ab9752062d44a1806c5848cac1e102db1844d2876583ab0084b7aff1478"
+    },
+    {
+      "file": "art/environment/konoha-tree-birch.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        520,
+        962
+      ],
+      "width": 277,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 118172,
+      "sha256": "01828fabfd95de29b16e7f7830dc47bde6ef0a0f2ba5b61b3582c0bc33cce95e"
+    },
+    {
+      "file": "art/environment/konoha-tree-low.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1017,
+        984
+      ],
+      "width": 512,
+      "height": 495,
+      "maxSize": 512,
+      "bytes": 262462,
+      "sha256": "89facc0e7faf255486e845872594760c6f7d7bc0129e720d235f7207aba6b8d6"
+    },
+    {
+      "file": "art/environment/konoha-tree-maple.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1018,
+        834
+      ],
+      "width": 512,
+      "height": 419,
+      "maxSize": 512,
+      "bytes": 207302,
+      "sha256": "3835882d9ec7c81eb2f33b0f0c6b3d9150e31f43fe9595355c71165074fbc799"
+    },
+    {
+      "file": "art/environment/konoha-tree-oak.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1018,
+        974
+      ],
+      "width": 512,
+      "height": 490,
+      "maxSize": 512,
+      "bytes": 209846,
+      "sha256": "7d6026cef40bb1b59f317b514b11dd9ec0c7199cb8ef86b197327a090dc20dc7"
+    },
+    {
+      "file": "art/environment/konoha-tree-pine.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        943,
+        953
+      ],
+      "width": 507,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 236722,
+      "sha256": "c6f8228346a121698bed2cb0f4fc6e346a9b8ffb2366f81bf8615d81282e3593"
+    },
+    {
+      "file": "art/environment/konoha-tree-sakura.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1018,
+        947
+      ],
+      "width": 512,
+      "height": 476,
+      "maxSize": 512,
+      "bytes": 223864,
+      "sha256": "784d0e592983d296ce1c79d2c0b1c98ba13dc19e3ba47e649c05f6011b74ab5b"
+    },
+    {
+      "file": "art/environment/konoha-tree-spruce.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        857,
+        988
+      ],
+      "width": 444,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 174158,
+      "sha256": "ad6a29d400774bcacd5f83bc9491595bb39aa42871fd87255727f0015e7cdb20"
+    },
+    {
+      "file": "art/environment/konoha-tree.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        1295,
+        1192
+      ],
+      "width": 512,
+      "height": 471,
+      "maxSize": 512,
+      "bytes": 219968,
+      "sha256": "1100f8b5a6219b4d546342dc4581e72309182177855f4d4a63219cc223e672ef"
+    },
+    {
+      "file": "art/environment/konoha-well.webp",
+      "kind": "environment",
+      "sourceCroppedSize": [
+        762,
+        997
+      ],
+      "width": 391,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 154264,
+      "sha256": "906625d30ebcdb89ef5f8c998ecf89dd15c622ac151f3cd1df6d26f2e2785554"
+    },
+    {
+      "file": "art/terrain/path/01-straight.png",
+      "kind": "terrain",
+      "sourceCroppedSize": [
+        1254,
+        1254
+      ],
+      "width": 512,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 459678,
+      "sha256": "81e9bedecaeb85b38a017917f1c8b058572477a92b90596fc1f9041b75f6c735"
+    },
+    {
+      "file": "art/terrain/path/02-corner-left-up.png",
+      "kind": "terrain",
+      "sourceCroppedSize": [
+        1254,
+        1254
+      ],
+      "width": 512,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 432819,
+      "sha256": "e50815c36bfae750c08bcb72e1919460409e8ae5c503eaaec869999631600613"
+    },
+    {
+      "file": "art/terrain/path/03-down.png",
+      "kind": "terrain",
+      "sourceCroppedSize": [
+        1254,
+        1254
+      ],
+      "width": 512,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 406069,
+      "sha256": "6854f4687b70dd05a123d395f8ac9c8ec11b12984f4bf6a2dbc98544e6e236f4"
+    },
+    {
+      "file": "art/terrain/path/04-up.png",
+      "kind": "terrain",
+      "sourceCroppedSize": [
+        1254,
+        1254
+      ],
+      "width": 512,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 415252,
+      "sha256": "d263fd2c88f3ba7897530663bebb575b0b22b23800f5ff0240f8114ba24a6b15"
+    },
+    {
+      "file": "art/terrain/path/05-grass.png",
+      "kind": "terrain",
+      "sourceCroppedSize": [
+        1254,
+        1254
+      ],
+      "width": 512,
+      "height": 512,
+      "maxSize": 512,
+      "bytes": 390654,
+      "sha256": "8e5b2f4f4e607b2d20be6ee3f31aafe7c699b2781c8f0a9a9a002a514fd4aed7"
+    }
+  ]
+}
