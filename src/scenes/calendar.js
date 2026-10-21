@@ -36,16 +36,18 @@ G.scenes.register('calendar', () => {
     if (Object.keys(Q).some((id) => Q[id].st === 'active' && Q[id].due === d)) m.push('#b8321c');
     return m;
   }
+  const offset=()=>G.touch.header().height-20;
   const GY = 62, CH = 30;   // верх сетки дней и высота ячейки
   const hh = (a, b) => String(a).padStart(2, '0') + '–' + String(b).padStart(2, '0');
 
   return {
-    name: 'calendar',
+    name: 'calendar',touch(){return {back:true,roomyBack:true};},
     update(dt) {
       const I = G.input, W = G.screen.W;
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
       if (I.tapNow) {
-        const t = I.tapNow;
+        const t = {x:I.tapNow.x,y:I.tapNow.y-offset()};
+        if(t.y<20)return;
         if (t.y >= 20 && t.y < 42) { const nt = t.x < W / 2 ? 0 : 1; if (nt !== tab) { tab = nt; G.audio.sfx.select(); } return; }
         if (tab === 0) {
           const cw = (W - 14) / 7, col = Math.floor((t.x - 7) / cw), row = Math.floor((t.y - GY) / CH);
@@ -72,9 +74,12 @@ G.scenes.register('calendar', () => {
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, V = G.state.vars, U = G.ui;
       U.backdrop(ctx);
-      U.title(ctx, 'КАЛЕНДАРЬ', W / 2, 3, 100);
+      const g=G.touch.header();
+      U.title(ctx, 'КАЛЕНДАРЬ', g.titleX, g.titleY, 100);
+      ctx.save();ctx.translate(0,offset());
       ['Дни', 'Расписание'].forEach((t, i) => U.tab(ctx, 4 + i * (W / 2 - 2), 21, W / 2 - 6, 20, t, i === tab));
-      if (tab === 0) this.drawDays(ctx, W, H, V); else this.drawSched(ctx, W, H, V);
+      if (tab === 0) this.drawDays(ctx, W, H-offset(), V); else this.drawSched(ctx, W, H-offset(), V);
+      ctx.restore();
     },
     drawDays(ctx, W, H, V) {
       const U = G.ui, C = U.C, pg = page(), cw = (W - 14) / 7;

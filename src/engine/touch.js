@@ -24,7 +24,7 @@ G.touch = (() => {
   }
   const joyAllowed = () => !!cfg().joy;
   function hit(p) {
-    for (const h of hits) if (p.x >= h.x - 2 && p.x < h.x + h.w + 2 && p.y >= h.y - 2 && p.y < h.y + h.h + 2) return h.btn;
+    for (const h of hits) { const pad=h.pad??2; if (p.x >= h.x-pad && p.x < h.x+h.w+pad && p.y >= h.y-pad && p.y < h.y+h.h+pad) return h.btn; }
     return null;
   }
 
@@ -70,7 +70,21 @@ G.touch = (() => {
       hits.push({x:cx-size/2,y:cy-size/2,w:size,h:size,btn:'a'});
     }
   }
+  // Сцены подключают просторную шапку явно: не накрываем старые вкладки и бой.
+  function header() {
+    const sc=G.screen.scale||1,z=sc<1.25?2:1,h=Math.max(22,Math.ceil(44/sc));
+    const back={x:3,y:3,w:Math.max(64,25+G.font.measure('Назад')*z),h};
+    return {back,z,height:h+6,titleX:(G.screen.W+back.x+back.w+4)/2,titleY:3+Math.floor((h-15)/2)};
+  }
   function backPill(ctx) {
+    if(cfg().roomyBack){
+      const g=header(),r=g.back,on=G.input.held('b'),dy=on?1:0;
+      G.ui.button(ctx,r.x,r.y+dy,r.w,r.h,'',on?'sel':'normal');
+      G.ui.icon(ctx,'back',r.x+4,r.y+Math.floor((r.h-11)/2)+dy,'#f4e4bc');
+      ctx.save();ctx.translate(r.x+18,r.y+Math.floor((r.h-G.font.CAP*g.z)/2)+dy);ctx.scale(g.z,g.z);
+      G.font.draw(ctx,'Назад',0,0,{color:'#f8eed0',shadow:'#160c06'});ctx.restore();
+      hits.push({...r,btn:'b',pad:0});return;
+    }
     const on = G.input.held('b'), w = 52, h = 16, x = 3, y = 3;
     G.ui.button(ctx, x, y + (on ? 1 : 0), w, h, '', on ? 'sel' : 'normal');
     G.ui.icon(ctx, 'back', x + 4, y + 3 + (on ? 1 : 0), '#f4e4bc');
@@ -110,5 +124,5 @@ G.touch = (() => {
     stick(ctx);
   }
 
-  return { draw, hit, joyAllowed, cfg, BACK, sysWidth: () => sysLayout().width };
+  return { draw, hit, joyAllowed, cfg, BACK, header, sysWidth: () => sysLayout().width };
 })();
