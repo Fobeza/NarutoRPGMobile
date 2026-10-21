@@ -28,8 +28,16 @@ def main():
         dest = ROOT / 'art/terrain/path' / src.name
         im.save(dest, optimize=True)
         entries.append(entry(dest, original, 512, 'terrain'))
-    if len(entries) != 35:
-        raise ValueError(f'Ожидалось 35 согласованных изображений, найдено {len(entries)}')
+    src = sources / 'terrain/stone/street-source.png'
+    im = Image.open(src).convert('RGB')
+    original = im.size
+    im.thumbnail((512,512), Image.Resampling.NEAREST)
+    dest = ROOT / 'art/terrain/stone/street.webp'
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    im.save(dest, lossless=True, method=6)
+    entries.append(entry(dest, original, 512, 'terrain'))
+    if len(entries) != 36:
+        raise ValueError(f'Ожидалось 36 согласованных изображений, найдено {len(entries)}')
     data = {'release': '2.2.2', 'status': 'integrated',
             'note': 'Мастеры встроены через tools/import_environment.py. Игровой тайл 16 точек, HI=2; размеры холстов и коллизии сохранены.',
             'assets': entries}
