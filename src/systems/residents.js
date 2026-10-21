@@ -10,6 +10,18 @@ G.residents = (() => {
     kiba: 'clan_inuzuka', akamaru: 'clan_inuzuka', shino: 'clan_aburame', hokage: 'clan_sarutobi', konohamaru: 'clan_sarutobi',
   };
   const names = ['Хару', 'Рэн', 'Аки', 'Юки', 'Нао', 'Сора', 'Мэй', 'Кэн', 'Рика', 'Тацу', 'Суми', 'Юна', 'Рё', 'Кай', 'Мина', 'Томо'];
+  // Семьи обычных домов: отец, мать и двое детей (сын или дочь) с общей фамилией.
+  const MEN = ['Хару', 'Рэн', 'Кэн', 'Тацу', 'Рё', 'Кай', 'Томо', 'Сота', 'Дайки', 'Хиро', 'Кэйта', 'Сюн', 'Таро', 'Дзиро', 'Масао', 'Исаму', 'Горо', 'Нобу', 'Сэйдзи', 'Акира', 'Ютака', 'Мамору', 'Синдзи', 'Такэси'];
+  const WOMEN = ['Мэй', 'Рика', 'Суми', 'Юна', 'Мина', 'Аюми', 'Кумико', 'Михо', 'Нацуми', 'Тиё', 'Юри', 'Каори', 'Сая', 'Харуко', 'Эми', 'Норико', 'Кана', 'Сэцуко', 'Тамаки', 'Ёко', 'Митико', 'Фуми', 'Кэйко', 'Асами'];
+  const BOYS = ['Кота', 'Юто', 'Сота', 'Рику', 'Хаято', 'Минато', 'Арата', 'Ёсуке', 'Тайга', 'Сэйта', 'Рэнта', 'Кайто', 'Дзюн', 'Харуто', 'Сюта', 'Иори'];
+  const GIRLS = ['Юи', 'Хана', 'Мио', 'Рин', 'Сумирэ', 'Аой', 'Мэй', 'Кохару', 'Ицуки', 'Юна', 'Мирай', 'Цумуги', 'Нанами', 'Касуми', 'Хикари', 'Момо'];
+  const FAMILY = ['Аоки', 'Мори', 'Като', 'Оно', 'Сато', 'Хаяси', 'Танака', 'Симада', 'Исида', 'Фудзи', 'Мацуда', 'Сава', 'Такада', 'Уэда', 'Кондо', 'Хосино', 'Накамура', 'Судзуки', 'Ямада', 'Сайто', 'Ито', 'Сугияма', 'Окада', 'Фукуда', 'Миура', 'Кимура', 'Хасимото', 'Кобаяси', 'Эндо', 'Мураками', 'Огава', 'Икэда',
+    'Ватанабэ', 'Ёсида', 'Иноуэ', 'Ниси', 'Мацумото', 'Абэ', 'Сакамото', 'Ямамото', 'Нода', 'Кубо', 'Араи', 'Хирата', 'Мидзуно', 'Курода', 'Ямагути', 'Сибата', 'Нисимура', 'Танигути', 'Ёкояма', 'Цуда', 'Мияке', 'Хамада', 'Кавасаки', 'Ота', 'Комацу', 'Утида', 'Хонда', 'Аракава', 'Ивата', 'Китамура', 'Номура', 'Сакаи',
+    'Ханда', 'Ёнэда', 'Кавано', 'Морита', 'Ода', 'Фудзита', 'Кикути', 'Тамура', 'Сибуя', 'Масуда', 'Ясуда', 'Нагаи', 'Хаттори', 'Омура', 'Кога', 'Тояма', 'Сугита', 'Миядзаки', 'Нагата', 'Ямасита', 'Канда', 'Сэки', 'Цукада', 'Асано', 'Мотидзуки', 'Хиросэ', 'Нагано', 'Окамото', 'Ватари', 'Имаи', 'Курата', 'Уэно'];
+  const ROLE = { villager_m: 'father', villager_f: 'mother', kid_m: 'child', kid_f: 'child' };
+  const SLOTS = { father: 1, mother: 1, child: 2 };
+  const familyHome = (b) => homeBuilding(b) && !b.tplDef.unique && b.tplId !== 'uchiha_small';
+  const emptyHome = (b) => b.tplId === 'uchiha_small';   // после трагедии в квартале Учиха живёт только Саске
   const surnames = ['Аоки', 'Мори', 'Като', 'Оно', 'Сато', 'Хаяси', 'Танака', 'Симада', 'Исида', 'Фудзи', 'Мацуда', 'Сава', 'Такада', 'Уэда', 'Кондо', 'Хосино', 'Накамура', 'Судзуки', 'Ямада', 'Сайто', 'Ито', 'Сугияма', 'Окада', 'Фукуда', 'Миура', 'Кимура', 'Хасимото', 'Кобаяси', 'Эндо', 'Мураками', 'Огава', 'Икэда'];
   const canonical = (n) => !!(G.SCHED[n.id] || G.FRIENDS[n.id] || ['teuchi', 'ayame', 'hokage', 'konohamaru', 'tora'].includes(n.id));
   const homeBuilding = (b) => b.interior && (b.tplDef.cat === 'house' || /^(clan_|sasuke_home|uchiha_house|uchiha_small)/.test(b.tplId));
@@ -18,21 +30,25 @@ G.residents = (() => {
 
   function roomPoint(m, reserved = []) {
     const grid = G.nav.walkGrid(m), start = Math.floor(m.spawn.y / T) * m.w + Math.floor(m.spawn.x / T);
-    const seen = new Set([start]), queue = [start], candidates = [];
+    const seen = new Set([start]), queue = [start], candidates = [], tight = [];
+    const near = (x, y, d) => reserved.some((n) => Math.hypot(n.x - (x * T + 8), n.y - (y * T + 12)) < d);
     for (let i = 0; i < queue.length; i++) {
       const cell = queue[i], x = cell % m.w, y = Math.floor(cell / m.w);
-      if (y >= 3 && y < m.h - 2 && x > 1 && x < m.w - 2 && !reserved.some((n) => Math.hypot(n.x - (x * T + 8), n.y - (y * T + 12)) < 18)) candidates.push({ x: x * T + 8, y: y * T + 12 });
+      if (y >= 3 && y < m.h - 2 && x > 1 && x < m.w - 2) {
+        if (!near(x, y, 18)) candidates.push({ x: x * T + 8, y: y * T + 12 });
+        else if (!near(x, y, 8)) tight.push({ x: x * T + 8, y: y * T + 12 });   // в тесной комнате семья стоит поплотнее
+      }
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy, k = ny * m.w + nx;
         if (nx >= 0 && ny >= 0 && nx < m.w && ny < m.h && grid[k] && !seen.has(k)) { seen.add(k); queue.push(k); }
       }
     }
-    return candidates[Math.floor(candidates.length / 2)] || { x: m.spawn.x, y: m.spawn.y - 16 };
+    return candidates[Math.floor(candidates.length / 2)] || tight[Math.floor(tight.length / 2)] || { x: m.spawn.x, y: m.spawn.y - 16 };
   }
 
   function attach(r, m, n, point) {
     n.uid = r.uid; n.homeId = r.home.interior.id; n.residentMap = m.id;
-    n._look = (r.id === 'villager_m' || r.id === 'villager_f') ? r.serial % G.chars.LOOKS : 0;
+    n._look = ROLE[r.id] ? r.serial % G.chars.LOOKS : 0;
     const rep = { map: m, actor: n, x: point ? point.x : n.x, y: point ? point.y : n.y };
     r.reps.push(rep);
     return rep;
@@ -47,6 +63,21 @@ G.residents = (() => {
       for (const b of k.buildings) b.residents = [];
       // Интерьеры небольшие; заранее строим население, но чанки пола запекаются лишь при посещении.
       const maps = [k, ...k.buildings.filter((b) => b.interior).map((b) => G.world.get(b.interior.id))];
+      // Дома Учиха пусты; в обычном доме — не больше одного взрослого каждого пола: лишний взрослый из интерьера
+      // становится недостающим родителем или ребёнком.
+      for (const b of houses) {
+        const m = G.world.get(b.interior.id);
+        if (emptyHome(b)) { m.npcs = m.npcs.filter(canonical); continue; }
+        if (!familyHome(b)) continue;
+        const seen = {};
+        for (const n of m.npcs) {
+          if (canonical(n) || (n.id !== 'villager_m' && n.id !== 'villager_f')) continue;
+          const other = n.id === 'villager_m' ? 'villager_f' : 'villager_m';
+          if (!seen[n.id]) seen[n.id] = 1;
+          else if (!seen[other]) { n.id = other; seen[other] = 1; }
+          else n.id = n.id === 'villager_m' ? 'kid_m' : 'kid_f';
+        }
+      }
       let serial = 0;
       for (const m of maps) m.npcs.forEach((n, i) => {
         const uid = keyFor(m, n, i);
@@ -57,17 +88,53 @@ G.residents = (() => {
         }
         r.reps.push({ map: m, actor: n, x: n.x, y: n.y });
       });
+      // Сначала те, чей дом известен (семьи сюжетных героев, жильцы из интерьеров), потом остальные —
+      // туда, где не хватает именно их роли в семье (отца, матери, ребёнка).
+      const roleCount = (home, role) => home.residents.filter((id) => ROLE[(people.get(id) || {}).id] === role && !canonical(people.get(id).origin)).length;
+      const later = [];
       for (const r of people.values()) {
         let home = families[r.id] && k.landmarks[families[r.id]];
-        if (!home) home = r.reps.map((p) => p.map.building).find((b) => b && homeBuilding(b) && b.tplId !== 'hero_home');
-        if (!home) home = houses.filter((b) => b.tplId !== 'hero_home').sort((a, b) => a.residents.length - b.residents.length || a.ty - b.ty || a.tx - b.tx)[0];
+        if (!home) home = r.reps.map((p) => p.map.building).find((b) => b && homeBuilding(b) && !emptyHome(b) && b.tplId !== 'hero_home');
+        if (home) { r.home = home; home.residents.push(r.uid); } else later.push(r);
+      }
+      const homes = houses.filter((b) => b.tplId !== 'hero_home' && !emptyHome(b));
+      const order = (a, b) => a.residents.length - b.residents.length || a.ty - b.ty || a.tx - b.tx;
+      for (const r of later) {
+        const role = !canonical(r.origin) && ROLE[r.id];
+        const home = (role && homes.filter((b) => familyHome(b) && roleCount(b, role) < SLOTS[role]).sort(order)[0]) || homes.slice().sort(order)[0];
         if (!home) throw new Error('Нет жилого дома для ' + r.uid);
         r.home = home; home.residents.push(r.uid);
       }
-      // Даже ранее пустые дома Учиха получают постоянного хозяина.
+      // Семьи: недостающие отец, мать и дети появляются в доме; у всей семьи одна фамилия.
+      let fam = 0;
+      const usedNames = new Set([...people.values()].filter((r) => canonical(r.origin)).map((r) => r.name));
+      for (const home of houses) {
+        if (!familyHome(home)) continue;
+        const h = (k2) => Math.floor(G.util.hash2(fam, k2, 313) * 1e6), surname = FAMILY[(fam * 37 + 11) % FAMILY.length];
+        const m = G.world.get(home.interior.id);
+        for (const role of ['father', 'mother', 'child']) {
+          while (roleCount(home, role) < SLOTS[role]) {
+            const id = role === 'father' ? 'villager_m' : role === 'mother' ? 'villager_f' : h(roleCount(home, role) + 3) % 2 ? 'kid_m' : 'kid_f';
+            const p = roomPoint(m, m.npcs), uid = 'family:' + home.interior.id + ':' + home.residents.length;
+            const n = G.world.makeNpc({ id, ...p, ai: 'idle', talk: [{ text: role === 'child' ? 'Мама говорит, что после уроков надо сразу домой. А я сначала поиграю!' : 'Заходи в гости. Днём мы все по делам, а вечером вся семья дома.' }] });
+            const r = { uid, id, reps: [], origin: n, serial: serial++, home, active: null };
+            m.npcs.push(n); people.set(uid, r); home.residents.push(uid); attach(r, m, n);
+          }
+        }
+        for (const [i, uid] of home.residents.entries()) {
+          const r = people.get(uid);
+          if (!r || canonical(r.origin) || !ROLE[r.id]) continue;
+          const list = { villager_m: MEN, villager_f: WOMEN, kid_m: BOYS, kid_f: GIRLS }[r.id];
+          let j = h(i + 1) % list.length, name = `${list[j]} ${surname}`;
+          for (let t = 0; t < list.length && usedNames.has(name); t++) name = `${list[(j + t + 1) % list.length]} ${surname}`;
+          usedNames.add(name); r.name = name;
+          r.role = { villager_m: 'Отец', villager_f: 'Мать', kid_m: 'Сын', kid_f: 'Дочь' }[r.id] + ' семьи ' + surname;
+        }
+        fam++;
+      }
       for (const home of houses) {
         if (home.tplId === 'hero_home') { home.residents.push('hero'); continue; }
-        if (home.residents.length) continue;
+        if (home.residents.length || emptyHome(home)) continue;
         const m = G.world.get(home.interior.id), p = roomPoint(m, m.npcs);
         const id = serial % 2 ? 'villager_m' : 'villager_f', uid = 'resident:' + home.interior.id;
         const n = G.world.makeNpc({ id, ...p, ai: 'idle', talk: [{ text: 'Заходи в гости. Днём я гуляю по деревне, а вечером возвращаюсь домой.' }] });
@@ -77,8 +144,8 @@ G.residents = (() => {
       for (const r of people.values()) {
         for (const rep of r.reps) {
           rep.actor.uid = r.uid; rep.actor.homeId = r.home.interior.id; rep.actor.residentMap = rep.map.id;
-          rep.actor._look = (r.id === 'villager_m' || r.id === 'villager_f') ? r.serial % G.chars.LOOKS : 0;
-          if (!canonical(r.origin)) { rep.actor.role = rep.actor.name; rep.actor.name = r.name; }
+          rep.actor._look = ROLE[r.id] ? r.serial % G.chars.LOOKS : 0;
+          if (!canonical(r.origin)) { rep.actor.role = r.role || rep.actor.name; rep.actor.name = r.name; }
         }
         const hm = G.world.get(r.home.interior.id);
         let hr = r.reps.find((p) => p.map === hm);
@@ -101,6 +168,7 @@ G.residents = (() => {
           { from: 14 * 60, to: 20 * 60, label: work ? 'Дневные дела' : 'Прогулка по деревне', map: work ? work.map.id : 'konoha', x: work ? work.x : dest[0] * T + 8, y: work ? work.y : dest[1] * T + 12 },
           { from: 20 * 60, to: 30 * 60, label: 'Возвращается домой', map: hm.id, x: hr.x, y: hr.y },
         ];
+        if (r.role && !work) r.dailyRoute = familyRoute(k, r, hm, hr, door);
         const shop = work && G.SHOPS[work.actor.shop || (work.map.building && work.map.building.tplId)];
         if (shop || r.id === 'hokage') {
           const hours = shop ? shop.hours : [8 * 60, 18 * 60];
@@ -122,6 +190,45 @@ G.residents = (() => {
         home.occupantNames = labels;
       }
     } finally { building = false; }
+  }
+
+  // Распорядок семьи: у каждого свои места, чтобы сотни жителей не стояли в одной точке у рынка.
+  const WORK = ['hokage_tower', 'academy', 'hospital', 'library', 'market', 'weapons', 'onsen', 'pharmacy', 'books', 'souvenir'];
+  const FOOD = ['ichiraku', 'dango', 'teahouse', 'yakiniku', 'market'];
+  const SHOPS = ['market', 'flowers', 'pharmacy', 'books', 'souvenir', 'dango', 'inuzuka_shop'];
+  // свободная клетка, где житель не встанет на мешки, корзины и прочие бытовые мелочи у домов
+  function clearTile(k, tx, ty, obstacle) {
+    for (const [dx, dy] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2], [3, 2], [-3, -2], [4, 0], [-4, 0]]) {
+      const p = G.world.freeTile(k, tx + dx, ty + dy, obstacle);
+      if (!p) continue;
+      const x = p[0] * T + 8, y = p[1] * T + 12;
+      if (k.objects.some((o) => o._villageDetail && Math.abs(o.x - x) < 24 && Math.abs(o.y - y) < 24)) continue;
+      if (k.warps.some((w) => Math.hypot(w.rect.x + 8 - x, w.rect.y - y) < 56)) continue;   // у дверей — место прохожим и уличным историям
+      return p;
+    }
+    return null;
+  }
+  function near(k, tpl, r, spread, fallback) {
+    const b = k.landmarks[tpl];
+    if (!b) return fallback;
+    const s = r.serial * 7919, p = clearTile(k, b.tx + (s % spread) - (spread >> 1) + (b.tw >> 1), b.ty + b.th + 3 + (Math.floor(s / spread) % 4), true);
+    return p ? { x: p[0] * T + 8, y: p[1] * T + 12 } : fallback;
+  }
+  function aroundHome(k, r, door, radius) {
+    const s = r.serial * 104729, p = clearTile(k, (door.x / T | 0) + (s % (radius * 2 + 1)) - radius, (door.y / T | 0) + (Math.floor(s / 31) % (radius + 1)) - (radius >> 1), true);
+    return p ? { x: p[0] * T + 8, y: p[1] * T + 12 } : door;
+  }
+  function familyRoute(k, r, hm, hr, door) {
+    const home = (from, to, label = 'Дома') => ({ from, to, label, map: hm.id, x: hr.x, y: hr.y });
+    const out = (from, to, label, p) => ({ from, to, label, map: 'konoha', x: p.x, y: p.y });
+    const pick = (list, salt) => list[(r.serial * 31 + salt) % list.length];
+    if (r.id === 'villager_m') return [home(0, 7 * 60), out(7 * 60, 12 * 60, 'На работе', near(k, pick(WORK, 1), r, 9, door)),
+      out(12 * 60, 13 * 60, 'Обедает', near(k, pick(FOOD, 2), r, 7, door)), out(13 * 60, 19 * 60, 'На работе', near(k, pick(WORK, 1), r, 9, door)),
+      out(19 * 60, 20 * 60, 'Отдыхает у дома', aroundHome(k, r, door, 2)), home(20 * 60, 30 * 60)];
+    if (r.id === 'villager_f') return [home(0, 9 * 60, 'Дома по хозяйству'), out(9 * 60, 12 * 60, 'За покупками', near(k, pick(SHOPS, 3), r, 7, door)),
+      out(12 * 60, 16 * 60, 'Гуляет по кварталу', aroundHome(k, r, door, 6)), home(16 * 60, 30 * 60, 'Дома, готовит ужин')];
+    return [home(0, 8 * 60), out(8 * 60, 13 * 60, 'Играет во дворе', aroundHome(k, r, door, 3)),
+      out(13 * 60, 18 * 60, 'Гуляет с друзьями', aroundHome(k, r, door, 10)), home(18 * 60, 30 * 60)];
   }
 
   function eligible(r) {

@@ -105,7 +105,14 @@ test('Меню и карточки магазина помещаются в ми
 test('Каждое жильё заселено, у всех NPC свой дом и распорядок', () => {
   const k = G.world.konoha(), people = G.residents.list();
   const homes = k.buildings.filter(b => b.interior && (b.tplDef.cat === 'house' || /^(clan_|sasuke_home|uchiha_house|uchiha_small)/.test(b.tplId)));
-  assert.ok(homes.length > 150); assert.ok(homes.every(b => b.residents.length));
+  assert.ok(homes.length > 150); assert.ok(homes.every(b => b.tplId === 'uchiha_small' ? !b.residents.length : b.residents.length));
+  // обычный дом — семья: отец, мать и двое детей; в квартале Учиха после трагедии живёт только Саске
+  const P = G.residents.people, family = homes.filter(b => b.tplDef.cat === 'house' && !b.tplDef.unique);
+  assert.ok(family.length > 120);
+  for (const b of family) {
+    const ids = b.residents.map(id => P.get(id)).filter(r => ['villager_m','villager_f','kid_m','kid_f'].includes(r.id)).map(r => r.id);
+    assert.deepEqual([ids.filter(i => i === 'villager_m').length, ids.filter(i => i === 'villager_f').length, ids.filter(i => i[0] === 'k').length], [1, 1, 2], b.name);
+  }
   assert.equal(new Set(people.map(r => r.uid)).size, people.length);
   assert.equal(new Set(people.map(r => r.name)).size, people.length);
   assert.ok(people.every(r => r.home.residents.includes(r.uid) && r.dailyRoute.length >= 3));
