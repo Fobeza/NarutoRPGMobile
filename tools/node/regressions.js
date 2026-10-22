@@ -164,6 +164,43 @@ test('Выборы сюжета: последствия, один раз, стр
   const w = G.scenes.make('world', G.world.outsideOf(G.world.heroHome())); G.scenes.push(w);
   assert.ok(G.guards.build(w.map).patrols.filter(p => p.need === 'guards_up').length === 2);
 });
+test('Побочные ветки: открываются по дружбе, шаги закрываются действиями, награда и контроль чакры', () => {
+  const v = G.state.vars, Q = G.quests, F = G.state.flags; G.state.quests = {}; G.state.frQueue = []; G.state.started = true;
+  v.day = 6; v.purple_ctl = 0; v.money = 0;
+  assert.equal(Q.scriptFor('naruto'), null, 'пока не друзья — ветки нет'); v.friend_naruto = 6;
+  assert.equal(Q.scriptFor('naruto'), 'arc_naruto_offer'); assert.equal(Q.iconFor('naruto'), '!');
+  Q.start('arc_naruto'); assert.equal(Q.curStep('arc_naruto').id, 'ramen');
+  G.events.emit('bought', 'kunai'); assert.equal(Q.curStep('arc_naruto').id, 'ramen');
+  G.events.emit('bought', 'ramen_miso'); assert.equal(Q.curStep('arc_naruto').id, 'roof'); assert.ok(G.state.frQueue.includes('arc_naruto_ramen'));
+  F.roofs = 1; G.events.emit('roof'); assert.equal(Q.curStep('arc_naruto').id, 'train');
+  G.events.emit('training', 'dummy', 0.8, null); assert.equal(Q.curStep('arc_naruto').id, 'train', 'нужен партнёр Наруто');
+  G.events.emit('training', 'dummy', 0.8, 'naruto'); assert.equal(Q.curStep('arc_naruto').id, 'talk');
+  assert.equal(Q.scriptFor('naruto'), 'arc_naruto_end'); Q.step('arc_naruto', 'talk'); assert.ok(Q.done('arc_naruto')); assert.equal(v.money, 100);
+  // Ирука: тетрадь берётся из лавки и отдаётся
+  v.friend_iruka = 6; Q.start('arc_iruka'); G.game.give('notebook', 1); assert.equal(Q.curStep('arc_iruka').id, 'give'); assert.equal(Q.scriptFor('iruka'), 'arc_iruka_give');
+  Q.step('arc_iruka', 'give'); assert.equal(G.game.count('notebook'), 0);
+  G.quests.onEnterMap({ building: { tplId: 'memorial' } }); assert.equal(Q.curStep('arc_iruka').id, 'cook');
+  G.events.emit('cooked', 'x'); assert.equal(Q.curStep('arc_iruka').id, 'talk'); Q.step('arc_iruka', 'talk'); assert.ok(Q.done('arc_iruka')); assert.equal(v.purple_ctl, 4);
+  // Хината: трава отдаётся, медитация с партнёром, подарок именно ей
+  v.friend_hinata = 6; Q.start('arc_hinata'); G.game.give('herb_blue', 1); Q.step('arc_hinata', 'give');
+  G.events.emit('training', 'meditate', 0.9, 'hinata'); G.events.emit('gift', 'sakura', 'flowers_s'); assert.equal(Q.curStep('arc_hinata').id, 'gift');
+  G.events.emit('gift', 'hinata', 'flowers_s'); assert.equal(Q.curStep('arc_hinata').id, 'talk');
+  // Шикамару: книга, медитация, спарринг именно с ним
+  v.friend_shikamaru = 6; Q.start('arc_shikamaru'); G.events.emit('training', 'shogi', 0.8, 'shikamaru'); G.game.give('book_traps', 1);
+  assert.equal(Q.curStep('arc_shikamaru').id, 'clouds'); G.events.emit('training', 'meditate', 0.8, null);
+  G.events.emit('battle', { enemy: 'kiba', mode: 'spar' }, {}); assert.equal(Q.curStep('arc_shikamaru').id, 'spar');
+  G.events.emit('battle', { enemy: 'shikamaru', mode: 'spar' }, {}); assert.equal(Q.curStep('arc_shikamaru').id, 'talk');
+  for (const q of ['arc_naruto', 'arc_iruka', 'arc_hinata', 'arc_shikamaru']) for (const st of G.QUESTS[q].steps) for (const k of ['after', 'script']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
+});
+test('Малые задания: просьба, предметы списываются, награда', () => {
+  const v = G.state.vars, Q = G.quests; G.state.quests = {}; v.day = 8; v.money = 0; G.state.started = true; G.state.inv = {}; v.friend_choji = 0;
+  const small = Object.keys(G.QUESTS).filter((id) => id.startsWith('sm_')); assert.ok(small.length >= 12);
+  assert.equal(Q.scriptFor('choji'), 'sm_choji_milk_offer'); Q.start('sm_choji_milk'); assert.equal(Q.scriptFor('choji'), 'sm_choji_chips_offer', 'вторая просьба Чоджи');
+  G.game.give('milk', 1); assert.equal(Q.curStep('sm_choji_milk').id, 'give'); assert.equal(Q.scriptFor('choji'), 'sm_choji_milk_done');
+  G.game.take('milk', 1); assert.equal(Q.scriptFor('choji'), 'quest_missing_items'); G.game.give('milk', 1);
+  Q.step('sm_choji_milk', 'give'); assert.ok(Q.done('sm_choji_milk')); assert.equal(v.money, 40); assert.equal(G.game.count('milk'), 0);
+  for (const id of small) for (const st of G.QUESTS[id].steps) { assert.ok(G.ITEMS[Object.keys(st.have || st.need)[0]]); if (st.script) assert.ok(G.script.library[st.script], st.script); assert.ok(G.script.library[G.QUESTS[id].offer.script]); }
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });

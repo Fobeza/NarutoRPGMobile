@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '9c38ccf0', date: '2026-10-22 18:52', debug: false };
+const BUILD = { release: '2.3', version: '079fcd77', date: '2026-10-22 19:16', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -7004,12 +7004,14 @@ G.CHOICES = {
   taunt:  ['fight', 'leave', 'talk'],   // день 13: героя дразнят из-за чакры
   hokage: ['told', 'silent'],           // день 20: рассказать Хокаге о незнакомце в плаще
   exam:   ['honest', 'cautious'],       // день 21: показать на экзамене всю силу или сдерживаться
+  naruto: ['listen', 'joke'],           // ветка Наруто: ответить серьёзно или шуткой
 };
 G.choices = (() => {
   const EFFECTS = {
     taunt:  { fight: { rep: -3, friend: { naruto: 2 } }, leave: { friend: { iruka: 1 } }, talk: { rep: 2, friend: { hinata: 1 } } },
     hokage: { told: { rep: 1, flag: 'guards_up', friend: { iruka: 1 } }, silent: { friend: { naruto: 1 } } },
     exam:   { honest: { rep: 1 }, cautious: { friend: { shikamaru: 1 } } },
+    naruto: { listen: { friend: { naruto: 1 }, flag: 'naruto_trust' }, joke: {} },
   };
   function get(id) { const v = G.state.flags['ch_' + id]; return v ? (G.CHOICES[id] || [])[v - 1] || null : null; }
   function set(id, name) {
@@ -9629,6 +9631,269 @@ iruka: Это сложнее, чем по дереву: вода непослу�
 sakura: С нашей точностью это просто математика!
 end
 `);
+
+
+// ===== data/side_quests.js =====
+// Большие побочные ветки: одна история на персонажа (4–5 шагов), открываются по дружбе. Категория «friend».
+// Формат шагов — как у главной ветки (data/main_quest.js). Сцены — data/side_story.js. Порядок приоритета и идеи — docs/STORY.md.
+const _lvl = (id, n) => () => G.state.started && G.friends.level(id) >= n;
+const _partner = (who, ...ids) => ['training', (id, score, partner) => partner === who && (!ids.length || ids.includes(id))];
+Object.assign(G.QUESTS, {
+  // ───────────── Наруто: «Первый друг» ─────────────
+  arc_naruto: {
+    cat: 'friend', title: 'Первый друг',
+    desc: 'Наруто почти всегда один. Он первый принял тебя без страха. Пора ответить тем же.',
+    offer: { npc: 'naruto', script: 'arc_naruto_offer', when: () => _lvl('naruto', 1)() && G.state.vars.day >= 3 },
+    steps: [
+      { id: 'ramen', text: 'Угостить Наруто рамэном в Ичираку', target: { building: 'ichiraku' }, on: ['bought', (id) => /^ramen_/.test(id)], after: 'arc_naruto_ramen' },
+      { id: 'roof', text: 'Побегать с Наруто по крышам', target: { building: 'academy' }, on: ['roof'], when: () => !!G.state.flags.roofs, after: 'arc_naruto_roof' },
+      { id: 'train', text: 'Потренироваться вместе с Наруто (меню общения)', target: { npc: 'naruto' }, on: _partner('naruto'), after: 'arc_naruto_train' },
+      { id: 'talk', text: 'Поговорить с Наруто у качелей', target: { npc: 'naruto' }, script: 'arc_naruto_end' },
+    ],
+    reward: { money: 100, vars: { friend_naruto: 3 }, text: 'Первый настоящий друг' },
+  },
+  // ───────────── Ирука: «Прошлое наставника» ─────────────
+  arc_iruka: {
+    cat: 'friend', title: 'Прошлое наставника',
+    desc: 'Ирука знает, каково быть чужим. Узнай, почему он так за тебя переживает.',
+    offer: { npc: 'iruka', in: 'academy', script: 'arc_iruka_offer', when: () => _lvl('iruka', 1)() && G.state.vars.day >= 5 },
+    steps: [
+      { id: 'notebook', text: 'Купить Ируке тетрадь в книжной лавке', target: { building: 'books' }, have: { notebook: 1 } },
+      { id: 'give', text: 'Отдать тетрадь Ируке в Академии', target: { npc: 'iruka', in: 'academy' }, need: { notebook: 1 }, consume: true, script: 'arc_iruka_give' },
+      { id: 'memorial', text: 'Сходить к мемориалу', target: { building: 'memorial' }, reach: true, after: 'arc_iruka_memorial' },
+      { id: 'cook', text: 'Приготовить обед на кухне (дома или в Ичираку)', target: { building: 'hero_home' }, on: ['cooked'], after: 'arc_iruka_cook' },
+      { id: 'talk', text: 'Поговорить с Ирукой в Академии', target: { npc: 'iruka', in: 'academy' }, script: 'arc_iruka_end' },
+    ],
+    reward: { money: 120, vars: { friend_iruka: 3, purple_ctl: 4 }, text: 'Урок наставника: контроль чакры +4' },
+  },
+  // ───────────── Хината: «Дыхание» ─────────────
+  arc_hinata: {
+    cat: 'friend', title: 'Дыхание',
+    desc: 'Хината знает, как успокаивать чакру. Попроси её научить тебя дышать ровно.',
+    offer: { npc: 'hinata', script: 'arc_hinata_offer', when: () => _lvl('hinata', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'herb', text: 'Найти голубую траву для Хинаты (поляны за деревней и лес)', target: { building: 'pharmacy' }, have: { herb_blue: 1 } },
+      { id: 'give', text: 'Отдать траву Хинате', target: { npc: 'hinata' }, need: { herb_blue: 1 }, consume: true, script: 'arc_hinata_give' },
+      { id: 'meditate', text: 'Помедитировать вместе с Хинатой (меню общения)', target: { npc: 'hinata' }, on: _partner('hinata'), after: 'arc_hinata_med' },
+      { id: 'gift', text: 'Подарить Хинате цветы или другой подарок', target: { npc: 'hinata' }, on: ['gift', (id) => id === 'hinata'], after: 'arc_hinata_gift' },
+      { id: 'talk', text: 'Поговорить с Хинатой', target: { npc: 'hinata' }, script: 'arc_hinata_end' },
+    ],
+    reward: { money: 80, vars: { friend_hinata: 3, purple_ctl: 6 }, text: 'Дыхание Хьюга: контроль чакры +6' },
+  },
+  // ───────────── Шикамару: «Облака и тактика» ─────────────
+  arc_shikamaru: {
+    cat: 'friend', title: 'Облака и тактика',
+    desc: 'Шикамару ленив, но видит на ходы вперёд. Может, и тебе пригодится его способ думать.',
+    offer: { npc: 'shikamaru', in: 'academy', script: 'arc_shikamaru_offer', when: () => _lvl('shikamaru', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'shogi', text: 'Сыграть с Шикамару в шоги (меню общения)', target: { npc: 'shikamaru' }, on: _partner('shikamaru', 'shogi'), after: 'arc_shika_shogi' },
+      { id: 'book', text: 'Купить книгу о ловушках в книжной лавке', target: { building: 'books' }, have: { book_traps: 1 } },
+      { id: 'clouds', text: 'Помедитировать: Шикамару советует смотреть на облака', target: { building: 'training_ground' }, on: ['training', (id) => id === 'meditate' || id === 'falls'], after: 'arc_shika_clouds' },
+      { id: 'spar', text: 'Провести спарринг с Шикамару', target: { npc: 'shikamaru' }, on: ['battle', (a) => a && a.enemy === 'shikamaru'], after: 'arc_shika_spar' },
+      { id: 'talk', text: 'Поговорить с Шикамару', target: { npc: 'shikamaru' }, script: 'arc_shika_end' },
+    ],
+    reward: { money: 100, vars: { friend_shikamaru: 3, purple_ctl: 3 }, text: 'Тактика Шикамару' },
+  },
+});
+
+
+// ===== data/side_story.js =====
+// Сцены больших побочных веток (data/side_quests.js).
+G.script.parse(`
+// ───────────── Наруто: «Первый друг» ─────────────
+=== arc_naruto_offer
+naruto: Эй, {name}! Слушай, я тут подумал... Ты ведь первый, кто не отводит глаза, когда я говорю, что стану Хокаге.
+naruto: Давай как-нибудь побудем вместе? Не на уроке, не в очереди за лапшой. Просто так.
+? Согласиться?
+* Конечно -> yes
+* Потом -> no
+# yes
+naruto: Правда?! Ура! Тогда, для начала, угости меня рамэном в Ичираку! Ну... я приглашаю, а плачу ты. Даттебайо!
+call quest start arc_naruto
+end
+# no
+naruto: Ладно... Но я подожду.
+end
+=== arc_naruto_ramen
+naruto: Хрум... Это лучший рамен в мире. Знаешь, почему он лучший? Потому что мы вдвоём.
+naruto: Теучи-сан и Аяме всегда были добры ко мне. Остальные в деревне... в общем, смотрят иначе.
+naruto: У тебя тоже странная чакра, и тебя тоже сторонятся. Мы с тобой одного поля ягоды!
+end
+=== arc_naruto_roof
+: Вы бежите по крышам, и ветер бьёт в лицо. Наруто хохочет.
+naruto: Отсюда нас никто не видит! Здесь я могу кричать что угодно! Я стану Хокаге!!!
+: Он смеётся, но в глазах влажный блеск.
+naruto: Спасибо, что не сказал «замолчи».
+end
+=== arc_naruto_train
+naruto: Ха! Ты стал сильнее! А я всё равно тебя обгоню!
+naruto: Знаешь, когда я тренируюсь один, мне иногда кажется, что никто не видит. А с тобой видно!
+end
+=== arc_naruto_end
+naruto: Присядь на качели, {name}. Хочу сказать кое-что важное.
+naruto: Я никому этого не рассказывал. У меня... нет родителей. И в деревне многие смотрят на меня не так, как на других. Я не знаю почему.
+naruto: Поэтому я кричу про Хокаге. Чтобы однажды все посмотрели на меня по-другому.
+? Что ответишь?
+* Я с тобой, что бы там ни было -> listen
+* Хокаге, ты? Громкий слишком! -> joke
+# listen
+naruto: ...Спасибо. Правда. Ты настоящий друг.
+call choice naruto listen
+-> end_part
+# joke
+naruto: Эй! Ха-ха-ха! Ну погоди, вот стану Хокаге...
+: Он смеётся, но ты замечаешь, как легче стало у него на душе.
+call choice naruto joke
+# end_part
+naruto: Знаешь что? Когда будем генинами, мы пойдём на первое задание вместе. Обещай!
+call step arc_naruto talk
+end
+
+// ───────────── Ирука: «Прошлое наставника» ─────────────
+=== arc_iruka_offer
+iruka: {name}, у меня к тебе странная просьба. Тетради кончаются, а читать работы учеников — моя тяжёлая обязанность.
+iruka: Если сможешь, купи мне новую тетрадь в книжной лавке. Взамен... расскажу кое-что, чего я не говорил другим.
+? Поможешь?
+* Конечно -> yes
+* Потом -> no
+# yes
+call quest start arc_iruka
+end
+# no
+iruka: Хорошо. Когда будет время.
+end
+=== arc_iruka_give
+iruka: Отличная тетрадь. Спасибо, {name}.
+iruka: Знаешь, мне кажется, я должен кое-что показать тебе. Сходи к мемориалу в деревне. Это важное место для меня.
+end
+=== arc_iruka_memorial
+: На камне высечены имена. Ирука подходит и останавливается у одного из них.
+iruka: Мои родители. Они погибли, когда на деревню напал Девятихвостый. Мне тогда было мало лет.
+iruka: Я долго злился на всех. Потом понял, что есть те, кому ещё хуже. И решил стать тем, кто не оставит ребёнка одного.
+iruka: Поэтому я стал учителем. И поэтому я не оставлю тебя, {name}.
+end
+=== arc_iruka_cook
+iruka: Это ты приготовил? Неплохо! Давай-ка я попробую.
+iruka: ...Вкусно. Слушай, когда-то я думал, что сильный шиноби — тот, кто сражается. А оказалось, что сильный — тот, кто защищает дом. Хорошая еда, тёплый дом... это тоже сила.
+end
+=== arc_iruka_end
+iruka: Ну вот и всё. Ты знаешь теперь мою историю.
+iruka: Хочу показать тебе один приём, который помогает мне, когда накрывает: считай до четырёх на вдохе и до шести на выдохе. Чакра успокаивается вместе с дыханием.
+: Ты повторяешь за ним. Чакра в груди перестаёт метаться и становится тихой.
+iruka: Не забывай: ты не один. Что бы ни пришло за тобой, у тебя есть мы.
+call step arc_iruka talk
+end
+
+// ───────────── Хината: «Дыхание» ─────────────
+=== arc_hinata_offer
+hinata: Э-это... {name}... я видела, как ты тренируешься. У тебя чакра... такая красивая. Фиолетовая.
+hinata: Я могу научить дышать так, чтобы она не рвалась. Но мне нужна голубая трава для чая: растёт на полянах за деревней.
+? Поможешь?
+* Конечно, принесу -> yes
+* Не сейчас -> no
+# yes
+hinata: С-спасибо. Я... буду ждать.
+call quest start arc_hinata
+end
+# no
+hinata: Х-хорошо... в другой раз.
+end
+=== arc_hinata_give
+hinata: Т-та самая трава! Спасибо...
+hinata: Давай как-нибудь помедитируем вместе. Я покажу, как дышат в клане Хьюга.
+end
+=== arc_hinata_med
+hinata: Вдох... выдох... Не думай о чакре. Думай о воде в озере.
+: Рядом с ней чакра успокаивается. Фиолетовое сияние гаснет, и дыхание становится ровным.
+hinata: У-у тебя получается...
+end
+=== arc_hinata_gift
+hinata: Эт-это мне? О... Спасибо. Я... никогда не получала подарки просто так.
+hinata: Ты очень добрый, {name}.
+end
+=== arc_hinata_end
+hinata: Д-давай я покажу тебе последний приём. Положи руку на грудь.
+hinata: Чакра как течение реки. Нельзя толкать её, можно только направлять. Вот так...
+: Она кладёт ладонь рядом с твоей. Волна тепла проходит по телу.
+hinata: Т-ты справишься, {name}. Я в тебя верю.
+call step arc_hinata talk
+end
+
+// ───────────── Шикамару: «Облака и тактика» ─────────────
+=== arc_shikamaru_offer
+shikamaru: Эх... Ты, кажется, тот, у кого чакра, как гроза. Хлопотно.
+shikamaru: Слушай, у меня предложение. Сыграй со мной в шоги. Если не проиграешь — расскажу, как не терять голову, когда чакра рвётся.
+? Сыграем?
+* Давай -> yes
+* Потом -> no
+# yes
+shikamaru: Тогда пошли. Только не очень быстро.
+call quest start arc_shikamaru
+end
+# no
+shikamaru: Тоже верно. Тратить силы на лишнее...
+end
+=== arc_shika_shogi
+shikamaru: Хм. Неплохо. Ты не торопишься, а я не люблю, когда торопятся.
+shikamaru: Чтобы держать чакру, надо сначала успокоить голову. Купи книгу о ловушках в книжной лавке: она учит видеть на ходы вперёд.
+end
+=== arc_shika_clouds
+: Ты лежишь на траве и смотришь на облака. Рядом, заложив руки за голову, лежит Шикамару.
+shikamaru: Видишь? Облако не борется с ветром. Оно просто плывёт, куда несёт. Хлопотно жить иначе.
+: Чакра в груди утихает, будто тоже плывёт вместе с облаками.
+end
+=== arc_shika_spar
+shikamaru: Не торопись. Смотри, зачем я делаю ход, а не какой.
+: Шикамару выигрывает, но ты замечаешь, что понимаешь его способ мышления.
+shikamaru: Хм... Ты учишься быстрее, чем я думал.
+end
+=== arc_shika_end
+shikamaru: Ладно. Раз ты дошёл до конца, держи совет.
+shikamaru: Когда чакра рвётся, не дави. Подумай: чего ты боишься? Страх тоже ход. Не отвечай на него сразу.
+: Ты запоминаешь. Что-то в этих словах встаёт на место.
+set flag.tactic = 1
+call step arc_shikamaru talk
+end
+`);
+
+
+// ===== data/small_quests.js =====
+// Малые задания (категория «errand»): 1–2 шага, «принеси предмет» от известных жителей. Деньги, иногда дружба.
+// Таблица: [id, кто, где (интерьер), название, просьба, предмет, штук, награда рё, друг+, благодарность, с какого дня]
+(() => {
+  const T = [
+    ['sm_teuchi_fish', 'teuchi', 'ichiraku', 'Рыба для бульона', 'Теучи: Бульон кончается, а свежей рыбы нет. Принесёшь пару рыбин? Заплачу.', 'fish', 2, 70, null, 'Отличная рыба! Бульон выйдет на славу.', 3],
+    ['sm_ayame_eggs', 'ayame', 'ichiraku', 'Яйца для Аяме', 'Аяме: Папа забыл купить яйца для омлета. Сбегаешь на рынок?', 'eggs', 2, 50, null, 'Спасибо! Омлет будет вовремя.', 3],
+    ['sm_choji_milk', 'choji', null, 'Молоко для Чоджи', 'Чоджи: У меня горло пересохло после чипсов. Принесёшь молока?', 'milk', 1, 40, 'choji', 'Хрум... спасибо! Ты настоящий друг.', 4],
+    ['sm_choji_chips', 'choji', null, 'Чипсы про запас', 'Чоджи: Хочу устроить пикник. Принесёшь пару пачек чипсов?', 'chips', 2, 45, 'choji', 'Лучший пикник! Приходи в следующий раз.', 6],
+    ['sm_kiba_treat', 'kiba', null, 'Лакомство для Акамару', 'Киба: Акамару заслужил награду. Сгоняй в лавку Инузука, возьми лакомства?', 'dog_treat', 2, 60, 'kiba', 'Гав! Акамару в восторге. Держи.', 4],
+    ['sm_shino_jar', 'shino', null, 'Банка для насекомых', 'Шино: Мне нужна банка для сбора образцов. Принесёшь?', 'bug_jar', 1, 80, 'shino', 'Подходящая. Спасибо.', 5],
+    ['sm_lee_weights', 'lee', null, 'Утяжелители для Ли', 'Ли: Мои утяжелители стали слишком лёгкими! Достань новые, и я покажу, как работает сила юности!', 'weights', 1, 100, 'lee', 'Сила юности растёт! Спасибо!', 6],
+    ['sm_ino_blue', 'ino', 'flowers', 'Голубая трава для Ино', 'Ино: Для особого букета нужна голубая трава. Найдёшь для меня?', 'herb_blue', 1, 90, 'ino', 'То, что надо! Букет будет сказочный.', 5],
+    ['sm_sakura_notebook', 'sakura', null, 'Блокнот для Сакуры', 'Сакура: Мои конспекты не помещаются в тетради. Принеси блокнот из книжной лавки?', 'notebook', 1, 40, 'sakura', 'Ого, как раз то, что нужно!', 4],
+    ['sm_sasuke_tomato', 'sasuke', null, 'Томаты для Саске', 'Саске: ...Нужны томаты. Не спрашивай зачем. Принесёшь пару?', 'tomato', 2, 60, 'sasuke', '...Хм. Спасибо.', 6],
+    ['sm_anko_dango', 'anko', null, 'Данго для Анко', 'Анко: Данго! Мне срочно нужны три палочки данго. Беги в лавку!', 'dango', 3, 120, null, 'Хррум... Ты мой любимый ученик!', 7],
+    ['sm_teuchi_veg', 'teuchi', 'ichiraku', 'Овощи для рамена', 'Теучи: Нужно три порции овощей для сегодняшнего рамена. Принесёшь?', 'vegetables', 3, 75, null, 'Спасибо! Сегодня у нас будет аншлаг.', 5],
+    ['sm_ayame_tea', 'ayame', 'ichiraku', 'Чай для посетителей', 'Аяме: Зелёный чай закончился. Купишь пачку?', 'green_tea', 1, 40, null, 'Спасибо! Клиенты довольны.', 4],
+  ];
+  let src = '';
+  for (const [id, npc, inB, title, ask, item, n, pay, friend, thanks, day] of T) {
+    const name = G.chars.nameOf(npc);
+    const reward = { money: pay, text: pay + ' рё' };
+    if (friend) reward.vars = { ['friend_' + friend]: 1 };
+    G.QUESTS[id] = {
+      cat: 'errand', title, desc: ask.replace(/^[^:]+: /, ''),
+      offer: { npc, in: inB || undefined, script: id + '_offer', when: () => G.state.started && G.state.vars.day >= day },
+      steps: [
+        { id: 'get', text: 'Принести: ' + G.ITEMS[item].name + (n > 1 ? ' ×' + n : ''), target: { npc, in: inB || undefined }, have: { [item]: n } },
+        { id: 'give', text: 'Отдать: ' + name, target: { npc, in: inB || undefined }, need: { [item]: n }, consume: true, script: id + '_done' },
+      ],
+      reward,
+    };
+    src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Поможешь?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\nend\n`;
+  }
+  G.script.parse(src);
+})();
 
 
 // ===== data/story_scenes.js =====

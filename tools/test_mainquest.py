@@ -65,5 +65,20 @@ with sync_playwright() as p:
     shot(page, 'mq_exam_done')
     b.close()
 
+    # ── побочная ветка: просьба Наруто принимается в диалоге, ветка и малое задание видны в журнале ──
+    b, page = open_page(p, URL)
+    seed(page); wait_top(page, 'world'); close_dialogs(page)
+    page.evaluate("G.state.quests = {}; G.state.vars.day = 6; G.state.vars.friend_naruto = 6; G.state.vars.friend_choji = 0")
+    check(page.evaluate("G.quests.scriptFor('naruto')") == 'arc_naruto_offer', 'Наруто предлагает ветку «Первый друг»')
+    W(page, "s.talk('arc_naruto_offer'); return 1"); time.sleep(0.6)
+    for _ in range(14):
+        if page.evaluate("G.quests.active('arc_naruto')"): break
+        key(page, 'KeyZ', wait=0.3)
+    check(page.evaluate("G.quests.active('arc_naruto')"), 'ветка «Первый друг» принята')
+    close_dialogs(page)
+    page.evaluate("G.quests.start('sm_choji_milk')")
+    page.evaluate("G.scenes.push(G.scenes.make('journal'))"); time.sleep(0.5); shot(page, 'side_journal')
+    b.close()
+
 report()
 sys.exit(1 if fails or errors else 0)

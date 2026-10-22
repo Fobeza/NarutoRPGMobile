@@ -33,7 +33,7 @@ JS_FILES = [
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
     "systems/sim.js",
     # ── сюжет и диалоги ──
-    "data/konoha_layout.js", "data/legacy_layout.js", "data/dialogs.js", "data/story_dialogs.js", "data/main_quest.js", "data/main_story.js", "data/story_scenes.js", "data/village_daily.js", "data/street_events.js", "data/village_dialogues.js",
+    "data/konoha_layout.js", "data/legacy_layout.js", "data/dialogs.js", "data/story_dialogs.js", "data/main_quest.js", "data/main_story.js", "data/side_quests.js", "data/side_story.js", "data/small_quests.js", "data/story_scenes.js", "data/village_daily.js", "data/street_events.js", "data/village_dialogues.js",
     # ── мир: карты, интерьеры, жители, расписания ──
     "world/buildgfx.js", "world/map.js", "world/mapgen.js", "world/interiors.js", "world/world.js",
     "world/village_extra.js", "world/interior_details.js", "world/village_life.js", "world/cast.js",

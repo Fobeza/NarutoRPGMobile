@@ -4,12 +4,14 @@ G.CHOICES = {
   taunt:  ['fight', 'leave', 'talk'],   // день 13: героя дразнят из-за чакры
   hokage: ['told', 'silent'],           // день 20: рассказать Хокаге о незнакомце в плаще
   exam:   ['honest', 'cautious'],       // день 21: показать на экзамене всю силу или сдерживаться
+  naruto: ['listen', 'joke'],           // ветка Наруто: ответить серьёзно или шуткой
 };
 G.choices = (() => {
   const EFFECTS = {
     taunt:  { fight: { rep: -3, friend: { naruto: 2 } }, leave: { friend: { iruka: 1 } }, talk: { rep: 2, friend: { hinata: 1 } } },
     hokage: { told: { rep: 1, flag: 'guards_up', friend: { iruka: 1 } }, silent: { friend: { naruto: 1 } } },
     exam:   { honest: { rep: 1 }, cautious: { friend: { shikamaru: 1 } } },
+    naruto: { listen: { friend: { naruto: 1 }, flag: 'naruto_trust' }, joke: {} },
   };
   function get(id) { const v = G.state.flags['ch_' + id]; return v ? (G.CHOICES[id] || [])[v - 1] || null : null; }
   function set(id, name) {
