@@ -1,4 +1,4 @@
-// Полный план, повторные занятия, доставка и оба этапа нового финала.
+// План из действий в бою, отмена плана, события тренировок.
 'use strict';
 const assert=require('node:assert/strict'),h=require('./harness.js'),{G}=h;
 let passed=0;
@@ -10,17 +10,6 @@ function script(id){const r=G.script.runner(id);for(let i=0;i<100;i++){const op=
 test('План сближения и удара исполняется по реальной шкале боя',()=>{const b=battle(),hp=b.E.hp;assert.ok(b.planner.select('move','Вперёд'));assert.ok(b.planner.add());assert.ok(b.planner.select('tai',G.MOVES.punch.name));assert.ok(b.planner.add());assert.equal(b.planner.add(),false);assert.ok(b.planner.commit());settle(b);assert.equal(b.planner.queue.length,0);assert.ok(b.E.hp<hp);});
 test('План останавливается при исчезновении припаса без списания хода',()=>{const b=battle('ko');b.planner.select('throw','Кунай');assert.ok(b.planner.add());G.game.take('kunai',5);const hp=b.P.hp;b.planner.commit();b.update(.1);assert.equal(b.planner.running,false);assert.equal(b.planner.queue.length,0);assert.equal(b.P.hp,hp);assert.match(b.planner.message,/остановлен/);});
 test('Отмена плана не тратит ни чакру, ни предметы',()=>{const b=battle(),snap=JSON.stringify(G.state);b.planner.select('throw','Кунай');b.planner.add();b.planner.cancel();assert.equal(JSON.stringify(G.state),snap);});
-test('Новые упражнения не выдаются все сразу при загрузке позднего дня',()=>{G.learning.poll();const a=G.learning.entries.filter(e=>G.quests.active(e.id));assert.equal(a.length,1);G.learning.poll();G.learning.poll();assert.ok(G.learning.entries.filter(e=>G.quests.active(e.id)).length<=1);assert.equal(G.state.learning.offeredDay,33);});
 test('Событие успешной тренировки сохраняет конкретный навык и напарника',()=>{G.events.emit('training','throw',.8,'naruto');assert.equal(G.state.learning.tr_throw,1);assert.equal(G.state.learning.partner,1);G.storage.save(G.state);const s=G.game.fix(G.storage.load());assert.equal(s.learning.tr_throw,1);});
 test('Возобновление боя возвращает и учебный прогресс к началу схватки',()=>{G.state.learning.gift=1;battle('ko');G.state.learning.gift=99;const s=G.game.fix(JSON.parse(JSON.stringify(G.state)));assert.equal(s.learning.gift,1);assert.equal(s.battleCheckpoint,null);});
-test('Посылки передаются по адресам, оплата выдаётся один раз',()=>{script('promise_offer');for(const tpl of ['market','flowers','hospital']){const b=G.world.konoha().buildings.find(b=>b.tplId===tpl);G.quests.onEnterMap(G.world.get(b.interior.id));}assert.equal(G.game.count('promise_parcel'),0);const money=G.state.vars.money;script('promise_paid');script('promise_paid');assert.equal(G.state.vars.money,money+100);assert.ok(G.quests.done('promise_parcels'));});
-test('Признание Юты, доклад, разведка и примирение проходят последовательно',()=>{script('promise_missing');script('promise_confession');assert.equal(G.quests.curStep('promise_case').id,'iruka');script('promise_report');assert.equal(G.quests.curStep('promise_case').id,'forest');script('promise_field_win');assert.equal(G.quests.curStep('promise_case').id,'back');script('promise_reconcile');assert.ok(G.quests.done('promise_case'));assert.equal(G.state.vars.promise_trust,2);});
-test('NPC нового сюжета не дублируются при повторном входе',()=>{const w=G.scenes.make('world',G.world.outsideOf(G.world.heroHome()));G.scenes.push(w);w.setMap(G.world.outsideOf(G.world.heroHome()));for(const id of ['yuta','gendo'])assert.equal(w.map.npcs.filter(n=>n.id===id).length,1);});
-test('Оба этапа финала приводят к выпуску и продолжению игры',()=>{
-  G.state.flags.st_exam=1;G.state.flags.st_night=1;G.state.vars.exam=70;G.state.flags.graduated=1;
-  const w=G.scenes.make('world',G.world.outsideOf(G.world.heroHome()));G.scenes.push(w);G.quests.start('promise_rescue');G.flow.promiseFinale({},w);
-  function win(){const b=G.scenes.top();assert.equal(b.name,'battle');b.debugWin();G.input.pressed=k=>k==='a';b.update(1.2);G.input.pressed=()=>false;}
-  function dialogue(){for(let n=0;n<40&&G.scenes.top()?.name.startsWith('dialog:');n++){const d=G.scenes.top();if(d.cur?.op==='choice')throw Error('Неожиданный выбор');d.advance();}}
-  win();assert.equal(G.state.flags.promise_people,1);dialogue();assert.equal(G.scenes.top().opts.enemy,'gendo');win();dialogue();assert.equal(G.state.flags.promise_final,1);assert.equal(G.state.flags.game_clear,1);assert.ok(G.quests.done('promise_rescue'));assert.ok(G.state.vars.day>=55);assert.equal(G.state.battleCheckpoint,null);
-});
 assert.equal(G.script.problems.length,0);console.log('ИТОГ нового выпуска: '+passed+' проверок');

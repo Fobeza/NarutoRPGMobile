@@ -1,4 +1,4 @@
-"""Тест этапов 7–9: уроки, тренировки, дружба, доска, события, экзамен, финал, концовка."""
+"""Тест: уроки, тренировки, дружба, доска, прогул, свитки, готовка, календарь, статус."""
 import time, sys
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
@@ -65,17 +65,7 @@ with sync_playwright() as p:
     page.evaluate("G.state.vars.day = 3; G.state.daily = {}; G.state.vars.min = 9 * 60 + 29; G.game.advance(2)"); time.sleep(0.3)
     check(page.evaluate("G.state.vars.miss") == 1, 'прогул засчитан')
     close_dialogs(page)
-    # ── 6. сюжет: Киба (день 3) ──
-    to_konoha(page, 80, 46)
-    page.evaluate("G.state.vars.min = 14 * 60"); time.sleep(0.6)
-    check(page.evaluate("G.state.flags.st_kiba") == 1 and page.evaluate("G.scenes.busy || G.scenes.top().name !== 'world'"), 'Киба сам находит героя')
-    shot(page, 'life_kiba')
-    for _ in range(4): key(page, 'KeyZ', wait=0.3)
-    close_dialogs(page)
-    if top(page) == 'battle':
-        B(page, "s.debugWin(); return 1"); time.sleep(2.2); key(page, 'KeyZ'); time.sleep(0.5); close_dialogs(page)
-    check(page.evaluate("G.state.flags.met_kiba") == 1, 'сцена Кибы завершена')
-    # ── 7. свиток, готовка, календарь ──
+    # ── 6. свиток, готовка, календарь ──
     W(page, "G.flow.scroll({ i: 3 }, s); return 1"); time.sleep(0.3); close_dialogs(page)
     check(page.evaluate("G.state.vars.scrolls") == 1, 'секретный свиток найден')
     page.evaluate("Object.assign(G.state.inv, { rice: 1, fish: 1, vegetables: 1 })")
@@ -84,55 +74,5 @@ with sync_playwright() as p:
     check(page.evaluate("G.state.daily.bento") == 1, 'бэнто приготовлено')
     W(page, "G.flow.calendar({}, s); return 1"); time.sleep(0.4); shot(page, 'life_calendar'); key(page, 'KeyX'); time.sleep(0.3)
     page.evaluate("G.scenes.push(G.scenes.make('status'))"); time.sleep(0.4); shot(page, 'life_status'); key(page, 'KeyX'); time.sleep(0.3)
-    # ── 7б. турнир (день 26) ──
-    page.evaluate("Object.assign(G.state.vars, { day: 26, min: 6 * 60 }); G.state.daily = {}"); close_dialogs(page)
-    page.evaluate("G.state.vars.min = 7 * 60 + 5"); time.sleep(0.6)
-    check(page.evaluate("G.state.flags.st_tourney") == 1, 'турнир начался (перенос в Академию: %s)' % W(page, "return s.map.name"))
-    for rnd in range(3):
-        for _ in range(30):
-            if top(page) == 'battle': break
-            key(page, 'KeyZ', wait=0.25)
-        if top(page) != 'battle': break
-        if rnd == 0: shot(page, 'life_tourney')
-        B(page, "s.debugWin(); return 1"); time.sleep(2.2); key(page, 'KeyZ'); time.sleep(0.6)
-    close_dialogs(page)
-    check(page.evaluate("G.state.vars.tourney") == 4, 'турнир: 3 победы → чемпион (%s), +300 рё' % page.evaluate("G.state.vars.tourney"))
-    # ── 8. экзамен ──
-    page.evaluate("Object.assign(G.state.vars, { day: 54, min: 6 * 60 }); G.state.daily = {}; G.state.flags.tech_bunshin = 1")
-    close_dialogs(page)
-    page.evaluate("G.state.vars.min = 7 * 60 + 5"); time.sleep(0.6)
-    check(page.evaluate("G.state.flags.st_exam") == 1, 'экзамен начался')
-    for i in range(3):
-        close_dialogs(page)
-        ok = finish_train(page, 1.0)
-    close_dialogs(page)
-    ex = page.evaluate("G.state.vars.exam")
-    check(ex is not None and ex > 0, 'экзамен оценён: %s баллов, сдан=%s' % (ex, page.evaluate("G.state.vars.exam_pass")))
-    # ── 9. ночь выпуска и концовка (2.0, data/first_promise.js) ──
-    # ночь наступает после расследования «Пропавшие лекарства»; дальше два боя: удержать проход у склада и Гэндо
-    page.evaluate("G.state.quests.promise_case = { st: 'done', step: 99, day: 40 }")
-    page.evaluate("G.state.vars.min = 20 * 60 + 5")
-    for _ in range(30):
-        if page.evaluate("G.state.flags.st_night") == 1: break
-        time.sleep(0.1)
-    check(page.evaluate("G.state.flags.st_night") == 1, 'ночь выпуска началась')
-    for stage, name in enumerate(['бой у склада: удержать проход', 'финальный бой с Гэндо']):
-        for _ in range(50):
-            if top(page) == 'battle': break
-            key(page, 'KeyZ', wait=0.25)
-        check(wait_top(page, 'battle', 5), name)
-        shot(page, 'life_final_%d' % stage)
-        B(page, "s.debugWin(); return 1"); time.sleep(2.2); key(page, 'KeyZ'); time.sleep(0.5)
-    for _ in range(40):
-        if top(page) == 'ending': break
-        key(page, 'KeyZ', wait=0.25)
-    time.sleep(1.0)
-    check(top(page) == 'ending', 'концовка')
-    for i in range(12):   # 2.0: 7 страниц титров («Первое обещание»), затем игра продолжается
-        if top(page) != 'ending': break
-        time.sleep(0.9); shot(page, 'life_end_%d' % i); key(page, 'KeyZ')
-    time.sleep(1.2)
-    check(top(page) == 'world', 'после титров — игра продолжается в мире (%s)' % top(page))
-    check(page.evaluate("(G.storage.load() || {flags:{}}).flags.game_clear") == 1, 'сохранение с флагом прохождения')
     b.close()
 report()

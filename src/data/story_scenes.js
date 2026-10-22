@@ -217,6 +217,7 @@ end
 // ───────── Сюжетные сцены по дням ─────────
 const _Hh = 60;
 G.STORY.push(
+  { id: 'roofs', day: 4, from: 14 * _Hh, to: 20 * _Hh, where: 'out', script: 'st_roofs', must: true },
   { id: 'tora', day: 6, from: 12 * _Hh, to: 19 * _Hh, where: 'out', script: 'cine_tora' },
   { id: 'konohamaru', day: 9, from: 13 * _Hh, to: 19 * _Hh, where: 'out', script: 'cine_konohamaru' },
   { id: 'iruka_story', day: 12, from: 15 * _Hh, to: 22 * _Hh, where: 'out', script: 'st_iruka_story' },
@@ -297,6 +298,19 @@ end
 === kakashi_talk
 kakashi[Какаши]: Я не опаздываю. Просто по дороге... случилась жизнь.
 kakashi[Какаши]: Имена на камне — те, ради кого мы живём. Помни это.
+end
+`);
+
+G.script.parse(`
+// Наруто открывает бег по крышам (флаг roofs)
+=== st_roofs
+naruto: Эй, {name}! Ты всё ещё ходишь по улицам, как обычный человек?!
+naruto: Настоящие шиноби бегают по крышам! Смотри: чакру в ступни — и прыг!
+: Наруто одним прыжком взлетает на крышу ближайшего дома.
+naruto: Подойди к стене любого дома и нажми A. Через проулки прыгаешь сам — просто беги к соседней крыше.
+naruto: А на краю — A, чтобы спрыгнуть. По крышам быстрее, и Скорость растёт!
+set flag.roofs = 1
+call friend naruto 1
 end
 `);
 

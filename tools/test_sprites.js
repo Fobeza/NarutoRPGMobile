@@ -51,7 +51,7 @@ const shots=process.env.SPRITE_SHOTS||path.join(__dirname,'shots','sprites');fs.
   });
   fs.writeFileSync(path.join(shots,'metrics.json'),JSON.stringify(result,null,2));
   assert.deepEqual(result.failures,[]);assert.equal(result.frames.length,result.characters*12);assert.equal(result.portraits,result.characters);
-  for(const id of ['hero','fugaku','yuta','gendo'])assert.ok(result.frames.some(f=>f.id===id),id+' отсутствует в проверке');
+  for(const id of ['hero','fugaku'])assert.ok(result.frames.some(f=>f.id===id),id+' отсутствует в проверке');
   console.log('✔ Все '+result.frames.length+' кадров и '+result.portraits+' портретов непустые; герой и Фугаку без чужих фрагментов, масштаб и земля верны');
   console.log('✔ Окна не выходят за непрозрачный контур; карнизы и объекты без окон не светятся');
   const atlas=await page.evaluate(()=>{

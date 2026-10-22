@@ -2,8 +2,7 @@
 G.scenes.register('calendar', () => {
   const F = G.font, P = G.PAL;
   const STORY_NAMES = { tora: 'Пропал кот Тора', konohamaru: 'Мелкий Коноханамару', iruka_story: 'Вечер с Ирукой', hinata_rain: 'Дождь и Хината', ino_sakura: 'Ино и Сакура',
-    sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', mizuki1: 'Подозрительный Мизуки', mizuki2: 'Мизуки и свиток',
-    kiba: 'Киба', roofs: 'Крыши с Наруто', prank: 'Шалость Наруто', lee: 'Рок Ли', festival: 'Фестиваль', night: 'Ночь экзамена' };
+    sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', roofs: 'Крыши с Наруто' };
   const WEATHER = { sun: 'ясно', cloud: 'облачно', rain: 'дождь' };
   let tab = 0, sel = G.state.vars.day, ci = 0, wk = true, scroll = 0;
   const ids = G.schedule.who();

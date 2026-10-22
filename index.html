@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '5e91ef18', date: '2026-10-22 15:36', debug: false };
+const BUILD = { release: '2.3', version: 'a2dbc2ae', date: '2026-10-22 15:55', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -7025,7 +7025,7 @@ G.friends = {
 
 
 // ===== systems/story.js =====
-// Этапы 7 и 9: Академия (уроки и оценки), сюжет 8 недель, турнир, экзамен, финал, случайные события,
+// Академия (уроки и оценки), побочные сцены по дням, случайные события,
 // доска поручений, календарь, секретные свитки, готовка и цветок дома.
 const _H = 60;
 const _dlg = (id, then) => { const w = G.scenes.stack.find((s) => s.name === 'world'); G.dialog.start(id, { bottom: 22, onEnd: () => { w && w.refreshNpcs(); then && then(); } }); };
@@ -7037,9 +7037,7 @@ const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
 G.calendar = {
   BDAY: { 9: 'kiba', 16: 'shino', 22: 'shikamaru', 23: 'sasuke', 27: 'hinata', 30: 'sakura', 34: 'iruka', 37: 'choji', 44: 'ino', 48: 'lee', 12: 'naruto' },
   EVENTS: {
-    2: 'Первый урок', 3: 'Киба ищет соперника', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 10: 'Наруто что-то задумал', 15: 'Урок: Хенге',
-    17: 'Урок гендзюцу', 18: 'Кто-то в зелёном...', 21: 'Фестиваль (вечер)', 26: 'ТУРНИР АКАДЕМИИ', 29: 'Урок: хождение по дереву',
-    38: 'Полевой выход', 43: 'Урок: Буншин', 47: 'Колокольчики', 54: 'ВЫПУСКНОЙ ЭКЗАМЕН',
+    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 15: 'Урок: Хенге', 17: 'Урок гендзюцу', 29: 'Урок: хождение по дереву', 43: 'Урок: Буншин',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
@@ -7056,7 +7054,7 @@ G.calendar = {
 // ───────────────────────── Академия ─────────────────────────
 G.academy = {
   SUBJ: { hist: 'История', throw: 'Метание', nin: 'Ниндзюцу', tai: 'Тайдзюцу', prac: 'Практика' },
-  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 54 && (d - 1) % 7 < 5 && d !== 26 && d !== 38; },
+  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 54 && (d - 1) % 7 < 5; },
   inClass() { const w = _world(); return w && w.map && w.map.name === 'Академия: класс'; },
   lessonNow() { const v = G.state.vars; return this.isSchoolDay() && v.min >= 7 * _H + 30 && v.min < 9 * _H + 30 && !G.state.daily.lesson; },
   grade(s) { const v = G.state.vars, n = v['gn_' + s] || 0; return n ? Math.round(v['gs_' + s] / n) : 0; },
@@ -7136,35 +7134,13 @@ G.academy = {
 
 // ───────────────────────── Сюжетные события ─────────────────────────
 // where: 'out' — на улице, 'any', 'class' — в классе; from/to — время; script — диалог, run — функция
-G.STORY = [
-  { id: 'kiba', day: 3, from: 13 * _H, to: 21 * _H, where: 'out', script: 'st_kiba' },
-  { id: 'roofs', day: 4, from: 14 * _H, to: 20 * _H, where: 'out', script: 'st_roofs', must: true },
-  { id: 'memory', day: 14, from: 17 * _H, to: 22 * _H, where: 'out', script: 'st_memory' },
-  { id: 'prank', day: 10, from: 17 * _H, to: 22 * _H, where: 'out', script: 'st_prank' },
-  { id: 'lee', day: 18, from: 15 * _H, to: 21 * _H, where: 'out', script: 'st_lee' },
-  { id: 'festival', day: 21, from: 18 * _H, to: 23 * _H, where: 'out', script: 'st_festival' },
-  { id: 'tourney', day: 26, from: 7 * _H, to: 20 * _H, where: 'any', script: 'st_tourney', must: true, place: 'academy' },
-  { id: 'mizuki1', day: 31, from: 20 * _H, to: 23 * _H, where: 'out', script: 'st_mizuki1' },
-  { id: 'mizuki2', day: 33, from: 13 * _H, to: 19 * _H, where: 'out', script: 'st_mizuki2' },
-  { id: 'field', day: 38, from: 7 * _H, to: 20 * _H, where: 'any', script: 'st_field', place: 'academy' },
-  { id: 'bells', day: 47, from: 13 * _H, to: 21 * _H, where: 'any', script: 'st_bells', place: 'academy' },
-  { id: 'exam', day: 54, from: 7 * _H, to: 20 * _H, where: 'any', script: 'st_exam', must: true, place: 'academy' },
-  { id: 'night', day: 54, from: 20 * _H, to: 30 * _H, where: 'any', script: 'st_night', after: 'exam', must: true, place: 'forest' },
-];
+G.STORY = [];
 G.story = {
   // Событие помечается «было» (st_<id>) в момент начала. Если вкладку Safari выгрузили посреди боя или экзамена,
   // в сохранении остаётся флаг без результата, и без этой починки игру нельзя пройти. Вызывается из G.game.fix().
   recover(st) {
     const f = st.flags || {}, v = st.vars || {}, d = st.daily || {};
     const fixes = [];
-    const undo = (flag, why) => { if (f[flag]) { delete f[flag]; fixes.push(why); } };
-    if (f.st_night && !f.mizuki_beaten) undo('st_night', 'ночь Мизуки');
-    if (f.st_exam && v.exam == null) undo('st_exam', 'экзамен');
-    if (f.st_tourney && v.tourney == null) undo('st_tourney', 'турнир');
-    if (f.st_field && !f.field_done && v.day <= 38) undo('st_field', 'полевой выход');
-    if (f.st_bells && !f.bells_done && v.day <= 47) undo('st_bells', 'колокольчики');
-    // экзамен оценён, но диалог с результатом не дошёл до «выпускник»
-    if (v.exam != null && v.exam_pass && !f.graduated) { f.graduated = 1; if (v.exam >= 80) f.best = 1; fixes.push('результат экзамена'); }
     // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
     if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
     if (d.lessonRun) { delete d.lesson; delete d.lessonRun; fixes.push('урок'); }
@@ -7192,8 +7168,6 @@ G.story = {
       return true;
     }
     const m = world.map;
-    // Мизуки побеждён, а титры не показаны (закрыли игру посреди эпилога) — показываем их
-    if (f.st_night && f.mizuki_beaten && !f.game_clear) { G.scenes.fadeTo(G.scenes.make('ending')); return true; }
     // урок
     if (G.academy.lessonNow() && G.academy.inClass()) { G.academy.start(world); return true; }
     if (v.makeup) { (st.makeupQ = st.makeupQ || []).push(v.makeup); v.makeup = 0; }   // старые сохранения
@@ -7220,68 +7194,7 @@ G.story = {
       if (G.cine && G.cine.defs[e.script]) G.cine.play(e.script, world, () => world.refreshNpcs && world.refreshNpcs()); else _dlg(e.script);
       return true;
     }
-    // пропущенный обязательный сюжет (если проспал): турнир/экзамен — переносится на следующее утро
     return false;
-  },
-  // ── турнир академии: 3 боя на вылет ──
-  tournament() {
-    const v = G.state.vars;
-    // третий элемент — id друга для бонуса (у турнирного Кибы боевой id другой: kiba_t)
-    const rounds = [['choji', 'Первый круг: Чоджи Акимичи!', 'choji'], ['kiba_t', 'Полуфинал: Киба Инузука!', 'kiba'], ['sasuke', 'ФИНАЛ: Саске Учиха!', 'sasuke']];
-    let r = 0;
-    const next = () => {
-      if (r >= rounds.length) { v.tourney = 4; return end(); }
-      const [en, title, fid] = rounds[r];
-      _say([{ who: 'iruka', text: title }], () => {
-        G.flow.battle({ enemy: en, mode: 'ringout', terrain: 'ring', story: r === 2, storyLine: 'Я не проиграю! Не здесь!', onEnd: (res) => {
-          G.state.vars.hp = 100;
-          if (res.win) { r++; G.friends.add(fid, 1); next(); } else { v.tourney = r + 1; end(); }
-        } }, _world());
-      });
-    };
-    const end = () => {
-      const place = v.tourney;
-      const prize = { 4: [300, 'Чемпион Академии', 5], 3: [150, 'Финалист', 3], 2: [80, 'Полуфиналист', 0], 1: [30, 'Участник турнира', 0] }[place];
-      G.game.earn(prize[0]); v.pouch_plus = (v.pouch_plus || 0) + prize[2]; v.title_t = place;
-      if (place === 4) { v.rival = (v.rival || 0) + 2; v.rep = (v.rep || 0) + 5; }
-      G.game.advanceTo('16:00');
-      _dlg(place === 4 ? 'st_tourney_win' : 'st_tourney_lose', () => {
-        _say([`Приз: ${prize[0]} рё${prize[2] ? ', подсумок +' + prize[2] + ' мест' : ''}. Титул: «${prize[1]}».`]);
-      });
-      G.game.note(`Турнир Академии: ${prize[1]}`);
-    };
-    next();
-  },
-  // ── выпускной экзамен ──
-  exam() {
-    const v = G.state.vars, res = {};
-    const step3 = () => {
-      // Буншин
-      if (!G.combat.knows('bunshin')) { res.bun = 0; return fin(); }
-      G.scenes.push(G.scenes.make('train', 'seals', { title: 'Экзамен: Буншин' }, (s) => { res.bun = Math.min(1, s * 0.7 + G.combat.mastery('bunshin') * 0.12 + G.hero.stat('nin') * 0.02); fin(); }));
-    };
-    const step2 = () => _say([{ who: 'iruka', text: 'Вторая часть: метание. Восемь бросков!' }], () => G.scenes.push(G.scenes.make('train', 'throw', { title: 'Экзамен: метание' }, (s) => { res.thr = Math.min(1, s * 0.85 + G.hero.stat('tai') * 0.015); _say([{ who: 'iruka', text: 'И последнее: создай трёх клонов. Техника Буншин!' }], step3); })));
-    const fin = () => {
-      const g = G.academy.avg() / 100, att = G.academy.attendance() / 100, ir = G.friends.level('iruka') / 5;
-      const total = Math.round(res.wr * 22 + res.thr * 18 + res.bun * 25 + g * 20 + att * 10 + ir * 5);
-      v.exam = total; v.exam_pass = total >= 55 && res.bun > 0.3 ? 1 : 0;
-      G.game.advanceTo('15:00');
-      G.game.note(`Экзамен: ${total} баллов — ${v.exam_pass ? 'сдан' : 'не сдан'}`);
-      _say([
-        { text: `Письменный тест: ${Math.round(res.wr * 100)}%. Метание: ${Math.round(res.thr * 100)}%. Буншин: ${Math.round(res.bun * 100)}%.` },
-        { text: `Оценки за 8 недель: ${G.academy.avg()}. Посещаемость: ${G.academy.attendance()}%. Итог: ${total} из 100.` },
-      ], () => _dlg(v.exam_pass ? (total >= 80 ? 'st_exam_best' : 'st_exam_pass') : 'st_exam_fail'));
-    };
-    G.scenes.push(G.scenes.make('train', 'quiz', { title: 'Экзамен: письменный тест', n: 5 }, (s) => { res.wr = Math.min(1, s * 0.8 + G.hero.stat('know') * 0.02); step2(); }));
-  },
-  // ── финальный бой и концовка ──
-  finale() {
-    const go = () => G.flow.battle({ enemy: 'mizuki', mode: 'ko', terrain: 'night', story: true, allies: ['iruka', 'naruto'], storyLine: 'Я защищу их! Это и есть Воля Огня!', will: 30 + (G.state.flags.told_iruka ? 10 : 0), onEnd: (res) => {
-      G.state.vars.hp = Math.max(G.state.vars.hp, 40);
-      if (res.win) { G.state.flags.mizuki_beaten = 1; _dlg('st_mizuki_win', () => G.scenes.fadeTo(G.scenes.make('ending'))); }
-      else _dlg('st_mizuki_lose', go);   // повтор с чекпоинта
-    } }, _world());
-    go();
   },
 };
 
@@ -7342,9 +7255,6 @@ Object.assign(G.script.actions, {
   xp: (a) => G.train.addXp(a[0], Number(a[1]) || 5),
   hurt: (a) => { G.state.vars.hp = Math.max(5, (G.state.vars.hp || 100) - (Number(a[0]) || 10)); },
   board: () => { G.game.pending = { type: 'board' }; },
-  tourney: () => { G.game.pending = { type: 'tourney' }; },
-  exam: () => { G.game.pending = { type: 'exam' }; },
-  finale: () => { G.game.pending = { type: 'finale' }; },
   calendar: () => { G.game.pending = { type: 'calendar' }; },
   cook: () => { G.game.pending = { type: 'cook' }; },
   flower: () => { G.game.pending = { type: 'flower' }; },
@@ -7353,9 +7263,6 @@ Object.assign(G.script.actions, {
 });
 Object.assign(G.flow, {
   board: (a, w) => G.life_events.board(w),
-  tourney: () => G.story.tournament(),
-  exam: () => G.story.exam(),
-  finale: () => G.story.finale(),
   calendar: (a, w) => {
     const ev = G.calendar.upcoming(9);
     const opts = ev.map((e) => ({ label: `День ${e.d} (${G.game.dayName(e.d)})`, sub: '', desc: e.text }));
@@ -7427,6 +7334,9 @@ G.events.on('time', () => {
   const v = G.state.vars;
   if (v.min % 60 === 0 && w.map && w.map.outdoor && G.scenes.top() === w) G.life_events.roll(w);
 });
+
+// успешные тренировки запоминаются: на них реагируют наставники и соседи (world/street_events.js)
+G.events.on('training', (id, score, partner) => { const L = G.state.learning || (G.state.learning = {}); L['tr_' + id] = 1; if (partner) L.partner = 1; });
 
 
 // ===== systems/lessons.js =====
@@ -7945,7 +7855,6 @@ G.sim = {
     { id: 'thief_d30', day: 30, enemy: 'thief', mode: 'ko', terrain: 'night', label: 'Ночной вор (д.30)' },
     { id: 'senior_d38', day: 38, enemy: 'senior', mode: 'scroll', terrain: 'forest', turns: 12, label: 'Полевой выход: свиток (д.38)' },
     { id: 'iruka_d47', day: 47, enemy: 'iruka', mode: 'bells', terrain: 'yard', turns: 10, label: 'Колокольчики Ируки (д.47)' },
-    { id: 'mizuki_d54', day: 54, enemy: 'gendo', mode: 'ko', terrain: 'night', story: true, allies: ['iruka', 'naruto'], will: 30, label: 'ФИНАЛ: Гэндо (д.54)' },
   ],
   run(scId, build, skill, n = 20, statsDay = null) {
     const sc = this.SCEN.find((x) => x.id === scId), B = this.BUILDS[build];
@@ -8485,16 +8394,11 @@ end
 end
 
 === home_bed
-if flag.mizuki_beaten -> normal
-if flag.st_exam -> tense
 # normal
 if var.min >= 1080 -> late
 ? Твоя постель. Лечь спать и пропустить остаток дня? Наступит следующее утро, игра сохранится.
 * Лечь спать -> yes
 * Ещё не время -> no
-# tense
-: Ты ложишься... и тут же садишься снова. Тревожное предчувствие не даёт уснуть: этот день ещё не закончился.
-: Нужно дождаться вечера.
 end
 # late
 ? Лечь спать? Игра сохранится.
@@ -8993,357 +8897,7 @@ end
 iruka: Практика. Каждый работает над своим. Я посмотрю на каждого.
 end
 
-// ═════════════ Неделя 1: Киба ═════════════
-=== st_kiba
-kiba: Эй, новенький! Стой!
-kiba: Говорят, ты у Ируки любимчик. Мы с Акамару проверим, чего ты стоишь! — Гав!
-? Принять вызов?
-* Давай! -> fight
-* Не сейчас -> later
-# later
-kiba: Трус! Ну и ладно... Акамару, пошли.
-call friend kiba -1
-end
-# fight
-kiba: Ха! Вот это я понимаю! Спарринг до первой серьёзной ошибки!
-call battle kiba spar yard st_kiba_win st_kiba_lose
-end
-
-=== st_kiba_win
-kiba: Ч-чёрт... Ты быстрее, чем выглядишь!
-kiba: Ладно, признаю. Ты не слабак. Акамару, он наш! — Гав-гав!
-set flag.met_kiba = 1
-call friend kiba 3
-call rep 1
-end
-=== st_kiba_lose
-kiba: Ха! Сила стаи! Но ты держался неплохо. Для новенького.
-kiba: Приходи ещё — мы всегда у квартала Инузука.
-set flag.met_kiba = 1
-call friend kiba 2
-end
-
-// ═════════════ Неделя 1: крыши ═════════════
-=== st_roofs
-naruto: Эй, {name}! Ты всё ещё ходишь по улицам, как обычный человек?!
-naruto: Настоящие шиноби бегают по крышам! Смотри: чакру в ступни — и прыг!
-: Наруто одним прыжком взлетает на крышу ближайшего дома.
-naruto: Подойди к стене любого дома и нажми A. Через проулки прыгаешь сам — просто беги к соседней крыше!
-naruto: А на краю — A, чтобы спрыгнуть. По крышам быстрее, и Скорость растёт! Только Ирука-сенсей пусть не видит...
-set flag.roofs = 1
-call friend naruto 1
-end
-
-// ═════════════ Неделя 2: проделка Наруто ═════════════
-=== st_prank
-naruto: Пс-с! {name}! Иди сюда!
-naruto: У меня ведро краски и гениальный план. Скала Хокаге! Ночью! Им понравится! Ну... может, не всем.
-? Пойти с Наруто?
-* Конечно, я с тобой! -> join
-* Это плохая идея, Наруто -> no
-# no
-naruto: Эх... Скучный ты. Ладно, я сам!
-: Утром все лица Хокаге украшены усами. Ирука гоняется за Наруто по всей деревне.
-call friend naruto -1
-call friend iruka 1
-end
-# join
-: Через час лица великих Хокаге украшены усами, румянцем и надписью «Наруто был здесь».
-naruto: Ха-ха-ха! Шедевр!
-iruka: НАРУТО!!! И... {name}?!
-naruto: Бежим!!!
-call battle iruka survive street st_prank_ok st_prank_caught 4
-end
-
-=== st_prank_ok
-naruto: Ушли! Ты видел его лицо?! Ха-ха!
-naruto: Ты лучший напарник для проделок, даттебайо!
-call friend naruto 4
-call rep -2
-call friend iruka -1
-end
-=== st_prank_caught
-iruka: Попались! Оба! Всю скалу — отмыть! До блеска!
-: Два часа вы с Наруто отмываете Скалу Хокаге. Наруто всё время смеётся.
-naruto: А всё равно было весело!
-call wait 120
-call friend naruto 3
-call rep -1
-end
-
-// ═════════════ Неделя 3: Рок Ли и Гай ═════════════
-=== st_lee
-lee: Эй, ты! Ты тренируешься совсем один? Это же прекрасно!
-lee: Я — Рок Ли! Прекрасный зелёный зверь Конохи... младший! Не умею ни ниндзюцу, ни гендзюцу.
-lee: Но я докажу, что упорным трудом можно стать великим шиноби! Сразимся?
-? Спарринг с Рок Ли?
-* С радостью! -> fight
-* Не сегодня -> no
-# no
-lee: Тогда в другой раз! Ищи меня на полигоне — я там всегда!
-set flag.met_lee = 1
-end
-# fight
-call battle lee spar field st_lee_after st_lee_after
-end
-
-=== st_lee_after
-guy: Великолепно!!! Какая сила юности!!! — из ниоткуда появляется человек в зелёном трико.
-lee: Гай-сенсей!!!
-guy: {name}, верно? Я — Майто Гай! Твои движения хороши, но связкам не хватает огня!
-guy: Смотри! Подсечка, Апперкот — и добивающий удар в прыжке! ВОЗДУШНОЕ КОМБО!
-call combo air
-guy: Тренируйся! И приходи на полигон — мы с Ли там каждый вечер!
-lee: Ты — мой соперник! Я не проиграю тебе в следующий раз!
-set flag.met_lee = 1
-call friend lee 3
-end
-
-// ═════════════ Неделя 3: фестиваль ═════════════
-=== st_festival
-: Вечер. Над деревней висят бумажные фонарики. Летний фестиваль!
-: Пахнет такояки и сладкой ватой. Где-то бьют барабаны.
-? С кем смотреть фейерверк?
-* С Наруто -> n
-* С Хинатой -> h
-* С Шикамару и Чоджи -> s
-* С Сакурой -> k
-* Одному на крыше -> alone
-# n
-naruto: Йо-хо! Смотри, смотри! Красный — как моё будущее плащ Хокаге!
-call friend naruto 3
--> fin
-# h
-hinata: К-красиво... Спасибо, что позвал меня...
-call friend hinata 3
--> fin
-# s
-choji: Хрум! Фейерверк под чипсы — лучшее сочетание!
-shikamaru: Хлопотно... но, признаю, красиво.
-call friend shikamaru 2
-call friend choji 2
--> fin
-# k
-sakura: Ой! Ну... ладно. Только никому не говори, что я ждала Саске-куна.
-call friend sakura 3
--> fin
-# alone
-: Ты сидишь на крыше и смотришь, как небо расцветает огнями. Где-то там, на мемориальном камне, — имена тех, кто не вернулся. Возможно, и твоих близких. Ты не помнишь.
-call mood 15
--> fin
-# fin
-: Небо гаснет. Ты чувствуешь: эта деревня становится твоим домом.
-call mood 10
-end
-
-// ═════════════ Неделя 4: турнир ═════════════
-=== st_tourney
-iruka: Внимание! Сегодня — Турнир Академии! Бои на арене до вылета за край или до 30% сил.
-iruka: Победителю — 300 рё и расширенный подсумок от Хокаге-сама!
-naruto: Я выиграю! Даттебайо!
-sasuke: ...
-iruka: {name}, ты выступаешь в первом круге. Удачи!
-call tourney
-end
-
-=== st_tourney_win
-: Арена взрывается криками. Ты — чемпион Академии!
-sasuke: ...Ты меня победил. Это не повторится.
-naruto: УРА!!! Мой друг — чемпион! Это почти как я!
-iruka: Поздравляю, {name}. Хокаге-сама лично прислал награду.
-call friend iruka 2
-call friend naruto 2
-end
-=== st_tourney_lose
-iruka: Достойное выступление, {name}. Проиграть сильному — не позор.
-naruto: Ты был крут! В следующий раз ты им всем покажешь!
-call friend naruto 1
-end
-
-// ═════════════ Неделя 5: Мизуки ═════════════
-=== st_mizuki1
-: Поздний вечер. Ты проходишь мимо Резиденции и слышишь приглушённые голоса за углом.
-mizuki: ...Запретный свиток хранится на верхнем этаже. Охрана меняется в полночь.
-: Второй голос неразборчив. Шорох — и никого нет. Только Мизуки-сенсей, как ни в чём не бывало, уходит прочь.
-? Что делать?
-* Рассказать Ируке-сенсею -> tell
-* Промолчать — может, показалось -> quiet
-# tell
-iruka: Мизуки? Да нет, что ты. Мы с ним с детства дружим. Наверное, обсуждал дежурство.
-iruka: Но... спасибо, что сказал. Я буду внимательнее.
-set flag.told_iruka = 1
-call friend iruka 1
-end
-# quiet
-: Ты решаешь никому не говорить. Наверное, показалось...
-end
-
-=== st_mizuki2
-mizuki: {name}! Как успехи? Ирука-сенсей так строг с вами, правда?
-mizuki: Знаешь... если экзамен не задастся — приходи ко мне. Есть особый способ сдать. Секретный.
-mizuki: Только никому, договорились? — Мизуки улыбается. Улыбка не доходит до глаз.
-set flag.mizuki_offer = 1
-end
-
-=== mizuki_talk
-mizuki: Привет! Я Мизуки, помощник Ируки. Если что-то непонятно — обращайся!
-if flag.st_mizuki2 -> late
-end
-# late
-mizuki: Не забудь о моём предложении... Особый способ сдать экзамен.
-end
-
-// ═════════════ Неделя 6: полевой выход ═════════════
-=== st_field
-iruka: Сегодня — полевой выход! В лесу за полигоном спрятаны учебные свитки. Найдите свой.
-iruka: Будьте внимательны: в лесу могут быть ловушки. И... не только они.
-: Ты углубляешься в лес. Вот он — свиток на пне! Но из кустов выходят трое ребят постарше.
-villager_m[Хулиган]: Ого, ученичок. Свиток-то наш теперь. Отойди, а то хуже будет.
-? Что делать?
-* Отобрать свиток силой -> fight
-* Попробовать договориться -> talk
-# talk
-if skill.charm -> charm
-villager_m[Хулиган]: Договориться? Ха! Мечтай!
--> fight
-# charm
-villager_m[Хулиган]: ...Ну ладно. Ты вроде нормальный. Держи свой свиток.
--> win
-# fight
-call battle senior scroll forest st_field_win st_field_lose 12
-end
-# win
-: Свиток снова твой. Хулиганы растворяются в кустах — обошлось без драки.
-iruka: {name}! Ты нашёл свиток — и даже ни с кем не подрался? Вот это выдержка.
-iruka: Держи учебник по ловушкам: пригодится на экзамене.
-call give book_traps
-call note Свиток найден: договорился без боя
-call rep 2
-call friend iruka 2
-set flag.field_done = 1
-end
-
-=== st_field_win
-iruka: {name}! Ты нашёл свиток — и справился с этими хулиганами? Отлично!
-iruka: Держи: это учебник по ловушкам. Взрывные печати теперь продаются тебе в оружейной.
-call give book_traps
-call give tag_explosive 2
-call give wire 2
-call rep 3
-call friend iruka 2
-set flag.field_done = 1
-end
-=== st_field_lose
-iruka: Хулиганы сбежали со свитком, когда увидели меня. Ты цел?
-iruka: Ничего. Ты вёл себя храбро. Возьми — пригодится.
-call give wire 2
-call friend iruka 1
-set flag.field_done = 1
-end
-
-// ═════════════ Неделя 7: колокольчики ═════════════
-=== st_bells
-iruka: {name}, есть минутка? Перед экзаменом я хочу проверить тебя лично.
-iruka: Видишь колокольчик на моём поясе? Сорви его за 10 ходов. Можно всё: техники, ловушки, хитрости.
-iruka: Подсказка: просто так его не взять. Сначала оглуши, ослепи, свяжи — или обмани.
-call battle iruka bells yard st_bells_win st_bells_lose 10
-end
-=== st_bells_win
-iruka: Дзинь! Ха-ха, молодец! Ты нашёл способ.
-iruka: Знаешь, {name}... я не знаю, кем ты был раньше. Но тем, кем ты стал, — горжусь.
-call friend iruka 4
-call xp nin 10
-set flag.bells_done = 1
-end
-=== st_bells_lose
-iruka: Время вышло. Но ты был близок! Главное — ты не сдавался.
-call friend iruka 2
-set flag.bells_done = 1
-end
-
-// ═════════════ Неделя 8: экзамен и ночь Мизуки ═════════════
-=== st_exam
-iruka: Сегодня — выпускной экзамен! Три части: письменный тест, метание и Буншин.
-naruto: Буншин... опять Буншин... — Наруто бледный.
-iruka: Начинаем. {name}, удачи!
-call exam
-end
-
-=== st_exam_best
-iruka: {name}... Лучший результат выпуска! Поздравляю!
-: Ирука вручает тебе протектор с символом Листа. Металл холодный и тяжёлый. Настоящий.
-set flag.graduated = 1
-set flag.best = 1
-end
-=== st_exam_pass
-iruka: Поздравляю, {name}. Ты сдал. Ты — генин Конохи!
-: Ирука вручает тебе протектор. Ты не можешь сдержать улыбку.
-set flag.graduated = 1
-end
-=== st_exam_fail
-iruka: {name}... мне жаль. Ты не прошёл. Буншин — или баллов не хватило.
-: Ты выходишь во двор. На качелях сидит Наруто — он тоже провалился.
-if flag.mizuki_offer -> offer
-mizuki: Не расстраивайтесь, ребята. Всякое бывает...
-end
-# offer
-mizuki: Не расстраивайтесь, ребята. Помните, я говорил о секретном способе?..
-end
-
-// Обрывок памяти (день 14): герой всё ещё не знает, кто он, но прошлое иногда прорывается
-=== st_memory
-: Закатное солнце бьёт в глаза — и мир вдруг плывёт.
-: Запах дыма. Чей-то голос: «Беги и не оглядывайся!» Тёплая рука выпускает твою ладонь...
-: Видение исчезает так же внезапно, как пришло. Сердце колотится, ладони мокрые.
-? Что ты сделаешь?
-* Попытаться вспомнить ещё -> try
-* Отвлечься и пойти дальше -> walk
-# try
-: Ты зажмуриваешься и пытаешься ухватить хоть что-то... Тщетно. Только имя и этот голос.
-call mood -5
--> fin
-# walk
-: Ты глубоко вдыхаешь вечерний воздух. Коноха шумит, живёт — и тебе становится спокойнее.
-call mood 5
-# fin
-: Кто тебя звал? Кто выпустил руку? Ответа пока нет. Но ты чувствуешь: память вернётся, если не сдаваться.
-end
-
-=== st_night
-: Ночь. Вся деревня поднята по тревоге: украден Запретный свиток!
-: Ты бежишь через лес на шум — и видишь: Ирука-сенсей ранен, Наруто сжимает огромный свиток.
-mizuki: А, {name}! Как вовремя. Наруто, хочешь знать, почему все тебя ненавидят?
-mizuki: В тебе — Девятихвостый лис! Тот самый, что убил родителей Ируки!
-naruto: Ч-что?..
-iruka: Не слушай его, Наруто! {name} — беги!
-if flag.told_iruka -> warned
--> ask
-# warned
-iruka: {name}... ты же предупреждал меня про Мизуки. Прости, что не поверил сразу!
-# ask
-? Что ты сделаешь?
-* Встать между Мизуки и Наруто -> stand
-# stand
-: Ты делаешь шаг вперёд и закрываешь собой Наруто.
-naruto: {name}?..
-: Ты понимаешь: неважно, кто в ком. Наруто — твой друг. Это и есть Воля Огня.
-mizuki: Глупец! Тогда умрёте оба!
-call finale
-end
-
-=== st_mizuki_win
-: Мизуки падает без сознания. Тишина. Только сверчки и тяжёлое дыхание.
-naruto: Ты... ты защитил меня. Даже узнав, что во мне...
-naruto: Спасибо. Я никогда не забуду, даттебайо!
-iruka: Вы оба... настоящие шиноби Листа.
-set flag.mizuki_beaten = 1
-end
-=== st_mizuki_lose
-iruka: {name}! Вставай! Мы не можем отдать свиток!
-: Ты поднимаешься. Ещё раз.
-end
-
-// ═════════════ Сцены дружбы ═════════════
+// ═════════════ Награды дружбы ═════════════
 === fr_naruto_3
 naruto: Слушай, {name}... я придумал технику! Секретную! Только тебе покажу!
 naruto: Секси-дзюцу! — Пуф! — ...Ты не можешь развидеть это.
@@ -9781,6 +9335,7 @@ end
 // ───────── Сюжетные сцены по дням ─────────
 const _Hh = 60;
 G.STORY.push(
+  { id: 'roofs', day: 4, from: 14 * _Hh, to: 20 * _Hh, where: 'out', script: 'st_roofs', must: true },
   { id: 'tora', day: 6, from: 12 * _Hh, to: 19 * _Hh, where: 'out', script: 'cine_tora' },
   { id: 'konohamaru', day: 9, from: 13 * _Hh, to: 19 * _Hh, where: 'out', script: 'cine_konohamaru' },
   { id: 'iruka_story', day: 12, from: 15 * _Hh, to: 22 * _Hh, where: 'out', script: 'st_iruka_story' },
@@ -9861,6 +9416,19 @@ end
 === kakashi_talk
 kakashi[Какаши]: Я не опаздываю. Просто по дороге... случилась жизнь.
 kakashi[Какаши]: Имена на камне — те, ради кого мы живём. Помни это.
+end
+`);
+
+G.script.parse(`
+// Наруто открывает бег по крышам (флаг roofs)
+=== st_roofs
+naruto: Эй, {name}! Ты всё ещё ходишь по улицам, как обычный человек?!
+naruto: Настоящие шиноби бегают по крышам! Смотри: чакру в ступни — и прыг!
+: Наруто одним прыжком взлетает на крышу ближайшего дома.
+naruto: Подойди к стене любого дома и нажми A. Через проулки прыгаешь сам — просто беги к соседней крыше.
+naruto: А на краю — A, чтобы спрыгнуть. По крышам быстрее, и Скорость растёт!
+set flag.roofs = 1
+call friend naruto 1
 end
 `);
 
@@ -12456,8 +12024,7 @@ G.world = {
     add(...an('kiba', [14, 104]), { id: 'kiba', dir: 'right', talk: 'kiba_talk', ai: 'wander', wanderR: 24, sched: [[14 * H, 19 * H, 'wd'], [8 * H, 18 * H, 'we']] });
     add(...an('shino', [100, 118]), { id: 'shino', dir: 'down', talk: 'shino_talk', sched: [[14 * H, 18 * H, 'wd'], [10 * H, 17 * H, 'we']], dryOnly: true });
     add(...an('lee', [38, 115]), { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 18 || G.state.flags.met_lee });
-    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => G.state.flags.met_lee });
-    add(...an('mizuki', [58, 27]), { id: 'mizuki', dir: 'down', talk: 'mizuki_talk', sched: [[13 * H, 17 * H, 'wd']], cond: () => day() >= 8 && day() < 54 });
+    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => day() >= 18 || G.state.flags.met_lee });
     // ночной торговец в переулке (каждую третью ночь)
     add(...an('thief', [104, 68]), { id: 'thief', name: 'Ночной торговец', dir: 'down', shop: 'night', reach: 20, sched: [[21 * H, 26 * H]], cond: () => day() % 3 === 0 });
     // объекты тренировок на полигонах
@@ -13105,7 +12672,6 @@ G.SCHED = {
   lee: { since: 18, rows: [
     ['wd', 15, 21, 'Тренируется до изнеможения', '@'], ['we', 6, 10, 'Бегает кругами по полигону', 'training_ground', 4, 8], ['we', 10, 21, 'Тренируется до изнеможения', '@'] ] },
   guy: { since: 18, rows: [['all', 16, 20, 'Тренирует Ли', '@']] },
-  mizuki: { since: 8, rows: [['wd', 13, 17, 'Бродит у Академии', '@']] },
   kakashi: { since: 20, rows: [
     ['all', 6, 11, 'У мемориального камня', 'memorial', 3, 4], ['all', 11, 15, 'Читает в книжной лавке', 'books', 2, 5] ] },
   anko: { since: 30, rows: [
@@ -17320,8 +16886,7 @@ G.scenes.register('journal', () => {
 G.scenes.register('calendar', () => {
   const F = G.font, P = G.PAL;
   const STORY_NAMES = { tora: 'Пропал кот Тора', konohamaru: 'Мелкий Коноханамару', iruka_story: 'Вечер с Ирукой', hinata_rain: 'Дождь и Хината', ino_sakura: 'Ино и Сакура',
-    sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', mizuki1: 'Подозрительный Мизуки', mizuki2: 'Мизуки и свиток',
-    kiba: 'Киба', roofs: 'Крыши с Наруто', prank: 'Шалость Наруто', lee: 'Рок Ли', festival: 'Фестиваль', night: 'Ночь экзамена' };
+    sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', roofs: 'Крыши с Наруто' };
   const WEATHER = { sun: 'ясно', cloud: 'облачно', rain: 'дождь' };
   let tab = 0, sel = G.state.vars.day, ci = 0, wk = true, scroll = 0;
   const ids = G.schedule.who();
@@ -20068,76 +19633,6 @@ G.scenes.register('storage', () => {
 });
 
 
-// ===== scenes/ending.js =====
-// Концовка: результат экзамена, стиль ниндзя, команда (эпилог), статистика, титры.
-G.scenes.register('ending', () => {
-  const W = G.screen.W, F = G.font, P = G.PAL;
-  const st = G.state, v = st.vars, f = st.flags, name = st.hero.name;
-  const fmt = (t) => G.util.fmt(t, { name });
-  const s = st.hero.stats || {};
-  const cats = [['tai', 'Мастер тайдзюцу'], ['nin', 'Ниндзюцу-специалист'], ['gen', 'Иллюзионист'], ['know', 'Тактик']].map(([k, n]) => [s[k] || 3, n]).sort((a, b) => b[0] - a[0]);
-  const style = cats[0][0] - cats[3][0] <= 1 ? 'Универсал' : cats[0][1];
-  const team = G.friends.team();
-  const kind = f.best ? 'best' : f.graduated ? 'grad' : 'redeem';
-  const TEAMS = {
-    7: ['КОМАНДА 7', 'Наруто, Саске, Сакура — и ты.', 'Сенсей опаздывает на три часа. Наконец в дверь заглядывает седой джонин с книжкой: «Хм. Моё первое впечатление... вы мне не нравитесь». Это Какаши Хатаке.', 'Наруто: «Четвёртый — это ты?! Даттебайо! Мы непобедимы!»'],
-    8: ['КОМАНДА 8', 'Хината, Киба, Шино — и ты.', 'Куренай Юхи улыбается: «Команда следопытов. Ваша сила — в том, чтобы видеть то, чего не видят другие».', 'Киба: «Ха! Стая стала больше!» — Акамару радостно лает. Хината тихо улыбается.'],
-    10: ['КОМАНДА 10', 'Шикамару, Чоджи, Ино — и ты.', 'Асума Сарутоби закуривает и смеётся: «Ино-Шика-Чо и четвёртый. Будет интересно».', 'Шикамару: «Четверо — значит, мне можно работать на четверть меньше. Хлопотно... но я рад».'],
-  };
-  const T = TEAMS[team];
-  const top = Object.keys(G.FRIENDS).sort((a, b) => G.friends.pts(b) - G.friends.pts(a)).slice(0, 3).map((id) => (G.chars.nameOf(id) + ' ' + '♥'.repeat(G.friends.level(id))).trim());
-  const pages = [
-    { title: { best: 'ЛУЧШИЙ ВЫПУСКНИК', grad: 'ВЫПУСКНИК', redeem: 'ИСКУПЛЕНИЕ' }[kind], col: P.yellow, lines: {
-      best: ['Утром тебя вызывают в Резиденцию.', 'Третий Хокаге лично повязывает тебе протектор.', fmt('«Ты спас Юту и рабочих, {name}. Ты научился беречь тех, кто рядом. Добро пожаловать в ряды шиноби Конохи».')],
-      grad: ['Утром Ирука-сенсей находит тебя у качелей.', 'На твоём лбу — протектор Листа. Ты — генин.', '«Прошлой ночью ты доказал, что достоин его вдвойне», — говорит Ирука.'],
-      redeem: ['Экзамен провален... но прошлой ночью ты спас Юту и людей на складе.', 'Ирука снимает свой протектор и повязывает его тебе.', '«Ты сдал главный экзамен, {name}. Поздравляю с выпуском!»'].map(fmt),
-    }[kind] },
-    { title: 'СТИЛЬ НИНДЗЯ', col: P.orange, lines: [`«${style}»`, `Тайдзюцу ${s.tai} · Ниндзюцу ${s.nin} · Гендзюцу ${s.gen}`, `Чакра ${s.chakra} · Контроль ${s.ctrl} · Скорость ${s.spd}`, `Выносливость ${s.end} · Знания ${s.know}`, v.title_t === 4 ? 'Чемпион турнира Академии' : v.title_t ? 'Участник турнира Академии' : '', (v.rival || 0) >= 3 ? 'Саске признал тебя соперником' : '', f.told_iruka ? 'Ирука услышал твоё предупреждение о Мизуки' : ''] },
-    { title: 'РАСПРЕДЕЛЕНИЕ ПО КОМАНДАМ', col: '#8ae070', lines: ['Через неделю всех выпускников собирают в классе.', 'Ирука зачитывает списки...', `${T[0]}: ${T[1]}`, '«Четвёртый член команды — по особому решению Хокаге».'] },
-    { title: T[0], col: '#8ae070', lines: [T[2], T[3]] },
-    { title: 'ТВОИ 8 НЕДЕЛЬ', col: P.light, lines: [`Дней прожито: ${v.day} · Боёв: ${v.battles || 0}, побед: ${v.wins || 0}`, `Тренировок: ${v.trainings || 0} · Поручений: ${v.jobs || 0}`, `Секретных свитков: ${v.scrolls || 0}/20 · Репутация: ${v.rep || 0}`, `Экзамен: ${v.exam || 0} баллов · Посещаемость: ${G.academy.attendance()}%`, 'Лучшие друзья: ' + top.join(', ')] },
-    { title: 'НОВАЯ ГЛАВА', col: P.orange, lines: ['Ты окончил Академию.', 'После этой страницы ты вернёшься домой и сможешь продолжить игру.', '', 'Фан-игра по мотивам «Наруто» Масаси Кисимото.'] },
-  ];
-  if(f.promise_final)pages.splice(4,0,{title:'ПЕРВОЕ ОБЕЩАНИЕ',col:P.orange,lines:['Юта признался в своём участии и помогает вернуть украденное. Днём он работает на складе, вечером учится вести свою службу доставки.',v.promise_trust>=2?'Он сам приходит к Ируке с каждой накладной. Твоя поддержка помогла ему перестать прятаться.':'Ваше доверие восстанавливается постепенно. На этот раз Юта отвечает за свои решения.','Наруто ждёт у качелей с двумя порциями рамена. «Я же говорил: мы справимся!»']});
-  let i = 0, t = 0;
-  f.game_clear = 1; f['end_' + kind] = 1; f['team_' + team] = 1;
-  // «Продолжить» после титров возвращает в свободное утро дома, а не в ночной лес после финала
-  if (v.day < 55) v.day = 55;
-  v.min = G.hero.wakeMin(); v.hp = 100; v.chakra = 100; v.energy = 100; v.food = Math.max(v.food, 60);
-  st.daily = {}; st.log = [];
-  try { st.pos = { map: G.world.heroHome().interior.id, x: 3 * 16 + 8, y: 4 * 16 + 4, dir: 'down' }; } catch (_) {}
-  G.storage.save(G.state);
-  return {
-    name: 'ending',
-    update(dt) {
-      t += dt; const I = G.input;
-      if (t > 0.8 && (I.pressed('a') || I.tapNow)) { G.audio.sfx.confirm(); i++; t = 0; if (i >= pages.length) G.scenes.fadeTo(G.scenes.make('world',st.pos)); }
-    },
-    draw(ctx) {
-      const H = G.screen.H, p = pages[Math.min(i, pages.length - 1)], U = G.ui, C = U.C, S = F.small;
-      ctx.fillStyle = '#0e0c16'; ctx.fillRect(0, 0, W, H);
-      for (let k = 0; k < 50; k++) { ctx.fillStyle = (Math.sin(t * 2 + k) > 0.5) ? '#fff' : '#5a5a80'; ctx.fillRect((k * 53) % W, (k * 29) % Math.round(H * 0.4), 1, 1); }
-      // протектор
-      ctx.fillStyle = '#2a3a6a'; ctx.fillRect(W / 2 - 40, 14, 80, 18); ctx.fillStyle = '#c8ccd8'; ctx.fillRect(W / 2 - 22, 16, 44, 14);
-      ctx.strokeStyle = '#5a5a6a'; ctx.beginPath(); ctx.arc(W / 2, 23, 4, 0.5, 5.8); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W / 2 + 3, 21); ctx.lineTo(W / 2 + 10, 18); ctx.stroke();
-      if (kind === 'redeem' && i === 0) { ctx.fillStyle = '#a07050'; ctx.fillRect(W / 2 - 40, 32, 80, 1); }
-      const a = Math.min(1, t * 2); ctx.globalAlpha = a;
-      // страница-свиток: красная лента с названием, текст чернилами
-      const lines = [];
-      for (const l of p.lines) for (const w of S.wrap(l, W - 54)) lines.push(w);
-      const ph = Math.min(H - 110, 30 + lines.length * 13 + 8);
-      U.panel(ctx, 8, 56, W - 16, ph, 'scroll');
-      U.title(ctx, p.title, W / 2, 44, 0);
-      let y = 74;
-      for (const w of lines) { S.draw(ctx, w, W / 2, y, { align: 'center', color: C.ink }); y += 13; }
-      ctx.globalAlpha = 1;
-      S.draw(ctx, `${i + 1}/${pages.length}`, W - 8, H - 14, { align: 'right', color: '#8a7a60' });
-      if (t > 0.8) S.draw(ctx, 'Коснись экрана', W / 2, H - 24, { align: 'center', color: Math.sin(t * 5) > 0 ? '#d8c8a0' : '#6a5a46' });
-    },
-  };
-});
-
-
 // ===== scenes/menu.js =====
 // Меню паузы (кнопка МЕНЮ): задания, календарь, статус, сумка, персонажи, настройки (scenes/settings.js), сохранение.
 // Окно — свиток «Свитки и дерево» (G.ui.menu).
@@ -20157,7 +19652,6 @@ G.scenes.register('menu', () => {
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
-    { label: 'Обучение', act: () => { G.scenes.pop(); G.learning.menu(); } },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
@@ -20652,394 +20146,6 @@ G.lighting = (() => {
       }
     };
     return b;
-  });
-})();
-
-
-// ===== systems/curriculum.js =====
-// Постепенные задания. Результат проверяется по действиям и сохранённым достижениям.
-G.learning = (() => {
-  const V=()=>G.state.vars,F=()=>G.state.flags,L=()=>G.state.learning||(G.state.learning={});
-  const world=()=>G.scenes.stack.find(x=>x.name==='world');
-  const done=id=>G.quests.done(id),used=id=>(V()['use_'+id]||0)>0;
-  const entries=[];
-  function task(id,day,title,place,text,test,extra={}){
-    const e={id:'learn_'+id,day,title,place,text,test,...extra};entries.push(e);
-    const target=place==='lake'?{tile:[138,104],label:'Берег озера'}:{building:place==='mission_board'?'hokage_tower':place};
-    G.QUESTS[e.id]={cat:extra.optional?'errand':'academy',title,desc:text,steps:[{id:'practice',text,target}],reward:{text:'Упражнение освоено',vars:{rep:1}}};
-  }
-  task('route',1,'Новый адрес','academy','Найди Академию по карте и поговори с Ирукой.',()=>!!F().enrolled);
-  task('rest',1,'Рамен после неприятностей','hero_home','Поужинай и переночуй дома. Во сне игра сохраняется.',()=>V().day>=2);
-  task('fight',2,'Покажи, что умеешь','academy','Пройди первый учебный бой. В плане можно выбрать до двух действий.',()=>V().battles>0);
-  task('kunai',3,'Три куная к уроку','weapons','Купи недостающие кунаи в оружейной. Проверь сумку и её вместимость.',()=>G.game.count('kunai')>=3);
-  task('job',4,'Первые заработанные рё','mission_board','Выполни поручение с доски или доставку Юты и получи оплату.',()=>V().jobs>0||done('promise_parcels'));
-  task('train',5,'Твой полигон','training_ground','Подойди к мишеням на полигоне и выполни тренировку метания.',()=>!!L().tr_throw,{train:'throw'});
-  task('friend',6,'После уроков','academy','Потренируйся вместе с другом через меню общения.',()=>!!L().partner);
-  task('kawa',8,'Полено вместо тебя','academy','Изучи Каварими у Ируки и выполни подмену в бою.',()=>used('kawarimi'),{tech:'kawarimi',mg:'seals'});
-  task('roofs',10,'Короткая дорога','academy','После урока Наруто поднимись на крышу у стены и пересеки проулок.',()=>!!L().roof);
-  task('henge',15,'Камень, который дышит','academy','Разучи Хенге и примени превращение в учебном бою.',()=>used('henge'),{tech:'henge',mg:'seals'});
-  task('read',17,'Посмотри, прежде чем бить','academy','Примени Анализ в бою и разучи Ложный страх у Ируки.',()=>!!L().analyze&&F().tech_fear,{tech:'fear',mg:'meditate'});
-  task('combo',18,'Удары в связке','training_ground','Занятие с Ли открывает воздушное комбо. Примени связку в спарринге.',()=>!!L().combo,{combo:'air',mg:'log'});
-  task('tools',23,'Не только кунай','weapons','Используй дымовую бомбу или вспышку в учебном бою.',()=>!!L().tool);
-  task('tourney',26,'Первый турнир','academy','Участвуй в турнире Академии. Важен опыт, а не занятое место.',()=>V().title_t>0);
-  task('tree',29,'Чакра под ногами','training_ground','Пройди урок Ируки, затем потренируй хождение по дереву на полигоне №3.',()=>!!L().tr_tree,{train:'tree',grant:'tech_tree',mg:'tree'});
-  task('water',31,'На другой берег','lake','Изучи удержание на воде у Ируки, затем выполни тренировку у озера.',()=>!!L().tr_water,{train:'water',grant:'tech_water',mg:'tree'});
-  task('trap',33,'Ловушка для торопливого','training_ground','Получи учебник у Ируки, затем поставь ловушку в спарринге.',()=>!!L().trap,{supply:{book_traps:1,wire:2}});
-  task('bunshin',43,'Пуф - и нас трое','academy','Изучи Буншин, затем создай клонов в учебном бою.',()=>used('bunshin'),{tech:'bunshin',mg:'seals'});
-  task('tactics',46,'Один приём дважды','academy','Примени Финт и Анализ: проверь привычки противника и смени тактику.',()=>!!L().feint&&!!L().analyze);
-  task('will',48,'Держись, я рядом','academy','В учебном бою накопи Волю Огня и используй её.',()=>!!L().will);
-  task('prepare',50,'План спасения','hero_home','Подготовь дымовую бомбу, бинт и хотя бы один кунай.',()=>['smoke_bomb','bandage','kunai'].every(id=>G.game.count(id)>0));
-  task('exam',54,'Готов к выпуску','academy','Пройди выпускной экзамен: тест, метание и Буншин.',()=>V().exam!=null);
-  task('promise',54,'Первое обещание','mission_board','Спаси Юту и рабочих. Останови Гэндо у склада.',()=>!!F().mizuki_beaten);
-  task('fish',9,'Удочка для терпеливого','souvenir','Купи удочку, подойди к воде и вытащи первый улов.',()=>V().fished>0,{optional:true});
-  task('herbs',11,'Аптечка своими руками','hero_home','Собери травы и приготовь лекарство за домашним столом.',()=>!!L().crafted,{optional:true});
-  task('gift',12,'Подарок со смыслом','flowers','Выбери подарок другу в меню общения. Любимые подарки и дни рождения помогают сблизиться.',()=>!!L().gift,{optional:true});
-  task('books',14,'Ответ в книге','library','Выполни занятие в библиотеке или прочитай книгу дома.',()=>!!L().tr_library||!!L().tr_book,{optional:true,train:'library'});
-  task('secret',16,'Секрет под камнем','waterfall','Осматривай предметы вне дороги и найди один секретный свиток.',()=>V().scrolls>0,{optional:true});
-  task('storage',3,'Собирайся налегке','hero_home','Положи один лишний предмет в домашний сундук. Его можно забрать перед вылазкой.',()=>!!L().storage,{optional:true});
-  task('heal',5,'Сначала перевязка','hospital','После спарринга получи бинт в аптеке и примени его в сумке, когда нужно лечение.',()=>!!L().heal,{optional:true});
-  task('cook',7,'Обед на завтра','hero_home','Купи продукты на рынке и приготовь еду на домашней кухне.',()=>!!L().cook,{optional:true});
-  task('sell',10,'Лишний улов','market','Продай одну рыбу на рынке или траву в аптеке. Остальное можно оставить для готовки.',()=>!!L().sold,{optional:true});
-  task('flower',6,'Цветок на подоконнике','hero_home','Полей цветок у себя дома. Возвращайся, чтобы увидеть рост.',()=>V().flower_n>0,{optional:true});
-  const practices=[['dummy',3,'Манекен и стойка','training_ground'],['log',6,'Ритм ударов','training_ground'],['meditate',7,'Тихая минута','hero_home'],['seals',8,'Ловкие пальцы','hero_home'],['run',11,'Быстрые ноги','academy'],['shogi',13,'Ход Шикамару','academy'],['book',15,'Чтение дома','hero_home'],['falls',20,'Голос водопада','waterfall'],['stealth',24,'Тихий лес','clan_nara'],['cook',9,'Помощник Аяме','ichiraku']];
-  for(const [id,day,title,place]of practices)task('practice_'+id,day,title,place,G.TRAININGS[id].name+'. Занятие: '+G.TRAININGS[id].minutes+' мин, энергия '+G.TRAININGS[id].energy+'.',()=>!!L()['tr_'+id],{optional:true,train:id});
-  function practiceTarget(e){
-    if(!e.train||!['run','falls','stealth','tree','water','throw','dummy','log'].includes(e.train))return null;
-    const o=G.world.konoha().objects.find(o=>o.talk==='train_'+e.train);return o?{tile:[Math.floor(o.x/16),Math.floor(o.y/16)],label:G.TRAININGS[e.train].name}:null;
-  }
-  function save(){const w=world();if(w)w.savePos();if(G.state.started)G.storage.save(G.state);}
-  function poll(w){
-    if(!G.state.started||!F().enrolled||!G.hero.ready())return;
-    for(const e of entries){if(G.quests.active(e.id)&&e.test()){G.quests.step(e.id,'practice');save();}}
-    const active=entries.some(e=>!e.optional&&G.quests.active(e.id));
-    if(!active&&L().offeredDay!==V().day){const e=entries.find(e=>!e.optional&&e.day<=V().day&&!G.quests.state(e.id));if(e){L().offeredDay=V().day;G.quests.start(e.id);}}
-    if(w?.player?.roof)L().roof=1;
-  }
-  function go(e){if(!G.quests.state(e.id))G.quests.start(e.id);G.quests.track(e.id);const target=practiceTarget(e)||G.QUESTS[e.id].steps[0].target,b=G.world.konoha().buildings.find(b=>b.tplId===(e.place==='mission_board'?'hokage_tower':e.place));if(target.tile)G.state.marker={x:target.tile[0],y:target.tile[1],label:e.title};else if(b)G.state.marker={x:b.tx+Math.floor(b.tw/2),y:b.ty+b.th,label:e.title};save();world()?.showToast('Маршрут отмечен: '+e.title);}
-  function near(w,tpl){if(tpl==='lake')return w?.map?.outdoor&&Math.hypot(w.player.x-138*16,w.player.y-104*16)<110;return w?.map?.building?.tplId===tpl||w?.map?.outdoor&&w.map.buildings?.some(b=>b.tplId===tpl&&Math.hypot(w.player.x-(b.x+b.tw*8),w.player.y-(b.y+b.th*16))<100);}
-  function lesson(e){
-    const w=world();if(!w)return;
-    if(V().day<e.day)return G.dialog.say([{text:'Этот урок откроется с дня '+e.day+'. Пока выполняй текущие задания.'}]);
-    if(e.grant==='tech_water'&&!F().tech_tree)return G.dialog.say([{text:'Сначала пройди урок хождения по дереву. Он учит удерживать чакру под ногами.'}]);
-    const teacher=e.combo?'training_ground':'academy';if(!near(w,teacher))return G.dialog.say([{text:'Сначала найди учителя: '+(teacher==='academy'?'Ирука в Академии':'Ли на полигоне')+'. Кнопка пути поможет.'}]);
-    if(V().min<13*60||V().min>=19*60)return G.dialog.say([{text:'Занятия с наставником: с 13:00 до 19:00. Вернись после уроков.'}]);
-    if(V().energy<8)return G.dialog.say([{text:'Отдохни или поешь. Для занятия нужно 8 энергии.'}]);
-    if(e.supply&&!L()['sup_'+e.id]){for(const [id,n]of Object.entries(e.supply))if(G.game.count(id)<n)G.game.give(id,n-G.game.count(id));L()['sup_'+e.id]=1;save();return G.dialog.say([{text:'Учебник и припасы получены. Поставь ловушку в безопасном спарринге.'}]);}
-    G.scenes.push(G.scenes.make('train',e.mg||'seals',{title:e.title,n:3},score=>{
-      G.game.advance(25);V().energy=Math.max(0,V().energy-6);
-      if(score>=.3){if(e.tech)F()['tech_'+e.tech]=1;if(e.grant)F()[e.grant]=1;if(e.combo)F()['combo_'+e.combo]=1;G.train.addXp('ctrl',3);save();G.dialog.say([{text:'Приём разучен. '+e.text+' Объяснение остаётся в разделе Обучение.'}]);}
-      else G.dialog.say([{text:'Попробуем ещё раз. Дыши ровнее и следи за подсказкой. Занятие можно повторить.'}]);
-    }));
-  }
-  function show(e){
-    const target=practiceTarget(e);if(target)G.QUESTS[e.id].steps[0].target=target;
-    const w=world(),learned=e.tech?F()['tech_'+e.tech]:e.grant?F()[e.grant]:e.combo?F()['combo_'+e.combo]:false;
-    const rows=[{label:'Показать путь',act:()=>go(e)},{label:'Объяснить ещё раз',act:()=>G.dialog.say([{text:e.text},{text:'Урок открывает приём. Тренировка повышает характеристики. Применение повышает мастерство техники.'}])}];
-    if(e.tech||e.grant||e.combo||e.supply)rows.push({label:learned?'Повторить занятие':'Занятие с наставником',act:()=>lesson(e)});
-    if(e.train){const at=target?w?.map?.outdoor&&Math.hypot(w.player.x-target.tile[0]*16,w.player.y-target.tile[1]*16)<65:near(w,e.place);rows.push({label:'Начать тренировку',off:!at?'Сначала приди к месту тренировки':null,act:()=>G.train.start(e.train,w)});}
-    if((e.tech&&learned)||e.combo||e.supply)rows.push({label:'Учебный спарринг',off:!near(w,'academy')&&!near(w,'training_ground')?'Приди к Ируке или на полигон':null,act:()=>{
-      if(V().energy<8)return G.dialog.say([{text:'Сначала восстанови силы.'}]);
-      if(e.tech==='kawarimi')G.flow.battle({enemy:'dummy2',mode:'spar',will:0},w);
-      else G.flow.battle({enemy:'dummy2',mode:'spar',will:e.id==='learn_will'?100:0},w);
-    }});
-    G.scenes.push(G.scenes.make('pick',{title:e.title,text:e.text,options:rows},i=>{if(i>=0&&!rows[i].off)rows[i].act();}));
-  }
-  function menu(){
-    const rows=[['Основные задания',e=>!e.optional],['Техники и приёмы',e=>e.tech||e.grant||e.combo||e.supply],['Места тренировок',e=>!!e.train],['Свободные занятия',e=>!!e.optional]];
-    G.scenes.push(G.scenes.make('pick',{title:'ОБУЧЕНИЕ',text:'Новые занятия открываются постепенно. Любой урок можно повторить.',options:rows.map(([label])=>({label}))},i=>{
-      if(i<0)return;const es=entries.filter(e=>rows[i][1](e)&&e.day<=V().day);
-      const opts=es.map(e=>({label:(done(e.id)?'✔ ':'')+e.title,desc:e.text,sub:e.tech?'мастерство '+G.combat.mastery(e.tech)+'/3':''}));
-      G.scenes.push(G.scenes.make('pick',{title:rows[i][0],options:opts.length?opts:[{label:'Новые уроки появятся позже'}]},n=>{if(n>=0&&es[n])show(es[n]);}));
-    }));
-  }
-  G.events.on('training',(id,score,partner)=>{L()['tr_'+id]=1;if(partner)L().partner=1;});
-  G.events.on('tactic',(g,label)=>{if(label==='Анализ')L().analyze=1;if(label==='Финт')L().feint=1;if(g==='tai'&&Object.values(G.COMBOS).some(c=>c.name===label))L().combo=1;if(g==='tool')L().tool=1;if(/^Ловушка/.test(label))L().trap=1;if(label==='Воля Огня!')L().will=1;});
-  const gift=G.friends.gift;G.friends.gift=function(...a){const r=gift.apply(this,a);L().gift=1;return r;};
-  G.events.on('crafted',()=>{L().crafted=1;});
-  G.events.on('storage',()=>{L().storage=1;});G.events.on('sold',()=>{L().sold=1;});G.events.on('cooked',()=>{L().cook=1;});G.events.on('item-used',id=>{if(['bandage','ointment'].includes(id))L().heal=1;});
-  const makeWorld=G.scenes.registry.world;G.scenes.register('world',pos=>{const w=makeWorld(pos),update=w.update;w.update=function(dt){update.call(w,dt);if(G.scenes.top()===w&&!G.scenes.busy)poll(w);};return w;});
-  return {entries,menu,poll,lesson,show,go};
-})();
-
-
-// ===== data/first_promise.js =====
-// «Первое обещание»: новая история собственного героя. Старые ключи финала сохраняют совместимость сейвов.
-(() => {
-  const clone=(id,from,name)=>{G.chars.DEFS[id]={...G.chars.DEFS[from],name};G.chars.STY[id]={...G.chars.STY[from]};if(G.CHAR_ART[from])G.CHAR_ART[id]=G.CHAR_ART[from];};
-  clone('yuta','courier','Юта');clone('gendo','merchant','Гэндо');
-  G.ENEMIES.gendo={...G.ENEMIES.mizuki,name:'Гэндо',spr:'gendo',grow:false,lines:{start:'Ты полез не в своё дело, ученик.',low:'Груз всё равно будет моим!',lose:'Как вы успели?..'}};
-  G.ITEMS.promise_parcel={name:'Посылка Гэндо',cat:'misc',quest:true,price:0,desc:'Три адреса: рынок, цветочная лавка и больница. На обёртке служебная печать.'};
-  G.QUESTS.day1.desc='Ты приехал в Коноху и поступаешь в выпускной класс. До экзамена восемь недель. Познакомься с Ирукой и одноклассниками.';
-  G.QUESTS.promise_parcels={cat:'story',title:'Маленькие поручения',desc:'Юта предложил подработку у торговца Гэндо. Доставь три посылки и вернись за оплатой.',offer:{npc:'yuta',script:'promise_offer',when:()=>G.state.vars.day>=4&&!!G.state.flags.enrolled},steps:[
-    {id:'market',text:'Отнести посылку на рынок',target:{building:'market'},reach:true,need:{promise_parcel:1},consume:true},
-    {id:'flowers',text:'Отнести посылку в цветочную лавку',target:{building:'flowers'},reach:true,need:{promise_parcel:1},consume:true},
-    {id:'hospital',text:'Отнести посылку в больницу',target:{building:'hospital'},reach:true,need:{promise_parcel:1},consume:true},
-    {id:'pay',text:'Вернуться к Юте за оплатой',target:{npc:'yuta'},script:'promise_paid'},
-  ],reward:{money:100,text:'100 рё и знакомство с Ютой'}};
-  G.QUESTS.promise_case={cat:'story',title:'Печать на посылке',desc:'Из склада исчезли лекарства. Юта был последним курьером. Найди друга и разберись в случившемся.',steps:[
-    {id:'yuta',text:'Найти Юту у рынка',target:{npc:'yuta'},script:'promise_confession'},
-    {id:'iruka',text:'Рассказать Ируке о посылках',target:{npc:'iruka',in:'academy'},script:'promise_report'},
-    {id:'forest',text:'Дождаться разведки с Ирукой (с дня 38)',target:{building:'academy'}},
-    {id:'back',text:'Обсудить найденное с Ютой',target:{npc:'yuta'},script:'promise_reconcile'},
-  ],reward:{vars:{rep:3},text:'Маршрут Гэндо раскрыт'}};
-  G.QUESTS.promise_rescue={cat:'story',title:'Первое обещание',desc:'Юта не пришёл на встречу. Гэндо вывозит груз со склада. Ирука задержит сообщников, а ты выведешь людей.',steps:[{id:'people',text:'Удержать проход и вывести рабочих',target:{building:'hokage_tower'}},{id:'gendo',text:'Остановить Гэндо у склада',target:{building:'hokage_tower'}}],reward:{text:'Юта и рабочие спасены'}};
-  G.STORY=G.STORY.filter(e=>!['memory','mizuki1','mizuki2'].includes(e.id));
-  for(const e of G.STORY){if(e.id==='night'){e.script='promise_night';e.place='market';e.when=()=>G.quests.done('promise_case');}if(e.id==='field'){e.script='promise_field';e.must=true;e.after='promise_missing';e.when=()=>G.quests.curStep('promise_case')?.id==='forest';}}
-  G.STORY.push({id:'promise_meet',day:4,from:13*60,to:21*60,where:'out',must:true,script:'promise_meet'},
-    {id:'promise_mark',day:31,from:13*60,to:21*60,where:'out',must:true,script:'promise_mark'},
-    {id:'promise_missing',day:33,from:13*60,to:21*60,where:'out',must:true,script:'promise_missing'});
-  Object.assign(G.calendar.EVENTS,{4:'Знакомство с Ютой',31:'Знакомая печать',33:'Пропавшие лекарства',38:'Лесная разведка',54:'Экзамен и первое обещание'});
-  G.script.parse(`
-=== prologue_voices
-: Колёса телеги гремят по дороге. За поворотом появляются ворота Конохи.
-: Новый класс. Новый дом. До выпускного экзамена всего восемь недель.
-: После долгой дороги тебя проводят в больницу: Сидзуне хочет убедиться, что ты можешь завтра заниматься.
-: За дверью слышен голос: «Хокаге-сама, новенький уже здесь».
-end
-=== hosp_wake
-shizune: Добро пожаловать в Коноху. С дороги нужно отдохнуть и поесть.
-hokage: Я Сарутоби Хирузен. А как зовут нашего нового ученика?
-call askname
-end
-=== hosp_after_name
-call met iruka
-hokage: {name}, мы получили бумаги о твоём переводе. В выпускном классе Академии есть место.
-iruka: Я Умино Ирука. За восемь недель разберёмся, что ты умеешь, и подготовимся к экзамену.
-? Готов начать?
-* Постараюсь изо всех сил! -> go
-* Я немного волнуюсь -> worry
-# worry
-iruka: Это нормально. Приходи за помощью, когда она нужна.
-# go
-hokage: Для тебя приготовили небольшой дом и деньги на первое время. Осваивайся.
-set flag.hosp_done = 1
-call begin
-call quest start day1
-: Двигайся джойстиком или стрелками. A - разговор и осмотр. Карта, Цель и журнал помогут найти Академию.
-end
-=== home_first
-: Небольшая комната, татами, мешок риса и чистая постель. Здесь начинается твоя жизнь в Конохе.
-end
-=== iruka_class
-if flag.enrolled -> enrolled
-iruka: Вот и ты, {name}. Познакомимся после вступительного упражнения.
-call charcreate
-end
-# enrolled
-if quest.homework.show -> homework
-iruka: Утром приходи на урок. После 13:00 можно повторить занятие. В меню есть раздел Обучение: учителя, места и путь к ним.
-end
-# homework
-call run iruka_homework
-end
-=== iruka_after_test
-set flag.enrolled = 1
-iruka: Хорошо. Теперь ты ученик моего класса. Учебный день начинается утром, а после занятий остаётся время для практики.
-iruka: Найди Наруто у качелей. Кажется, он снова кого-то ищет для своих затей.
-call step day1 iruka
-call quest start homework
-end
-=== day2_morning
-: Первое утро в Конохе. Из окна слышны шаги учеников.
-iruka: Приходи в Академию до 9:30. После уроков загляни на полигон. Раздел Обучение подскажет следующую задачу.
-end
-=== st_exam_fail
-iruka: {name}, сегодня баллов не хватило. Мы разберём ошибки и позанимаемся ещё.
-: У качелей сидит Наруто. Он тоже не сдал Буншин.
-naruto: Слышишь? Мы всё равно справимся. Обещание действует.
-end
-=== st_bells_win
-iruka: Дзинь! Молодец. Ты нашёл подходящий момент.
-iruka: Помню твоё первое занятие. Ты многому научился, {name}. Горжусь тобой.
-call friend iruka 4
-call xp nin 10
-set flag.bells_done = 1
-end
-=== promise_meet
-: На повороте Наруто пытается поймать рыжую кошку. Ты отскакиваешь - и задеваешь тележку с овощами.
-naruto: Ой. Мы ведь это быстро соберём, правда?
-yuta: Если поможете, я даже не скажу торговке, кто перевернул её морковь.
-: Пока вы собираете овощи, курьер представляется: Юта. Он знает все адреса Конохи и мечтает открыть службу доставки.
-naruto: Слышишь, {name}? Мы оба станем генинами. И никто не останется один у этих качелей. Обещаешь?
-? Что ответишь?
-* Обещаю. Справимся вместе -> yes
-* Только сначала поймай свою кошку -> joke
-# joke
-naruto: Она ещё получит своё! А обещание я всё равно запомнил.
--> finish
-# yes
-naruto: Вот! Я знал, что ты свой.
-# finish
-call friend naruto 2
-yuta: Ищи меня у рынка после уроков. Есть работа у торговца Гэндо. Оплата честная, а путь я покажу.
-end
-=== promise_yuta
-if quest.promise_case.yuta -> confess
-if flag.q_promise_parcels -> later
-yuta: Я разношу посылки по деревне. Хочешь подработать? У меня как раз три адреса.
-call run promise_offer
-end
-# confess
-call run promise_confession
-end
-# later
-if flag.promise_confessed -> honest
-yuta: Когда открою свою службу, тебе всегда найдётся работа. Как дела в Академии?
-end
-# honest
-yuta: Я расскажу Ируке всё. Только... спасибо, что пришёл за мной.
-end
-=== promise_offer
-yuta: Гэндо просит отнести посылки на рынок, в цветочную лавку и в больницу. Ничего сложного.
-? Возьмёшься?
-* Да, покажи адреса -> yes
-* Позже -> later
-# yes
-call give promise_parcel 3
-call quest start promise_parcels
-yuta: Адреса записаны в журнале. Вернёшься - получишь сто рё. Бумажные печати не срывай: Гэндо говорит, это защита от воров.
-end
-# later
-yuta: Я буду у рынка.
-end
-=== promise_paid
-yuta: Все три? Быстро! Вот твои сто рё.
-call step promise_parcels pay
-: Юта аккуратно складывает оставшиеся накладные. На каждой - такой же знак, как на посылках.
-end
-=== promise_gendo
-gendo: Делу нужны быстрые ноги. Юта расскажет, куда нести посылки.
-end
-=== promise_mark
-: На занятии по печатям ты замечаешь знакомый знак на рисунке охранного барьера.
-iruka: Служебные метки помогают отличать разрешённый груз. Их выдачу строго учитывают.
-: Такой знак стоял на посылках Гэндо. Странно: зачем он нужен обычной доставке цветов?
-set flag.promise_suspect = 1
-end
-=== promise_missing
-: У рынка спорят торговцы. Из склада исчезли лекарства для больницы.
-shizune: Последним груз забирал молодой курьер. Юта. Его сегодня никто не видел.
-naruto: Мы его найдём. Но сначала выслушаем, ладно?
-call quest start promise_case
-end
-=== promise_confession
-: Юта прячется за ящиками у рынка. Увидев тебя, он перестаёт искать выход.
-yuta: Я знал, что некоторые грузы чужие. Гэндо говорил: залежавшийся товар богатых торговцев. Никто не пострадает.
-yuta: Я хотел помочь семье. Думал, ещё пара доставок - и всё. А теперь в больнице ждут лекарства...
-? Что ты сделаешь?
-* Пойдём к Ируке. Ты расскажешь всё сам -> honest
-* Я помогу, но сначала вернём лекарства -> help
-* Ты должен отвечать за это -> stern
-# honest
-set var.promise_trust += 2
-yuta: Вместе? Хорошо. Пойдём.
--> end
-# help
-set var.promise_trust += 1
-yuta: Я знаю лесной маршрут. Только без учителя туда нельзя.
--> end
-# stern
-yuta: Знаю. Я не стану убегать.
-# end
-set flag.promise_confessed = 1
-call step promise_case yuta
-end
-=== promise_report
-iruka: Спасибо, что пришли. Юта, ты ответишь за свою часть. Сейчас важно вернуть лекарства и остановить Гэндо.
-iruka: На полевом выходе проверим лесную тропу. Задача учеников - наблюдать и сообщать. Самостоятельной погони не будет.
-set flag.st_field = 0
-call step promise_case iruka
-end
-=== promise_field
-iruka: Сегодня лесная разведка. Изучи следы повозки, держись маршрута и возвращайся с донесением.
-: За поворотом дозорный загораживает тропу. За его спиной - ящики с больничной печатью.
-? Как поступить?
-* Отвлечь его и взять накладную -> quiet
-* Удержать его в учебной схватке -> fight
-# quiet
-if skill.charm -> peace
-iruka: Я отвлеку дозорного. {name}, осмотри накладную у колеса.
--> evidence
-# peace
-: Ты показываешь учебный пропуск и просишь сверить накладную. Дозорный колеблется достаточно долго.
--> evidence
-# fight
-call battle senior scroll forest promise_field_win promise_field_lose 12
-end
-# evidence
-call run promise_field_win
-end
-=== promise_field_win
-: В накладной указаны служебные метки, которые вы разносили по Конохе. Они позволяли грузам обходить проверку.
-iruka: Этого достаточно. Патруль проверит склад. Ты справился с разведкой.
-call give book_traps
-set flag.field_done = 1
-set flag.promise_evidence = 1
-call step promise_case forest
-end
-=== promise_field_lose
-iruka: Отходим. Пока дозорный смотрел на тебя, я увидел печати на ящиках. Ты цел?
-set flag.field_done = 1
-set flag.promise_evidence = 1
-call step promise_case forest
-end
-=== promise_reconcile
-yuta: Последнюю отправку Гэндо готовит на ночь выпуска. Я покажу патрулю нужный склад.
-call step promise_case back
-end
-=== promise_night
-: Вечером после экзамена Юта не приходит на встречу. С рынка доносятся крики: склад закрыт, внутри остались люди.
-iruka: Гэндо начал вывозить груз раньше. Юта попытался помешать и оказался внутри.
-naruto: Мы обещали друг друга не бросать. Помнишь?
-iruka: Я задержу сообщников у дороги. Вы прикроете выход и выведете рабочих. Действуйте по плану.
-call quest start promise_rescue
-call promiseFinale
-end
-=== promise_saved
-: Последний рабочий выходит во двор. Юта держит дверь, пока ты отходишь от прохода.
-yuta: Все вышли! Теперь и ты!
-gendo: Груз останется со мной. Убирайтесь, ученики!
-end
-=== promise_won
-: Гэндо больше не может сопротивляться. Со двора входит Ирука с патрулём.
-yuta: Я расскажу всё. И отработаю каждый потерянный ящик. Спасибо, что вы за мной пришли.
-naruto: Ты только на встречу больше не опаздывай. Нам ещё рамен есть!
-set flag.promise_final = 1
-set flag.mizuki_beaten = 1
-call step promise_rescue gendo
-end
-`);
-  function save(){const w=G.scenes.stack.find(s=>s.name==='world');if(w)w.savePos();G.storage.save(G.state);}
-  G.script.actions.promiseFinale=()=>{G.game.pending={type:'promiseFinale'};};
-  // Переход к другому диалогу выполняется после закрытия текущего окна.
-  G.script.actions.run=a=>{G.game.pending={type:'dialogScript',id:a[0]};};
-  G.flow.dialogScript=(a,w)=>w.talk(a.id);
-  G.flow.promiseFinale=(a,w)=>{
-    const boss=()=>{G.state.vars.hp=Math.max(80,G.state.vars.hp);G.state.vars.chakra=Math.max(80,G.state.vars.chakra);G.flow.battle({enemy:'gendo',mode:'ko',terrain:'night',story:true,allies:['iruka','naruto'],will:30,onEnd:r=>{
-      G.state.vars.hp=Math.max(45,G.state.vars.hp);G.state.vars.chakra=Math.max(40,G.state.vars.chakra);
-      if(r.win){G.state.flags.promise_final=1;G.state.flags.mizuki_beaten=1;G.quests.step('promise_rescue','gendo');save();G.dialog.start('promise_won',{onEnd:()=>G.scenes.fadeTo(G.scenes.make('ending'))});}
-      else G.dialog.say([{who:'naruto',text:'Поднимайся! Юта и рабочие уже снаружи. Мы поможем!'}],{onEnd:boss});
-    }},w);};
-    if(G.state.flags.promise_people)return boss();
-    const hold=()=>G.flow.battle({enemy:'thief',mode:'survive',terrain:'street',turns:6,story:true,allies:['naruto'],onEnd:r=>{
-      G.state.vars.hp=Math.max(60,G.state.vars.hp);G.state.vars.chakra=Math.max(50,G.state.vars.chakra);
-      if(r.win){G.state.flags.promise_people=1;G.quests.step('promise_rescue','people');save();G.dialog.start('promise_saved',{onEnd:boss});}
-      else G.dialog.say([{text:'Ирука прикрывает тебя. Перегруппируйся и попробуй удержать проход ещё раз.'}],{onEnd:hold});
-    }},w);hold();
-  };
-  const make=G.scenes.registry.world;
-  G.scenes.register('world',pos=>{
-    const w=make(pos),set=w.setMap;
-    w.setMap=function(p){
-      const m=G.world.get(p.map);
-      if(m.outdoor&&m.id==='konoha')for(const [id,talk,tpl,offset]of [['yuta','promise_yuta','market',3],['gendo','promise_gendo','weapons',4]]){
-        if(m.npcs.some(n=>n.id===id))continue;
-        const b=m.buildings.find(b=>b.tplId===tpl);if(!b)continue;
-        const a=G.world.outsideOf(b),pt=G.world.freeTile(m,Math.floor(a.x/16)+offset,Math.floor(a.y/16),true);if(!pt)continue;
-        m.npcs.push(Object.assign(G.actors.make(id,pt[0]*16+8,pt[1]*16+12),{name:G.chars.nameOf(id),talk,keep:()=>true}));
-      }
-      return set.call(w,p);
-    };return w;
   });
 })();
 

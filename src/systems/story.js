@@ -1,4 +1,4 @@
-// Этапы 7 и 9: Академия (уроки и оценки), сюжет 8 недель, турнир, экзамен, финал, случайные события,
+// Академия (уроки и оценки), побочные сцены по дням, случайные события,
 // доска поручений, календарь, секретные свитки, готовка и цветок дома.
 const _H = 60;
 const _dlg = (id, then) => { const w = G.scenes.stack.find((s) => s.name === 'world'); G.dialog.start(id, { bottom: 22, onEnd: () => { w && w.refreshNpcs(); then && then(); } }); };
@@ -10,9 +10,7 @@ const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
 G.calendar = {
   BDAY: { 9: 'kiba', 16: 'shino', 22: 'shikamaru', 23: 'sasuke', 27: 'hinata', 30: 'sakura', 34: 'iruka', 37: 'choji', 44: 'ino', 48: 'lee', 12: 'naruto' },
   EVENTS: {
-    2: 'Первый урок', 3: 'Киба ищет соперника', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 10: 'Наруто что-то задумал', 15: 'Урок: Хенге',
-    17: 'Урок гендзюцу', 18: 'Кто-то в зелёном...', 21: 'Фестиваль (вечер)', 26: 'ТУРНИР АКАДЕМИИ', 29: 'Урок: хождение по дереву',
-    38: 'Полевой выход', 43: 'Урок: Буншин', 47: 'Колокольчики', 54: 'ВЫПУСКНОЙ ЭКЗАМЕН',
+    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 15: 'Урок: Хенге', 17: 'Урок гендзюцу', 29: 'Урок: хождение по дереву', 43: 'Урок: Буншин',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
@@ -29,7 +27,7 @@ G.calendar = {
 // ───────────────────────── Академия ─────────────────────────
 G.academy = {
   SUBJ: { hist: 'История', throw: 'Метание', nin: 'Ниндзюцу', tai: 'Тайдзюцу', prac: 'Практика' },
-  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 54 && (d - 1) % 7 < 5 && d !== 26 && d !== 38; },
+  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 54 && (d - 1) % 7 < 5; },
   inClass() { const w = _world(); return w && w.map && w.map.name === 'Академия: класс'; },
   lessonNow() { const v = G.state.vars; return this.isSchoolDay() && v.min >= 7 * _H + 30 && v.min < 9 * _H + 30 && !G.state.daily.lesson; },
   grade(s) { const v = G.state.vars, n = v['gn_' + s] || 0; return n ? Math.round(v['gs_' + s] / n) : 0; },
@@ -109,35 +107,13 @@ G.academy = {
 
 // ───────────────────────── Сюжетные события ─────────────────────────
 // where: 'out' — на улице, 'any', 'class' — в классе; from/to — время; script — диалог, run — функция
-G.STORY = [
-  { id: 'kiba', day: 3, from: 13 * _H, to: 21 * _H, where: 'out', script: 'st_kiba' },
-  { id: 'roofs', day: 4, from: 14 * _H, to: 20 * _H, where: 'out', script: 'st_roofs', must: true },
-  { id: 'memory', day: 14, from: 17 * _H, to: 22 * _H, where: 'out', script: 'st_memory' },
-  { id: 'prank', day: 10, from: 17 * _H, to: 22 * _H, where: 'out', script: 'st_prank' },
-  { id: 'lee', day: 18, from: 15 * _H, to: 21 * _H, where: 'out', script: 'st_lee' },
-  { id: 'festival', day: 21, from: 18 * _H, to: 23 * _H, where: 'out', script: 'st_festival' },
-  { id: 'tourney', day: 26, from: 7 * _H, to: 20 * _H, where: 'any', script: 'st_tourney', must: true, place: 'academy' },
-  { id: 'mizuki1', day: 31, from: 20 * _H, to: 23 * _H, where: 'out', script: 'st_mizuki1' },
-  { id: 'mizuki2', day: 33, from: 13 * _H, to: 19 * _H, where: 'out', script: 'st_mizuki2' },
-  { id: 'field', day: 38, from: 7 * _H, to: 20 * _H, where: 'any', script: 'st_field', place: 'academy' },
-  { id: 'bells', day: 47, from: 13 * _H, to: 21 * _H, where: 'any', script: 'st_bells', place: 'academy' },
-  { id: 'exam', day: 54, from: 7 * _H, to: 20 * _H, where: 'any', script: 'st_exam', must: true, place: 'academy' },
-  { id: 'night', day: 54, from: 20 * _H, to: 30 * _H, where: 'any', script: 'st_night', after: 'exam', must: true, place: 'forest' },
-];
+G.STORY = [];
 G.story = {
   // Событие помечается «было» (st_<id>) в момент начала. Если вкладку Safari выгрузили посреди боя или экзамена,
   // в сохранении остаётся флаг без результата, и без этой починки игру нельзя пройти. Вызывается из G.game.fix().
   recover(st) {
     const f = st.flags || {}, v = st.vars || {}, d = st.daily || {};
     const fixes = [];
-    const undo = (flag, why) => { if (f[flag]) { delete f[flag]; fixes.push(why); } };
-    if (f.st_night && !f.mizuki_beaten) undo('st_night', 'ночь Мизуки');
-    if (f.st_exam && v.exam == null) undo('st_exam', 'экзамен');
-    if (f.st_tourney && v.tourney == null) undo('st_tourney', 'турнир');
-    if (f.st_field && !f.field_done && v.day <= 38) undo('st_field', 'полевой выход');
-    if (f.st_bells && !f.bells_done && v.day <= 47) undo('st_bells', 'колокольчики');
-    // экзамен оценён, но диалог с результатом не дошёл до «выпускник»
-    if (v.exam != null && v.exam_pass && !f.graduated) { f.graduated = 1; if (v.exam >= 80) f.best = 1; fixes.push('результат экзамена'); }
     // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
     if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
     if (d.lessonRun) { delete d.lesson; delete d.lessonRun; fixes.push('урок'); }
@@ -165,8 +141,6 @@ G.story = {
       return true;
     }
     const m = world.map;
-    // Мизуки побеждён, а титры не показаны (закрыли игру посреди эпилога) — показываем их
-    if (f.st_night && f.mizuki_beaten && !f.game_clear) { G.scenes.fadeTo(G.scenes.make('ending')); return true; }
     // урок
     if (G.academy.lessonNow() && G.academy.inClass()) { G.academy.start(world); return true; }
     if (v.makeup) { (st.makeupQ = st.makeupQ || []).push(v.makeup); v.makeup = 0; }   // старые сохранения
@@ -193,68 +167,7 @@ G.story = {
       if (G.cine && G.cine.defs[e.script]) G.cine.play(e.script, world, () => world.refreshNpcs && world.refreshNpcs()); else _dlg(e.script);
       return true;
     }
-    // пропущенный обязательный сюжет (если проспал): турнир/экзамен — переносится на следующее утро
     return false;
-  },
-  // ── турнир академии: 3 боя на вылет ──
-  tournament() {
-    const v = G.state.vars;
-    // третий элемент — id друга для бонуса (у турнирного Кибы боевой id другой: kiba_t)
-    const rounds = [['choji', 'Первый круг: Чоджи Акимичи!', 'choji'], ['kiba_t', 'Полуфинал: Киба Инузука!', 'kiba'], ['sasuke', 'ФИНАЛ: Саске Учиха!', 'sasuke']];
-    let r = 0;
-    const next = () => {
-      if (r >= rounds.length) { v.tourney = 4; return end(); }
-      const [en, title, fid] = rounds[r];
-      _say([{ who: 'iruka', text: title }], () => {
-        G.flow.battle({ enemy: en, mode: 'ringout', terrain: 'ring', story: r === 2, storyLine: 'Я не проиграю! Не здесь!', onEnd: (res) => {
-          G.state.vars.hp = 100;
-          if (res.win) { r++; G.friends.add(fid, 1); next(); } else { v.tourney = r + 1; end(); }
-        } }, _world());
-      });
-    };
-    const end = () => {
-      const place = v.tourney;
-      const prize = { 4: [300, 'Чемпион Академии', 5], 3: [150, 'Финалист', 3], 2: [80, 'Полуфиналист', 0], 1: [30, 'Участник турнира', 0] }[place];
-      G.game.earn(prize[0]); v.pouch_plus = (v.pouch_plus || 0) + prize[2]; v.title_t = place;
-      if (place === 4) { v.rival = (v.rival || 0) + 2; v.rep = (v.rep || 0) + 5; }
-      G.game.advanceTo('16:00');
-      _dlg(place === 4 ? 'st_tourney_win' : 'st_tourney_lose', () => {
-        _say([`Приз: ${prize[0]} рё${prize[2] ? ', подсумок +' + prize[2] + ' мест' : ''}. Титул: «${prize[1]}».`]);
-      });
-      G.game.note(`Турнир Академии: ${prize[1]}`);
-    };
-    next();
-  },
-  // ── выпускной экзамен ──
-  exam() {
-    const v = G.state.vars, res = {};
-    const step3 = () => {
-      // Буншин
-      if (!G.combat.knows('bunshin')) { res.bun = 0; return fin(); }
-      G.scenes.push(G.scenes.make('train', 'seals', { title: 'Экзамен: Буншин' }, (s) => { res.bun = Math.min(1, s * 0.7 + G.combat.mastery('bunshin') * 0.12 + G.hero.stat('nin') * 0.02); fin(); }));
-    };
-    const step2 = () => _say([{ who: 'iruka', text: 'Вторая часть: метание. Восемь бросков!' }], () => G.scenes.push(G.scenes.make('train', 'throw', { title: 'Экзамен: метание' }, (s) => { res.thr = Math.min(1, s * 0.85 + G.hero.stat('tai') * 0.015); _say([{ who: 'iruka', text: 'И последнее: создай трёх клонов. Техника Буншин!' }], step3); })));
-    const fin = () => {
-      const g = G.academy.avg() / 100, att = G.academy.attendance() / 100, ir = G.friends.level('iruka') / 5;
-      const total = Math.round(res.wr * 22 + res.thr * 18 + res.bun * 25 + g * 20 + att * 10 + ir * 5);
-      v.exam = total; v.exam_pass = total >= 55 && res.bun > 0.3 ? 1 : 0;
-      G.game.advanceTo('15:00');
-      G.game.note(`Экзамен: ${total} баллов — ${v.exam_pass ? 'сдан' : 'не сдан'}`);
-      _say([
-        { text: `Письменный тест: ${Math.round(res.wr * 100)}%. Метание: ${Math.round(res.thr * 100)}%. Буншин: ${Math.round(res.bun * 100)}%.` },
-        { text: `Оценки за 8 недель: ${G.academy.avg()}. Посещаемость: ${G.academy.attendance()}%. Итог: ${total} из 100.` },
-      ], () => _dlg(v.exam_pass ? (total >= 80 ? 'st_exam_best' : 'st_exam_pass') : 'st_exam_fail'));
-    };
-    G.scenes.push(G.scenes.make('train', 'quiz', { title: 'Экзамен: письменный тест', n: 5 }, (s) => { res.wr = Math.min(1, s * 0.8 + G.hero.stat('know') * 0.02); step2(); }));
-  },
-  // ── финальный бой и концовка ──
-  finale() {
-    const go = () => G.flow.battle({ enemy: 'mizuki', mode: 'ko', terrain: 'night', story: true, allies: ['iruka', 'naruto'], storyLine: 'Я защищу их! Это и есть Воля Огня!', will: 30 + (G.state.flags.told_iruka ? 10 : 0), onEnd: (res) => {
-      G.state.vars.hp = Math.max(G.state.vars.hp, 40);
-      if (res.win) { G.state.flags.mizuki_beaten = 1; _dlg('st_mizuki_win', () => G.scenes.fadeTo(G.scenes.make('ending'))); }
-      else _dlg('st_mizuki_lose', go);   // повтор с чекпоинта
-    } }, _world());
-    go();
   },
 };
 
@@ -315,9 +228,6 @@ Object.assign(G.script.actions, {
   xp: (a) => G.train.addXp(a[0], Number(a[1]) || 5),
   hurt: (a) => { G.state.vars.hp = Math.max(5, (G.state.vars.hp || 100) - (Number(a[0]) || 10)); },
   board: () => { G.game.pending = { type: 'board' }; },
-  tourney: () => { G.game.pending = { type: 'tourney' }; },
-  exam: () => { G.game.pending = { type: 'exam' }; },
-  finale: () => { G.game.pending = { type: 'finale' }; },
   calendar: () => { G.game.pending = { type: 'calendar' }; },
   cook: () => { G.game.pending = { type: 'cook' }; },
   flower: () => { G.game.pending = { type: 'flower' }; },
@@ -326,9 +236,6 @@ Object.assign(G.script.actions, {
 });
 Object.assign(G.flow, {
   board: (a, w) => G.life_events.board(w),
-  tourney: () => G.story.tournament(),
-  exam: () => G.story.exam(),
-  finale: () => G.story.finale(),
   calendar: (a, w) => {
     const ev = G.calendar.upcoming(9);
     const opts = ev.map((e) => ({ label: `День ${e.d} (${G.game.dayName(e.d)})`, sub: '', desc: e.text }));
@@ -400,3 +307,6 @@ G.events.on('time', () => {
   const v = G.state.vars;
   if (v.min % 60 === 0 && w.map && w.map.outdoor && G.scenes.top() === w) G.life_events.roll(w);
 });
+
+// успешные тренировки запоминаются: на них реагируют наставники и соседи (world/street_events.js)
+G.events.on('training', (id, score, partner) => { const L = G.state.learning || (G.state.learning = {}); L['tr_' + id] = 1; if (partner) L.partner = 1; });

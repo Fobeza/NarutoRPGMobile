@@ -16,7 +16,6 @@ G.scenes.register('menu', () => {
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
-    { label: 'Обучение', act: () => { G.scenes.pop(); G.learning.menu(); } },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },

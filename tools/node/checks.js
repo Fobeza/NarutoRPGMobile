@@ -379,7 +379,6 @@ smoke('pause', () => G.scenes.make('pause'));
 })();
 smoke('charcreate', () => G.scenes.make('charcreate', () => {}));
 smoke('daysum', () => G.scenes.make('daysum', G.game.sleep(), () => {}));
-smoke('ending', () => G.scenes.make('ending'));
 smoke('pick', () => G.scenes.make('pick', { title: 'Тест', options: [{ label: 'Один' }, { label: 'Два' }] }, () => {}));
 smoke('fishing', () => G.scenes.make('fishing', { spot: 'river', left: () => 3 }, () => {}, () => {}));
 for (const sid of Object.keys(G.SHOPS)) smoke('shop ' + sid, () => G.scenes.make('shop', sid));
@@ -391,7 +390,7 @@ for (const sc of G.sim.SCEN) {
     return s;
   }, 4);
 }
-check(sceneFails.length === 0, `сцен проверено: ${44 + Object.keys(G.SHOPS).length + 11 + G.sim.SCEN.length}, падений: ${sceneFails.length}`);
+check(sceneFails.length === 0, `сцен проверено: ${43 + Object.keys(G.SHOPS).length + 11 + G.sim.SCEN.length}, падений: ${sceneFails.length}`);
 for (const f of sceneFails.slice(0, 12)) say('     - ' + f);
 
 // ─────────── 8. бой и баланс ───────────

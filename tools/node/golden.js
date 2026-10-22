@@ -104,5 +104,4 @@ traceScene('shop ichiraku', () => G.scenes.make('shop', 'ichiraku'));
 traceScene('shop weapons', () => G.scenes.make('shop', 'weapons'));
 traceScene('charcreate', () => G.scenes.make('charcreate', () => {}));
 traceScene('daysum', () => G.scenes.make('daysum', { day: 5, dayName: 'Пятница', spent: 120, log: ['Урок', 'Тренировка'], money: 400, bed: 22 * 60, wakeEnergy: 90, wake: 5 * 60, mood: 70, weather: 'sun' }, () => {}));
-traceScene('ending', () => G.scenes.make('ending'));
 for (const kind of ['throw', 'log', 'seals', 'run', 'meditate', 'tree', 'cook', 'shogi', 'quiz', 'cat', 'sort']) traceScene('train ' + kind, () => G.scenes.make('train', kind, {}, () => {}), 5);

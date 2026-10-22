@@ -45,9 +45,9 @@ JS_FILES = [
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
-    "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/ending.js", "scenes/menu.js", "scenes/settings.js",
+    "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/menu.js", "scenes/settings.js",
     "scenes/gallery.js", "scenes/shogi.js",
-    "world/lighting.js", "scenes/battle_tactics.js", "systems/curriculum.js", "data/first_promise.js",
+    "world/lighting.js", "scenes/battle_tactics.js",
     # ── точка входа ──
     "main.js",
 ]
