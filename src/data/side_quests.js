@@ -59,3 +59,89 @@ Object.assign(G.QUESTS, {
     reward: { money: 100, vars: { friend_shikamaru: 3, purple_ctl: 3 }, text: 'Тактика Шикамару' },
   },
 });
+
+Object.assign(G.QUESTS, {
+  // ───────────── Сакура: «Книги и конспекты» ─────────────
+  arc_sakura: {
+    cat: 'friend', title: 'Книги и конспекты',
+    desc: 'Сакура учится лучше всех. Её способ учёбы может пригодиться тебе перед экзаменом.',
+    offer: { npc: 'sakura', script: 'arc_sakura_offer', when: () => _lvl('sakura', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'library', text: 'Позаниматься с Сакурой (меню общения: тренировка)', target: { npc: 'sakura' }, on: _partner('sakura'), after: 'arc_sakura_study' },
+      { id: 'book', text: 'Купить «Историю Конохи» в книжной лавке', target: { building: 'books' }, have: { book_history: 1 } },
+      { id: 'give', text: 'Отдать книгу Сакуре', target: { npc: 'sakura' }, need: { book_history: 1 }, consume: true, script: 'arc_sakura_give' },
+      { id: 'read', text: 'Прочитать что-нибудь самому: дома или в библиотеке', target: { building: 'library' }, on: ['training', (id) => id === 'library' || id === 'book'], after: 'arc_sakura_read' },
+      { id: 'talk', text: 'Поговорить с Сакурой', target: { npc: 'sakura' }, script: 'arc_sakura_end' },
+    ],
+    reward: { money: 80, vars: { friend_sakura: 3, purple_ctl: 2 }, text: 'Способ учёбы Сакуры' },
+  },
+  // ───────────── Киба: «Следопыт» ─────────────
+  arc_kiba: {
+    cat: 'friend', title: 'Следопыт',
+    desc: 'У Кибы и Акамару лучший нюх в классе. Они могут помочь понять, кто интересуется тобой.',
+    offer: { npc: 'kiba', script: 'arc_kiba_offer', when: () => _lvl('kiba', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'treat', text: 'Купить лакомство для Акамару в лавке Инузука', target: { building: 'inuzuka_shop' }, have: { dog_treat: 1 } },
+      { id: 'give', text: 'Отдать лакомство Кибе', target: { npc: 'kiba' }, need: { dog_treat: 1 }, consume: true, script: 'arc_kiba_give' },
+      { id: 'run', text: 'Побегать с Кибой (меню общения)', target: { npc: 'kiba' }, on: _partner('kiba'), after: 'arc_kiba_run' },
+      { id: 'forest', text: 'Потренировать скрытность в Лесу Нара', target: { building: 'clan_nara' }, on: ['training', (id) => id === 'stealth'], after: 'arc_kiba_forest' },
+      { id: 'talk', text: 'Поговорить с Кибой', target: { npc: 'kiba' }, script: 'arc_kiba_end' },
+    ],
+    reward: { money: 90, vars: { friend_kiba: 3 }, text: 'Нюх Акамару' },
+  },
+  // ───────────── Чоджи: «Всё о еде» ─────────────
+  arc_choji: {
+    cat: 'friend', title: 'Всё о еде',
+    desc: 'Чоджи знает о еде всё. Еда снимает усталость, а усталость мешает контролю.',
+    offer: { npc: 'choji', script: 'arc_choji_offer', when: () => _lvl('choji', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'cook', text: 'Приготовить что-нибудь на кухне', target: { building: 'hero_home' }, on: ['cooked'], after: 'arc_choji_cook' },
+      { id: 'fish', text: 'Поймать рыбу (река или пирс)', target: { building: 'pier' }, on: ['fished', (id) => !!id] },
+      { id: 'give', text: 'Отдать рыбу Чоджи', target: { npc: 'choji' }, need: { fish: 1 }, consume: true, script: 'arc_choji_give' },
+      { id: 'ramen', text: 'Поесть рамена с Чоджи в Ичираку', target: { building: 'ichiraku' }, on: ['bought', (id) => /^ramen_/.test(id)], after: 'arc_choji_ramen' },
+      { id: 'talk', text: 'Поговорить с Чоджи', target: { npc: 'choji' }, script: 'arc_choji_end' },
+    ],
+    reward: { money: 60, vars: { friend_choji: 3 }, text: 'Секрет Акимичи' },
+  },
+  // ───────────── Ино: «Цветы и сплетни» ─────────────
+  arc_ino: {
+    cat: 'friend', title: 'Цветы и сплетни',
+    desc: 'Ино знает все новости деревни. Она слышала что-то о тебе.',
+    offer: { npc: 'ino', in: 'flowers', script: 'arc_ino_offer', when: () => _lvl('ino', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'peace', text: 'Подарить Сакуре цветок, чтобы помирить её с Ино', target: { npc: 'sakura' }, on: ['gift', (id) => id === 'sakura'], after: 'arc_ino_peace' },
+      { id: 'talk', text: 'Рассказать Ино, как всё прошло', target: { npc: 'ino', in: 'flowers' }, script: 'arc_ino_gossip' },
+      { id: 'med', text: 'Помедитировать вместе с Ино (меню общения)', target: { npc: 'ino' }, on: _partner('ino', 'meditate'), after: 'arc_ino_med' },
+      { id: 'end', text: 'Поговорить с Ино', target: { npc: 'ino', in: 'flowers' }, script: 'arc_ino_end' },
+    ],
+    reward: { money: 90, vars: { friend_ino: 3, purple_ctl: 4 }, text: 'Упражнение клана Яманака: контроль +4' },
+  },
+  // ───────────── Ли: «Сила через труд» ─────────────
+  arc_lee: {
+    cat: 'friend', title: 'Сила через труд',
+    desc: 'Ли ничего не умеет, кроме тайдзюцу, и всё равно идёт вперёд. Это стоит увидеть.',
+    offer: { npc: 'lee', script: 'arc_lee_offer', when: () => _lvl('lee', 1)() && G.state.vars.day >= 8 },
+    steps: [
+      { id: 'towel', text: 'Купить полотенце для Ли', target: { building: 'shop_generic' }, have: { towel: 1 } },
+      { id: 'give', text: 'Отдать полотенце Ли', target: { npc: 'lee' }, need: { towel: 1 }, consume: true, script: 'arc_lee_give' },
+      { id: 'train', text: 'Потренироваться вместе с Ли (меню общения)', target: { npc: 'lee' }, on: _partner('lee'), after: 'arc_lee_train' },
+      { id: 'spar', text: 'Провести спарринг с Ли', target: { npc: 'lee' }, on: ['battle', (a) => a && a.enemy === 'lee'], after: 'arc_lee_spar' },
+      { id: 'talk', text: 'Поговорить с Гаем у полигона', target: { npc: 'guy' }, script: 'arc_lee_end' },
+    ],
+    reward: { money: 100, vars: { friend_lee: 3 }, text: 'Сила юности' },
+  },
+  // ───────────── Саске: «Соперник» ─────────────
+  arc_sasuke: {
+    cat: 'friend', title: 'Соперник',
+    desc: 'Саске не любит слабых. Но ему тоже одиноко. Постарайся стать ему настоящим соперником.',
+    offer: { npc: 'sasuke', script: 'arc_sasuke_offer', when: () => _lvl('sasuke', 1)() && G.state.vars.day >= 6 },
+    steps: [
+      { id: 'spar', text: 'Провести спарринг с Саске', target: { npc: 'sasuke' }, on: ['battle', (a) => a && a.enemy === 'sasuke'], after: 'arc_sasuke_spar' },
+      { id: 'throw', text: 'Побросать сюрикены вместе с Саске', target: { npc: 'sasuke' }, on: _partner('sasuke', 'throw'), after: 'arc_sasuke_throw' },
+      { id: 'tomato', text: 'Купить томаты для Саске', target: { building: 'market' }, have: { tomato: 2 } },
+      { id: 'give', text: 'Отдать томаты Саске', target: { npc: 'sasuke' }, need: { tomato: 2 }, consume: true, script: 'arc_sasuke_give' },
+      { id: 'talk', text: 'Поговорить с Саске', target: { npc: 'sasuke' }, script: 'arc_sasuke_end' },
+    ],
+    reward: { money: 100, vars: { friend_sasuke: 3, rival: 1 }, text: 'Признание соперника' },
+  },
+});

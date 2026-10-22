@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '079fcd77', date: '2026-10-22 19:16', debug: false };
+const BUILD = { release: '2.3', version: '8e9b0880', date: '2026-10-22 19:40', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -7004,13 +7004,17 @@ G.CHOICES = {
   taunt:  ['fight', 'leave', 'talk'],   // день 13: героя дразнят из-за чакры
   hokage: ['told', 'silent'],           // день 20: рассказать Хокаге о незнакомце в плаще
   exam:   ['honest', 'cautious'],       // день 21: показать на экзамене всю силу или сдерживаться
-  naruto: ['listen', 'joke'],           // ветка Наруто: ответить серьёзно или шуткой
+  naruto: ['listen', 'joke'],
+  sasuke: ['trust', 'distance'],        // ветка Саске: поддержать или держать дистанцию
+  kiba:   ['tell', 'keep'],             // ветка Кибы: рассказать про незнакомый запах или умолчать           // ветка Наруто: ответить серьёзно или шуткой
 };
 G.choices = (() => {
   const EFFECTS = {
     taunt:  { fight: { rep: -3, friend: { naruto: 2 } }, leave: { friend: { iruka: 1 } }, talk: { rep: 2, friend: { hinata: 1 } } },
     hokage: { told: { rep: 1, flag: 'guards_up', friend: { iruka: 1 } }, silent: { friend: { naruto: 1 } } },
     exam:   { honest: { rep: 1 }, cautious: { friend: { shikamaru: 1 } } },
+    sasuke: { trust: { friend: { sasuke: 1 } }, distance: { rep: 1 } },
+    kiba:   { tell: { friend: { kiba: 1 }, flag: 'kiba_knows' }, keep: {} },
     naruto: { listen: { friend: { naruto: 1 }, flag: 'naruto_trust' }, joke: {} },
   };
   function get(id) { const v = G.state.flags['ch_' + id]; return v ? (G.CHOICES[id] || [])[v - 1] || null : null; }
@@ -9696,6 +9700,92 @@ Object.assign(G.QUESTS, {
   },
 });
 
+Object.assign(G.QUESTS, {
+  // ───────────── Сакура: «Книги и конспекты» ─────────────
+  arc_sakura: {
+    cat: 'friend', title: 'Книги и конспекты',
+    desc: 'Сакура учится лучше всех. Её способ учёбы может пригодиться тебе перед экзаменом.',
+    offer: { npc: 'sakura', script: 'arc_sakura_offer', when: () => _lvl('sakura', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'library', text: 'Позаниматься с Сакурой (меню общения: тренировка)', target: { npc: 'sakura' }, on: _partner('sakura'), after: 'arc_sakura_study' },
+      { id: 'book', text: 'Купить «Историю Конохи» в книжной лавке', target: { building: 'books' }, have: { book_history: 1 } },
+      { id: 'give', text: 'Отдать книгу Сакуре', target: { npc: 'sakura' }, need: { book_history: 1 }, consume: true, script: 'arc_sakura_give' },
+      { id: 'read', text: 'Прочитать что-нибудь самому: дома или в библиотеке', target: { building: 'library' }, on: ['training', (id) => id === 'library' || id === 'book'], after: 'arc_sakura_read' },
+      { id: 'talk', text: 'Поговорить с Сакурой', target: { npc: 'sakura' }, script: 'arc_sakura_end' },
+    ],
+    reward: { money: 80, vars: { friend_sakura: 3, purple_ctl: 2 }, text: 'Способ учёбы Сакуры' },
+  },
+  // ───────────── Киба: «Следопыт» ─────────────
+  arc_kiba: {
+    cat: 'friend', title: 'Следопыт',
+    desc: 'У Кибы и Акамару лучший нюх в классе. Они могут помочь понять, кто интересуется тобой.',
+    offer: { npc: 'kiba', script: 'arc_kiba_offer', when: () => _lvl('kiba', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'treat', text: 'Купить лакомство для Акамару в лавке Инузука', target: { building: 'inuzuka_shop' }, have: { dog_treat: 1 } },
+      { id: 'give', text: 'Отдать лакомство Кибе', target: { npc: 'kiba' }, need: { dog_treat: 1 }, consume: true, script: 'arc_kiba_give' },
+      { id: 'run', text: 'Побегать с Кибой (меню общения)', target: { npc: 'kiba' }, on: _partner('kiba'), after: 'arc_kiba_run' },
+      { id: 'forest', text: 'Потренировать скрытность в Лесу Нара', target: { building: 'clan_nara' }, on: ['training', (id) => id === 'stealth'], after: 'arc_kiba_forest' },
+      { id: 'talk', text: 'Поговорить с Кибой', target: { npc: 'kiba' }, script: 'arc_kiba_end' },
+    ],
+    reward: { money: 90, vars: { friend_kiba: 3 }, text: 'Нюх Акамару' },
+  },
+  // ───────────── Чоджи: «Всё о еде» ─────────────
+  arc_choji: {
+    cat: 'friend', title: 'Всё о еде',
+    desc: 'Чоджи знает о еде всё. Еда снимает усталость, а усталость мешает контролю.',
+    offer: { npc: 'choji', script: 'arc_choji_offer', when: () => _lvl('choji', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'cook', text: 'Приготовить что-нибудь на кухне', target: { building: 'hero_home' }, on: ['cooked'], after: 'arc_choji_cook' },
+      { id: 'fish', text: 'Поймать рыбу (река или пирс)', target: { building: 'pier' }, on: ['fished', (id) => !!id] },
+      { id: 'give', text: 'Отдать рыбу Чоджи', target: { npc: 'choji' }, need: { fish: 1 }, consume: true, script: 'arc_choji_give' },
+      { id: 'ramen', text: 'Поесть рамена с Чоджи в Ичираку', target: { building: 'ichiraku' }, on: ['bought', (id) => /^ramen_/.test(id)], after: 'arc_choji_ramen' },
+      { id: 'talk', text: 'Поговорить с Чоджи', target: { npc: 'choji' }, script: 'arc_choji_end' },
+    ],
+    reward: { money: 60, vars: { friend_choji: 3 }, text: 'Секрет Акимичи' },
+  },
+  // ───────────── Ино: «Цветы и сплетни» ─────────────
+  arc_ino: {
+    cat: 'friend', title: 'Цветы и сплетни',
+    desc: 'Ино знает все новости деревни. Она слышала что-то о тебе.',
+    offer: { npc: 'ino', in: 'flowers', script: 'arc_ino_offer', when: () => _lvl('ino', 1)() && G.state.vars.day >= 4 },
+    steps: [
+      { id: 'peace', text: 'Подарить Сакуре цветок, чтобы помирить её с Ино', target: { npc: 'sakura' }, on: ['gift', (id) => id === 'sakura'], after: 'arc_ino_peace' },
+      { id: 'talk', text: 'Рассказать Ино, как всё прошло', target: { npc: 'ino', in: 'flowers' }, script: 'arc_ino_gossip' },
+      { id: 'med', text: 'Помедитировать вместе с Ино (меню общения)', target: { npc: 'ino' }, on: _partner('ino', 'meditate'), after: 'arc_ino_med' },
+      { id: 'end', text: 'Поговорить с Ино', target: { npc: 'ino', in: 'flowers' }, script: 'arc_ino_end' },
+    ],
+    reward: { money: 90, vars: { friend_ino: 3, purple_ctl: 4 }, text: 'Упражнение клана Яманака: контроль +4' },
+  },
+  // ───────────── Ли: «Сила через труд» ─────────────
+  arc_lee: {
+    cat: 'friend', title: 'Сила через труд',
+    desc: 'Ли ничего не умеет, кроме тайдзюцу, и всё равно идёт вперёд. Это стоит увидеть.',
+    offer: { npc: 'lee', script: 'arc_lee_offer', when: () => _lvl('lee', 1)() && G.state.vars.day >= 8 },
+    steps: [
+      { id: 'towel', text: 'Купить полотенце для Ли', target: { building: 'shop_generic' }, have: { towel: 1 } },
+      { id: 'give', text: 'Отдать полотенце Ли', target: { npc: 'lee' }, need: { towel: 1 }, consume: true, script: 'arc_lee_give' },
+      { id: 'train', text: 'Потренироваться вместе с Ли (меню общения)', target: { npc: 'lee' }, on: _partner('lee'), after: 'arc_lee_train' },
+      { id: 'spar', text: 'Провести спарринг с Ли', target: { npc: 'lee' }, on: ['battle', (a) => a && a.enemy === 'lee'], after: 'arc_lee_spar' },
+      { id: 'talk', text: 'Поговорить с Гаем у полигона', target: { npc: 'guy' }, script: 'arc_lee_end' },
+    ],
+    reward: { money: 100, vars: { friend_lee: 3 }, text: 'Сила юности' },
+  },
+  // ───────────── Саске: «Соперник» ─────────────
+  arc_sasuke: {
+    cat: 'friend', title: 'Соперник',
+    desc: 'Саске не любит слабых. Но ему тоже одиноко. Постарайся стать ему настоящим соперником.',
+    offer: { npc: 'sasuke', script: 'arc_sasuke_offer', when: () => _lvl('sasuke', 1)() && G.state.vars.day >= 6 },
+    steps: [
+      { id: 'spar', text: 'Провести спарринг с Саске', target: { npc: 'sasuke' }, on: ['battle', (a) => a && a.enemy === 'sasuke'], after: 'arc_sasuke_spar' },
+      { id: 'throw', text: 'Побросать сюрикены вместе с Саске', target: { npc: 'sasuke' }, on: _partner('sasuke', 'throw'), after: 'arc_sasuke_throw' },
+      { id: 'tomato', text: 'Купить томаты для Саске', target: { building: 'market' }, have: { tomato: 2 } },
+      { id: 'give', text: 'Отдать томаты Саске', target: { npc: 'sasuke' }, need: { tomato: 2 }, consume: true, script: 'arc_sasuke_give' },
+      { id: 'talk', text: 'Поговорить с Саске', target: { npc: 'sasuke' }, script: 'arc_sasuke_end' },
+    ],
+    reward: { money: 100, vars: { friend_sasuke: 3, rival: 1 }, text: 'Признание соперника' },
+  },
+});
+
 
 // ===== data/side_story.js =====
 // Сцены больших побочных веток (data/side_quests.js).
@@ -9856,6 +9946,231 @@ call step arc_shikamaru talk
 end
 `);
 
+G.script.parse(`
+// ───────────── Сакура: «Книги и конспекты» ─────────────
+=== arc_sakura_offer
+sakura: {name}, ты же собираешься сдавать экзамен? Могу показать, как я готовлюсь. Но для начала давай позанимаемся вместе.
+sakura: Я не из доброты! Просто ты — единственный, кто не списывает.
+? Согласиться?
+* Давай -> yes
+* Потом -> no
+# yes
+sakura: Отлично! Через меню общения: «Тренировка вместе».
+call quest start arc_sakura
+end
+# no
+sakura: Ну ладно, но времени мало.
+end
+=== arc_sakura_study
+sakura: Видишь, как я делаю конспект? Сначала главное, потом детали. Так в голове остаётся.
+sakura: Чакра тоже требует порядка. Чем яснее мысли, тем яснее поток.
+end
+=== arc_sakura_give
+sakura: «История Конохи»! Откуда ты знал, что я хотела её?
+sakura: Спасибо, {name}. Хочешь, дам тебе список, с чего начать?
+end
+=== arc_sakura_read
+: Ты читаешь, подчёркиваешь, записываешь на полях. В голове странно проясняется.
+: Мысли выстраиваются, как печати в ряд. И чакра внутри слушается чуть лучше.
+end
+=== arc_sakura_end
+sakura: Ну как, понял, зачем нужны конспекты?
+sakura: Слушай, я до этого думала, что ты слишком странный. А теперь вижу: ты работаешь так же, как я. Просто с другой силой.
+: Она улыбается и протягивает листок с аккуратными записями.
+sakura: Держи. Тебе пригодится.
+call xp know 15
+call step arc_sakura talk
+end
+
+// ───────────── Киба: «Следопыт» ─────────────
+=== arc_kiba_offer
+kiba: Эй, {name}! Акамару говорит, от тебя пахнет чем-то необычным. Не плохо! Просто... странно. Как гроза.
+kiba: Хочешь, мы тебе покажем, как следопыты читают местность? Только сначала лакомство для Акамару!
+? Согласишься?
+* Давай -> yes
+* Потом -> no
+# yes
+kiba: Гав! Акамару доволен. Купи лакомство в лавке Инузука и приходи.
+call quest start arc_kiba
+end
+# no
+kiba: Как знаешь.
+end
+=== arc_kiba_give
+kiba: Акамару, смотри, что нам принесли! — Гав! — Всё, ты теперь друг семьи.
+end
+=== arc_kiba_run
+kiba: Не отставай! Акамару любит, когда бегут быстро!
+: Вы несётесь по улицам. Акамару лает на каждого прохожего, а ты ловишь себя на мысли, что давно так не смеялся.
+end
+=== arc_kiba_forest
+: В Лесу Нара тихо. Ты крадёшься, ступая след в след.
+: Акамару вдруг замирает и рычит куда-то в чащу. Там никого нет.
+kiba: Тише. Он что-то учуял. Странный запах... Не отсюда.
+end
+=== arc_kiba_end
+kiba: Слушай, {name}. Акамару уже второй раз чует один и тот же запах. Возле библиотеки, у твоего дома, в лесу.
+kiba: Незнакомый. Не наш. Я ничего не говорил Ирука-сенсею. Но ты должен знать.
+? Что скажешь?
+* Расскажу Ируке -> tell
+* Пока не будем никому говорить -> keep
+# tell
+kiba: Правильно. Идём вместе, вдвоём не так страшно.
+call choice kiba tell
+-> end_part
+# keep
+kiba: Ладно. Но если запах появится снова, я пойду к Ируке сам.
+call choice kiba keep
+# end_part
+call xp spd 15
+call step arc_kiba talk
+end
+
+// ───────────── Чоджи: «Всё о еде» ─────────────
+=== arc_choji_offer
+choji: {name}, ты когда-нибудь замечал, как после обеда силы возвращаются? Это не магия. Это еда!
+choji: В моей семье умеют делать так, чтобы еда восполняла силы как можно лучше. Хочешь научиться?
+? Хочешь?
+* Давай -> yes
+* Потом -> no
+# yes
+choji: Тогда для начала приготовь что-нибудь сам. Нужен мой разбор!
+call quest start arc_choji
+end
+# no
+choji: Хрум... В другой раз.
+end
+=== arc_choji_cook
+choji: Хм... Выглядит съедобно. А пахнет ещё лучше! Знаешь, главное в еде — чтобы её делали с удовольствием.
+end
+=== arc_choji_give
+choji: Свежая рыба! Хрум. Ого, правильная! Ты нашёл лучшее место для рыбалки.
+choji: Давай теперь я тебя угощу рамэном. Только ты платишь. Шучу! Ну почти.
+end
+=== arc_choji_ramen
+choji: Ммм... Видишь, как усталость уходит? Тепло внутри, и силы возвращаются.
+choji: Чакре тоже нужно топливо. А ты в последнее время слишком быстро выдыхаешься.
+end
+=== arc_choji_end
+choji: Ну вот и всё. Теперь ты знаешь о еде не меньше моего.
+choji: Держи, секрет семьи Акимичи: чай с мёдом. Бодрит и успокаивает.
+: Чоджи протягивает флягу. Ты отпиваешь, и усталость будто смывает тёплой волной.
+call rest 25
+call step arc_choji talk
+end
+
+// ───────────── Ино: «Цветы и сплетни» ─────────────
+=== arc_ino_offer
+ino: {name}! Хорошо, что ты зашёл! Я такое слышала...
+ino: Но сначала услуга. Сакура на меня обиделась, а я хочу помириться. Купи ей цветок и скажи, что от тебя.
+? Поможешь?
+* Помогу -> yes
+* Нет -> no
+# yes
+ino: Правда?! Ты лучший! Тогда, как всё получится, возвращайся, я расскажу тебе кое-что интересное.
+call quest start arc_ino
+end
+# no
+ino: Эх... ладно.
+end
+=== arc_ino_peace
+sakura: Это цветок? От тебя? ...Или от Ино-свиньи?
+sakura: ...Ладно, передай ей, что я не злюсь. Совсем немного.
+end
+=== arc_ino_gossip
+ino: Мирно?! Вот это новости! Спасибо.
+ino: Тогда слушай. Моя мама говорит, что в деревне ходит человек в плаще. Расспрашивает торговцев: нет ли в Конохе новичка с необычной чакрой.
+ino: Вряд ли он добрый. Мы в клане Яманака чувствуем такие вещи. Будь осторожнее.
+: Холодок снова пробегает по спине. Но ты уже не один: Ино предупреждает, значит, ты не чужой.
+end
+=== arc_ino_med
+ino: В нашем клане учат слушать собственные мысли. Закрой глаза. Почувствуй, где чакра, а где ты.
+: Ты слышишь свой пульс, дыхание и тихий гул фиолетового света в груди. Теперь их можно различить.
+end
+=== arc_ino_end
+ino: Ну вот, у тебя получается! Это упражнение Яманака. Делай его каждый вечер, и чакра станет послушнее.
+call step arc_ino end
+end
+
+// ───────────── Ли: «Сила через труд» ─────────────
+=== arc_lee_offer
+lee: {name}! Мой вечный соперник! Слушай! Я ничего не умею, кроме тайдзюцу, но Гай-сенсей говорит: тот, кто не сдаётся, и есть победитель!
+lee: Хочешь тренироваться по-настоящему? Для начала мне нужно полотенце: пот течёт ручьём!
+? Принесёшь?
+* Принесу -> yes
+* Потом -> no
+# yes
+lee: Спасибо! Ты настоящий друг!
+call quest start arc_lee
+end
+# no
+lee: Хорошо, но я не сдамся!
+end
+=== arc_lee_give
+lee: Ах, как приятно! Вот что значит дружба! Давай тренироваться!
+end
+=== arc_lee_train
+lee: Раз, два! Отжимания! А теперь приседания! Не останавливайся!
+: Через час ты едва держишься на ногах, а Ли только разогревается. Но в груди приятно горит.
+end
+=== arc_lee_spar
+lee: Отлично! Ты сражался честно! Я не рассчитывал, что ты настолько силён!
+: Ли смеётся и хлопает тебя по плечу.
+end
+=== arc_lee_end
+guy: Ха-ха! Я видел вашу тренировку! Вот это сила юности!
+guy: Знаешь, Ли — мой лучший ученик. Не из-за таланта, а из-за упорства. Тот, кто не сдаётся, всегда выигрывает.
+guy: Твоя чакра... необычная. Но не бойся её. Работай над ней каждый день, и она подчинится тебе. Сила юности!
+call xp end 12
+call step arc_lee talk
+end
+
+// ───────────── Саске: «Соперник» ─────────────
+=== arc_sasuke_offer
+sasuke: ...Ты тот, у кого чакра фиолетовая. Это правда?
+sasuke: Мне нужен достойный противник. Не тот, кто убегает. Дерёшься?
+? Ответ?
+* Дерусь -> yes
+* Не сейчас -> no
+# yes
+sasuke: Хм. Хорошо. Через меню общения: «Спарринг».
+call quest start arc_sasuke
+end
+# no
+sasuke: ...Как хочешь.
+end
+=== arc_sasuke_spar
+sasuke: ...Неплохо. Для слабака.
+sasuke: Но я не проиграю. Я стану сильнее.
+: Он уходит, но ты замечаешь, что он оглянулся.
+end
+=== arc_sasuke_throw
+sasuke: Кунай держи крепче. Целься в глаз мишени, а не в её центр.
+: Сюрикены втыкаются один за другим. Рядом с твоими стоят его: ровные, как по линейке.
+end
+=== arc_sasuke_give
+sasuke: ...Откуда ты знал, что я люблю помидоры?
+sasuke: Это не... Просто хорошие помидоры. Спасибо.
+end
+=== arc_sasuke_end
+sasuke: Слушай... Я не говорю этого никому. У меня... никого нет. Только брат. И тот...
+sasuke: Я хочу стать сильным, чтобы однажды найти ответы. А ты кажешься... таким же.
+? Что ответишь?
+* Я помогу, чем смогу -> trust
+* Каждый идёт своим путём -> distance
+# trust
+sasuke: ...Хм. Ладно. Пока не уходи далеко.
+call choice sasuke trust
+-> end_part
+# distance
+sasuke: Правильно. Так и есть. Но... я запомню.
+call choice sasuke distance
+# end_part
+call xp tai 12
+call step arc_sasuke talk
+end
+`);
+
 
 // ===== data/small_quests.js =====
 // Малые задания (категория «errand»): 1–2 шага, «принеси предмет» от известных жителей. Деньги, иногда дружба.
@@ -9874,7 +10189,33 @@ end
     ['sm_sasuke_tomato', 'sasuke', null, 'Томаты для Саске', 'Саске: ...Нужны томаты. Не спрашивай зачем. Принесёшь пару?', 'tomato', 2, 60, 'sasuke', '...Хм. Спасибо.', 6],
     ['sm_anko_dango', 'anko', null, 'Данго для Анко', 'Анко: Данго! Мне срочно нужны три палочки данго. Беги в лавку!', 'dango', 3, 120, null, 'Хррум... Ты мой любимый ученик!', 7],
     ['sm_teuchi_veg', 'teuchi', 'ichiraku', 'Овощи для рамена', 'Теучи: Нужно три порции овощей для сегодняшнего рамена. Принесёшь?', 'vegetables', 3, 75, null, 'Спасибо! Сегодня у нас будет аншлаг.', 5],
+    ['sm_ayame_mochi', 'ayame', 'ichiraku', 'Моти для Аяме', 'Аяме: Хочу угостить подругу. Принесёшь рисовые лепёшки?', 'mochi', 1, 45, null, 'Мягкие, как надо! Спасибо.', 6],
+    ['sm_anko_tea', 'anko', null, 'Чай для Анко', 'Анко: К данго нужен сладкий чай. Принесёшь?', 'sweet_tea', 1, 40, null, 'Идеально! Теперь можно жить.', 8],
+    ['sm_shino_herb', 'shino', null, 'Травы для насекомых', 'Шино: Моим жукам нужны свежие травы. Принесёшь две?', 'herb', 2, 55, 'shino', 'Спасибо. Жуки довольны.', 7],
+    ['sm_lee_milk', 'lee', null, 'Молоко для Ли', 'Ли: После тренировки нужно молоко! Принесёшь пару?', 'milk', 2, 50, 'lee', 'Сила юности восстановлена!', 9],
+    ['sm_choji_berries', 'choji', null, 'Ягоды для Чоджи', 'Чоджи: Хочу ягод к чаю. Найдёшь три?', 'berries', 3, 40, 'choji', 'Хрум! Кисло-сладко, как надо.', 8],
+    ['sm_ino_candy', 'ino', 'flowers', 'Леденцы для Ино', 'Ино: Хочу леденцов, а то всё время сижу на цветочной диете. Принесёшь?', 'candy', 2, 40, 'ino', 'Сладкая жизнь! Спасибо.', 9],
+    ['sm_sasuke_kunai', 'sasuke', null, 'Кунаи для Саске', 'Саске: Мне нужны три кунаи. Не спрашивай, зачем.', 'kunai', 3, 60, 'sasuke', '...Спасибо.', 10],
+    ['sm_kiba_chips', 'kiba', null, 'Чипсы для Кибы', 'Киба: Акамару обожает чипсы. Принесёшь пару пачек?', 'chips', 2, 50, 'kiba', 'Гав! Угощай ещё!', 9],
     ['sm_ayame_tea', 'ayame', 'ichiraku', 'Чай для посетителей', 'Аяме: Зелёный чай закончился. Купишь пачку?', 'green_tea', 1, 40, null, 'Спасибо! Клиенты довольны.', 4],
+  ];
+  // [id, кто, где, название, просьба, событие, фильтр, награда рё, друг+, реплика после, с какого дня]
+  const D = [
+    ['sm_teuchi_big', 'teuchi', 'ichiraku', 'Попробуй большую порцию', 'Теучи: Хочу узнать, осилишь ли ты большую порцию. Попробуешь?', 'bought', (id) => id === 'ramen_big', 50, null, 'Ха-ха! Осилил! Приходи ещё.', 6],
+    ['sm_ayame_cook', 'ayame', 'ichiraku', 'Свой обед', 'Аяме: Говорят, ты неплохо готовишь. Приготовишь себе обед сам?', 'cooked', null, 40, null, 'Молодец! Теперь ты почти шеф.', 5],
+    ['sm_choji_cook', 'choji', null, 'Приготовь что-нибудь', 'Чоджи: Ты умеешь готовить? Давай приготовь что-нибудь, мне интересно.', 'cooked', null, 45, 'choji', 'Хрум... Неплохо. Очень неплохо!', 6],
+    ['sm_kiba_fish', 'kiba', null, 'Рыба для Акамару', 'Киба: Акамару захотел рыбы. Поймаешь?', 'fished', (id) => !!id, 45, 'kiba', 'Гав-гав! Спасибо за улов!', 7],
+    ['sm_lee_dummy', 'lee', null, 'Удары по манекену', 'Ли: Отдай тысячу ударов манекену! Покажи, что ты не сдаёшься!', 'training', (id) => id === 'dummy' || id === 'log', 60, 'lee', 'Сила юности растёт! Молодец!', 9],
+    ['sm_anko_sell', 'anko', null, 'Продай улов', 'Анко: Рыбу можно продавать на рынке. Поймай и продай, получишь рё.', 'sold', null, 50, null, 'Видишь? Мозги работают! Держи премию.', 8],
+    ['sm_sasuke_throw', 'sasuke', null, 'Метание', 'Саске: Покажи, как ты метаешь. Поработай на полигоне.', 'training', (id) => id === 'throw', 55, 'sasuke', '...Хм. Не плохо.', 8],
+    ['sm_shikamaru_med', 'shikamaru', 'academy', 'Минутка тишины', 'Шикамару: Помедитируй где-нибудь. Тихо. Хлопотно, но полезно.', 'training', (id) => id === 'meditate' || id === 'falls', 45, 'shikamaru', 'Тишина... Хорошо.', 7],
+    ['sm_sakura_read', 'sakura', null, 'Прочитай книгу', 'Сакура: Ты читаешь вообще? Давай, сходи в библиотеку.', 'training', (id) => id === 'library' || id === 'book', 45, 'sakura', 'Видишь, не так страшно!', 6],
+    ['sm_hinata_gift', 'hinata', null, 'Подарок другу', 'Хината: Мне кажется... надо дарить друзьям подарки. Подаришь кому-нибудь?', 'gift', null, 40, 'hinata', 'Эт-это хорошо. Спасибо.', 7],
+    ['sm_naruto_roof', 'naruto', null, 'Прыжок на крышу', 'Наруто: Давай ты запрыгнешь на крышу, а я посмотрю! Спорим, у тебя получится?', 'roof', null, 50, 'naruto', 'Круто! Это было классно!', 8],
+    ['sm_iruka_job', 'iruka', 'academy', 'Первая подработка', 'Ирука: Попробуй взять поручение на доске. Это полезный опыт.', 'job', null, 60, 'iruka', 'Молодец. Ответственность — это важно.', 7],
+    ['sm_shino_bug', 'shino', null, 'Тишина леса', 'Шино: Пойди в Лес Нара и потренируй скрытность. Насекомые там любят тишину.', 'training', (id) => id === 'stealth', 55, 'shino', 'Насекомые довольны.', 10],
+    ['sm_guy_run', 'guy', null, 'Пробежка по крышам', 'Гай: Пробеги по улицам, юноша! Сила юности требует движения!', 'training', (id) => id === 'run', 70, 'lee', 'Прекрасно! Вот это энергия!', 10],
+    ['sm_teuchi_gift', 'teuchi', 'ichiraku', 'Подарок от души', 'Теучи: Хочешь стать настоящим другом? Подари что-нибудь другу, не жалей.', 'gift', null, 40, null, 'Правильно. Дружба стоит дороже рё.', 6],
   ];
   let src = '';
   for (const [id, npc, inB, title, ask, item, n, pay, friend, thanks, day] of T) {
@@ -9891,6 +10232,17 @@ end
       reward,
     };
     src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Поможешь?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\nend\n`;
+  }
+  for (const [id, npc, inB, title, ask, ev, flt, pay, friend, thanks, day] of D) {
+    const reward = { money: pay, text: pay + ' рё' };
+    if (friend) reward.vars = { ['friend_' + friend]: 1 };
+    G.QUESTS[id] = {
+      cat: 'errand', title, desc: ask.replace(/^[^:]+: /, ''),
+      offer: { npc, in: inB || undefined, script: id + '_offer', when: () => G.state.started && G.state.vars.day >= day },
+      steps: [{ id: 'do', text: title, target: { npc, in: inB || undefined }, on: flt ? [ev, flt] : [ev], after: id + '_done' }],
+      reward,
+    };
+    src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Возьмёшься?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\nend\n`;
   }
   G.script.parse(src);
 })();
@@ -12804,8 +13156,8 @@ G.world = {
     add(...an('choji', [46, 55]), { id: 'choji', dir: 'down', talk: 'choji_talk', sched: [[14 * H, 20 * H, 'wd'], [11 * H, 20 * H, 'we']] });
     add(...an('kiba', [14, 104]), { id: 'kiba', dir: 'right', talk: 'kiba_talk', ai: 'wander', wanderR: 24, sched: [[14 * H, 19 * H, 'wd'], [8 * H, 18 * H, 'we']] });
     add(...an('shino', [100, 118]), { id: 'shino', dir: 'down', talk: 'shino_talk', sched: [[14 * H, 18 * H, 'wd'], [10 * H, 17 * H, 'we']], dryOnly: true });
-    add(...an('lee', [38, 115]), { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 18 || G.state.flags.met_lee });
-    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => day() >= 18 || G.state.flags.met_lee });
+    add(...an('lee', [38, 115]), { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 8 || G.state.flags.met_lee });
+    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => day() >= 8 || G.state.flags.met_lee });
     // ночной торговец в переулке (каждую третью ночь)
     add(...an('thief', [104, 68]), { id: 'thief', name: 'Ночной торговец', dir: 'down', shop: 'night', reach: 20, sched: [[21 * H, 26 * H]], cond: () => day() % 3 === 0 });
     // объекты тренировок на полигонах

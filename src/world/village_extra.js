@@ -13,8 +13,8 @@
     add(...an('choji', [46, 55]), { id: 'choji', dir: 'down', talk: 'choji_talk', sched: [[14 * H, 20 * H, 'wd'], [11 * H, 20 * H, 'we']] });
     add(...an('kiba', [14, 104]), { id: 'kiba', dir: 'right', talk: 'kiba_talk', ai: 'wander', wanderR: 24, sched: [[14 * H, 19 * H, 'wd'], [8 * H, 18 * H, 'we']] });
     add(...an('shino', [100, 118]), { id: 'shino', dir: 'down', talk: 'shino_talk', sched: [[14 * H, 18 * H, 'wd'], [10 * H, 17 * H, 'we']], dryOnly: true });
-    add(...an('lee', [38, 115]), { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 18 || G.state.flags.met_lee });
-    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => day() >= 18 || G.state.flags.met_lee });
+    add(...an('lee', [38, 115]), { id: 'lee', dir: 'left', talk: 'lee_talk', sched: [[15 * H, 21 * H, 'wd'], [6 * H, 21 * H, 'we']], cond: () => day() >= 8 || G.state.flags.met_lee });
+    add(...an('guy', [40, 115]), { id: 'guy', dir: 'left', talk: 'guy_talk', sched: [[16 * H, 20 * H]], cond: () => day() >= 8 || G.state.flags.met_lee });
     // ночной торговец в переулке (каждую третью ночь)
     add(...an('thief', [104, 68]), { id: 'thief', name: 'Ночной торговец', dir: 'down', shop: 'night', reach: 20, sched: [[21 * H, 26 * H]], cond: () => day() % 3 === 0 });
     // объекты тренировок на полигонах
