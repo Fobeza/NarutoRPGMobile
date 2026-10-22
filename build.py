@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "2.2.2"                            # подготовленный набор графики; игровой масштаб сохранён
+RELEASE = "2.3"                              # подготовленный набор графики; игровой масштаб сохранён
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -121,6 +121,13 @@ def build(debug=False):
 
     version = hashlib.sha1((RELEASE + js + read("shell.html") + read("style.css")).encode("utf-8")).hexdigest()[:8]   # меняется при любой правке и смене выпуска → телефоны подхватят обновление
     stamp = time.strftime("%Y-%m-%d %H:%M")
+    try:   # код не менялся (тот же хеш) → дату не трогаем, чтобы index.html не «грязнился» пустой пересборкой
+        old = open(os.path.join(OUT, "index.html"), encoding="utf-8").read()
+        m = re.search(r"version: '%s', date: '([^']+)'" % version, old)
+        if m:
+            stamp = m.group(1)
+    except OSError:
+        pass
     header = (f"'use strict';\nconst BUILD = {{ release: '{RELEASE}', version: '{version}', date: '{stamp}', "
               f"debug: {'true' if debug else 'false'} }};\n")
 

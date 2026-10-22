@@ -1,0 +1,24 @@
+name: Проверки
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Сборка
+        run: python3 build.py
+      - name: Сборка не отличается от закоммиченной
+        run: git diff --exit-code -- index.html sw.js map-editor.html
+      - name: Проверки без браузера
+        run: python3 tools/check_node.py
