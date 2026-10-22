@@ -82,6 +82,23 @@ test('Усталость: набор, отдых, еда и миграция с�
   G.state.vars.fatigue = 100; assert.equal(G.game.useItem('berries').ok, false);   // нет в сумке
   assert.ok(Object.values(G.ITEMS).filter(i => i.cat === 'food').every(i => i.effect.rest > 0));
 });
+test('Фиолетовая чакра: стабильность, шанс выброса, усиление и срыв, практика', () => {
+  const v = G.state.vars, P = G.purple;
+  v.fatigue = 0; v.injury = 0; v.purple_ctl = 0; G.state.hero.stats.ctrl = 4;
+  const s0 = P.stability(); assert.ok(s0 > 15 && s0 < 45, 'в начале герой нестабилен: ' + s0);
+  v.fatigue = 80; assert.ok(P.stability() < s0); v.fatigue = 0;
+  G.state.hero.stats.ctrl = 10; v.purple_ctl = 30; assert.ok(P.stability() > 80); assert.ok(P.chance(30) < 0.1);
+  G.state.hero.stats.ctrl = 4; v.purple_ctl = 0;
+  assert.ok(P.chance(30) > P.chance(10) && P.chance(30) <= 0.4);
+  assert.equal(P.roll(30, () => 0.99), null);
+  assert.equal(P.roll(30, () => 0).kind, 'boost');                         // первая проверка пройдена, вторая даёт усиление
+  const seq = [0, 0.99]; assert.equal(P.roll(30, () => seq.shift()).kind, 'backfire');
+  v.chakra = 80; v.hp = 50; v.fatigue = 0; P.apply({ kind: 'backfire' });
+  assert.equal(v.chakra, 65); assert.equal(v.hp, 45); assert.equal(v.fatigue, 8);
+  P.apply({ kind: 'boost' }); assert.equal(v.chakra, 65);                  // усиление ничего не списывает
+  assert.equal(P.practice('dummy', 1), 0); assert.ok(P.practice('tree', 1) > 0); assert.ok(v.purple_ctl > 0);
+  for (let i = 0; i < 99; i++) P.practice('tree', 1); assert.equal(v.purple_ctl, 40);
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });

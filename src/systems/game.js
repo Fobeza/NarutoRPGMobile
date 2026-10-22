@@ -22,7 +22,7 @@ G.game = (() => {
       layoutVersion: 3,
       hero: { name: '', stats: null, skills: [] },
       flags: {},
-      vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, fatigue: 10, spent: 0, injury: 0, poison: 0 },
+      vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, fatigue: 10, purple_ctl: 0, spent: 0, injury: 0, poison: 0 },
       daily: {},           // разовые за день отметки (предупреждения об усталости и т.п.), сбрасываются во сне
       inv: {},
       chest: {},

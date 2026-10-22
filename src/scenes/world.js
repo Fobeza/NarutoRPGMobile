@@ -884,6 +884,7 @@ G.scenes.register('world', (pos) => {
       if(G.villageDaily)G.villageDaily.drawCargo(ctx,this,a,true);
       if(!G.worldMotion||!G.worldMotion.actor(ctx,this,a,frame,lift))G.chars.draw(ctx, a.id, a.dir, frame, a.x, a.y-lift, a._look);
       ctx.restore();
+      if (a === this.player && G.purple) G.purple.drawAura(ctx, this, a);
       if(G.villageDaily){G.villageDaily.drawCargo(ctx,this,a);G.villageDaily.drawActorExtras(ctx,this,a);}
       if(a._guard)G.guards.lantern(ctx,a);
     },

@@ -63,13 +63,15 @@ G.train = {
       return;
     }
     G.scenes.push(G.scenes.make('train', t.mg, { title: t.name, partner: opts.partner }, (score) => {
-      const m = this.mult(id, opts.partner) * (0.35 + 0.65 * score);
+      const surge = G.purple.PRACTICE.includes(id) ? G.purple.roll(30) : null;   // выброс фиолетовой чакры
+      const m = this.mult(id, opts.partner) * (0.35 + 0.65 * score) * (surge && surge.kind === 'boost' ? G.purple.BOOST : 1);
       const gained = [];
       for (const [st, base] of Object.entries(t.stats)) { const x = Math.round(base * m * 10) / 10; gained.push([st, x]); this.addXp(st, x); }
       const d = G.state.daily; d['tr_' + id] = (d['tr_' + id] || 0) + 1;
       if (t.mg === 'seals') for (const tid of Object.keys(G.TECHS)) if (G.combat.knows(tid)) v['use_' + tid] = (v['use_' + tid] || 0) + 1;
       G.game.advance(t.minutes, { work: true });
       G.game.tire(t.fatigue * (opts.partner ? 0.8 : 1));
+      G.purple.practice(id, score); G.purple.apply(surge, world);
       v.trainings = (v.trainings || 0) + 1;
       G.events.emit('training', id, score, opts.partner || null);
       if (opts.partner) { d['trw_' + opts.partner] = 1; G.friends && G.friends.add(opts.partner, 2, 'train'); }   // попытка дня тратится только на состоявшуюся тренировку
