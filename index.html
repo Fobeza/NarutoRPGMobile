@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '194b3f06', date: '2026-10-22 17:12', debug: false };
+const BUILD = { release: '2.3', version: '2d448d2a', date: '2026-10-22 17:22', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -5459,6 +5459,8 @@ G.dialog = (() => {
 // чтобы сценарии могли их проверять: `if var.money >= 40 -> treat`, `if var.min >= 1080 -> sleep`.
 G.game = (() => {
   const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  // Календарь как в Stardew Valley: месяц — 4 недели по 7 дней, всегда лето (июнь → июль → август → снова июнь)
+  const MONTHS = [['Июнь', 'июня'], ['Июль', 'июля'], ['Август', 'августа']], MONTH_DAYS = 28;
   const DAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
   const START_MONEY = 300;
   const POUCH = 10;           // слотов подсумка на старте (§5.4)
@@ -5498,7 +5500,7 @@ G.game = (() => {
   }
 
   const api = {
-    DAYS, DAYS_FULL, GOALS, POUCH,
+    DAYS, DAYS_FULL, MONTHS, MONTH_DAYS, GOALS, POUCH,
 
     newState() { G.state = defaults(); return G.state; },
 
@@ -5588,6 +5590,12 @@ G.game = (() => {
     dayName(day = this.v.day) { return DAYS[(day - 1) % 7]; },
     dayNameFull(day = this.v.day) { return DAYS_FULL[(day - 1) % 7]; },
     week(day = this.v.day) { return Math.floor((day - 1) / 7) + 1; },
+    monthIndex(day = this.v.day) { return Math.floor((day - 1) / MONTH_DAYS); },
+    dayOfMonth(day = this.v.day) { return (day - 1) % MONTH_DAYS + 1; },
+    monthName(day = this.v.day) { return MONTHS[this.monthIndex(day) % MONTHS.length][0]; },
+    // «5 июня»
+    date(day = this.v.day) { return this.dayOfMonth(day) + ' ' + MONTHS[this.monthIndex(day) % MONTHS.length][1]; },
+    year(day = this.v.day) { return Math.floor(this.monthIndex(day) / MONTHS.length) + 1; },
 
     // Сдвинуть время вперёд на n минут. Нужды (этап 4):
     //   усталость +4,2/ч (×Выносливость), бег ещё +7/ч; еда, чай и отдых её снимают;
@@ -5715,7 +5723,7 @@ G.game = (() => {
       const bed = v.min;
       const lateH = Math.max(0, bed - 23 * 60) / 60;
       const wakeFatigue = opts.faint ? 50 : Math.round(G.util.clamp(lateH * (H.has('early_bird') ? 5 : 10), 0, 50));
-      const summary = { day: v.day, dayName: this.dayNameFull(), spent: v.spent, log: G.state.log.slice(), money: v.money,
+      const summary = { day: v.day, date: this.date(), dayName: this.dayNameFull(), spent: v.spent, log: G.state.log.slice(), money: v.money,
         bed, wakeFatigue, faint: !!opts.faint };
       v.day += 1;
       v.min = H.wakeMin();
@@ -7102,7 +7110,7 @@ G.calendar = {
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
     const d0 = G.state.vars.day, out = [];
-    for (let d = d0; d <= 56 && out.length < n; d++) {
+    for (let d = d0; d <= d0 + G.game.MONTH_DAYS && out.length < n; d++) {
       if (this.EVENTS[d]) out.push({ d, text: this.EVENTS[d] });
       if (this.BDAY[d]) out.push({ d, text: 'ДР: ' + G.chars.nameOf(this.BDAY[d]) + ' ♥×2' });
       if (G.academy.isSchoolDay(d) && !this.EVENTS[d] && d === d0) out.push({ d, text: 'Уроки: прийти до 9:30' });
@@ -7325,9 +7333,9 @@ Object.assign(G.flow, {
   board: (a, w) => G.life_events.board(w),
   calendar: (a, w) => {
     const ev = G.calendar.upcoming(9);
-    const opts = ev.map((e) => ({ label: `День ${e.d} (${G.game.dayName(e.d)})`, sub: '', desc: e.text }));
-    opts.forEach((o, i) => { o.label = `${ev[i].d === G.state.vars.day ? 'Сегодня' : 'Д' + ev[i].d}: ${ev[i].text}`; o.desc = `День ${ev[i].d}, ${G.game.dayNameFull(ev[i].d)}. ${ev[i].text}${ev[i].text.startsWith('ДР') ? ' — подарок ценится вдвое.' : ''}`; });
-    G.scenes.push(G.scenes.make('pick', { title: `Календарь · неделя ${G.game.week()} из 8`, text: `До экзамена: ${Math.max(0, 54 - G.state.vars.day)} дн.`, options: opts.length ? opts : [{ label: 'Ничего особенного' }] }, () => {}));
+    const opts = ev.map((e) => ({ label: `${G.game.date(e.d)} (${G.game.dayName(e.d)})`, sub: '', desc: e.text }));
+    opts.forEach((o, i) => { o.label = `${ev[i].d === G.state.vars.day ? 'Сегодня' : G.game.date(ev[i].d)}: ${ev[i].text}`; o.desc = `${G.game.date(ev[i].d)}, ${G.game.dayNameFull(ev[i].d)}. ${ev[i].text}${ev[i].text.startsWith('ДР') ? ' — подарок ценится вдвое.' : ''}`; });
+    G.scenes.push(G.scenes.make('pick', { title: `Календарь · ${G.game.monthName()}`, text: `Сегодня ${G.game.date()}, ${G.game.dayNameFull()}.`, options: opts.length ? opts : [{ label: 'Ничего особенного' }] }, () => {}));
   },
   cook: (a, w) => {
     const c = (id) => G.game.count(id), d = G.state.daily;
@@ -15911,7 +15919,7 @@ G.scenes.register('world', (pos) => {
       const W = G.screen.W, U = G.ui, F = G.font.small, C = U.C;
       U.panel(ctx, 0, 0, W, HUD_H, 'night');
       const g = G.game, v = g.v;
-      F.draw(ctx, `${g.dayName()}, день ${v.day}`, 6, 5, { color: '#d8c8a0' });
+      F.draw(ctx, `${g.dayName()}, ${g.date()}`, 6, 5, { color: '#d8c8a0' });
       // часы: мигающее двоеточие, пока время идёт; значок погоды (ночью — луна)
       const wt = G.life.WEATHER[G.life.weather()];
       const night = g.isNight();
@@ -16643,7 +16651,7 @@ G.scenes.register('bag', () => {
       U.backdrop(ctx);button(ctx,g.back,'Назад',z,'normal');
       ctx.save();ctx.translate(g.back.x+g.back.w+(W-g.back.x-g.back.w)/2,4+(g.bh-16*z)/2);ctx.scale(z,z);U.title(ctx,'СУМКА',0,0,70);ctx.restore();
       U.panel(ctx,4,g.infoY,W-8,g.infoH,'frame');
-      text(ctx,`${game.dayName()}, ${v.day} · ${game.clock()}`,12,g.infoY+5*z,z,true,{color:C.inkDim,maxW:(W-24)/z-G.font.small.measure(`${v.money} рё`)-8});
+      text(ctx,`${game.dayName()}, ${game.date()} · ${game.clock()}`,12,g.infoY+5*z,z,true,{color:C.inkDim,maxW:(W-24)/z-G.font.small.measure(`${v.money} рё`)-8});
       text(ctx,`${v.money} рё`,W-12,g.infoY+5*z,z,true,{align:'right',color:'#8a5a10'});
       text(ctx,'Цель: '+(game.goalText()||'—'),12,g.infoY+18*z,z,true,{color:C.redDark,maxW:(W-24)/z});
       [['Усталость',v.fatigue,C.fatigue]].forEach(([nm,val,col],i)=>{
@@ -16717,7 +16725,7 @@ G.scenes.register('daysum', (summary, onDone) => {
       const h = 30 + rows.reduce((n, [txt]) => n + S.wrap(txt, tw).length * 12 + 2, 0);
       const y0 = Math.max(46, Math.min(96, H - h - 56));
       U.title(ctx, 'ИТОГИ ДНЯ', W / 2, y0 - 36, 110);
-      F.small.draw(ctx, `День ${summary.day} · ${summary.dayName}`, W / 2, y0 - 16, { align: 'center', color: '#d8c8a0' });
+      F.small.draw(ctx, `${summary.date || G.game.date(summary.day)} · ${summary.dayName}`, W / 2, y0 - 16, { align: 'center', color: '#d8c8a0' });
       U.panel(ctx, 8, y0, W - 16, h, 'scroll');
       let y = y0 + 15;
       for (const [txt, col] of rows) { for (const ln of S.wrap(txt, tw)) { S.draw(ctx, ln, 26, y, { color: col }); y += 12; } y += 2; }
@@ -16753,8 +16761,8 @@ G.scenes.register('cheats', () => {
     { label: '> Ичираку', act: () => tp('ichiraku') },
     { label: '> Главные ворота', act: () => tp('gate') },
     { label: 'Сюжет: после Ируки', act: () => { const f = G.state.flags; f.enrolled = 1; f.met_iruka = 1; G.game.advanceTo('12:30'); G.quests.start('day1'); G.quests.step('day1', 'iruka'); G.quests.start('homework'); say('Цель: Наруто'); } },
-    { label: 'День +1 (утро 7:00)', act: () => { const v = G.state.vars; v.day = Math.min(56, v.day + 1); v.min = 7 * 60; G.state.daily = {}; say('День ' + v.day); } },
-    { label: 'День +7', act: () => { const v = G.state.vars; v.day = Math.min(54, v.day + 7); v.min = 7 * 60; G.state.daily = {}; say('День ' + v.day); } },
+    { label: 'День +1 (утро 7:00)', act: () => { const v = G.state.vars; v.day = Math.min(56, v.day + 1); v.min = 7 * 60; G.state.daily = {}; say(G.game.date()); } },
+    { label: 'День +7', act: () => { const v = G.state.vars; v.day = Math.min(54, v.day + 7); v.min = 7 * 60; G.state.daily = {}; say(G.game.date()); } },
     { label: 'Все техники', act: () => { for (const t of Object.keys(G.TECHS)) G.state.flags['tech_' + t] = 1; G.state.flags.tech_tree = 1; say('Все техники выучены'); } },
     { label: 'Статы +2', act: () => { const s = G.state.hero.stats; for (const k in s) s[k] = Math.min(G.STAT_CAP, s[k] + 2); say('Статы +2'); } },
     { label: 'Дружба всем +5', act: () => { for (const id of Object.keys(G.FRIENDS)) G.friends.add(id, 5); say('Дружба +5'); } },
@@ -16913,7 +16921,7 @@ G.scenes.register('journal', () => {
       y += 3;
       if (s.due != null && s.st === 'active') {
         const left = s.due - G.state.vars.day;
-        F.small.draw(ctx, `Срок: до конца дня ${s.due} (${G.game.dayName(s.due)})${left === 0 ? ' — сегодня!' : ''}`, x0, y, { color: left === 0 ? C.err : C.inkDim }); y += 13;
+        F.small.draw(ctx, `Срок: до конца дня ${G.game.date(s.due)} (${G.game.dayName(s.due)})${left === 0 ? ' — сегодня!' : ''}`, x0, y, { color: left === 0 ? C.err : C.inkDim }); y += 13;
       }
       if (d.reward && d.reward.text) { F.small.draw(ctx, 'Награда: ' + d.reward.text, x0, y, { color: '#8a5a10', maxW: tw }); y += 13; }
       const st = { active: 'Активно', done: 'Выполнено ✔', failed: 'Провалено' }[s.st];
@@ -16966,7 +16974,7 @@ G.scenes.register('calendar', () => {
     return m;
   }
   const offset=()=>G.touch.header().height-20;
-  const GY = 62, CH = 30;   // верх сетки дней и высота ячейки
+  const GY = 74, CH = 30;   // верх сетки дней и высота ячейки
   const hh = (a, b) => String(a).padStart(2, '0') + '–' + String(b).padStart(2, '0');
 
   return {
@@ -17013,14 +17021,17 @@ G.scenes.register('calendar', () => {
     drawDays(ctx, W, H, V) {
       const U = G.ui, C = U.C, pg = page(), cw = (W - 14) / 7;
       U.panel(ctx, 4, 44, W - 8, GY + 4 * CH - 40, 'frame');
-      for (let c = 0; c < 7; c++) F.small.draw(ctx, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][c], 7 + c * cw + cw / 2, 49, { align: 'center', color: c > 4 ? C.red : C.inkDim });
+      const mname = G.game.monthName(pg * 28 + 1) + (G.game.year(pg * 28 + 1) > 1 ? ', год ' + G.game.year(pg * 28 + 1) : '');
+      F.draw(ctx, mname, W / 2, 49, { align: 'center', color: C.redDark });
+      F.draw(ctx, '<', 14, 49, { color: pg > 0 ? C.red : C.inkFaint }); F.draw(ctx, '>', W - 18, 49, { color: C.red });
+      for (let c = 0; c < 7; c++) F.small.draw(ctx, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][c], 7 + c * cw + cw / 2, 64, { align: 'center', color: c > 4 ? C.red : C.inkDim });
       for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) {
         const d = pg * 28 + r * 7 + c + 1;
         if (d > limit()) continue;
         const x = Math.round(7 + c * cw), y = GY + r * CH, w = Math.round(cw) - 2;
         U.card(ctx, x, y, w, CH - 3, d === sel);
         if (d === V.day) { ctx.fillStyle = C.ok; ctx.fillRect(x + 3, y + 3, 5, 5); }
-        F.small.draw(ctx, String(d), x + 5 + (d === V.day ? 5 : 0), y + 3, { color: d < V.day ? C.inkFaint : c > 4 ? C.red : C.ink });
+        F.small.draw(ctx, String(G.game.dayOfMonth(d)), x + 5 + (d === V.day ? 5 : 0), y + 3, { color: d < V.day ? C.inkFaint : c > 4 ? C.red : C.ink });
         marks(d).slice(0, 3).forEach((col, i) => { ctx.fillStyle = col; ctx.fillRect(x + 4 + i * 6, y + CH - 11, 5, 5); });
         if (G.academy.isSchoolDay(d)) { ctx.fillStyle = '#3a62a0'; ctx.fillRect(x + w - 8, y + 4, 5, 5); }
       }
@@ -17028,7 +17039,7 @@ G.scenes.register('calendar', () => {
       const dy = GY + 4 * CH + 8;
       U.panel(ctx, 4, dy, W - 8, H - dy - 4, 'well');
       let y = dy + 8;
-      F.draw(ctx, `День ${sel} · ${G.game.dayNameFull(sel)}`, 12, y, { color: C.redDark }); y += 16;
+      F.draw(ctx, `${G.game.date(sel)} · ${G.game.dayNameFull(sel)}`, 12, y, { color: C.redDark }); y += 16;
       for (const it of dayItems(sel)) {
         if (y > H - 20) break;
         ctx.fillStyle = it.c; ctx.fillRect(12, y + 3, 4, 4);
@@ -17039,10 +17050,10 @@ G.scenes.register('calendar', () => {
     drawSched(ctx, W, H, V) {
       const U = G.ui, C = U.C, id = ids[ci], s = G.SCHED[id];
       U.panel(ctx, 4, 44, W - 8, H - 50, 'frame');
-      F.draw(ctx, '‹', 16, 53, { color: C.red }); F.draw(ctx, '›', W - 20, 53, { color: C.red });
+      F.draw(ctx, '<', 16, 53, { color: C.red }); F.draw(ctx, '>', W - 20, 53, { color: C.red });
       F.draw(ctx, G.chars.nameOf(id), W / 2, 53, { align: 'center', color: C.redDark });
       const known = V.day >= s.since;
-      if (!known) { F.draw(ctx, 'Пока не знакомы', W / 2, 96, { align: 'center', color: C.inkDim }); F.small.draw(ctx, `(появится с дня ${s.since})`, W / 2, 112, { align: 'center', color: C.inkDim }); return; }
+      if (!known) { F.draw(ctx, 'Пока не знакомы', W / 2, 96, { align: 'center', color: C.inkDim }); F.small.draw(ctx, `(появится ${G.game.date(s.since)})`, W / 2, 112, { align: 'center', color: C.inkDim }); return; }
       F.small.draw(ctx, 'Сейчас: ' + G.schedule.label(id), 12, 72, { color: C.redDark, maxW: W - 24 });
       U.row(ctx, 10, 87, W - 20, 17, true);
       F.draw(ctx, wk ? 'БУДНИ' : 'ВЫХОДНЫЕ', W / 2, 90, { align: 'center', color: '#f8eed0', shadow: '#5a1408' });
@@ -17279,12 +17290,12 @@ G.scenes.register('status', () => {
       let y = header().height;
       // герой, неделя, дата и погода
       U.panel(ctx, 4, y, W - 8, 44, 'frame');
-      F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(`Неделя ${g.week()}`) });
-      S.draw(ctx, `Неделя ${g.week()}`, W - 14, y + 11, { align: 'right', color: C.inkDim });
+      F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(g.monthName()) });
+      S.draw(ctx, g.monthName(), W - 14, y + 11, { align: 'right', color: C.inkDim });
       const wt = G.life.WEATHER[G.life.weather()];
       // узкий экран («крупно»): время суток не влезает — без него, а не с обрезанным «У…»
-      const when = [`${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, `${g.dayName()}, день ${v.day} · ${g.clock()}`].find((t) => S.measure(t) <= W - 90);
-      S.draw(ctx, when || `${g.dayName()}, день ${v.day} · ${g.clock()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
+      const when = [`${g.dayName()}, ${g.date()} · ${g.clock()} · ${G.life.period()}`, `${g.dayName()}, ${g.date()} · ${g.clock()}`].find((t) => S.measure(t) <= W - 90);
+      S.draw(ctx, when || `${g.dayName()}, ${g.date()} · ${g.clock()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
       S.draw(ctx, wt.icon + ' ' + wt.name, W - 14, y + 28, { align: 'right', color: '#3a62a0' });
       y += 48;
       // нужды: бамбуковые шкалы
@@ -17317,7 +17328,7 @@ G.scenes.register('status', () => {
       for (const ln of S.wrap('Навыки: ' + (sk.join(', ') || '—'), W - 24)) { S.draw(ctx, ln, 12, ty, { color: C.redDark }); ty += 12; }
       const A = G.academy, vv = G.state.vars;
       S.draw(ctx, `Оценки ${A.avg() || '—'} · посещ. ${A.attendance()}% · реп. ${vv.rep || 0}`, 12, ty, { color: '#3a62a0', maxW: W - 24 }); ty += 12;
-      S.draw(ctx, `Экзамен через ${Math.max(0, 54 - vv.day)} дн. · свитки ${vv.scrolls || 0}`, 12, ty, { color: C.inkDim, maxW: W - 24 }); ty += 15;
+      S.draw(ctx, `Свитки ${vv.scrolls || 0}`, 12, ty, { color: C.inkDim, maxW: W - 24 }); ty += 15;
       const met = FRIENDS.filter((id) => G.state.flags['met_' + id]);
       F.draw(ctx, 'Дружба', 12, ty, { color: C.redDark }); ty += 16;
       if (!met.length) S.draw(ctx, 'Пока ни с кем не знаком', 12, ty, { color: C.inkDim });

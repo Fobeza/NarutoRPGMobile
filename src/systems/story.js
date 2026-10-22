@@ -15,7 +15,7 @@ G.calendar = {
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
     const d0 = G.state.vars.day, out = [];
-    for (let d = d0; d <= 56 && out.length < n; d++) {
+    for (let d = d0; d <= d0 + G.game.MONTH_DAYS && out.length < n; d++) {
       if (this.EVENTS[d]) out.push({ d, text: this.EVENTS[d] });
       if (this.BDAY[d]) out.push({ d, text: 'ДР: ' + G.chars.nameOf(this.BDAY[d]) + ' ♥×2' });
       if (G.academy.isSchoolDay(d) && !this.EVENTS[d] && d === d0) out.push({ d, text: 'Уроки: прийти до 9:30' });
@@ -238,9 +238,9 @@ Object.assign(G.flow, {
   board: (a, w) => G.life_events.board(w),
   calendar: (a, w) => {
     const ev = G.calendar.upcoming(9);
-    const opts = ev.map((e) => ({ label: `День ${e.d} (${G.game.dayName(e.d)})`, sub: '', desc: e.text }));
-    opts.forEach((o, i) => { o.label = `${ev[i].d === G.state.vars.day ? 'Сегодня' : 'Д' + ev[i].d}: ${ev[i].text}`; o.desc = `День ${ev[i].d}, ${G.game.dayNameFull(ev[i].d)}. ${ev[i].text}${ev[i].text.startsWith('ДР') ? ' — подарок ценится вдвое.' : ''}`; });
-    G.scenes.push(G.scenes.make('pick', { title: `Календарь · неделя ${G.game.week()} из 8`, text: `До экзамена: ${Math.max(0, 54 - G.state.vars.day)} дн.`, options: opts.length ? opts : [{ label: 'Ничего особенного' }] }, () => {}));
+    const opts = ev.map((e) => ({ label: `${G.game.date(e.d)} (${G.game.dayName(e.d)})`, sub: '', desc: e.text }));
+    opts.forEach((o, i) => { o.label = `${ev[i].d === G.state.vars.day ? 'Сегодня' : G.game.date(ev[i].d)}: ${ev[i].text}`; o.desc = `${G.game.date(ev[i].d)}, ${G.game.dayNameFull(ev[i].d)}. ${ev[i].text}${ev[i].text.startsWith('ДР') ? ' — подарок ценится вдвое.' : ''}`; });
+    G.scenes.push(G.scenes.make('pick', { title: `Календарь · ${G.game.monthName()}`, text: `Сегодня ${G.game.date()}, ${G.game.dayNameFull()}.`, options: opts.length ? opts : [{ label: 'Ничего особенного' }] }, () => {}));
   },
   cook: (a, w) => {
     const c = (id) => G.game.count(id), d = G.state.daily;

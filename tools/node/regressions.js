@@ -99,6 +99,14 @@ test('Фиолетовая чакра: стабильность, шанс выб
   assert.equal(P.practice('dummy', 1), 0); assert.ok(P.practice('tree', 1) > 0); assert.ok(v.purple_ctl > 0);
   for (let i = 0; i < 99; i++) P.practice('tree', 1); assert.equal(v.purple_ctl, 40);
 });
+test('Календарь по месяцам: 28 дней, июнь → июль → август → снова июнь, всегда лето', () => {
+  const g = G.game;
+  assert.equal(g.date(1), '1 июня'); assert.equal(g.date(28), '28 июня'); assert.equal(g.date(29), '1 июля'); assert.equal(g.date(57), '1 августа');
+  assert.equal(g.date(85), '1 июня'); assert.equal(g.year(84), 1); assert.equal(g.year(85), 2);
+  assert.equal(g.monthName(30), 'Июль'); assert.equal(g.dayName(29), 'Пн');   // каждый месяц начинается с понедельника
+  for (const d of [1, 40, 100, 200, 500]) assert.equal(G.life.season().name, 'Лето');
+  assert.ok(G.calendar.upcoming(5).every(e => e.d <= G.state.vars.day + 28));
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });

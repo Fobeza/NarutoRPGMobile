@@ -893,7 +893,7 @@ G.scenes.register('world', (pos) => {
       const W = G.screen.W, U = G.ui, F = G.font.small, C = U.C;
       U.panel(ctx, 0, 0, W, HUD_H, 'night');
       const g = G.game, v = g.v;
-      F.draw(ctx, `${g.dayName()}, день ${v.day}`, 6, 5, { color: '#d8c8a0' });
+      F.draw(ctx, `${g.dayName()}, ${g.date()}`, 6, 5, { color: '#d8c8a0' });
       // часы: мигающее двоеточие, пока время идёт; значок погоды (ночью — луна)
       const wt = G.life.WEATHER[G.life.weather()];
       const night = g.isNight();

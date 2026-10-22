@@ -59,7 +59,7 @@ G.scenes.register('bag', () => {
       U.backdrop(ctx);button(ctx,g.back,'Назад',z,'normal');
       ctx.save();ctx.translate(g.back.x+g.back.w+(W-g.back.x-g.back.w)/2,4+(g.bh-16*z)/2);ctx.scale(z,z);U.title(ctx,'СУМКА',0,0,70);ctx.restore();
       U.panel(ctx,4,g.infoY,W-8,g.infoH,'frame');
-      text(ctx,`${game.dayName()}, ${v.day} · ${game.clock()}`,12,g.infoY+5*z,z,true,{color:C.inkDim,maxW:(W-24)/z-G.font.small.measure(`${v.money} рё`)-8});
+      text(ctx,`${game.dayName()}, ${game.date()} · ${game.clock()}`,12,g.infoY+5*z,z,true,{color:C.inkDim,maxW:(W-24)/z-G.font.small.measure(`${v.money} рё`)-8});
       text(ctx,`${v.money} рё`,W-12,g.infoY+5*z,z,true,{align:'right',color:'#8a5a10'});
       text(ctx,'Цель: '+(game.goalText()||'—'),12,g.infoY+18*z,z,true,{color:C.redDark,maxW:(W-24)/z});
       [['Усталость',v.fatigue,C.fatigue]].forEach(([nm,val,col],i)=>{

@@ -45,12 +45,12 @@ G.scenes.register('status', () => {
       let y = header().height;
       // герой, неделя, дата и погода
       U.panel(ctx, 4, y, W - 8, 44, 'frame');
-      F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(`Неделя ${g.week()}`) });
-      S.draw(ctx, `Неделя ${g.week()}`, W - 14, y + 11, { align: 'right', color: C.inkDim });
+      F.draw(ctx, G.state.hero.name || 'Герой', 14, y + 9, { color: C.redDark, maxW: W - 34 - S.measure(g.monthName()) });
+      S.draw(ctx, g.monthName(), W - 14, y + 11, { align: 'right', color: C.inkDim });
       const wt = G.life.WEATHER[G.life.weather()];
       // узкий экран («крупно»): время суток не влезает — без него, а не с обрезанным «У…»
-      const when = [`${g.dayName()}, день ${v.day} · ${g.clock()} · ${G.life.period()}`, `${g.dayName()}, день ${v.day} · ${g.clock()}`].find((t) => S.measure(t) <= W - 90);
-      S.draw(ctx, when || `${g.dayName()}, день ${v.day} · ${g.clock()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
+      const when = [`${g.dayName()}, ${g.date()} · ${g.clock()} · ${G.life.period()}`, `${g.dayName()}, ${g.date()} · ${g.clock()}`].find((t) => S.measure(t) <= W - 90);
+      S.draw(ctx, when || `${g.dayName()}, ${g.date()} · ${g.clock()}`, 14, y + 28, { color: C.inkDim, maxW: W - 90 });
       S.draw(ctx, wt.icon + ' ' + wt.name, W - 14, y + 28, { align: 'right', color: '#3a62a0' });
       y += 48;
       // нужды: бамбуковые шкалы
@@ -83,7 +83,7 @@ G.scenes.register('status', () => {
       for (const ln of S.wrap('Навыки: ' + (sk.join(', ') || '—'), W - 24)) { S.draw(ctx, ln, 12, ty, { color: C.redDark }); ty += 12; }
       const A = G.academy, vv = G.state.vars;
       S.draw(ctx, `Оценки ${A.avg() || '—'} · посещ. ${A.attendance()}% · реп. ${vv.rep || 0}`, 12, ty, { color: '#3a62a0', maxW: W - 24 }); ty += 12;
-      S.draw(ctx, `Экзамен через ${Math.max(0, 54 - vv.day)} дн. · свитки ${vv.scrolls || 0}`, 12, ty, { color: C.inkDim, maxW: W - 24 }); ty += 15;
+      S.draw(ctx, `Свитки ${vv.scrolls || 0}`, 12, ty, { color: C.inkDim, maxW: W - 24 }); ty += 15;
       const met = FRIENDS.filter((id) => G.state.flags['met_' + id]);
       F.draw(ctx, 'Дружба', 12, ty, { color: C.redDark }); ty += 16;
       if (!met.length) S.draw(ctx, 'Пока ни с кем не знаком', 12, ty, { color: C.inkDim });

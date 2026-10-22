@@ -40,7 +40,7 @@ G.scenes.register('daysum', (summary, onDone) => {
       const h = 30 + rows.reduce((n, [txt]) => n + S.wrap(txt, tw).length * 12 + 2, 0);
       const y0 = Math.max(46, Math.min(96, H - h - 56));
       U.title(ctx, 'ИТОГИ ДНЯ', W / 2, y0 - 36, 110);
-      F.small.draw(ctx, `День ${summary.day} · ${summary.dayName}`, W / 2, y0 - 16, { align: 'center', color: '#d8c8a0' });
+      F.small.draw(ctx, `${summary.date || G.game.date(summary.day)} · ${summary.dayName}`, W / 2, y0 - 16, { align: 'center', color: '#d8c8a0' });
       U.panel(ctx, 8, y0, W - 16, h, 'scroll');
       let y = y0 + 15;
       for (const [txt, col] of rows) { for (const ln of S.wrap(txt, tw)) { S.draw(ctx, ln, 26, y, { color: col }); y += 12; } y += 2; }

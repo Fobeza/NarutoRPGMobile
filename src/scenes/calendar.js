@@ -32,7 +32,7 @@ G.scenes.register('calendar', () => {
     return m;
   }
   const offset=()=>G.touch.header().height-20;
-  const GY = 62, CH = 30;   // верх сетки дней и высота ячейки
+  const GY = 74, CH = 30;   // верх сетки дней и высота ячейки
   const hh = (a, b) => String(a).padStart(2, '0') + '–' + String(b).padStart(2, '0');
 
   return {
@@ -79,14 +79,17 @@ G.scenes.register('calendar', () => {
     drawDays(ctx, W, H, V) {
       const U = G.ui, C = U.C, pg = page(), cw = (W - 14) / 7;
       U.panel(ctx, 4, 44, W - 8, GY + 4 * CH - 40, 'frame');
-      for (let c = 0; c < 7; c++) F.small.draw(ctx, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][c], 7 + c * cw + cw / 2, 49, { align: 'center', color: c > 4 ? C.red : C.inkDim });
+      const mname = G.game.monthName(pg * 28 + 1) + (G.game.year(pg * 28 + 1) > 1 ? ', год ' + G.game.year(pg * 28 + 1) : '');
+      F.draw(ctx, mname, W / 2, 49, { align: 'center', color: C.redDark });
+      F.draw(ctx, '<', 14, 49, { color: pg > 0 ? C.red : C.inkFaint }); F.draw(ctx, '>', W - 18, 49, { color: C.red });
+      for (let c = 0; c < 7; c++) F.small.draw(ctx, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][c], 7 + c * cw + cw / 2, 64, { align: 'center', color: c > 4 ? C.red : C.inkDim });
       for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) {
         const d = pg * 28 + r * 7 + c + 1;
         if (d > limit()) continue;
         const x = Math.round(7 + c * cw), y = GY + r * CH, w = Math.round(cw) - 2;
         U.card(ctx, x, y, w, CH - 3, d === sel);
         if (d === V.day) { ctx.fillStyle = C.ok; ctx.fillRect(x + 3, y + 3, 5, 5); }
-        F.small.draw(ctx, String(d), x + 5 + (d === V.day ? 5 : 0), y + 3, { color: d < V.day ? C.inkFaint : c > 4 ? C.red : C.ink });
+        F.small.draw(ctx, String(G.game.dayOfMonth(d)), x + 5 + (d === V.day ? 5 : 0), y + 3, { color: d < V.day ? C.inkFaint : c > 4 ? C.red : C.ink });
         marks(d).slice(0, 3).forEach((col, i) => { ctx.fillStyle = col; ctx.fillRect(x + 4 + i * 6, y + CH - 11, 5, 5); });
         if (G.academy.isSchoolDay(d)) { ctx.fillStyle = '#3a62a0'; ctx.fillRect(x + w - 8, y + 4, 5, 5); }
       }
@@ -94,7 +97,7 @@ G.scenes.register('calendar', () => {
       const dy = GY + 4 * CH + 8;
       U.panel(ctx, 4, dy, W - 8, H - dy - 4, 'well');
       let y = dy + 8;
-      F.draw(ctx, `День ${sel} · ${G.game.dayNameFull(sel)}`, 12, y, { color: C.redDark }); y += 16;
+      F.draw(ctx, `${G.game.date(sel)} · ${G.game.dayNameFull(sel)}`, 12, y, { color: C.redDark }); y += 16;
       for (const it of dayItems(sel)) {
         if (y > H - 20) break;
         ctx.fillStyle = it.c; ctx.fillRect(12, y + 3, 4, 4);
@@ -105,10 +108,10 @@ G.scenes.register('calendar', () => {
     drawSched(ctx, W, H, V) {
       const U = G.ui, C = U.C, id = ids[ci], s = G.SCHED[id];
       U.panel(ctx, 4, 44, W - 8, H - 50, 'frame');
-      F.draw(ctx, '‹', 16, 53, { color: C.red }); F.draw(ctx, '›', W - 20, 53, { color: C.red });
+      F.draw(ctx, '<', 16, 53, { color: C.red }); F.draw(ctx, '>', W - 20, 53, { color: C.red });
       F.draw(ctx, G.chars.nameOf(id), W / 2, 53, { align: 'center', color: C.redDark });
       const known = V.day >= s.since;
-      if (!known) { F.draw(ctx, 'Пока не знакомы', W / 2, 96, { align: 'center', color: C.inkDim }); F.small.draw(ctx, `(появится с дня ${s.since})`, W / 2, 112, { align: 'center', color: C.inkDim }); return; }
+      if (!known) { F.draw(ctx, 'Пока не знакомы', W / 2, 96, { align: 'center', color: C.inkDim }); F.small.draw(ctx, `(появится ${G.game.date(s.since)})`, W / 2, 112, { align: 'center', color: C.inkDim }); return; }
       F.small.draw(ctx, 'Сейчас: ' + G.schedule.label(id), 12, 72, { color: C.redDark, maxW: W - 24 });
       U.row(ctx, 10, 87, W - 20, 17, true);
       F.draw(ctx, wk ? 'БУДНИ' : 'ВЫХОДНЫЕ', W / 2, 90, { align: 'center', color: '#f8eed0', shadow: '#5a1408' });

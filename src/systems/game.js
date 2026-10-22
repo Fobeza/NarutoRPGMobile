@@ -3,6 +3,8 @@
 // чтобы сценарии могли их проверять: `if var.money >= 40 -> treat`, `if var.min >= 1080 -> sleep`.
 G.game = (() => {
   const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  // Календарь как в Stardew Valley: месяц — 4 недели по 7 дней, всегда лето (июнь → июль → август → снова июнь)
+  const MONTHS = [['Июнь', 'июня'], ['Июль', 'июля'], ['Август', 'августа']], MONTH_DAYS = 28;
   const DAYS_FULL = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
   const START_MONEY = 300;
   const POUCH = 10;           // слотов подсумка на старте (§5.4)
@@ -42,7 +44,7 @@ G.game = (() => {
   }
 
   const api = {
-    DAYS, DAYS_FULL, GOALS, POUCH,
+    DAYS, DAYS_FULL, MONTHS, MONTH_DAYS, GOALS, POUCH,
 
     newState() { G.state = defaults(); return G.state; },
 
@@ -132,6 +134,12 @@ G.game = (() => {
     dayName(day = this.v.day) { return DAYS[(day - 1) % 7]; },
     dayNameFull(day = this.v.day) { return DAYS_FULL[(day - 1) % 7]; },
     week(day = this.v.day) { return Math.floor((day - 1) / 7) + 1; },
+    monthIndex(day = this.v.day) { return Math.floor((day - 1) / MONTH_DAYS); },
+    dayOfMonth(day = this.v.day) { return (day - 1) % MONTH_DAYS + 1; },
+    monthName(day = this.v.day) { return MONTHS[this.monthIndex(day) % MONTHS.length][0]; },
+    // «5 июня»
+    date(day = this.v.day) { return this.dayOfMonth(day) + ' ' + MONTHS[this.monthIndex(day) % MONTHS.length][1]; },
+    year(day = this.v.day) { return Math.floor(this.monthIndex(day) / MONTHS.length) + 1; },
 
     // Сдвинуть время вперёд на n минут. Нужды (этап 4):
     //   усталость +4,2/ч (×Выносливость), бег ещё +7/ч; еда, чай и отдых её снимают;
@@ -259,7 +267,7 @@ G.game = (() => {
       const bed = v.min;
       const lateH = Math.max(0, bed - 23 * 60) / 60;
       const wakeFatigue = opts.faint ? 50 : Math.round(G.util.clamp(lateH * (H.has('early_bird') ? 5 : 10), 0, 50));
-      const summary = { day: v.day, dayName: this.dayNameFull(), spent: v.spent, log: G.state.log.slice(), money: v.money,
+      const summary = { day: v.day, date: this.date(), dayName: this.dayNameFull(), spent: v.spent, log: G.state.log.slice(), money: v.money,
         bed, wakeFatigue, faint: !!opts.faint };
       v.day += 1;
       v.min = H.wakeMin();

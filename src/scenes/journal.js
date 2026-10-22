@@ -107,7 +107,7 @@ G.scenes.register('journal', () => {
       y += 3;
       if (s.due != null && s.st === 'active') {
         const left = s.due - G.state.vars.day;
-        F.small.draw(ctx, `Срок: до конца дня ${s.due} (${G.game.dayName(s.due)})${left === 0 ? ' — сегодня!' : ''}`, x0, y, { color: left === 0 ? C.err : C.inkDim }); y += 13;
+        F.small.draw(ctx, `Срок: до конца дня ${G.game.date(s.due)} (${G.game.dayName(s.due)})${left === 0 ? ' — сегодня!' : ''}`, x0, y, { color: left === 0 ? C.err : C.inkDim }); y += 13;
       }
       if (d.reward && d.reward.text) { F.small.draw(ctx, 'Награда: ' + d.reward.text, x0, y, { color: '#8a5a10', maxW: tw }); y += 13; }
       const st = { active: 'Активно', done: 'Выполнено ✔', failed: 'Провалено' }[s.st];
