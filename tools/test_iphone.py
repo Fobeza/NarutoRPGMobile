@@ -122,7 +122,7 @@ with sync_playwright() as p:
     page.fill("#te-input", "Кайто")
     page.dispatch_event("#te-ok", "pointerdown")
     time.sleep(1.0)
-    for _ in range(60):
+    for _ in range(120):
         if top(page) == "world" and not page.evaluate("G.scenes.busy"): break
         key(page, "KeyZ", 1, 0.5)                 # на вопросах — первый вариант
     time.sleep(0.5)
