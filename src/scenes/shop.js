@@ -34,7 +34,6 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     if (it.cat === 'food' || it.cat === 'service') {
       const e = it.effect || {};
       if (e.rest) g.rest(e.rest);
-      if (e.mood) g.mood(e.mood);
       if (e.minutes) g.advance(e.minutes);
       G.audio.sfx.confirm();
       say(it.cat === 'food' ? `Ты съел: ${it.name}. Вкуснотища!` : `${it.name} — готово. Силы вернулись!`);

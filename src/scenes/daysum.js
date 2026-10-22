@@ -29,7 +29,6 @@ G.scenes.register('daysum', (summary, onDone) => {
       const best = Object.keys(G.FRIENDS).filter((id) => G.friends.pts(id) > 0).sort((a, b) => G.friends.pts(b) - G.friends.pts(a))[0];
       if (best) rows.push([`Лучший друг: ${G.chars.nameOf(best)} ` + ('♥'.repeat(G.friends.level(best)) || '·'), C.red]);
       if (summary.day < 54) rows.push([`До выпускного экзамена: ${54 - summary.day} дн.`, '#3a62a0']);
-      if (summary.mood != null) rows.push(['Настроение: ' + G.game.moodName(summary.mood).toLowerCase(), '#7a3a98']);
       rows.push([`Потрачено: ${summary.spent} рё · осталось ${summary.money} рё`, '#8a5a10']);
       if (summary.bed != null) {
         const late = summary.bed > 23 * 60;

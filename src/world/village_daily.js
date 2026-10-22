@@ -191,7 +191,7 @@ G.villageDaily = (() => {
     const d=n._daily,key='daily_help_'+n.uid;
     if(!active(w)||!w.npcs.includes(n)||!d||d.busy<=0||!['water','sweep'].includes(d.role)||G.state.daily[key])return false;
     G.state.streetLife.helped[n.uid]=1;
-    G.state.daily[key]=1;G.game.advance(3);G.game.mood(3);d.busy=0;d.cooldown=20;
+    G.state.daily[key]=1;G.game.advance(3);d.busy=0;d.cooldown=20;
     G.game.note('Помог соседу: '+D.jobs[d.role].label.toLowerCase());return true;
   }
   function talk(n,w){
@@ -215,7 +215,7 @@ G.villageDaily = (() => {
   function pet(w,a){
     if(!active(w)||a.type==='bird'||a.alpha<.2||Math.hypot(w.player.x-a.x,w.player.y-a.y)>32)return false;
     a.path=[];a.moving=false;a.pet=5;a.timer=6;
-    if(!G.state.daily.daily_pet){G.state.daily.daily_pet=1;G.game.mood(2);}
+    if(!G.state.daily.daily_pet){G.state.daily.daily_pet=1;}
     if(a.type==='dog')G.audio.sfx.bark();else G.audio.sfx.meow();
     w.showToast(a.type==='dog'?'Пёс радостно виляет хвостом':'Кошка щурится и тихонько мурчит');return true;
   }

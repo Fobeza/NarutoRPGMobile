@@ -9,7 +9,7 @@ G.streetLife = (() => {
   }
   function finish(w,def){
     if(progress(def.id)===9)return false;
-    state().events[def.id]=9;G.state.vars.money+=def.reward;G.game.mood(2);
+    state().events[def.id]=9;G.state.vars.money+=def.reward;
     G.game.note('Помощь в деревне: '+def.title);save(w);
     w.talk([...lines(def,'complete'),{text:'Награда: '+def.reward+' рё.'}]);return true;
   }

@@ -22,7 +22,7 @@ G.game = (() => {
       layoutVersion: 3,
       hero: { name: '', stats: null, skills: [] },
       flags: {},
-      vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, fatigue: 10, mood: 60, spent: 0, injury: 0, poison: 0 },
+      vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, fatigue: 10, spent: 0, injury: 0, poison: 0 },
       daily: {},           // разовые за день отметки (предупреждения об усталости и т.п.), сбрасываются во сне
       inv: {},
       chest: {},
@@ -58,7 +58,7 @@ G.game = (() => {
       for (const k of Object.keys(d)) if (st[k] == null) st[k] = d[k];
       // 2.3: вместо энергии и сытости — одна шкала усталости (0 — свеж, 100 — без сил)
       if (st.vars.fatigue == null && st.vars.energy != null) st.vars.fatigue = Math.round(100 - st.vars.energy);
-      delete st.vars.energy; delete st.vars.food;
+      delete st.vars.energy; delete st.vars.food; delete st.vars.mood;   // 2.3: настроения нет
       for (const k of Object.keys(d.vars)) if (st.vars[k] == null) st.vars[k] = d.vars[k];
       for (const k of Object.keys(d.hero)) if (st.hero[k] === undefined) st.hero[k] = d.hero[k];
       if (layout < 3 && st.pos && G.LEGACY_BUILDINGS) {
@@ -135,7 +135,6 @@ G.game = (() => {
 
     // Сдвинуть время вперёд на n минут. Нужды (этап 4):
     //   усталость +4,2/ч (×Выносливость), бег ещё +7/ч; еда, чай и отдых её снимают;
-    //   настроение медленно возвращается к 50, в дождь чуть падает.
     advance(n, opts = {}) {
       if (n <= 0) return;
       const v = this.v, H = G.hero;
@@ -143,9 +142,6 @@ G.game = (() => {
       v.min += n;
       const drain = (0.07 + (opts.running ? 0.12 : 0)) * (H ? H.drainMul() : 1);
       v.fatigue = G.util.clamp(v.fatigue + n * drain, 0, 100);
-      v.mood += G.util.clamp(50 - v.mood, -n * 0.01, n * 0.01);
-      if (G.life && G.life.raining()) v.mood -= n * 0.004;
-      v.mood = G.util.clamp(v.mood, 0, 100);
       G.events.emit('time', v.min, prev);
     },
     // Перевести часы на «HH:MM», только вперёд
@@ -188,8 +184,6 @@ G.game = (() => {
     tire(n) { this.v.fatigue = G.util.clamp(this.v.fatigue + n, 0, 100); },
     // запас сил: 100 — свеж, 0 — без сил
     vigor() { return 100 - this.v.fatigue; },
-    mood(n) { this.v.mood = G.util.clamp((this.v.mood ?? 60) + n, 0, 100); },
-    moodName(m = this.v.mood) { return m >= 80 ? 'Отличное' : m >= 60 ? 'Хорошее' : m >= 40 ? 'Обычное' : m >= 20 ? 'Хмурое' : 'Ужасное'; },
 
     // ---------- Цель ----------
     setGoal(id) {
@@ -231,10 +225,10 @@ G.game = (() => {
     useItem(id) {
       const it = G.ITEMS[id], v = this.v, e = it && it.effect;
       if (!this.usable(id) || this.count(id) < 1) return { ok: false, text: 'Этот предмет нельзя применить.' };
-      const useful = (e.rest && v.fatigue > 0) || (e.mood && v.mood < 100) || (e.hp && v.hp < 100) || (e.chakra && v.chakra < 100) || (e.injury && v.injury > 0) || (e.poison && v.poison > 0) || (e.sleep && !G.state.daily.herbTea);
+      const useful = (e.rest && v.fatigue > 0) || (e.hp && v.hp < 100) || (e.chakra && v.chakra < 100) || (e.injury && v.injury > 0) || (e.poison && v.poison > 0) || (e.sleep && !G.state.daily.herbTea);
       if (!useful) return { ok: false, text: 'Сейчас не нужно. Предмет сохранён.' };
       this.take(id);
-      if (e.rest) this.rest(e.rest); if (e.mood) this.mood(e.mood);
+      if (e.rest) this.rest(e.rest);
       if (e.hp) v.hp = Math.min(100, v.hp + e.hp);
       if (e.chakra) v.chakra = Math.min(100, v.chakra + e.chakra);
       if (e.injury) v.injury = Math.max(0, v.injury - e.injury);
@@ -266,7 +260,7 @@ G.game = (() => {
       const lateH = Math.max(0, bed - 23 * 60) / 60;
       const wakeFatigue = opts.faint ? 50 : Math.round(G.util.clamp(lateH * (H.has('early_bird') ? 5 : 10), 0, 50));
       const summary = { day: v.day, dayName: this.dayNameFull(), spent: v.spent, log: G.state.log.slice(), money: v.money,
-        bed, wakeFatigue, faint: !!opts.faint, mood: v.mood };
+        bed, wakeFatigue, faint: !!opts.faint };
       v.day += 1;
       v.min = H.wakeMin();
       v.fatigue = G.state.daily.herbTea ? 0 : wakeFatigue;
@@ -275,7 +269,6 @@ G.game = (() => {
       v.chakra = Math.min(100, v.chakra + (G.state.daily.herbTea ? 100 : 40));
       v.injury = Math.max(0, (v.injury || 0) - 1);
       v.spent = 0;
-      if (opts.faint) this.mood(-8);
       summary.wake = v.min;
       summary.weather = G.life.weather(v.day);
       G.state.log = [];

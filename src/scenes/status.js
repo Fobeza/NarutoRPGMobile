@@ -54,7 +54,7 @@ G.scenes.register('status', () => {
       S.draw(ctx, wt.icon + ' ' + wt.name, W - 14, y + 28, { align: 'right', color: '#3a62a0' });
       y += 48;
       // нужды: бамбуковые шкалы
-      const bars = [['Здоровье', v.hp, C.hp], ['Чакра', v.chakra, C.chakra], ['Усталость', v.fatigue, C.fatigue], ['Настроение', v.mood, '#a860c0']];
+      const bars = [['Здоровье', v.hp, C.hp], ['Чакра', v.chakra, C.chakra], ['Усталость', v.fatigue, C.fatigue]];
       const barRow=compact()?28:16;
       U.panel(ctx, 4, y, W - 8, bars.length * barRow + 12, 'frame');
       bars.forEach(([nm, val, col], i) => {
@@ -62,7 +62,7 @@ G.scenes.register('status', () => {
         S.draw(ctx, nm, 14, yy, { color: C.ink });
         const bw = compact()?W-28:W-180;
         U.gauge(ctx, compact()?14:96, yy + (compact()?12:1), bw, 7, Math.max(0, Math.min(100, val)) / 100, col);
-        S.draw(ctx, i === 3 ? g.moodName() : String(Math.round(val)), W - 14, yy, { align: 'right', color: (i === 2 ? val > 80 : val < 20) ? C.err : C.ink });
+        S.draw(ctx, String(Math.round(val)), W - 14, yy, { align: 'right', color: (i === 2 ? val > 80 : val < 20) ? C.err : C.ink });
       });
       y += bars.length * barRow + 16;
       // характеристики

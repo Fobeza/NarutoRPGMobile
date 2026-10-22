@@ -463,7 +463,7 @@ G.scenes.register('world', (pos) => {
       if (every(120) && G.state.started) G.storage.save(G.state);          // автосейв раз в 2 часа
       // подсказки онбординга
       if (m.outdoor) this.tip('clock', '⏰ Время идёт', `Игровая минута — ${(1 / G.life.RATE).toFixed(1)} сек. В меню и диалогах часы стоят`);
-      if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам, настроение чуть падает');
+      if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам');
       if (crossed(19 * 60)) this.tip('evening', '🌙 Вечер', 'Лавки закрываются в 19–23 часа. Смотри часы на карте');
       // лавка закрывается
       const shop = m.building && G.SHOPS[m.building.tplId];
@@ -487,7 +487,7 @@ G.scenes.register('world', (pos) => {
           const hb = G.world.konoha().buildings.find((b) => b.tplId === 'hospital');
           if (hb && hb.interior) this.setMap({ map: hb.interior.id, entry: true });
           G.game.advance(180);
-          v.fatigue = 65; G.game.mood(-10);
+          v.fatigue = 65;
           G.game.note('Обморок от усталости — очнулся в больнице');
           this.pendingTalk = 'faint_hospital';
         }, 1.2);

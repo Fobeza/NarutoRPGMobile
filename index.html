@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '77e99a6f', date: '2026-10-22 16:07', debug: false };
+const BUILD = { release: '2.3', version: '50fdb104', date: '2026-10-22 17:10', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -5478,7 +5478,7 @@ G.game = (() => {
       layoutVersion: 3,
       hero: { name: '', stats: null, skills: [] },
       flags: {},
-      vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, fatigue: 10, mood: 60, spent: 0, injury: 0, poison: 0 },
+      vars: { day: 1, min: 8 * 60, money: START_MONEY, hp: 100, chakra: 100, fatigue: 10, spent: 0, injury: 0, poison: 0 },
       daily: {},           // разовые за день отметки (предупреждения об усталости и т.п.), сбрасываются во сне
       inv: {},
       chest: {},
@@ -5514,7 +5514,7 @@ G.game = (() => {
       for (const k of Object.keys(d)) if (st[k] == null) st[k] = d[k];
       // 2.3: вместо энергии и сытости — одна шкала усталости (0 — свеж, 100 — без сил)
       if (st.vars.fatigue == null && st.vars.energy != null) st.vars.fatigue = Math.round(100 - st.vars.energy);
-      delete st.vars.energy; delete st.vars.food;
+      delete st.vars.energy; delete st.vars.food; delete st.vars.mood;   // 2.3: настроения нет
       for (const k of Object.keys(d.vars)) if (st.vars[k] == null) st.vars[k] = d.vars[k];
       for (const k of Object.keys(d.hero)) if (st.hero[k] === undefined) st.hero[k] = d.hero[k];
       if (layout < 3 && st.pos && G.LEGACY_BUILDINGS) {
@@ -5591,7 +5591,6 @@ G.game = (() => {
 
     // Сдвинуть время вперёд на n минут. Нужды (этап 4):
     //   усталость +4,2/ч (×Выносливость), бег ещё +7/ч; еда, чай и отдых её снимают;
-    //   настроение медленно возвращается к 50, в дождь чуть падает.
     advance(n, opts = {}) {
       if (n <= 0) return;
       const v = this.v, H = G.hero;
@@ -5599,9 +5598,6 @@ G.game = (() => {
       v.min += n;
       const drain = (0.07 + (opts.running ? 0.12 : 0)) * (H ? H.drainMul() : 1);
       v.fatigue = G.util.clamp(v.fatigue + n * drain, 0, 100);
-      v.mood += G.util.clamp(50 - v.mood, -n * 0.01, n * 0.01);
-      if (G.life && G.life.raining()) v.mood -= n * 0.004;
-      v.mood = G.util.clamp(v.mood, 0, 100);
       G.events.emit('time', v.min, prev);
     },
     // Перевести часы на «HH:MM», только вперёд
@@ -5644,8 +5640,6 @@ G.game = (() => {
     tire(n) { this.v.fatigue = G.util.clamp(this.v.fatigue + n, 0, 100); },
     // запас сил: 100 — свеж, 0 — без сил
     vigor() { return 100 - this.v.fatigue; },
-    mood(n) { this.v.mood = G.util.clamp((this.v.mood ?? 60) + n, 0, 100); },
-    moodName(m = this.v.mood) { return m >= 80 ? 'Отличное' : m >= 60 ? 'Хорошее' : m >= 40 ? 'Обычное' : m >= 20 ? 'Хмурое' : 'Ужасное'; },
 
     // ---------- Цель ----------
     setGoal(id) {
@@ -5687,10 +5681,10 @@ G.game = (() => {
     useItem(id) {
       const it = G.ITEMS[id], v = this.v, e = it && it.effect;
       if (!this.usable(id) || this.count(id) < 1) return { ok: false, text: 'Этот предмет нельзя применить.' };
-      const useful = (e.rest && v.fatigue > 0) || (e.mood && v.mood < 100) || (e.hp && v.hp < 100) || (e.chakra && v.chakra < 100) || (e.injury && v.injury > 0) || (e.poison && v.poison > 0) || (e.sleep && !G.state.daily.herbTea);
+      const useful = (e.rest && v.fatigue > 0) || (e.hp && v.hp < 100) || (e.chakra && v.chakra < 100) || (e.injury && v.injury > 0) || (e.poison && v.poison > 0) || (e.sleep && !G.state.daily.herbTea);
       if (!useful) return { ok: false, text: 'Сейчас не нужно. Предмет сохранён.' };
       this.take(id);
-      if (e.rest) this.rest(e.rest); if (e.mood) this.mood(e.mood);
+      if (e.rest) this.rest(e.rest);
       if (e.hp) v.hp = Math.min(100, v.hp + e.hp);
       if (e.chakra) v.chakra = Math.min(100, v.chakra + e.chakra);
       if (e.injury) v.injury = Math.max(0, v.injury - e.injury);
@@ -5722,7 +5716,7 @@ G.game = (() => {
       const lateH = Math.max(0, bed - 23 * 60) / 60;
       const wakeFatigue = opts.faint ? 50 : Math.round(G.util.clamp(lateH * (H.has('early_bird') ? 5 : 10), 0, 50));
       const summary = { day: v.day, dayName: this.dayNameFull(), spent: v.spent, log: G.state.log.slice(), money: v.money,
-        bed, wakeFatigue, faint: !!opts.faint, mood: v.mood };
+        bed, wakeFatigue, faint: !!opts.faint };
       v.day += 1;
       v.min = H.wakeMin();
       v.fatigue = G.state.daily.herbTea ? 0 : wakeFatigue;
@@ -5731,7 +5725,6 @@ G.game = (() => {
       v.chakra = Math.min(100, v.chakra + (G.state.daily.herbTea ? 100 : 40));
       v.injury = Math.max(0, (v.injury || 0) - 1);
       v.spent = 0;
-      if (opts.faint) this.mood(-8);
       summary.wake = v.min;
       summary.weather = G.life.weather(v.day);
       G.state.log = [];
@@ -5956,16 +5949,16 @@ G.houseArt = (() => {
 // ===== data/items.js =====
 // Предметы и лавки (план §5.4).
 // cat: food — съедается сразу; tool/med — в подсумок (pouch); gift, book, misc — в сумку; service — услуга на месте.
-// effect: { rest (усталость −n), mood, hp, minutes } — применяется при покупке еды и услуг.
+// effect: { rest (усталость −n), hp, minutes } — применяется при покупке еды и услуг.
 G.ITEMS = {
   // ── Ичираку ──
   ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
   ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
   ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
   // ── Якинику Q ──
-  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, mood: 10, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
+  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
   // ── Данго и чайная ──
-  dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, mood: 5, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
+  dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
   sweet_tea:    { name: 'Сладкий чай',       price: 15,  cat: 'food', effect: { rest: 5, minutes: 10 }, desc: 'Тёплый и сладкий.' },
   green_tea:    { name: 'Зелёный чай',       price: 15,  cat: 'food', effect: { rest: 6, minutes: 15 }, desc: 'Бодрит немного.' },
   mochi:        { name: 'Рисовые лепёшки',   price: 25,  cat: 'food', effect: { rest: 12, minutes: 15 }, desc: 'Мягкие моти с бобовой пастой.' },
@@ -6013,14 +6006,14 @@ G.ITEMS = {
   boot:         { name: 'Старый сапог',      price: 2,   cat: 'misc', desc: 'Улов так себе. Рынок купит за гроши.' },
   herb:         { name: 'Лечебная трава',    price: 12,  cat: 'misc', desc: 'Из трав дома можно сделать мазь, чай или пилюлю.' },
   herb_blue:    { name: 'Голубой лотос',     price: 45,  cat: 'gift', desc: 'Редкий цветок у воды. Для пилюль чакры — или в подарок.' },
-  berries:      { name: 'Лесные ягоды',      price: 6,   cat: 'food', effect: { rest: 4, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие, прямо с куста.' },
-  candy:        { name: 'Леденцы',           price: 5,   cat: 'food', effect: { rest: 1, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие.' },
+  berries:      { name: 'Лесные ягоды',      price: 6,   cat: 'food', effect: { rest: 4, minutes: 2 }, desc: 'Кисло-сладкие, прямо с куста.' },
+  candy:        { name: 'Леденцы',           price: 5,   cat: 'food', effect: { rest: 1, minutes: 2 }, desc: 'Кисло-сладкие.' },
   towel:        { name: 'Полотенце',         price: 20,  cat: 'misc', desc: 'Пригодится после тренировки.' },
   notebook:     { name: 'Тетрадь',           price: 10,  cat: 'misc', desc: 'Для конспектов на уроках Ируки.' },
   // ── Для заданий ──
   bouquet_ino:  { name: 'Букет для Хинаты',  price: 0,   cat: 'misc', quest: true, desc: 'Букет от Ино. Нужно отнести Хинате к особняку Хьюга.' },
   // ── Услуги ──
-  onsen_bath:   { name: 'Искупаться',        price: 30,  cat: 'service', effect: { rest: 100, mood: 10, minutes: 60 }, desc: 'Горячий источник: усталость снимается полностью.' },
+  onsen_bath:   { name: 'Искупаться',        price: 30,  cat: 'service', effect: { rest: 100, minutes: 60 }, desc: 'Горячий источник: усталость снимается полностью.' },
 };
 
 // Лавки: id совпадает с шаблоном здания (tplId). keeper — кто стоит за прилавком.
@@ -6776,10 +6769,9 @@ G.life = (() => {
 })();
 
 // ---------- Действия и условия для сценариев ----------
-// call eat 25 | call rest 20 | call mood 5 | call cooldown rice 240 | call home | call charcreate | call askname | call begin
+// call eat 25 | call rest 20 | call cooldown rice 240 | call home | call charcreate | call askname | call begin
 G.script.actions.eat = (a) => G.game.eat(Number(a[0]) || 0);
 G.script.actions.rest = (a) => G.game.rest(Number(a[0]) || 0);
-G.script.actions.mood = (a) => G.game.mood(Number(a[0]) || 0);
 G.script.actions.cooldown = (a) => { G.state.vars['cd_' + a[0]] = G.life.absMin() + (Number(a[1]) || 60); };
 G.script.actions.home = () => { G.game.pending = 'home'; };
 G.script.actions.charcreate = () => { G.game.pending = 'charcreate'; };
@@ -6859,7 +6851,6 @@ G.train = {
     let m = [1, 0.7, 0.45, 0.3][Math.min(3, n)];
     if (G.hero.has('diligent')) m *= 1.25;
     if (partner) m *= 1.5;
-    if ((v.mood ?? 60) >= 80) m *= 1.15;
     if ((v.fatigue ?? 10) > 80) m *= 0.7;
     if (v.injury) m *= 0.7;
     if (d.bento) m *= 1.1;
@@ -6889,7 +6880,6 @@ G.train = {
       if (t.mg === 'seals') for (const tid of Object.keys(G.TECHS)) if (G.combat.knows(tid)) v['use_' + tid] = (v['use_' + tid] || 0) + 1;
       G.game.advance(t.minutes, { work: true });
       G.game.tire(t.fatigue * (opts.partner ? 0.8 : 1));
-      G.game.mood(score >= 0.7 ? 3 : 0);
       v.trainings = (v.trainings || 0) + 1;
       G.events.emit('training', id, score, opts.partner || null);
       if (opts.partner) { d['trw_' + opts.partner] = 1; G.friends && G.friends.add(opts.partner, 2, 'train'); }   // попытка дня тратится только на состоявшуюся тренировку
@@ -7277,13 +7267,13 @@ Object.assign(G.flow, {
   cook: (a, w) => {
     const c = (id) => G.game.count(id), d = G.state.daily;
     const recipes = [
-      { label: 'Рис (из запасов)', need: {}, rest: 15, mood: 0, off: G.state.vars.cd_rice && G.state.vars.cd_rice > G.life.absMin() ? 'Запасы риса закончились до вечера' : null, cd: true },
-      { label: 'Бэнто: рис, рыба, овощи', need: { rice: 1, fish: 1, vegetables: 1 }, rest: 33, mood: 6, bento: true, desc: 'Усталость −33. Тренировки сегодня +10%.' },
-      { label: 'Омлет с рисом', need: { eggs: 1, rice: 1 }, rest: 27, mood: 3 },
-      { label: 'Мисо-суп с рыбой', need: { fish: 1, vegetables: 1 }, rest: 22, mood: 4 },
-      { label: 'Унаги-дон', need: { eel: 1, rice: 1 }, rest: 46, mood: 10, desc: 'Угорь на рисе. Сытно и бодрит!' },
-      { label: 'Жареная рыба', need: { fish: 1 }, rest: 13, mood: 2 },
-      { label: 'Молоко', need: { milk: 1 }, rest: 5, mood: 2 },
+      { label: 'Рис (из запасов)', need: {}, rest: 15, off: G.state.vars.cd_rice && G.state.vars.cd_rice > G.life.absMin() ? 'Запасы риса закончились до вечера' : null, cd: true },
+      { label: 'Бэнто: рис, рыба, овощи', need: { rice: 1, fish: 1, vegetables: 1 }, rest: 33, bento: true, desc: 'Усталость −33. Тренировки сегодня +10%.' },
+      { label: 'Омлет с рисом', need: { eggs: 1, rice: 1 }, rest: 27 },
+      { label: 'Мисо-суп с рыбой', need: { fish: 1, vegetables: 1 }, rest: 22 },
+      { label: 'Унаги-дон', need: { eel: 1, rice: 1 }, rest: 46, desc: 'Угорь на рисе. Сытно и бодрит!' },
+      { label: 'Жареная рыба', need: { fish: 1 }, rest: 13 },
+      { label: 'Молоко', need: { milk: 1 }, rest: 5 },
     ];
     const opts = recipes.map((r) => {
       const miss = Object.entries(r.need).filter(([k, n]) => c(k) < n).map(([k]) => G.ITEMS[k].name);
@@ -7293,7 +7283,7 @@ Object.assign(G.flow, {
       if (i < 0) return;
       const r = recipes[i];
       for (const [k, n] of Object.entries(r.need)) G.game.give(k, -n);
-      G.game.rest(r.rest); G.game.mood(r.mood || 0); if (r.bento) d.bento = 1;
+      G.game.rest(r.rest); if (r.bento) d.bento = 1;
       if (r.cd) G.state.vars.cd_rice = G.life.absMin() + 240;
       G.game.advance(20);
       G.events.emit('cooked', r.label);
@@ -7303,7 +7293,7 @@ Object.assign(G.flow, {
   flower: (a, w) => {
     const v = G.state.vars, last = v.flower_last || 1, dry = v.day - last;
     if (v.flower_day === v.day) return w.talk([{ text: 'Цветок уже полит сегодня. Листья блестят.' }]);
-    v.flower_day = v.day; v.flower_last = v.day; v.flower_n = (v.flower_n || 0) + 1; G.game.mood(dry >= 3 ? 1 : 3);
+    v.flower_day = v.day; v.flower_last = v.day; v.flower_n = (v.flower_n || 0) + 1;
     w.talk([{ text: dry >= 3 ? 'Цветок совсем поник... Ты поливаешь его, и он медленно оживает.' : `Ты поливаешь цветок. ${v.flower_n >= 20 ? 'Он расцвёл яркими лепестками!' : v.flower_n >= 8 ? 'Появился бутон!' : 'Он тянется к солнцу.'}` }]);
   },
   scroll: (a, w) => {
@@ -8743,7 +8733,6 @@ end
 call met naruto
 if cooldown.talk_naruto -> short
 call cooldown talk_naruto 600
-call mood 4
 set var.friend_naruto += 1
 naruto: О! {name}! Садись рядом! Теучи-сан, ещё одну мисо!
 naruto: Знаешь, раньше я всегда ужинал один. А теперь вон — компания. Хе-хе!
@@ -8779,7 +8768,6 @@ villager_m[Чунин-патрульный]: Вечер добрый. После
 end
 # late
 villager_m[Чунин-патрульный]: Эй! Комендантский час! А ну марш домой!
-call mood -3
 call note Патруль отправил домой
 call home
 end
@@ -8787,7 +8775,6 @@ end
 === patrol_curfew
 villager_m[Чунин-патрульный]: Стой! Ученик Академии — на улице в такой час?
 villager_m[Чунин-патрульный]: Комендантский час для учеников — с одиннадцати. Провожу до дома.
-call mood -5
 call note Патруль отвёл домой после комендантского часа
 call home
 end
@@ -8911,7 +8898,6 @@ call learn sexy
 end
 === fr_naruto_5
 naruto: Ты мой лучший друг. Первый, кто признал меня. Я этого никогда не забуду!
-call mood 20
 end
 === fr_shikamaru_3
 shikamaru: Слушай... ты неплохо играешь в шоги. Вот что я тебе скажу: в бою думай как в шоги.
@@ -9060,7 +9046,6 @@ villager_f[Девочка]: Ы-ы-ы... Я потерялась... Мама бы
 call wait 30
 call eat 15
 call rep 3
-call mood 6
 end
 # n
 : Девочка кивает и неуверенно уходит. Надеюсь, найдёт...
@@ -9094,7 +9079,6 @@ villager_f[Бабушка]: Внучек, помоги донести сумки
 villager_f[Бабушка]: Спасибо, милый. Вот, возьми данго.
 call wait 20
 call eat 10
-call mood 5
 call rep 2
 end
 # n
@@ -14035,7 +14019,7 @@ G.villageDaily = (() => {
     const d=n._daily,key='daily_help_'+n.uid;
     if(!active(w)||!w.npcs.includes(n)||!d||d.busy<=0||!['water','sweep'].includes(d.role)||G.state.daily[key])return false;
     G.state.streetLife.helped[n.uid]=1;
-    G.state.daily[key]=1;G.game.advance(3);G.game.mood(3);d.busy=0;d.cooldown=20;
+    G.state.daily[key]=1;G.game.advance(3);d.busy=0;d.cooldown=20;
     G.game.note('Помог соседу: '+D.jobs[d.role].label.toLowerCase());return true;
   }
   function talk(n,w){
@@ -14059,7 +14043,7 @@ G.villageDaily = (() => {
   function pet(w,a){
     if(!active(w)||a.type==='bird'||a.alpha<.2||Math.hypot(w.player.x-a.x,w.player.y-a.y)>32)return false;
     a.path=[];a.moving=false;a.pet=5;a.timer=6;
-    if(!G.state.daily.daily_pet){G.state.daily.daily_pet=1;G.game.mood(2);}
+    if(!G.state.daily.daily_pet){G.state.daily.daily_pet=1;}
     if(a.type==='dog')G.audio.sfx.bark();else G.audio.sfx.meow();
     w.showToast(a.type==='dog'?'Пёс радостно виляет хвостом':'Кошка щурится и тихонько мурчит');return true;
   }
@@ -14393,7 +14377,7 @@ G.streetLife = (() => {
   }
   function finish(w,def){
     if(progress(def.id)===9)return false;
-    state().events[def.id]=9;G.state.vars.money+=def.reward;G.game.mood(2);
+    state().events[def.id]=9;G.state.vars.money+=def.reward;
     G.game.note('Помощь в деревне: '+def.title);save(w);
     w.talk([...lines(def,'complete'),{text:'Награда: '+def.reward+' рё.'}]);return true;
   }
@@ -15432,7 +15416,7 @@ G.scenes.register('world', (pos) => {
       if (every(120) && G.state.started) G.storage.save(G.state);          // автосейв раз в 2 часа
       // подсказки онбординга
       if (m.outdoor) this.tip('clock', '⏰ Время идёт', `Игровая минута — ${(1 / G.life.RATE).toFixed(1)} сек. В меню и диалогах часы стоят`);
-      if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам, настроение чуть падает');
+      if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам');
       if (crossed(19 * 60)) this.tip('evening', '🌙 Вечер', 'Лавки закрываются в 19–23 часа. Смотри часы на карте');
       // лавка закрывается
       const shop = m.building && G.SHOPS[m.building.tplId];
@@ -15456,7 +15440,7 @@ G.scenes.register('world', (pos) => {
           const hb = G.world.konoha().buildings.find((b) => b.tplId === 'hospital');
           if (hb && hb.interior) this.setMap({ map: hb.interior.id, entry: true });
           G.game.advance(180);
-          v.fatigue = 65; G.game.mood(-10);
+          v.fatigue = 65;
           G.game.note('Обморок от усталости — очнулся в больнице');
           this.pendingTalk = 'faint_hospital';
         }, 1.2);
@@ -16373,7 +16357,6 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     if (it.cat === 'food' || it.cat === 'service') {
       const e = it.effect || {};
       if (e.rest) g.rest(e.rest);
-      if (e.mood) g.mood(e.mood);
       if (e.minutes) g.advance(e.minutes);
       G.audio.sfx.confirm();
       say(it.cat === 'food' ? `Ты съел: ${it.name}. Вкуснотища!` : `${it.name} — готово. Силы вернулись!`);
@@ -16657,7 +16640,6 @@ G.scenes.register('daysum', (summary, onDone) => {
       const best = Object.keys(G.FRIENDS).filter((id) => G.friends.pts(id) > 0).sort((a, b) => G.friends.pts(b) - G.friends.pts(a))[0];
       if (best) rows.push([`Лучший друг: ${G.chars.nameOf(best)} ` + ('♥'.repeat(G.friends.level(best)) || '·'), C.red]);
       if (summary.day < 54) rows.push([`До выпускного экзамена: ${54 - summary.day} дн.`, '#3a62a0']);
-      if (summary.mood != null) rows.push(['Настроение: ' + G.game.moodName(summary.mood).toLowerCase(), '#7a3a98']);
       rows.push([`Потрачено: ${summary.spent} рё · осталось ${summary.money} рё`, '#8a5a10']);
       if (summary.bed != null) {
         const late = summary.bed > 23 * 60;
@@ -17240,7 +17222,7 @@ G.scenes.register('status', () => {
       S.draw(ctx, wt.icon + ' ' + wt.name, W - 14, y + 28, { align: 'right', color: '#3a62a0' });
       y += 48;
       // нужды: бамбуковые шкалы
-      const bars = [['Здоровье', v.hp, C.hp], ['Чакра', v.chakra, C.chakra], ['Усталость', v.fatigue, C.fatigue], ['Настроение', v.mood, '#a860c0']];
+      const bars = [['Здоровье', v.hp, C.hp], ['Чакра', v.chakra, C.chakra], ['Усталость', v.fatigue, C.fatigue]];
       const barRow=compact()?28:16;
       U.panel(ctx, 4, y, W - 8, bars.length * barRow + 12, 'frame');
       bars.forEach(([nm, val, col], i) => {
@@ -17248,7 +17230,7 @@ G.scenes.register('status', () => {
         S.draw(ctx, nm, 14, yy, { color: C.ink });
         const bw = compact()?W-28:W-180;
         U.gauge(ctx, compact()?14:96, yy + (compact()?12:1), bw, 7, Math.max(0, Math.min(100, val)) / 100, col);
-        S.draw(ctx, i === 3 ? g.moodName() : String(Math.round(val)), W - 14, yy, { align: 'right', color: (i === 2 ? val > 80 : val < 20) ? C.err : C.ink });
+        S.draw(ctx, String(Math.round(val)), W - 14, yy, { align: 'right', color: (i === 2 ? val > 80 : val < 20) ? C.err : C.ink });
       });
       y += bars.length * barRow + 16;
       // характеристики

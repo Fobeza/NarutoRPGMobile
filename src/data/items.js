@@ -1,15 +1,15 @@
 // Предметы и лавки (план §5.4).
 // cat: food — съедается сразу; tool/med — в подсумок (pouch); gift, book, misc — в сумку; service — услуга на месте.
-// effect: { rest (усталость −n), mood, hp, minutes } — применяется при покупке еды и услуг.
+// effect: { rest (усталость −n), hp, minutes } — применяется при покупке еды и услуг.
 G.ITEMS = {
   // ── Ичираку ──
   ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
   ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
   ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
   // ── Якинику Q ──
-  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, mood: 10, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
+  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
   // ── Данго и чайная ──
-  dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, mood: 5, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
+  dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
   sweet_tea:    { name: 'Сладкий чай',       price: 15,  cat: 'food', effect: { rest: 5, minutes: 10 }, desc: 'Тёплый и сладкий.' },
   green_tea:    { name: 'Зелёный чай',       price: 15,  cat: 'food', effect: { rest: 6, minutes: 15 }, desc: 'Бодрит немного.' },
   mochi:        { name: 'Рисовые лепёшки',   price: 25,  cat: 'food', effect: { rest: 12, minutes: 15 }, desc: 'Мягкие моти с бобовой пастой.' },
@@ -57,14 +57,14 @@ G.ITEMS = {
   boot:         { name: 'Старый сапог',      price: 2,   cat: 'misc', desc: 'Улов так себе. Рынок купит за гроши.' },
   herb:         { name: 'Лечебная трава',    price: 12,  cat: 'misc', desc: 'Из трав дома можно сделать мазь, чай или пилюлю.' },
   herb_blue:    { name: 'Голубой лотос',     price: 45,  cat: 'gift', desc: 'Редкий цветок у воды. Для пилюль чакры — или в подарок.' },
-  berries:      { name: 'Лесные ягоды',      price: 6,   cat: 'food', effect: { rest: 4, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие, прямо с куста.' },
-  candy:        { name: 'Леденцы',           price: 5,   cat: 'food', effect: { rest: 1, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие.' },
+  berries:      { name: 'Лесные ягоды',      price: 6,   cat: 'food', effect: { rest: 4, minutes: 2 }, desc: 'Кисло-сладкие, прямо с куста.' },
+  candy:        { name: 'Леденцы',           price: 5,   cat: 'food', effect: { rest: 1, minutes: 2 }, desc: 'Кисло-сладкие.' },
   towel:        { name: 'Полотенце',         price: 20,  cat: 'misc', desc: 'Пригодится после тренировки.' },
   notebook:     { name: 'Тетрадь',           price: 10,  cat: 'misc', desc: 'Для конспектов на уроках Ируки.' },
   // ── Для заданий ──
   bouquet_ino:  { name: 'Букет для Хинаты',  price: 0,   cat: 'misc', quest: true, desc: 'Букет от Ино. Нужно отнести Хинате к особняку Хьюга.' },
   // ── Услуги ──
-  onsen_bath:   { name: 'Искупаться',        price: 30,  cat: 'service', effect: { rest: 100, mood: 10, minutes: 60 }, desc: 'Горячий источник: усталость снимается полностью.' },
+  onsen_bath:   { name: 'Искупаться',        price: 30,  cat: 'service', effect: { rest: 100, minutes: 60 }, desc: 'Горячий источник: усталость снимается полностью.' },
 };
 
 // Лавки: id совпадает с шаблоном здания (tplId). keeper — кто стоит за прилавком.

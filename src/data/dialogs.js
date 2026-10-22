@@ -427,7 +427,6 @@ end
 call met naruto
 if cooldown.talk_naruto -> short
 call cooldown talk_naruto 600
-call mood 4
 set var.friend_naruto += 1
 naruto: О! {name}! Садись рядом! Теучи-сан, ещё одну мисо!
 naruto: Знаешь, раньше я всегда ужинал один. А теперь вон — компания. Хе-хе!
@@ -463,7 +462,6 @@ villager_m[Чунин-патрульный]: Вечер добрый. После
 end
 # late
 villager_m[Чунин-патрульный]: Эй! Комендантский час! А ну марш домой!
-call mood -3
 call note Патруль отправил домой
 call home
 end
@@ -471,7 +469,6 @@ end
 === patrol_curfew
 villager_m[Чунин-патрульный]: Стой! Ученик Академии — на улице в такой час?
 villager_m[Чунин-патрульный]: Комендантский час для учеников — с одиннадцати. Провожу до дома.
-call mood -5
 call note Патруль отвёл домой после комендантского часа
 call home
 end

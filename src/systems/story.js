@@ -245,13 +245,13 @@ Object.assign(G.flow, {
   cook: (a, w) => {
     const c = (id) => G.game.count(id), d = G.state.daily;
     const recipes = [
-      { label: 'Рис (из запасов)', need: {}, rest: 15, mood: 0, off: G.state.vars.cd_rice && G.state.vars.cd_rice > G.life.absMin() ? 'Запасы риса закончились до вечера' : null, cd: true },
-      { label: 'Бэнто: рис, рыба, овощи', need: { rice: 1, fish: 1, vegetables: 1 }, rest: 33, mood: 6, bento: true, desc: 'Усталость −33. Тренировки сегодня +10%.' },
-      { label: 'Омлет с рисом', need: { eggs: 1, rice: 1 }, rest: 27, mood: 3 },
-      { label: 'Мисо-суп с рыбой', need: { fish: 1, vegetables: 1 }, rest: 22, mood: 4 },
-      { label: 'Унаги-дон', need: { eel: 1, rice: 1 }, rest: 46, mood: 10, desc: 'Угорь на рисе. Сытно и бодрит!' },
-      { label: 'Жареная рыба', need: { fish: 1 }, rest: 13, mood: 2 },
-      { label: 'Молоко', need: { milk: 1 }, rest: 5, mood: 2 },
+      { label: 'Рис (из запасов)', need: {}, rest: 15, off: G.state.vars.cd_rice && G.state.vars.cd_rice > G.life.absMin() ? 'Запасы риса закончились до вечера' : null, cd: true },
+      { label: 'Бэнто: рис, рыба, овощи', need: { rice: 1, fish: 1, vegetables: 1 }, rest: 33, bento: true, desc: 'Усталость −33. Тренировки сегодня +10%.' },
+      { label: 'Омлет с рисом', need: { eggs: 1, rice: 1 }, rest: 27 },
+      { label: 'Мисо-суп с рыбой', need: { fish: 1, vegetables: 1 }, rest: 22 },
+      { label: 'Унаги-дон', need: { eel: 1, rice: 1 }, rest: 46, desc: 'Угорь на рисе. Сытно и бодрит!' },
+      { label: 'Жареная рыба', need: { fish: 1 }, rest: 13 },
+      { label: 'Молоко', need: { milk: 1 }, rest: 5 },
     ];
     const opts = recipes.map((r) => {
       const miss = Object.entries(r.need).filter(([k, n]) => c(k) < n).map(([k]) => G.ITEMS[k].name);
@@ -261,7 +261,7 @@ Object.assign(G.flow, {
       if (i < 0) return;
       const r = recipes[i];
       for (const [k, n] of Object.entries(r.need)) G.game.give(k, -n);
-      G.game.rest(r.rest); G.game.mood(r.mood || 0); if (r.bento) d.bento = 1;
+      G.game.rest(r.rest); if (r.bento) d.bento = 1;
       if (r.cd) G.state.vars.cd_rice = G.life.absMin() + 240;
       G.game.advance(20);
       G.events.emit('cooked', r.label);
@@ -271,7 +271,7 @@ Object.assign(G.flow, {
   flower: (a, w) => {
     const v = G.state.vars, last = v.flower_last || 1, dry = v.day - last;
     if (v.flower_day === v.day) return w.talk([{ text: 'Цветок уже полит сегодня. Листья блестят.' }]);
-    v.flower_day = v.day; v.flower_last = v.day; v.flower_n = (v.flower_n || 0) + 1; G.game.mood(dry >= 3 ? 1 : 3);
+    v.flower_day = v.day; v.flower_last = v.day; v.flower_n = (v.flower_n || 0) + 1;
     w.talk([{ text: dry >= 3 ? 'Цветок совсем поник... Ты поливаешь его, и он медленно оживает.' : `Ты поливаешь цветок. ${v.flower_n >= 20 ? 'Он расцвёл яркими лепестками!' : v.flower_n >= 8 ? 'Появился бутон!' : 'Он тянется к солнцу.'}` }]);
   },
   scroll: (a, w) => {

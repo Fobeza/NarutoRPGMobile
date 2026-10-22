@@ -41,7 +41,6 @@ G.train = {
     let m = [1, 0.7, 0.45, 0.3][Math.min(3, n)];
     if (G.hero.has('diligent')) m *= 1.25;
     if (partner) m *= 1.5;
-    if ((v.mood ?? 60) >= 80) m *= 1.15;
     if ((v.fatigue ?? 10) > 80) m *= 0.7;
     if (v.injury) m *= 0.7;
     if (d.bento) m *= 1.1;
@@ -71,7 +70,6 @@ G.train = {
       if (t.mg === 'seals') for (const tid of Object.keys(G.TECHS)) if (G.combat.knows(tid)) v['use_' + tid] = (v['use_' + tid] || 0) + 1;
       G.game.advance(t.minutes, { work: true });
       G.game.tire(t.fatigue * (opts.partner ? 0.8 : 1));
-      G.game.mood(score >= 0.7 ? 3 : 0);
       v.trainings = (v.trainings || 0) + 1;
       G.events.emit('training', id, score, opts.partner || null);
       if (opts.partner) { d['trw_' + opts.partner] = 1; G.friends && G.friends.add(opts.partner, 2, 'train'); }   // попытка дня тратится только на состоявшуюся тренировку

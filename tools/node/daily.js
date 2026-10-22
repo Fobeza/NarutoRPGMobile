@@ -15,7 +15,7 @@ test('Дворовые животные появляются у ориентир
 test('Кошки гуляют по проходимым клеткам, не перескакивают стены и реагируют на ласку',()=>{
   const w=world(),s=G.villageDaily.ensure(w),a=s.animals.find(a=>a.type==='cat');Object.assign(w.player,{x:a.x+60,y:a.y});const start={x:a.x,y:a.y};let moved=0;
   for(let i=0;i<800;i++){const prev={x:a.x,y:a.y};w.time+=.05;G.villageDaily.update(w,.05);assert.ok(Math.hypot(a.x-prev.x,a.y-prev.y)<1.5);assert.ok(!w.map.blockedRect({x:a.x-5,y:a.y-5,w:10,h:5}));moved+=Math.hypot(a.x-prev.x,a.y-prev.y);}
-  assert.ok(moved>8);Object.assign(w.player,{x:a.x,y:a.y+15,dir:'up'});const action=G.villageDaily.probe(w);assert.equal(action.label,'Погладить');const mood=G.state.vars.mood;action.run();assert.equal(a.path.length,0);assert.ok(a.pet>0);assert.equal(G.state.vars.mood,mood+2);G.villageDaily.pet(w,a);assert.equal(G.state.vars.mood,mood+2);
+  assert.ok(moved>8);Object.assign(w.player,{x:a.x,y:a.y+15,dir:'up'});const action=G.villageDaily.probe(w);assert.equal(action.label,'Погладить');action.run();assert.equal(a.path.length,0);assert.ok(a.pet>0);G.villageDaily.pet(w,a);
 });
 test('Птицы взлетают при приближении героя и садятся на доступную землю',()=>{
   const w=world(),a=G.villageDaily.ensure(w).animals.find(a=>a.type==='bird');Object.assign(w.player,{x:a.x+10,y:a.y});G.villageDaily.update(w,.1);assert.ok(a.flight);const target={x:a.flight.x1,y:a.flight.y1};Object.assign(w.player,{x:a.x+120,y:a.y+80});
