@@ -81,7 +81,7 @@ console.log('сцена',await p.evaluate(()=>G.scenes.top()&&G.scenes.top().nam
 - NPC не стоят в дверях и друг в друге; подсказка у каждой двери; цель задания понятна по стрелке/мини-карте.
 - Ночь читаема (не «чёрный экран»), окна светятся по маскам, дождь не прячет героя.
 
-**Бой** (`scenes/battle.js`, `battle_fx.js`, `battle_ai.js`, `battle_tactics.js`)
+**Бой** (`scenes/battle.js`, `systems/duel.js`)
 - Каждый удар заметен: вспышка/откидывание/число; ясно, чей ход и что задумал противник.
 - Правка цифр → `python3 tools/balance.py 120`, окна побед — `tools/targets.json`; `docs/BALANCE.md` не трогать руками.
 - Рефакторинг отрисовки боя/сцен → `node tools/node/golden.js` **до** и после, `diff` пустой. Визуальное изменение

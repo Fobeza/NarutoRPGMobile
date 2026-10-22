@@ -1,15 +1,22 @@
-// План из действий в бою, отмена плана, события тренировок.
+// Бой через экран, события тренировок.
 'use strict';
 const assert=require('node:assert/strict'),h=require('./harness.js'),{G}=h;
 let passed=0;
 function seed(day=33){h.seed();G.state.learning={};G.state.vars.day=day;G.state.vars.min=900;G.state.vars.hp=100;G.state.vars.chakra=100;G.state.inv={kunai:5,smoke_bomb:2,wire:2,book_traps:1};G.scenes.stack.length=0;G.scenes.fade={a:0,dir:0,speed:3,then:null};G.input.pressed=()=>false;G.input.tapNow=null;}
 function test(name,fn){seed();try{fn();console.log('✔ '+name);passed++;}catch(e){console.error('✘ '+name);throw e;}}
-function settle(b){for(let i=0;i<900;i++){if(b.state==='menu'&&!b.planner.running&&!b.planner.queue.length||b.state==='end')return;if(b.state==='react')b.sim.react('block');else if(b.state==='rhythm')b.sim.rhythm('ok');else if(b.state==='seals')b.sim.seals('ok');else if(b.state==='target')b.sim.target(true);b.update(.1);}throw Error('Бой не вернулся к решению');}
-function battle(mode='spar'){const b=G.scenes.make('battle',{enemy:'dummy',mode,ppos:1,epos:3},()=>{});G.scenes.push(b);settle(b);return b;}
+function settle(b){for(let i=0;i<600&&b.state!=='menu'&&b.state!=='end';i++)b.update(.1);}
+function battle(mode='spar',enemy='dummy',cb=()=>{}){const b=G.scenes.make('battle',{enemy,mode},cb);G.scenes.push(b);b.enter();settle(b);return b;}
 function script(id){const r=G.script.runner(id);for(let i=0;i<100;i++){const op=r.next();if(op.op==='choice')r.jump(op.options[0].label);if(op.op==='end')break;}const p=G.game.pending;G.game.pending=null;if(p?.type==='dialogScript')script(p.id);}
-test('План сближения и удара исполняется по реальной шкале боя',()=>{const b=battle(),hp=b.E.hp;assert.ok(b.planner.select('move','Вперёд'));assert.ok(b.planner.add());assert.ok(b.planner.select('tai',G.MOVES.punch.name));assert.ok(b.planner.add());assert.equal(b.planner.add(),false);assert.ok(b.planner.commit());settle(b);assert.equal(b.planner.queue.length,0);assert.ok(b.E.hp<hp);});
-test('План останавливается при исчезновении припаса без списания хода',()=>{const b=battle('ko');b.planner.select('throw','Кунай');assert.ok(b.planner.add());G.game.take('kunai',5);const hp=b.P.hp;b.planner.commit();b.update(.1);assert.equal(b.planner.running,false);assert.equal(b.planner.queue.length,0);assert.equal(b.P.hp,hp);assert.match(b.planner.message,/остановлен/);});
-test('Отмена плана не тратит ни чакру, ни предметы',()=>{const b=battle(),snap=JSON.stringify(G.state);b.planner.select('throw','Кунай');b.planner.add();b.planner.cancel();assert.equal(JSON.stringify(G.state),snap);});
 test('Событие успешной тренировки сохраняет конкретный навык и напарника',()=>{G.events.emit('training','throw',.8,'naruto');assert.equal(G.state.learning.tr_throw,1);assert.equal(G.state.learning.partner,1);G.storage.save(G.state);const s=G.game.fix(G.storage.load());assert.equal(s.learning.tr_throw,1);});
-test('Возобновление боя возвращает и учебный прогресс к началу схватки',()=>{G.state.learning.gift=1;battle('ko');G.state.learning.gift=99;const s=G.game.fix(JSON.parse(JSON.stringify(G.state)));assert.equal(s.learning.gift,1);assert.equal(s.battleCheckpoint,null);});
+test('Бой через экран: раунды с мини-играми, итог переносится в состояние игры',()=>{
+ let res=null;const b=battle('ko','dummy2',r=>{res=r;});G.state.vars.fatigue=10;const f0=G.state.vars.fatigue,w0=G.state.vars.wins||0;
+ for(let i=0;i<40&&b.state!=='end';i++){assert.ok(b.play('strike',0.8));settle(b);}
+ assert.equal(b.state,'end');for(let i=0;i<20&&G.scenes.top()===b;i++){G.input.tapNow={x:10,y:10};b.update(1.1);}G.input.tapNow=null;
+ assert.ok(res&&res.win&&res.enemy==='dummy2'&&res.turns>0);assert.ok(G.state.vars.fatigue>f0);assert.equal(G.state.vars.wins,w0+1);assert.equal(G.state.battleCheckpoint,null);
+});
+test('Спарринг заканчивается на 30% здоровья и не отнимает здоровье героя',()=>{
+ const hp0=G.state.vars.hp;const b=battle('spar','kiba');b.D.E.hp=b.D.E.hpMax*0.35;b.D.P.hp=1;
+ b.D.opts.rng=()=>0.99;let n=0;while(b.state!=='end'&&n++<30){b.play('strike',1);settle(b);}
+ assert.equal(b.state,'end');b.debugWin();assert.equal(G.state.vars.hp,hp0,'в спарринге здоровье не меняется');
+});
 assert.equal(G.script.problems.length,0);console.log('ИТОГ нового выпуска: '+passed+' проверок');

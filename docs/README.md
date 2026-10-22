@@ -25,6 +25,7 @@
 | [EDITOR_ART_REGEN](EDITOR_ART_REGEN.md) | Завершённый набор 36 мастеров, импорт, геометрия и стыки |
 | [CONTENT_GUIDE](CONTENT_GUIDE.md) | Рецепты добавления контента |
 | [SCRIPTS](SCRIPTS.md) | Диалоги и события |
+| [COMBAT](COMBAT.md) | Правила нового боя «Дуэль» |
 | [BALANCE](BALANCE.md) | Генерируемые таблицы боёв; не редактировать вручную |
 | [CLAUDE](../CLAUDE.md) | Правила работы с проектом |
 

@@ -10,7 +10,7 @@ const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
 G.calendar = {
   BDAY: { 9: 'kiba', 16: 'shino', 22: 'shikamaru', 23: 'sasuke', 27: 'hinata', 30: 'sakura', 34: 'iruka', 37: 'choji', 44: 'ino', 48: 'lee', 12: 'naruto' },
   EVENTS: {
-    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 9: 'Урок: хождение по дереву', 12: 'Урок: Хенге', 14: 'Урок: хождение по воде', 16: 'Урок: Буншин', 21: 'ЭКЗАМЕН НА ГЕНИНА',
+    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 9: 'Урок: хождение по дереву', 12: 'Урок: Хенге', 14: 'Урок: хождение по воде', 16: 'Урок: Буншин', 17: 'Урок гендзюцу', 21: 'ЭКЗАМЕН НА ГЕНИНА',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
@@ -39,12 +39,13 @@ G.academy = {
   plan(d) {
     const wd = (d - 1) % 7, week = Math.floor((d - 1) / 7) + 1;
     const special = {
-      2: { s: 'prac', intro: 'les_first', battle: 'dummy' },
+      2: { s: 'prac', intro: 'les_first', battle: 'dummy', learn: 'chakra_shot' },
       8: { s: 'nin', intro: 'les_kawarimi', battle: 'dummy2', learn: 'kawarimi' },
       9: { s: 'prac', intro: 'les_tree', mg: 'tree', learnFlag: 'tech_tree' },
       12: { s: 'nin', intro: 'les_henge', mg: 'seals', learn: 'henge' },
       14: { s: 'prac', intro: 'les_water', mg: 'tree', learnFlag: 'tech_water' },
       16: { s: 'nin', intro: 'les_bunshin', mg: 'seals', learn: 'bunshin' },
+      17: { s: 'nin', intro: 'les_genjutsu', mg: 'meditate', learn: 'fear' },
     }[d];
     if (special) return special;
     const mates = ['kiba', 'choji', 'ino', 'shikamaru', 'hinata', 'naruto', 'sasuke'];

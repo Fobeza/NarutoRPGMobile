@@ -23,34 +23,23 @@ function traceBattle(sc, build, seed) {
   h.rng(seed);
   const ctx = h.recordingCtx(G.screen.W, G.screen.H);
   const B = G.sim.BUILDS[build];
-  const g = G.sim.growth(build, 54);
+  const g = G.sim.growth(build, 21);
   const key = Object.keys(g).map(Number).filter((k) => k <= sc.day).pop();
-  const cfg = Object.assign({}, sc, {
-    stats: g[key], skills: B.skills.slice(), build, skill: 0.65,
-    techs: G.sim.techsAt(sc.day), combos: G.sim.combosAt(sc.day), inv: G.sim.invAt(sc.day),
-    uses: Math.max(0, Math.round((sc.day - 8) * 0.5)),
-  });
+  const cfg = Object.assign({}, sc, { stats: g[key], skills: B.skills.slice(), build, skill: 0.65, techs: G.sim.techsAt(sc.day), inv: G.sim.invAt(sc.day) });
   const st = G.state, snap = JSON.stringify(st);
   const snd = G.audio.enabled; G.audio.enabled = false;
   let res = null, turns = 0, it = 0;
   try {
     st.hero.stats = Object.assign({}, cfg.stats); st.hero.skills = cfg.skills.slice();
     for (const k of Object.keys(st.flags)) if (/^(tech_|combo_)/.test(k)) delete st.flags[k];
-    for (const t of cfg.techs) { st.flags['tech_' + t] = 1; st.vars['use_' + t] = cfg.uses; }
-    for (const c of cfg.combos) st.flags['combo_' + c] = 1;
-    st.flags.tactic = 0;
-    st.inv = Object.assign({}, cfg.inv); st.vars.day = cfg.day; st.vars.hp = 100; st.vars.chakra = 100;
-    const S = G.scenes.make('battle', { enemy: cfg.enemy, mode: cfg.mode, terrain: cfg.terrain, turns: cfg.turns, story: cfg.story, allies: cfg.allies, will: cfg.will }, (r) => { res = r; });
+    for (const t of cfg.techs) st.flags['tech_' + t] = 1;
+    st.inv = Object.assign({}, cfg.inv); st.vars.day = cfg.day; st.vars.hp = 100; st.vars.chakra = 100; st.vars.fatigue = 15;
+    const S = G.scenes.make('battle', { enemy: cfg.enemy, mode: cfg.mode, terrain: cfg.terrain, turns: cfg.turns }, (r) => { res = r; });
     G.scenes.stack.length = 0; G.scenes.push(S);
     while (it++ < 20000) {
       const s = S.state;
-      if (s === 'end') { res = res || S.sim.result(); break; }
-      if (s === 'menu') { turns++; if (!G.sim.decide(S, cfg)) S.sim.press('misc', 'Защита'); }
-      else if (s === 'rhythm') S.sim.rhythm('ok');
-      else if (s === 'seals') S.sim.seals('ok');
-      else if (s === 'react') G.sim.react(S, 0.65);
-      else if (s === 'target') S.sim.target(0.34);
-      else if (s === 'moment') S.sim.moment();
+      if (s === 'end') { res = res || { win: !!(S.D.over && S.D.over.win) }; break; }
+      if (s === 'menu') { turns++; const b = G.duel.bot(S.D, 0.65); S.play(b.act, b.q); }
       S.update(0.1);
       S.draw(ctx);
     }

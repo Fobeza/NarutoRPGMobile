@@ -27,11 +27,11 @@ JS_FILES = [
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
-    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/combat.js",
+    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/duel_data.js",
     # ── игровые системы ──
-    "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/choices.js", "systems/exam.js",
+    "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/duel.js", "systems/choices.js", "systems/exam.js", "systems/sim.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
-    "systems/sim.js",
+    
     # ── сюжет и диалоги ──
     "data/konoha_layout.js", "data/legacy_layout.js", "data/dialogs.js", "data/story_dialogs.js", "data/main_quest.js", "data/main_story.js", "data/side_quests.js", "data/side_story.js", "data/small_quests.js", "data/story_scenes.js", "data/village_daily.js", "data/street_events.js", "data/village_dialogues.js",
     # ── мир: карты, интерьеры, жители, расписания ──
@@ -44,10 +44,10 @@ JS_FILES = [
     "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
-    "scenes/battle_fx.js", "scenes/battle_ai.js", "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
+    "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/menu.js", "scenes/settings.js",
     "scenes/gallery.js", "scenes/shogi.js",
-    "world/lighting.js", "scenes/battle_tactics.js",
+    "world/lighting.js", 
     # ── точка входа ──
     "main.js",
 ]

@@ -18,7 +18,7 @@ function battle(mode = 'ko') {
   const b = G.scenes.make('battle', { enemy: 'dummy', mode }, () => {});
   b.enter(); settle(b); return b;
 }
-function settle(b) { for (let i = 0; i < 600 && b.state !== 'menu'; i++) b.update(.1); }
+function settle(b) { for (let i = 0; i < 600 && b.state !== 'menu' && b.state !== 'end'; i++) b.update(.1); }
 function key(scene, name) {
   const old = G.input.pressed; G.input.pressed = b => b === name;
   try { scene.update(.016); } finally { G.input.pressed = old; }
@@ -46,11 +46,11 @@ test('Повреждённые вложенные поля сохранения 
   for (const mutate of mutations) { const st = JSON.parse(JSON.stringify(G.state)); mutate(st); assert.equal(G.storage.valid({ state: st }), false); }
 });
 test('Перезагрузка во время боя полностью возвращает состояние до боя', () => {
-  G.state.inv = { kunai: 3 }; const before = JSON.stringify(G.state); const b = battle();
-  assert.ok(b.sim.press('throw', 'Кунай')); assert.equal(G.game.count('kunai'), 2);
+  G.state.inv = { bandage: 2 }; const before = JSON.stringify(G.state); const b = battle('ko');
+  G.state.vars.hp = 40; G.state.vars.fatigue = 90; G.game.take('bandage');
   G.storage.save(G.state); const st = G.game.fix(G.storage.load());
   assert.deepEqual(st.inv, JSON.parse(before).inv); assert.equal(st.battleCheckpoint, null);
-  assert.equal(st.vars.hp, 100);
+  assert.equal(st.vars.hp, 100); assert.equal(st.vars.fatigue, JSON.parse(before).vars.fatigue);
 });
 test('Предметы проверяются повторно в момент сдачи квеста', () => {
   for (const [qid, id, qty, npc] of [['homework', 'kunai', 3, 'iruka'], ['shogi', 'shogi', 1, 'shikamaru'], ['flowers', 'flowers_s', 1, 'sakura']]) {
@@ -68,10 +68,12 @@ test('Старый переполненный подсумок безопасн�
   G.state.inv = { kunai: 8, shuriken: 8 }; G.game.fix(G.state);
   assert.equal(G.game.pouchUsed(), 10); assert.equal(G.state.chest.shuriken, 6);
 });
-test('В спарринге расходники конечны, запас вне боя сохраняется', () => {
-  G.state.inv = { bandage: 1 }; const b = battle('spar'); b.P.hp = 10;
-  assert.ok(b.sim.press('tool', 'Бинт')); settle(b); b.P.hp = 10;
-  assert.equal(b.sim.press('tool', 'Бинт'), false); assert.equal(G.game.count('bandage'), 1);
+test('В спарринге расходники конечны, запас вне боя сохраняется; в бою до конца — списываются', () => {
+  G.state.inv = { bandage: 1 }; const b = battle('spar'); b.D.P.hp = 10;
+  assert.ok(b.play('item:bandage')); settle(b); assert.equal(b.D.inv.bandage, 0); assert.ok(b.D.P.hp > 10);
+  b.D.P.hp = 10; assert.ok(b.play('item:bandage')); settle(b); assert.equal(G.game.count('bandage'), 1, 'в спарринге запас не тратится');
+  b.debugWin(); assert.equal(G.game.count('bandage'), 1);
+  G.state.inv = { bandage: 1 }; const k = battle('ko'); k.D.P.hp = 10; k.play('item:bandage'); settle(k); k.debugWin(); assert.equal(G.game.count('bandage'), 0, 'в настоящем бою бинт списан');
 });
 test('Усталость: набор, отдых, еда и миграция сохранения (энергия и сытость заменены)', () => {
   G.state.vars.fatigue = 0; G.game.advance(60); assert.ok(G.state.vars.fatigue > 3 && G.state.vars.fatigue < 8);
@@ -229,6 +231,42 @@ test('Остальные побочные ветки: Сакура, Киба, Ч
   assert.equal(cur('arc_sasuke'), 'give'); Q.step('arc_sasuke', 'give'); assert.equal(cur('arc_sasuke'), 'talk'); assert.ok(G.choices.set('sasuke', 'trust'));
   for (const q of ['arc_sakura', 'arc_kiba', 'arc_choji', 'arc_ino', 'arc_lee', 'arc_sasuke']) for (const st of G.QUESTS[q].steps) for (const k of ['after', 'script']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
 });
+test('Дуэль: Блок бьёт Удар, Удар бьёт Уклон, Уклон бьёт Блок; ничьи без урона', () => {
+  const mk = (extra) => G.duel.create(Object.assign({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(5), stability: 60, techs: [], fatigue: 0 }, extra || {}));
+  const round = (p, e, q = 0.5) => { const D = mk(); D.intent = e; D.hintTrue = true; D.hint = e; const hp = D.P.hp, eh = D.E.hp; G.duel.play(D, p, q); return { dE: eh - D.E.hp, dP: hp - D.P.hp, D }; };
+  let r = round('strike', 'evade'); assert.ok(r.dE > 0 && r.dP === 0, 'удар догоняет уклон');
+  r = round('block', 'strike'); assert.ok(r.dP < round('evade', 'strike', 0.5).dP + 1 && r.dE === 0, 'блок смягчает удар');
+  r = round('block', 'strike', 0.9); assert.equal(r.dP, 0); assert.ok(r.dE > 0, 'идеальный блок: контрудар');
+  r = round('evade', 'block'); assert.ok(r.dE > 0 && r.dP === 0, 'уклон обходит блок');
+  r = round('strike', 'block'); assert.ok(r.dE >= 0 && r.dE < round('strike', 'evade').dE, 'удар в блок слабее удара в уклон');
+  r = round('strike', 'strike'); assert.ok(r.dE > 0 && r.dP > 0, 'размен ударами');
+  r = round('block', 'block'); assert.equal(r.dE + r.dP, 0); r = round('evade', 'evade'); assert.equal(r.dE + r.dP, 0);
+  const T = G.duel.create({ enemy: 'dummy', mode: 'ko', stats: { tai: 5 }, rng: G.duel.mulberry(1), stability: 50 }); const hp = T.P.hp; G.duel.play(T, 'strike', 0.7); assert.equal(T.P.hp, hp, 'манекен не бьёт');
+});
+test('Дуэль: приёмы пробивают блок, промахиваются по уклону, тратят чакру; выброс требует накала', () => {
+  const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 6, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: ['chakra_shot', 'bunshin', 'fear'], fatigue: 0, surge: false });
+  let D = mk(); D.intent = 'block'; const c0 = D.P.ch, e0 = D.E.hp; G.duel.play(D, 'tech:chakra_shot', 0.8); assert.ok(D.E.hp < e0, 'приём пробивает блок'); assert.ok(D.P.ch < c0);
+  D = mk(); D.intent = 'evade'; const e1 = D.E.hp; G.duel.play(D, 'tech:chakra_shot', 0.8); assert.equal(D.E.hp, e1, 'приём промахивается по уклону');
+  D = mk(); D.intent = 'strike'; G.duel.play(D, 'tech:bunshin', 0.8); assert.equal(D.P.clones, 1, 'клон принял удар'); assert.equal(D.P.hp, D.P.hpMax);
+  D = mk(); D.P.heat = 10; const ch = D.P.ch; G.duel.play(D, 'release', 0.8); assert.equal(D.P.ch, ch, 'без накала выброс не получается');
+  D = mk(); D.P.heat = 80; D.intent = 'block'; const e2 = D.E.hp; G.duel.play(D, 'release', 0.8); assert.ok(D.E.hp < e2); assert.ok(D.P.heat < 80);
+  D = mk(); D.P.ch = 1; D.intent = 'block'; const e3 = D.E.hp; G.duel.play(D, 'tech:chakra_shot', 0.8); assert.equal(D.E.hp, e3, 'без чакры приём не работает');
+});
+test('Дуэль: усталость и стабильность, намёки, стили, окончание боя и детерминизм', () => {
+  const base = { enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(3), stability: 60 };
+  const D = G.duel.create(Object.assign({ fatigue: 0 }, base)); const w0 = G.duel.window(D), s0 = G.duel.stability(D);
+  D.P.fat = 80; assert.ok(G.duel.window(D) < w0 && G.duel.stability(D) < s0, 'усталость сужает окно и снижает стабильность');
+  const hi = G.duel.create(Object.assign({}, base, { stats: Object.assign({}, base.stats, { know: 11 }) })), lo = G.duel.create(Object.assign({}, base, { stats: Object.assign({}, base.stats, { know: 3 }) }));
+  assert.ok(G.duel.hintAccuracy(hi) > G.duel.hintAccuracy(lo), 'Знания повышают точность намёка');
+  assert.ok(G.duel.hintAccuracy(G.duel.create(Object.assign({}, base, { enemy: 'ino' }))) < G.duel.hintAccuracy(G.duel.create(Object.assign({}, base, { enemy: 'kiba' }))), 'обманщик путает намёки');
+  const sp = G.duel.create(Object.assign({}, base, { mode: 'spar', enemy: 'dummy2' })); sp.E.hp = sp.E.hpMax * 0.35; sp.intent = 'idle'; G.duel.play(sp, 'strike', 0.9); assert.ok(sp.over && sp.over.win, 'спарринг идёт до 30%');
+  const sv = G.duel.create(Object.assign({}, base, { mode: 'survive', rounds: 3 })); for (let i = 0; i < 3; i++) G.duel.play(sv, 'block', 0.5); assert.ok(sv.over, 'survive кончается по раундам');
+  const run = () => G.duel.simulate(Object.assign({}, base, { rng: G.duel.mulberry(77), day: 12, techs: [] }), 0.65);
+  assert.deepEqual(run(), run(), 'симуляция детерминирована при том же зерне');
+  const styles = {}; for (const e of Object.keys(G.ENEMIES)) styles[G.ENEMIES[e].style] = 1; assert.ok(['dummy', 'rush', 'counter', 'reader', 'turtle', 'trickster', 'brute'].every((x) => styles[x]), 'есть все стили');
+  let blocks = 0, n = 0; for (let i = 0; i < 300; i++) { const d2 = G.duel.create(Object.assign({}, base, { enemy: 'sasuke', rng: G.duel.mulberry(100 + i) })); G.duel.play(d2, 'strike', 0.5); if (!d2.over && d2.intent !== 'tech') { n++; if (d2.intent === 'block') blocks++; } }
+  assert.ok(blocks / n > 0.4, 'противник «отвечает» блоком на повторный удар: ' + (blocks / n).toFixed(2));
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });
@@ -241,11 +279,7 @@ test('Ягоды, мазь, чай и противоядие можно прим
 });
 test('Пилюля при полной чакре не расходуется ни в сумке, ни в бою', () => {
   G.state.inv = { chakra_pill: 1 }; assert.equal(G.game.useItem('chakra_pill').ok, false);
-  const b = battle(); assert.equal(b.sim.press('tool', 'Пилюля'), false); assert.equal(G.game.count('chakra_pill'), 1);
-});
-test('На клетку противника нельзя потратить ловушку', () => {
-  G.state.inv = { book_traps: 1, wire: 1 }; const b = battle(); b.E.pos = b.P.pos + 1;
-  assert.equal(b.sim.press('tool', 'Ловушка-пров.'), false); assert.equal(G.game.count('wire'), 1);
+  const b = battle('ko'); b.play('item:chakra_pill'); settle(b); assert.equal(b.D.inv.chakra_pill, 1); b.debugWin(); assert.equal(G.game.count('chakra_pill'), 1);
 });
 test('Покупка после закрытия не списывает деньги', () => {
   const s = G.scenes.make('shop', 'pharmacy'); const before = G.game.v.money;

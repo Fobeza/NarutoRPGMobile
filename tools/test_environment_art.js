@@ -4,9 +4,9 @@ const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=requ
 const h=require('./node/harness.js');h.seed();
 const m=h.G.world.get('konoha');
 const geometry={ground:[...m.ground],block:[...m.block],objects:m.objects.map(o=>({kind:o.kind,x:o.x,y:o.y,w:o.w,h:o.h,ox:o.ox,oy:o.oy,box:o.box,sortY:o.sortY}))};
-// Снято на плотной Конохе (раскладка 3, seed 2027) с фонарями переулков и аллеей у реки. Хеш не содержит картинок: меняется только
+// Снято на плотной Конохе (раскладка 3, seed 2027) с фонарями переулков и аллеей у реки; переснято 2026-10-22 после перестройки сюжета (удалены «Дороги Листа» и старая кампания). Хеш не содержит картинок: меняется только
 // вместе с раскладкой или генератором карты — тогда снимите заново и отметьте причину в CHANGELOG.
-assert.equal(crypto.createHash('sha256').update(JSON.stringify(geometry)).digest('hex'),'9b414477dc6abb9b9ee3084f210a8dd816dafd539564208def84de51993b58ce');
+assert.equal(crypto.createHash('sha256').update(JSON.stringify(geometry)).digest('hex'),'f1351baca5f652ba4f2218cbb2a866be5d8043d0200edbdfcbb047601fd98385');
 console.log('✔ Клетки, размеры, опоры, сортировка и коллизии всей Конохи совпали с исходной сборкой');
 (async()=>{const browser=await chromium.launch(),errors=[],requests=[];
 try{

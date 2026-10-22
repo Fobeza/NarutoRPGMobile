@@ -99,26 +99,25 @@ my_quest: {
 
 ## 6. Враг и бой
 
-`src/data/combat.js` → `G.ENEMIES`:
+`src/data/duel_data.js` → `G.ENEMIES`:
 
 ```js
-tenten: { name: 'Тентен', spr: 'tenten', hp: 110, ch: 50, tai: 6, nin: 4, gen: 2, spd: 8, end: 5, know: 5,
-          focus: 2, pref: 3, acts: ['kunai', 'shuriken', 'blades', 'strike'], traits: ['smart'] },
+tenten: { name: 'Тентен', spr: 'tenten', male: false, grow: false, dmg: 14, hp: 70, ch: 50, tai: 6, nin: 4, gen: 2, spd: 8, end: 5, know: 5,
+          style: 'counter', tech: { name: 'Град кунаев', power: 1.6, kind: 'dmg', cost: 16 }, lines: { start: '...', win: '...', lose: '...' } },
 ```
 
-- `spr` — id персонажа для спрайта и портрета. `pref` — любимая дистанция (1 — вплотную, 3 — издалека).
-- `acts` — приёмы из `G.EACTS` (там же можно добавить свой: `range`, `w` вес, `kind`, `dmg`, `hits`).
-- `traits`: `smart` (читает героя), `impulsive`, `defensive`, `kawarimi`, `deceive`, `climb`, `clones`, `lazy`.
-- Начать бой из сценария: `call battle tenten spar field win_script lose_script`. Режимы: `ko spar bells scroll survive ringout`.
+- `spr` — id персонажа для спрайта. `dmg` — урон обычного удара, `hp` — здоровье (оба подгоняются симулятором под окна побед).
+- `style`: `dummy rush counter reader turtle trickster brute` (описание — `docs/COMBAT.md`). `tech.kind`: `dmg drain bind fear`.
+- Начать бой из сценария: `call battle tenten spar field win_script lose_script`. Режимы: `ko spar survive`.
   Арены — `G.ARENAS`: `yard field forest night river street ring`.
-- После правок проверь баланс: `python3 tools/balance.py 20` → `docs/BALANCE.md`. Чтобы бой попал в симулятор,
-  добавь сценарий в `SCEN` в `systems/sim.js`.
+- После правок проверь баланс: `python3 tools/balance.py 120` → `docs/BALANCE.md`. Чтобы бой попал в симулятор,
+  добавь сценарий в `SCEN` в `systems/sim.js` и окна — в `tools/targets.json`.
 
 ## 7. Техника (ниндзюцу)
 
-`G.TECHS` в `data/combat.js`: `{ name, seals: _S([...печати]), ch: цена_чакры, w: вес_хода, el?: 'fire'|'water'|'bolt'|'wind', desc }`
-и id в `G.TECH_ORDER` (порядок в меню). Логика эффекта — в `doTech` в `scenes/battle.js` (стихийные работают сами по `el`).
-Научить: `set flag.tech_<id> = 1` в сценарии (так учат Асума и Какаши в `data/story_scenes.js`).
+`G.TECHS` в `data/duel_data.js`: `{ name, seals: _S([...печати]), ch: цена_чакры, el?: 'fire'|'water'|'bolt'|'wind', desc }`
+и id в `G.TECH_ORDER` (порядок в меню). Эффект — в `systems/duel.js` (`SPECIAL` — особые техники, остальные бьют по `techPower`).
+Научить: `set flag.tech_<id> = 1` в сценарии (так учат Асума и Какаши в `data/story_scenes.js`) или `learn` в плане урока (`systems/story.js`).
 
 ## 8. Тренировка и подработка
 
@@ -197,7 +196,7 @@ my_room(info) {
 | Хочу… | Где |
 |---|---|
 | поменять цену / эффект еды | `data/items.js` |
-| сделать врага слабее/сильнее | `G.ENEMIES` в `data/combat.js`, потом `tools/balance.py` |
+| сделать врага слабее/сильнее | `hp` и `dmg` в `G.ENEMIES` (`data/duel_data.js`), потом `tools/balance.py` |
 | поменять скорость времени | `RATE` в `systems/life.js` |
 | стартовые деньги, вместимость подсумка | `START_MONEY`, `POUCH` в `systems/game.js` |
 | текст в меню | `scenes/menu.js` |

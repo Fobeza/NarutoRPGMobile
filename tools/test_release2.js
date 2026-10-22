@@ -7,16 +7,19 @@ const shots=process.env.RELEASE_SHOTS||path.join(__dirname,'shots','release2');f
 try{const page=await browser.newPage({viewport:{width:393,height:759},deviceScaleFactor:2,isMobile:true,hasTouch:true}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto(process.env.GAME_URL||'http://127.0.0.1:8765/index.html');await page.waitForFunction(()=>window.G?.lighting);
 async function seed(){await page.evaluate(()=>{const s=G.game.newState();s.started=true;s.hero.name='Кайто';s.hero.stats={tai:7,nin:6,gen:5,chakra:7,ctrl:6,spd:6,end:6,know:5};s.hero.skills=[];Object.assign(s.flags,{enrolled:1,hosp_done:1,day2_intro:1,roofs:1,home_seen:1,frd_init:1,ramen_done:1,tech_kawarimi:1,tech_henge:1,tech_katon:1,tech_bunshin:1,combo_air:1});s.vars.day=6;s.vars.min=900;s.inv={kunai:5,shuriken:5,smoke_bomb:2,wire:2,bandage:2};s.quests.day1={st:'done',step:5,day:1};G.story.poll=()=>false;G.life.RATE=0;G.audio.enabled=false;G.debug.on=false;G.scenes.fade={a:0,dir:0,speed:3,then:null};G.scenes.replace(G.scenes.make('world',G.world.outsideOf(G.world.heroHome())));});}
-async function tap(label){const p=await page.evaluate(label=>{const h=G.scenes.top().planner.buttons.find(x=>x.label===label);if(!h)throw Error('Нет кнопки '+label);const r=G.screen.canvas.getBoundingClientRect();return{x:r.x+(h.x+h.w/2)*r.width/G.screen.W,y:r.y+(h.y+h.h/2)*r.height/G.screen.H};},label);await page.touchscreen.tap(p.x,p.y);await page.waitForTimeout(100);}
+async function tapId(id){const p=await page.evaluate(id=>{const h=G.scenes.top().buttons().find(x=>x.id===id);if(!h)throw Error('Нет кнопки '+id);const r=G.screen.canvas.getBoundingClientRect();return{x:r.x+(h.x+h.w/2)*r.width/G.screen.W,y:r.y+(h.y+h.h/2)*r.height/G.screen.H};},id);await page.touchscreen.tap(p.x,p.y);await page.waitForTimeout(100);}
+const FAILS=[];
 for(const [width,height]of [[320,568],[393,759],[430,932]])for(const density of ['big','mid','fine']){
-  await page.setViewportSize({width,height});await seed();await page.evaluate(d=>{G.storage.settings.density=d;G.screen.resize();G.scenes.push(G.scenes.make('battle',{enemy:'dummy',mode:'spar'},()=>{}));},density);await page.waitForFunction(()=>G.scenes.top().state==='menu');await page.waitForTimeout(70);
-  const layout=await page.evaluate(()=>{const b=G.scenes.top(),r=G.screen.canvas.getBoundingClientRect();return {W:G.screen.W,H:G.screen.H,scale:r.width/G.screen.W,rects:b.planner.buttons,geo:G.tacticalGeometry()};});
-  for(const r of layout.rects){assert.ok(r.x>=0&&r.y>=0&&r.x+r.w<=layout.W&&r.y+r.h<=layout.H,JSON.stringify({r,layout}));assert.ok(r.w*layout.scale>=43.9&&r.h*layout.scale>=43.9,'Малая кнопка '+JSON.stringify({r,layout}));}
-  for(let i=0;i<layout.rects.length;i++)for(let j=i+1;j<layout.rects.length;j++){const a=layout.rects[i],b=layout.rects[j];assert.ok(!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y),'Пересечение кнопок');}
-  await tap('Вперёд');await tap('В план +');assert.equal(await page.evaluate(()=>G.scenes.top().planner.queue.length),1);
-  await tap('В бой!');await page.waitForFunction(()=>G.scenes.top().P.pos===2);assert.equal(await page.evaluate(()=>G.scenes.top().planner.queue.length),0);
+  await page.setViewportSize({width,height});await seed();await page.evaluate(d=>{G.storage.settings.density=d;G.screen.resize();G.state.flags.tech_chakra_shot=1;G.scenes.push(G.scenes.make('battle',{enemy:'dummy',mode:'spar'},()=>{}));},density);await page.waitForFunction(()=>G.scenes.top().state==='menu',null,{timeout:6000}).catch(async()=>{await page.evaluate(()=>{G.input.tapNow={x:5,y:5};});await page.waitForFunction(()=>G.scenes.top().state==='menu');});await page.waitForTimeout(70);
+  for(const menu of ['main','tech','item','main']){
+    const info=await page.evaluate(menu=>{const b=G.scenes.top(),rects=b.openMenu(menu),r=G.screen.canvas.getBoundingClientRect();return {W:G.screen.W,H:G.screen.H,scale:r.width/G.screen.W,rects};},menu);
+    assert.ok(info.rects.length>=(menu==='main'?7:2),'Кнопок меню '+menu+': '+info.rects.length);
+    for(const r of info.rects){assert.ok(r.x>=0&&r.y>=0&&r.x+r.w<=info.W&&r.y+r.h<=info.H,'Кнопка за экраном '+JSON.stringify({r,info:{W:info.W,H:info.H}}));assert.ok(r.w*info.scale>=43.9&&r.h*info.scale>=43.9,'Малая кнопка '+menu+' '+JSON.stringify({r,scale:info.scale,width,density}));}
+    for(let i=0;i<info.rects.length;i++)for(let j=i+1;j<info.rects.length;j++){const a=info.rects[i],b=info.rects[j];assert.ok(!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y),'Пересечение кнопок '+menu+' '+a.id+'/'+b.id);}
+  }
+  await tapId('strike');assert.equal(await page.evaluate(()=>G.scenes.top().phase),'mini','Удар открывает кольцо тайминга: '+width+'x'+height+' / '+density);
   console.log('✔ Касания и кнопки >=44 CSS: '+width+'x'+height+' / '+density);
-  if(width===393&&density==='fine'){await page.evaluate(()=>{const b=G.scenes.top();for(let i=0;i<300&&b.state!=='menu';i++){if(b.state==='react')b.sim.react('block');else b.update(.1);}});await page.screenshot({path:path.join(shots,'battle-mobile.png')});}
+  if(width===393&&density==='fine'){await page.waitForTimeout(800);await page.screenshot({path:path.join(shots,'battle-393x759.png')});}
 }
 await seed();const lighting=await page.evaluate(()=>{
   G.state.vars.min=22*60;G.storage.settings.fx=true;

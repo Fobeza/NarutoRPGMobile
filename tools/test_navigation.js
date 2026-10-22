@@ -16,7 +16,7 @@ try{for(const [phone,width,height,dpr]of [['small320',320,568,2],['15Pro',393,75
   assert.ok(g.back.x+g.back.w<g.titleX-50,'Заголовок не должен пересекать кнопку');
   if(scene==='calendar'){
    await tap(g.W*.75,g.height+10);assert.ok((await labels()).includes('БУДНИ'),'Вкладка расписания');
-   await tap(g.W*.25,g.height+10);await tap(7+(g.W-14)/14,g.height-20+72);assert.ok((await labels()).some(t=>String(t).startsWith('День 1 ·')),'Выбор первого дня после сдвига');
+   await tap(g.W*.25,g.height+10);await tap(7+(g.W-14)/14,g.height-20+84);assert.ok((await labels()).some(t=>String(t).startsWith('1 июня ·')),'Выбор первого дня после сдвига');
   }
   if(scene==='journal'){
    await tap(g.W*.75,g.height+10);assert.ok((await labels()).includes('Пока пусто'),'Вкладка завершённых');

@@ -25,7 +25,7 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 1. **Никогда не правь `index.html` и корневой `sw.js` руками** — это результат сборки. Правь `src/`, потом `python3 build.py`.
 2. Всё в глобальном `G`. Новый файл → добавь в `JS_FILES` в `build.py` (порядок важен: при загрузке модуль видит только то, что выше).
 3. Контент — это данные: персонажи `src/data/characters.js`, расписания `src/data/schedule.js`, задания `data/quests.js`,
-   предметы `data/items.js`, бой `data/combat.js`, диалоги — язык из `docs/SCRIPTS.md`. Рецепты — `docs/CONTENT_GUIDE.md`.
+   предметы `data/items.js`, бой `data/duel_data.js` (правила — `docs/COMBAT.md`, ядро `systems/duel.js`), диалоги — язык из `docs/SCRIPTS.md`. Рецепты — `docs/CONTENT_GUIDE.md`.
 4. Координаты — логические пиксели, тайл 16. Холсты «подробные» (×2), рисовать в логических координатах.
 5. Шрифт пиксельный (`gfx/font_data.js`, генерируется `tools/make_font.py`): символ, которого в нём нет, выводится как «?». Новый символ — в `make_font.py`, затем `python3 tools/make_font.py`.
    Интерфейс собирается из `G.ui` (`gfx/ui.js`): панели, кнопки, шкалы, заголовки — не рисуй рамки руками.
@@ -47,7 +47,7 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 - `src/systems/` — время, задания, навигация, жизнь (часы/погода), Академия и сюжет (`story.js`), уроки, дружба,
   тренировки, катсцены, расписания (`schedule.js`), симулятор баланса (`sim.js`)
 - `src/world/` — генератор Конохи, интерьеры (`interiors.js`), жители (`village_*.js`, `cast.js`), крыши, эффекты
-- `src/scenes/` — экраны: `world.js` (карта, NPC, камера), `battle.js` (+ `battle_fx.js` эффекты и `battle_ai.js` ИИ врага),
+- `src/scenes/` — экраны: `world.js` (карта, NPC, камера), `battle.js` (экран боя «Дуэль»; фоны — `battle_bg.js`),
   `train.js` (мини-игры), меню, календарь и др.
 - Подробно — `docs/ARCHITECTURE.md`.
 

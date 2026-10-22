@@ -1,5 +1,5 @@
 """Регрессия: урок, прерванный выгрузкой вкладки; очередь отработок; команда при ничьей;
-клоны в бою; запасы в тренировочных боях; предупреждение об уроке."""
+запасы в тренировочных боях; предупреждение об уроке."""
 import time, sys
 from playwright.sync_api import sync_playwright
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
@@ -66,38 +66,22 @@ with sync_playwright() as p:
     check(page.evaluate("G.friends.KEY_ITEMS.includes('fishing_rod') && G.friends.KEY_ITEMS.includes('book_traps')"), 'удочку и книги нельзя подарить')
     b.close()
 
-    # ── 4. бой: клоны и запасы в спарринге ──
+    # ── 4. бой: запасы в спарринге не тратятся, в настоящем бою тратятся после боя ──
     b, page = fresh(p)
-    k0 = page.evaluate("G.state.inv.kunai")
+    page.evaluate("G.state.inv.bandage = 2")
     W(page, "G.flow.battle({ enemy: 'naruto', mode: 'spar', terrain: 'field' }, s); return 1"); time.sleep(0.5)
     ok = False
     for _ in range(40):
         if B(page, "return s.state") == 'menu': ok = True; break
         key(page, 'KeyZ', wait=0.25)
     check(ok, 'бой с Наруто: дошли до меню действий')
-    B(page, "s.E.clones = 2; s.E.realIdx = 1; return 1")
-    B(page, "return s.act('throw', 'kunai')"); time.sleep(0.3)
-    check(B(page, "return s.state") == 'target', 'с клонами — выбор цели')
-    B(page, "s.sim.target(false); return 1"); time.sleep(0.4)
-    c = B(page, "return [s.E.clones, s.E.realIdx]")
-    check(c[0] == 1 and c[1] in (0, 1), 'после неверной цели клонов 1, настоящий в диапазоне 0..1: %s' % c)
-    check(page.evaluate("G.state.inv.kunai") == k0, 'кунай в спарринге не тратится (%s → %s)' % (k0, page.evaluate("G.state.inv.kunai")))
+    B(page, "s.D.P.hp = 10; s.play('item:bandage', 0.5); return 1"); time.sleep(2.5)
+    check(B(page, "return s.D.inv.bandage") == 1 and page.evaluate("G.state.inv.bandage") == 2, 'в спарринге бинт тратится в бою, но не из сумки')
+    B(page, "s.debugWin(); return 1"); time.sleep(1.8); key(page, 'KeyZ'); time.sleep(0.5)
+    check(page.evaluate("G.state.inv.bandage") == 2 and top(page) == 'world', 'после спарринга сумка цела')
     b.close()
 
-    # ── 5. ловушки только с учебником ──
-    b, page = fresh(p)
-    page.evaluate("G.state.inv.wire = 2; G.state.inv.tag_explosive = 1; delete G.state.inv.book_traps")
-    W(page, "G.flow.battle({ enemy: 'dummy', mode: 'ko', terrain: 'field' }, s); return 1"); time.sleep(0.5)
-    for _ in range(30):
-        if B(page, "return s.state") == 'menu': break
-        key(page, 'KeyZ', wait=0.25)
-    no_book = B(page, "return s.sim.buttons('tool').map(b => b.label)")
-    page.evaluate("G.state.inv.book_traps = 1")
-    with_book = B(page, "return s.sim.buttons('tool').map(b => b.label)")
-    check(not any('Ловушка' in x for x in no_book) and any('Ловушка' in x for x in with_book), 'ловушки открываются учебником: %s → %s' % (no_book, with_book))
-    b.close()
-
-    # ── 6. предупреждение об уроке перед тренировкой ──
+    # ── 5. предупреждение об уроке перед тренировкой ──
     b, page = fresh(p)
     page.evaluate("G.state.daily = { ev: 9 }; G.state.vars.day = 2; G.state.vars.min = 8*60+30")
     W(page, "s.setMap({ map: 'konoha', x: 38 * 16 + 8, y: 119 * 16 + 8 }); return 1"); time.sleep(0.6)

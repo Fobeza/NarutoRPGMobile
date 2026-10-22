@@ -29,8 +29,8 @@ check(scriptProblems.length === 0, `ошибок разбора сценарие
 
 // ─────────── 2. целостность данных и сценариев ───────────
 section('ЦЕЛОСТНОСТЬ ДАННЫХ');
-const L = G.script.library, ITEMS = G.ITEMS, QUESTS = G.QUESTS, ENEMIES = G.ENEMIES, EACTS = G.EACTS;
-const ARENAS = G.ARENAS, TECHS = G.TECHS, COMBOS = G.COMBOS, MOVES = G.MOVES, TRAIN = G.TRAININGS;
+const L = G.script.library, ITEMS = G.ITEMS, QUESTS = G.QUESTS, ENEMIES = G.ENEMIES;
+const ARENAS = G.ARENAS, TECHS = G.TECHS, COMBOS = G.COMBOS, TRAIN = G.TRAININGS;
 const FRIENDS = G.FRIENDS, DEFS = G.chars.DEFS, DRAFT = G.KONOHA_DRAFT;
 const bad = [];
 const draftTpls = new Set((DRAFT.buildings || []).map((b) => b.tpl));
@@ -122,11 +122,13 @@ for (const [qid, q] of Object.entries(QUESTS)) {
 }
 for (const [eid, e] of Object.entries(ENEMIES)) {
   texts.push(e.name);
-  for (const a of e.acts || []) if (!EACTS[a]) bad.push(`враг ${eid}: нет действия «${a}»`);
-  for (const t of e.techs || []) if (!TECHS[t]) bad.push(`враг ${eid}: нет техники «${t}»`);
+  if (!['dummy', 'rush', 'counter', 'reader', 'turtle', 'trickster', 'brute'].includes(e.style)) bad.push(`враг ${eid}: неизвестный стиль «${e.style}»`);
+  if (e.tech && !['dmg', 'drain', 'bind', 'fear'].includes(e.tech.kind)) bad.push(`враг ${eid}: неизвестный вид приёма «${e.tech.kind}»`);
+  if (e.tech) texts.push(e.tech.name);
   if (!(e.hp > 0)) bad.push(`враг ${eid}: hp = ${e.hp}`);
+  if (e.style !== 'dummy' && !(e.dmg > 0)) bad.push(`враг ${eid}: нет урона dmg`);
 }
-for (const [cid, c] of Object.entries(COMBOS)) { texts.push(c.name); for (const mv of c.seq) if (!MOVES[mv]) bad.push(`комбо ${cid}: нет приёма «${mv}»`); }
+for (const [cid, c] of Object.entries(COMBOS)) texts.push(c.name);
 for (const [tid, t] of Object.entries(TECHS)) { texts.push(t.name); texts.push(t.desc); if (!t.seals || !t.seals.length) bad.push(`техника ${tid}: нет печатей`); }
 for (const [cid, s] of Object.entries(G.SCHED)) {
   if (!DEFS[cid]) bad.push(`расписание: «${cid}» не в chars.DEFS`);

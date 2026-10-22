@@ -43,7 +43,7 @@ NarutoRPGMobile/
 │   │   ├── story_dialogs.js, story_scenes.js   сюжетные сцены и катсцены
 │   │   ├── quests.js        задания
 │   │   ├── items.js         предметы и магазины
-│   │   ├── combat.js        враги, их приёмы, техники, комбо, арены
+│   │   ├── duel_data.js     враги со стилями, техники, печати, арены (бой «Дуэль»)
 │   │   ├── hero.js          характеристики и навыки героя
 │   │   ├── buildings.js     шаблоны зданий
 │   │   └── konoha_layout.js раскладка деревни (генерирует tools/plan_konoha.py)

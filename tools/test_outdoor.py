@@ -131,7 +131,7 @@ with sync_playwright() as p:
 
     print("— симулятор баланса")
     before = page.evaluate("JSON.stringify([G.state.vars.money, G.state.hero.stats, G.state.inv])")
-    r = page.evaluate("G.sim.run('kiba_d3', 'bal', 0.65, 6)")
+    r = page.evaluate("G.sim.run('kiba_d11', 'bal', 0.65, 6)")
     check(r['n'] == 6 and 0 <= r['win'] <= 1, "G.sim.run: 6 боёв, побед %d%%" % round(r['win'] * 100))
     check(page.evaluate("JSON.stringify([G.state.vars.money, G.state.hero.stats, G.state.inv])") == before, "симуляция не трогает сохранение")
     check(top(page) == 'world', "после симуляции игра на месте")
