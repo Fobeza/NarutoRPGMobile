@@ -68,6 +68,7 @@ G.duel = (() => {
     const E = D.E, rng = D.rng;
     if (E.style === 'dummy') return 'idle';
     if (E.status.stun > 0) return 'idle';
+    if (E.status.fear > 0 && rng() < 0.35) return 'idle';   // страх: враг теряется
     const techOk = E.tech && E.ch >= E.tech.cost && E.cd <= 0;
     if (E.style === 'brute') { E.charge++; if (E.charge >= 3 && techOk) { E.charge = 0; return 'tech'; } }
     else if (techOk && rng() < (E.style === 'rush' ? 0.22 : 0.16)) return 'tech';
@@ -121,7 +122,8 @@ G.duel = (() => {
     D.stats.used[pAct] = (D.stats.used[pAct] || 0) + 1;
     let pDmgToE = 0, eDmgToP = 0;
     // who — кто действует (p/e); to — кто получает урон (по умолчанию противоположная сторона)
-    const note = (who, type, text, extra) => ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p' }, extra || {}));
+    let fxId = null;   // какая техника сработала: экран боя рисует по ней эффект
+    const note = (who, type, text, extra) => ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p', fx: fxId }, extra || {}));
 
     // — статусы врага
     const eStun = E.status.stun > 0, eFear = E.status.fear > 0, bound = P.status.bind > 0;
@@ -167,7 +169,7 @@ G.duel = (() => {
     // — разбор пар
     const heroKind = kind === 'item' ? 'item' : (kind === 'release' || kind === 'tech') && techUtility ? 'tech' : kind === 'tech' || kind === 'release' ? 'fail' : kind;
     const dmgStrikeP = heroStrike(D) * Q(q) * (1 + Math.min(P.chain, 4) * (0.08 + comboBonus()));
-    const dmgStrikeE = enemyStrike(D) * (eFear ? 0.6 : 1);
+    const dmgStrikeE = enemyStrike(D) * (eFear ? 0.6 : 1) * (E.status.slow > 0 ? 0.75 : 1);
     const eTechDmg = E.tech && E.tech.kind === 'dmg' ? enemyStrike(D) * E.tech.power : 0;   // приём бьёт сильнее обычного удара
 
     // Итоги героя
@@ -182,10 +184,10 @@ G.duel = (() => {
 
     // 2) удары по герою
     const pBlocking = kind === 'block', pEvading = kind === 'evade' && !bound;
-    const smoke = P.status.smoke > 0;
+    const smoke = P.status.smoke > 0 || (P.status.henge > 0 && eAttacking && rng() < 0.5 && (note('p', 'info', 'Хенге: враг потерял тебя из виду'), true));
     if (eStun) { note('e', 'info', 'Враг не может действовать'); }
     else if (eAct === 'strike') {
-      if (smoke) { note('p', 'info', 'Дым: враг промахнулся'); }
+      if (smoke) { note('p', 'info', 'Враг промахнулся'); }
       else if (heroKind === 'strike') { const d = dmgStrikeE * 0.7; eDmgToP += d; note('e', 'trade', 'Враг бьёт в ответ', { dmg: d, to: 'p' }); }
       else if (pBlocking) { const perfect = q > 0.8; const d = dmgStrikeE * (perfect ? 0 : 0.2); eDmgToP += d; note('e', perfect ? 'parry' : 'block', perfect ? 'Идеальный блок! Контрудар' : 'Блок смягчает удар', { dmg: d, to: 'p' }); if (perfect) { pDmgToE += heroStrike(D) * 0.5; P.chain++; } else P.chain = 0; P.ch = Math.min(P.chMax, P.ch + 2); }
       else if (pEvading) { const slip = q > 0.8; const d = dmgStrikeE * (slip ? 0.5 : 1); eDmgToP += d; note('e', slip ? 'graze' : 'hit', slip ? 'Уклон почти удался' : 'Уклон не спас', { dmg: d, to: 'p' }); }
@@ -200,6 +202,7 @@ G.duel = (() => {
 
     // 3) приём героя
     if (techUtility) {
+      fxId = techUtility.special || techUtility.id || 'release';
       if (techUtility.special) {
         const s = techUtility.special;
         if (s === 'kawarimi') { if (eAttacking && !smoke) { const d = 0; eDmgToP = 0; const c = heroStrike(D) * 0.5 * Q(q); pDmgToE += c; note('p', 'counter', 'Каварими: вместо тебя полено!', { dmg: c }); } else note('p', 'info', 'Каварими впустую'); }
@@ -225,12 +228,14 @@ G.duel = (() => {
       P.chain = 0;
     } else if (surge === null && (kind === 'tech' || kind === 'release')) { /* не хватило чакры */ }
     // враг, ответивший приёмом
+    fxId = null;
     if (!eStun && eAct === 'tech' && E.tech) {
+      fxId = 'e:' + E.tech.kind;
       E.ch = Math.max(0, E.ch - E.tech.cost); E.cd = 2;
       const k = E.tech.kind, name = E.tech.name;
       if (smoke) note('e', 'info', `${name}: дым сбил прицел`);
       else if (k === 'dmg') {
-        let d = eTechDmg * (eFear ? 0.6 : 1);
+        let d = eTechDmg * (eFear ? 0.6 : 1) * (E.status.slow > 0 ? 0.75 : 1);
         if (pEvading) { const slip = q > 0.7; d = slip ? 0 : d * 0.5; note('e', slip ? 'miss' : 'graze', slip ? `${name}: ты уклонился` : `${name} задевает`, { dmg: d }); }
         else if (pBlocking) { d *= 0.5; note('e', 'tech', `${name} пробивает блок`, { dmg: d }); }
         else note('e', 'tech', name, { dmg: d });

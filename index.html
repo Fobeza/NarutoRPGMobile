@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: 'ef2e7cc7', date: '2026-10-22 20:19', debug: false };
+const BUILD = { release: '2.3', version: 'e352307e', date: '2026-10-22 20:40', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -6206,13 +6206,13 @@ G.ENEMIES = {
   shikamaru: {name:'Шикамару',spr:'shikamaru',male:true,grow:false,dmg:38.9,hp:90,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
   hinata: {name:'Хината',spr:'hinata',male:false,grow:false,dmg:34.8,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
   choji: {name:'Чоджи',spr:'choji',male:true,grow:false,dmg:13.2,hp:90,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
-  ino: {name:'Ино',spr:'ino',male:false,grow:false,dmg:26.6,hp:70,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
-  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,dmg:29.8,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
+  ino: {name:'Ино',spr:'ino',male:false,grow:false,dmg:29.5,hp:70,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
+  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
   bully: {name:'Хулиган',spr:'bully',male:true,grow:true,dmg:19.1,hp:50,ch:20,tai:4,nin:1,gen:0,spd:3,end:4,know:1,style:'rush',tech:{name:'Бросок кунаев',power:1.3,kind:'dmg',cost:10},lines:{start:'Эй, мелкий! Гони деньги!',hurt:'Ах ты!',win:'Ха, слабак!',lose:'Б-бежим отсюда!'}},
   senior: {name:'Старшеклассник',spr:'bully',male:true,grow:false,dmg:25,hp:80,ch:40,tai:7,nin:4,gen:2,spd:8,end:9,know:8,style:'counter',tech:{name:'Бросок кунаев',power:1.5,kind:'dmg',cost:12},lines:{start:'Свиток? Попробуй отними, малявка!',hurt:'Тц, шустрый!',low:'Да кто ты такой?!',win:'Свиток останется у нас.',lose:'Ладно-ладно, забирай!'}},
   thief: {name:'Ночной вор',spr:'thief',male:true,grow:true,dmg:29,hp:50,ch:30,tai:4,nin:2,gen:2,spd:7,end:4,know:4,style:'trickster',tech:{name:'Дымовая завеса',power:0,kind:'fear',cost:12},lines:{start:'Ученичок? Не мешай работать.',hurt:'Шустрый...',win:'Сладких снов.',lose:'Сдаюсь! Отдам всё!'}},
   dog: {name:'Бродячий пёс',spr:'dog',male:false,grow:true,dmg:21.5,hp:40,ch:0,tai:5,nin:0,gen:0,spd:7,end:3,know:0,style:'rush',tech:{name:'Рывок',power:1.3,kind:'dmg',cost:0},lines:{start:'Р-р-р-гав!',lose:'Скуль-скуль...'}},
-  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,dmg:24.3,hp:75,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
+  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,dmg:27,hp:75,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
   shino: {name:'Шино',spr:'shino',male:true,grow:false,dmg:30,hp:90,ch:70,tai:3,nin:6,gen:2,spd:4,end:5,know:8,style:'reader',tech:{name:'Жуки-разрушители',power:1,kind:'drain',cost:18},lines:{start:'Мои жуки уже в пути. Сдавайся — это логично.',hurt:'Интересно.',low:'Колония слабеет... но я не отступлю.',win:'Расчёт был верным.',lose:'Невероятно. Жуки... ошиблись.'}},
   anko: {name:'Анко',spr:'anko',male:false,grow:false,dmg:28,hp:85,ch:80,tai:7,nin:7,gen:3,spd:8,end:6,know:6,style:'trickster',tech:{name:'Змеиная хватка',power:0,kind:'bind',cost:18},lines:{start:'Покажи, на что способен, малявка!',hurt:'Ха! Неплохо!',low:'Даже не думала, что придётся вспотеть!',win:'Мало данго ты ешь, парень.',lose:'Ладно-ладно... ты меня удивил.'}},
   asuma: {name:'Асума',spr:'asuma',male:true,grow:false,dmg:30,hp:90,ch:90,tai:8,nin:7,gen:2,spd:7,end:8,know:8,style:'counter',tech:{name:'Клинки чакры',power:1.9,kind:'dmg',cost:20},lines:{start:'Шикамару твердит, что ты упрямый. Проверим.',hurt:'Хм, неплохо!',low:'Ладно, хватит играть.',win:'Вырастешь — станешь опасным.',lose:'Вот это да. Респект, малыш.'}},
@@ -6986,6 +6986,7 @@ G.duel = (() => {
     const E = D.E, rng = D.rng;
     if (E.style === 'dummy') return 'idle';
     if (E.status.stun > 0) return 'idle';
+    if (E.status.fear > 0 && rng() < 0.35) return 'idle';   // страх: враг теряется
     const techOk = E.tech && E.ch >= E.tech.cost && E.cd <= 0;
     if (E.style === 'brute') { E.charge++; if (E.charge >= 3 && techOk) { E.charge = 0; return 'tech'; } }
     else if (techOk && rng() < (E.style === 'rush' ? 0.22 : 0.16)) return 'tech';
@@ -7039,7 +7040,8 @@ G.duel = (() => {
     D.stats.used[pAct] = (D.stats.used[pAct] || 0) + 1;
     let pDmgToE = 0, eDmgToP = 0;
     // who — кто действует (p/e); to — кто получает урон (по умолчанию противоположная сторона)
-    const note = (who, type, text, extra) => ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p' }, extra || {}));
+    let fxId = null;   // какая техника сработала: экран боя рисует по ней эффект
+    const note = (who, type, text, extra) => ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p', fx: fxId }, extra || {}));
 
     // — статусы врага
     const eStun = E.status.stun > 0, eFear = E.status.fear > 0, bound = P.status.bind > 0;
@@ -7085,7 +7087,7 @@ G.duel = (() => {
     // — разбор пар
     const heroKind = kind === 'item' ? 'item' : (kind === 'release' || kind === 'tech') && techUtility ? 'tech' : kind === 'tech' || kind === 'release' ? 'fail' : kind;
     const dmgStrikeP = heroStrike(D) * Q(q) * (1 + Math.min(P.chain, 4) * (0.08 + comboBonus()));
-    const dmgStrikeE = enemyStrike(D) * (eFear ? 0.6 : 1);
+    const dmgStrikeE = enemyStrike(D) * (eFear ? 0.6 : 1) * (E.status.slow > 0 ? 0.75 : 1);
     const eTechDmg = E.tech && E.tech.kind === 'dmg' ? enemyStrike(D) * E.tech.power : 0;   // приём бьёт сильнее обычного удара
 
     // Итоги героя
@@ -7100,10 +7102,10 @@ G.duel = (() => {
 
     // 2) удары по герою
     const pBlocking = kind === 'block', pEvading = kind === 'evade' && !bound;
-    const smoke = P.status.smoke > 0;
+    const smoke = P.status.smoke > 0 || (P.status.henge > 0 && eAttacking && rng() < 0.5 && (note('p', 'info', 'Хенге: враг потерял тебя из виду'), true));
     if (eStun) { note('e', 'info', 'Враг не может действовать'); }
     else if (eAct === 'strike') {
-      if (smoke) { note('p', 'info', 'Дым: враг промахнулся'); }
+      if (smoke) { note('p', 'info', 'Враг промахнулся'); }
       else if (heroKind === 'strike') { const d = dmgStrikeE * 0.7; eDmgToP += d; note('e', 'trade', 'Враг бьёт в ответ', { dmg: d, to: 'p' }); }
       else if (pBlocking) { const perfect = q > 0.8; const d = dmgStrikeE * (perfect ? 0 : 0.2); eDmgToP += d; note('e', perfect ? 'parry' : 'block', perfect ? 'Идеальный блок! Контрудар' : 'Блок смягчает удар', { dmg: d, to: 'p' }); if (perfect) { pDmgToE += heroStrike(D) * 0.5; P.chain++; } else P.chain = 0; P.ch = Math.min(P.chMax, P.ch + 2); }
       else if (pEvading) { const slip = q > 0.8; const d = dmgStrikeE * (slip ? 0.5 : 1); eDmgToP += d; note('e', slip ? 'graze' : 'hit', slip ? 'Уклон почти удался' : 'Уклон не спас', { dmg: d, to: 'p' }); }
@@ -7118,6 +7120,7 @@ G.duel = (() => {
 
     // 3) приём героя
     if (techUtility) {
+      fxId = techUtility.special || techUtility.id || 'release';
       if (techUtility.special) {
         const s = techUtility.special;
         if (s === 'kawarimi') { if (eAttacking && !smoke) { const d = 0; eDmgToP = 0; const c = heroStrike(D) * 0.5 * Q(q); pDmgToE += c; note('p', 'counter', 'Каварими: вместо тебя полено!', { dmg: c }); } else note('p', 'info', 'Каварими впустую'); }
@@ -7143,12 +7146,14 @@ G.duel = (() => {
       P.chain = 0;
     } else if (surge === null && (kind === 'tech' || kind === 'release')) { /* не хватило чакры */ }
     // враг, ответивший приёмом
+    fxId = null;
     if (!eStun && eAct === 'tech' && E.tech) {
+      fxId = 'e:' + E.tech.kind;
       E.ch = Math.max(0, E.ch - E.tech.cost); E.cd = 2;
       const k = E.tech.kind, name = E.tech.name;
       if (smoke) note('e', 'info', `${name}: дым сбил прицел`);
       else if (k === 'dmg') {
-        let d = eTechDmg * (eFear ? 0.6 : 1);
+        let d = eTechDmg * (eFear ? 0.6 : 1) * (E.status.slow > 0 ? 0.75 : 1);
         if (pEvading) { const slip = q > 0.7; d = slip ? 0 : d * 0.5; note('e', slip ? 'miss' : 'graze', slip ? `${name}: ты уклонился` : `${name} задевает`, { dmg: d }); }
         else if (pBlocking) { d *= 0.5; note('e', 'tech', `${name} пробивает блок`, { dmg: d }); }
         else note('e', 'tech', name, { dmg: d });
@@ -18986,7 +18991,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   const ACT_NAME = { strike: 'Удар', block: 'Блок', evade: 'Уклон', tech: 'Приём', idle: 'Ждёт' };
   const TERRAIN = opts.terrain || (mode === 'spar' ? 'field' : 'field');
   let phase = 'intro', t = 0, menu = 'main', focus = 0, mini = null, ev = [], evI = 0, evT = 0, result = null, endT = 0, said = null;
-  const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
+  const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
   let stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -19093,7 +19098,16 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (e.type === 'tech' && e.who === 'p') { fx.flash = 0.18; fx.flashCol = '#a8d8ff'; }
     if (e.type === 'parry') { fx.flash = 0.2; fx.flashCol = '#ffffff'; }
     if (e.type === 'heal') fx.pops.push({ x: g.hx, y: g.yb - 36, t: 1.1, txt: '+', col: '#8aff9a' });
+    if (e.fx) spawnFx(e.fx, e.who, g);
+    else if (e.dmg > 0) fx.fxs.push({ kind: 'slash', x0: tx, y0: ty, x1: tx, y1: ty, t: 0.35, T: 0.35, who: e.who });
     said = { text: e.text, t: 2 };
+  }
+  // визуальные эффекты техник: снаряды, вспышки, дым (рисует drawFx)
+  function spawnFx(id, who, g) {
+    const hx = g.hx, ex = g.ex, y = g.yb - 28, from = who === 'p' ? hx : ex, to = who === 'p' ? ex : hx;
+    const T = { katon: 0.7, suiton: 0.6, raiton: 0.5, fuuton: 0.6, chakra_shot: 0.5, release: 0.9, kawarimi: 0.6, henge: 0.7, bunshin: 0.7, shunshin: 0.45, fear: 0.7, sexy: 0.8, 'e:dmg': 0.5, 'e:drain': 0.7, 'e:bind': 0.7, 'e:fear': 0.7 }[id] || 0.5;
+    fx.fxs.push({ kind: id, x0: from, y0: y, x1: to, y1: y, t: T, T, who });
+    if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
   }
   function endRound() {
     if (D.over) { finish(D.over.win, false); return; }
@@ -19149,6 +19163,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       t += dt; endT += dt;
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
+      for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
       if (phase === 'intro') { if (t > 1.4 || I.tapNow || I.pressed('a')) { phase = 'choose'; } return; }
@@ -19200,6 +19215,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g);
+      this.drawFx(ctx);
       // всплывающие числа
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
@@ -19211,6 +19227,30 @@ G.scenes.register('battle', (opts, onEnd) => {
         ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 26, W, 52);
         F.draw(ctx, ed.name, W / 2, AH / 2 - 16, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
         FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
+      }
+    },
+    drawFx(ctx) {
+      for (const f of fx.fxs) {
+        const k = 1 - f.t / f.T, dx = f.x1 - f.x0, x = f.x0 + dx * Math.min(1, k * 1.5), y = f.y0, fl = Math.sin(t * 40);
+        ctx.save();
+        const dot = (px, py, w, col, a) => { w = Math.round(w * 1.7); ctx.globalAlpha = a == null ? 1 : a; ctx.fillStyle = col; ctx.fillRect(Math.round(px - w / 2), Math.round(py - w / 2), w, w); };
+        if (f.kind === 'katon') { const r = 4 + k * 10; for (let i = 0; i < 14; i++) dot(x + rnd(-r, r) * 0.6, y + rnd(-r, r) * 0.6, 3 + (i % 3), i % 2 ? '#ff7a2a' : '#ffd23a', 1 - k * 0.4); dot(x, y, r, '#ffe8a0', 0.8); }
+        else if (f.kind === 'suiton') { for (let i = 0; i < 8; i++) dot(x - i * 4 * Math.sign(dx), y + Math.sin(k * 12 + i) * 5, 4 - (i > 5 ? 2 : 0), i % 2 ? '#6ab8ff' : '#c8e8ff', 1 - i * 0.08); }
+        else if (f.kind === 'raiton') { ctx.strokeStyle = fl > 0 ? '#fff6a0' : '#ffd23a'; ctx.lineWidth = 3; ctx.globalAlpha = 1 - k * 0.5; ctx.beginPath(); ctx.moveTo(f.x1, y - 40); for (let i = 1; i <= 6; i++) ctx.lineTo(f.x1 + rnd(-8, 8), y - 40 + i * 9); ctx.stroke(); }
+        else if (f.kind === 'fuuton') { ctx.strokeStyle = '#e8f8ff'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.9 - k * 0.5; ctx.beginPath(); ctx.arc(x, y - 10 + i * 10, 12 + i * 3, -1.1, 1.1); ctx.stroke(); } }
+        else if (f.kind === 'chakra_shot') { dot(x, y, 8, '#4a9aff'); dot(x, y, 4, '#d8f0ff'); }
+        else if (f.kind === 'release') { const w = Math.min(1, k * 2) * Math.abs(dx), lx = Math.min(f.x0, f.x0 + Math.sign(dx) * w); ctx.globalAlpha = 0.85 - k * 0.5; ctx.fillStyle = G.purple.COLOR; ctx.fillRect(lx, y - 6 - fl * 2, w, 12 + fl * 3); ctx.fillStyle = '#f0d8ff'; ctx.fillRect(lx, y - 2, w, 4); }
+        else if (f.kind === 'kawarimi') { ctx.globalAlpha = 1 - k * 0.6; ctx.fillStyle = '#7a5230'; ctx.fillRect(f.x0 - 8, y - 20, 16, 44); ctx.fillStyle = '#a07040'; ctx.fillRect(f.x0 - 8, y - 20, 16, 5); for (let i = 0; i < 6; i++) dot(f.x0 + rnd(-14, 14), y + rnd(-10, 14), 4, '#e8e8e8', 0.6 - k * 0.4); }
+        else if (f.kind === 'henge') { for (let i = 0; i < 9; i++) dot(f.x0 + rnd(-14, 14), y + rnd(-20, 14), 5, '#e8e8e8', 0.7 - k * 0.5); if (k > 0.4) { ctx.globalAlpha = 0.9; ctx.fillStyle = '#8a8478'; ctx.fillRect(f.x0 - 8, y + 8, 16, 14); ctx.fillStyle = '#a8a298'; ctx.fillRect(f.x0 - 8, y + 8, 16, 4); } }
+        else if (f.kind === 'bunshin') { for (let i = 0; i < 8; i++) dot(f.x0 + rnd(-24, 24), y + rnd(-22, 14), 5, '#e8e8e8', 0.6 - k * 0.4); }
+        else if (f.kind === 'shunshin') { ctx.globalAlpha = 0.5 * (1 - k); ctx.fillStyle = '#f8f8f8'; ctx.fillRect(Math.min(f.x0, f.x1), y - 18, Math.abs(dx), 4); ctx.fillRect(Math.min(f.x0, f.x1), y, Math.abs(dx), 3); for (let i = 0; i < 6; i++) dot(f.x1 + rnd(-10, 10), y + rnd(-18, 12), 3, '#e8e8e8', 0.8 - k * 0.6); }
+        else if (f.kind === 'fear' || f.kind === 'e:fear') { for (let i = 0; i < 10; i++) { const a = t * 6 + i * 0.63; dot(f.x1 + Math.cos(a) * (6 + i * 1.5), y - 20 + Math.sin(a) * (6 + i * 1.5), 3, i % 2 ? '#b080e0' : '#5a3a8a', 0.9 - k * 0.5); } }
+        else if (f.kind === 'sexy') { for (let i = 0; i < 12; i++) dot(f.x0 + rnd(-16, 16), y - 6 + rnd(-24, 10), 4, i % 2 ? '#ffb0d0' : '#fff', 0.8 - k * 0.5); for (let i = 0; i < 5; i++) dot(f.x1 + rnd(-10, 10), y - 36 - k * 14, 4, '#ff6a9a', 1 - k); }
+        else if (f.kind === 'e:dmg') { ctx.strokeStyle = '#ffe8c8'; ctx.lineWidth = 3; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.moveTo(f.x1 - 14, y - 16); ctx.lineTo(f.x1 + 14, y + 12); ctx.stroke(); }
+        else if (f.kind === 'e:drain') { for (let i = 0; i < 8; i++) { const kk = (k * 1.4 + i * 0.12) % 1; dot(f.x1 + (f.x0 - f.x1) * kk, y - 10 + Math.sin(kk * 9 + i) * 6, 4, '#6aa8ff', 0.9); } }
+        else if (f.kind === 'e:bind') { ctx.strokeStyle = '#3a2a5a'; ctx.lineWidth = 2; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(f.x0, y + 20); ctx.lineTo(f.x0 + dx * Math.min(1, k * 1.6), y + 20); ctx.stroke(); }
+        else if (f.kind === 'slash') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.moveTo(f.x1 - 10, y - 12); ctx.lineTo(f.x1 + 10, y + 12); ctx.moveTo(f.x1 - 6, y - 14); ctx.lineTo(f.x1 + 14, y + 6); ctx.stroke(); }
+        ctx.restore();
       }
     },
     drawFighter(ctx, side, g) {

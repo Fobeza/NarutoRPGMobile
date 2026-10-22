@@ -12,7 +12,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   const ACT_NAME = { strike: 'Удар', block: 'Блок', evade: 'Уклон', tech: 'Приём', idle: 'Ждёт' };
   const TERRAIN = opts.terrain || (mode === 'spar' ? 'field' : 'field');
   let phase = 'intro', t = 0, menu = 'main', focus = 0, mini = null, ev = [], evI = 0, evT = 0, result = null, endT = 0, said = null;
-  const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
+  const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
   let stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -119,7 +119,16 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (e.type === 'tech' && e.who === 'p') { fx.flash = 0.18; fx.flashCol = '#a8d8ff'; }
     if (e.type === 'parry') { fx.flash = 0.2; fx.flashCol = '#ffffff'; }
     if (e.type === 'heal') fx.pops.push({ x: g.hx, y: g.yb - 36, t: 1.1, txt: '+', col: '#8aff9a' });
+    if (e.fx) spawnFx(e.fx, e.who, g);
+    else if (e.dmg > 0) fx.fxs.push({ kind: 'slash', x0: tx, y0: ty, x1: tx, y1: ty, t: 0.35, T: 0.35, who: e.who });
     said = { text: e.text, t: 2 };
+  }
+  // визуальные эффекты техник: снаряды, вспышки, дым (рисует drawFx)
+  function spawnFx(id, who, g) {
+    const hx = g.hx, ex = g.ex, y = g.yb - 28, from = who === 'p' ? hx : ex, to = who === 'p' ? ex : hx;
+    const T = { katon: 0.7, suiton: 0.6, raiton: 0.5, fuuton: 0.6, chakra_shot: 0.5, release: 0.9, kawarimi: 0.6, henge: 0.7, bunshin: 0.7, shunshin: 0.45, fear: 0.7, sexy: 0.8, 'e:dmg': 0.5, 'e:drain': 0.7, 'e:bind': 0.7, 'e:fear': 0.7 }[id] || 0.5;
+    fx.fxs.push({ kind: id, x0: from, y0: y, x1: to, y1: y, t: T, T, who });
+    if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
   }
   function endRound() {
     if (D.over) { finish(D.over.win, false); return; }
@@ -175,6 +184,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       t += dt; endT += dt;
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
+      for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
       if (phase === 'intro') { if (t > 1.4 || I.tapNow || I.pressed('a')) { phase = 'choose'; } return; }
@@ -226,6 +236,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g);
+      this.drawFx(ctx);
       // всплывающие числа
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
@@ -237,6 +248,30 @@ G.scenes.register('battle', (opts, onEnd) => {
         ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 26, W, 52);
         F.draw(ctx, ed.name, W / 2, AH / 2 - 16, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
         FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
+      }
+    },
+    drawFx(ctx) {
+      for (const f of fx.fxs) {
+        const k = 1 - f.t / f.T, dx = f.x1 - f.x0, x = f.x0 + dx * Math.min(1, k * 1.5), y = f.y0, fl = Math.sin(t * 40);
+        ctx.save();
+        const dot = (px, py, w, col, a) => { w = Math.round(w * 1.7); ctx.globalAlpha = a == null ? 1 : a; ctx.fillStyle = col; ctx.fillRect(Math.round(px - w / 2), Math.round(py - w / 2), w, w); };
+        if (f.kind === 'katon') { const r = 4 + k * 10; for (let i = 0; i < 14; i++) dot(x + rnd(-r, r) * 0.6, y + rnd(-r, r) * 0.6, 3 + (i % 3), i % 2 ? '#ff7a2a' : '#ffd23a', 1 - k * 0.4); dot(x, y, r, '#ffe8a0', 0.8); }
+        else if (f.kind === 'suiton') { for (let i = 0; i < 8; i++) dot(x - i * 4 * Math.sign(dx), y + Math.sin(k * 12 + i) * 5, 4 - (i > 5 ? 2 : 0), i % 2 ? '#6ab8ff' : '#c8e8ff', 1 - i * 0.08); }
+        else if (f.kind === 'raiton') { ctx.strokeStyle = fl > 0 ? '#fff6a0' : '#ffd23a'; ctx.lineWidth = 3; ctx.globalAlpha = 1 - k * 0.5; ctx.beginPath(); ctx.moveTo(f.x1, y - 40); for (let i = 1; i <= 6; i++) ctx.lineTo(f.x1 + rnd(-8, 8), y - 40 + i * 9); ctx.stroke(); }
+        else if (f.kind === 'fuuton') { ctx.strokeStyle = '#e8f8ff'; ctx.lineWidth = 2; for (let i = 0; i < 3; i++) { ctx.globalAlpha = 0.9 - k * 0.5; ctx.beginPath(); ctx.arc(x, y - 10 + i * 10, 12 + i * 3, -1.1, 1.1); ctx.stroke(); } }
+        else if (f.kind === 'chakra_shot') { dot(x, y, 8, '#4a9aff'); dot(x, y, 4, '#d8f0ff'); }
+        else if (f.kind === 'release') { const w = Math.min(1, k * 2) * Math.abs(dx), lx = Math.min(f.x0, f.x0 + Math.sign(dx) * w); ctx.globalAlpha = 0.85 - k * 0.5; ctx.fillStyle = G.purple.COLOR; ctx.fillRect(lx, y - 6 - fl * 2, w, 12 + fl * 3); ctx.fillStyle = '#f0d8ff'; ctx.fillRect(lx, y - 2, w, 4); }
+        else if (f.kind === 'kawarimi') { ctx.globalAlpha = 1 - k * 0.6; ctx.fillStyle = '#7a5230'; ctx.fillRect(f.x0 - 8, y - 20, 16, 44); ctx.fillStyle = '#a07040'; ctx.fillRect(f.x0 - 8, y - 20, 16, 5); for (let i = 0; i < 6; i++) dot(f.x0 + rnd(-14, 14), y + rnd(-10, 14), 4, '#e8e8e8', 0.6 - k * 0.4); }
+        else if (f.kind === 'henge') { for (let i = 0; i < 9; i++) dot(f.x0 + rnd(-14, 14), y + rnd(-20, 14), 5, '#e8e8e8', 0.7 - k * 0.5); if (k > 0.4) { ctx.globalAlpha = 0.9; ctx.fillStyle = '#8a8478'; ctx.fillRect(f.x0 - 8, y + 8, 16, 14); ctx.fillStyle = '#a8a298'; ctx.fillRect(f.x0 - 8, y + 8, 16, 4); } }
+        else if (f.kind === 'bunshin') { for (let i = 0; i < 8; i++) dot(f.x0 + rnd(-24, 24), y + rnd(-22, 14), 5, '#e8e8e8', 0.6 - k * 0.4); }
+        else if (f.kind === 'shunshin') { ctx.globalAlpha = 0.5 * (1 - k); ctx.fillStyle = '#f8f8f8'; ctx.fillRect(Math.min(f.x0, f.x1), y - 18, Math.abs(dx), 4); ctx.fillRect(Math.min(f.x0, f.x1), y, Math.abs(dx), 3); for (let i = 0; i < 6; i++) dot(f.x1 + rnd(-10, 10), y + rnd(-18, 12), 3, '#e8e8e8', 0.8 - k * 0.6); }
+        else if (f.kind === 'fear' || f.kind === 'e:fear') { for (let i = 0; i < 10; i++) { const a = t * 6 + i * 0.63; dot(f.x1 + Math.cos(a) * (6 + i * 1.5), y - 20 + Math.sin(a) * (6 + i * 1.5), 3, i % 2 ? '#b080e0' : '#5a3a8a', 0.9 - k * 0.5); } }
+        else if (f.kind === 'sexy') { for (let i = 0; i < 12; i++) dot(f.x0 + rnd(-16, 16), y - 6 + rnd(-24, 10), 4, i % 2 ? '#ffb0d0' : '#fff', 0.8 - k * 0.5); for (let i = 0; i < 5; i++) dot(f.x1 + rnd(-10, 10), y - 36 - k * 14, 4, '#ff6a9a', 1 - k); }
+        else if (f.kind === 'e:dmg') { ctx.strokeStyle = '#ffe8c8'; ctx.lineWidth = 3; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.moveTo(f.x1 - 14, y - 16); ctx.lineTo(f.x1 + 14, y + 12); ctx.stroke(); }
+        else if (f.kind === 'e:drain') { for (let i = 0; i < 8; i++) { const kk = (k * 1.4 + i * 0.12) % 1; dot(f.x1 + (f.x0 - f.x1) * kk, y - 10 + Math.sin(kk * 9 + i) * 6, 4, '#6aa8ff', 0.9); } }
+        else if (f.kind === 'e:bind') { ctx.strokeStyle = '#3a2a5a'; ctx.lineWidth = 2; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(f.x0, y + 20); ctx.lineTo(f.x0 + dx * Math.min(1, k * 1.6), y + 20); ctx.stroke(); }
+        else if (f.kind === 'slash') { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.globalAlpha = 1 - k; ctx.beginPath(); ctx.moveTo(f.x1 - 10, y - 12); ctx.lineTo(f.x1 + 10, y + 12); ctx.moveTo(f.x1 - 6, y - 14); ctx.lineTo(f.x1 + 14, y + 6); ctx.stroke(); }
+        ctx.restore();
       }
     },
     drawFighter(ctx, side, g) {
