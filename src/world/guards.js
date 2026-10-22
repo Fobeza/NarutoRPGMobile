@@ -6,6 +6,7 @@ G.guards = (() => {
   const ROUTES = [   // [откуда, куда, днём, ночью]
     ['gate', 'hokage_tower', true, true], ['market', 'teahouse', true, false], ['clan_hyuga', 'uchiha_police', true, true],
     ['academy', 'hospital', true, false], ['night_alley', 'hero_home', false, true], ['clan_inuzuka', 'clan_akimichi', true, true],
+    ['hero_home', 'academy', true, true, 'guards_up'],   // добавляется после рассказа Хокаге о незнакомце (выбор hokage)
   ];
   function point(map, tpl) {
     const b = map.buildings.find((x) => x.tplId === tpl) || (map.spots && map.spots[tpl]);
@@ -17,19 +18,19 @@ G.guards = (() => {
   function build(map) {
     if (map._guards) return map._guards;
     const patrols = [];
-    ROUTES.forEach(([a, b, day, night], i) => {
+    ROUTES.forEach(([a, b, day, night, need], i) => {
       const A = point(map, a), B = point(map, b);
       if (!A || !B) return;
       const path = G.nav.path(map, A.x, A.y, B.x, B.y, 60000);
       if (!path || path.length < 8) return;
       const pts = path.map(([x, y]) => ({ x: x * T + 8, y: y * T + 12 }));
       for (let k = 0; k < 2; k++) patrols.push({ id: 'chunin', name: 'Стража', pts, i: Math.max(0, 10 * i % pts.length - k * 2), step: 1, x: pts[0].x, y: pts[0].y,
-        dir: 'down', anim: 0, moving: true, day, night, serial: i * 2 + k, wait: k * 0.45, _guard: true });
+        dir: 'down', anim: 0, moving: true, day, night, need, serial: i * 2 + k, wait: k * 0.45, _guard: true });
     });
     return (map._guards = { patrols });
   }
   const night = () => { const m = G.state.vars.min % 1440; return m >= 20 * 60 || m < 6 * 60; };
-  const onDuty = (p) => (night() ? p.night : p.day);
+  const onDuty = (p) => (!p.need || G.state.flags[p.need]) && (night() ? p.night : p.day);
   function update(world, dt) {
     if (!world.map || world.map.id !== 'konoha') return;
     for (const p of build(world.map).patrols) {

@@ -103,6 +103,7 @@ G.streetLife = (() => {
     const name=G.state.hero.name||'сосед',mem=state().helped[n.uid];
     if(mem)return name+', спасибо за помощь! Во дворе теперь гораздо уютнее.';
     if(n.id==='iruka'&&Object.keys(G.state.learning).some(k=>k.startsWith('tr_')&&G.state.learning[k]))return name+', я вижу, ты не бросаешь упражнения. Продолжай в том же духе!';
+    const vl=G.choices&&G.choices.villagerLine(n);if(vl)return vl;
     const friendship=G.state.vars['friend_'+n.id]||0;
     if(friendship>=5)return (G.STREET_REACTIONS[n.id]||'Привет, {name}! Рад снова тебя видеть.').replace('{name}',name);
     if(G.state.flags['met_'+n.id])return 'Привет, '+name+'! Удачного дня!';

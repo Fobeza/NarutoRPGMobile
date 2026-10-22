@@ -29,7 +29,7 @@ JS_FILES = [
     # ── данные: здания, предметы, задания, герой, бой ──
     "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/combat.js",
     # ── игровые системы ──
-    "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js",
+    "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/choices.js", "systems/exam.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
     "systems/sim.js",
     # ── сюжет и диалоги ──

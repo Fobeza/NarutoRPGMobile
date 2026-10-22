@@ -36,7 +36,7 @@ def press_until(page, name, n=50):
 with sync_playwright() as p:
     # ── 1. урок Буншина прерван → урок начнётся снова, а не «прогул без отработки» ──
     b, page = fresh(p)
-    page.evaluate("Object.assign(G.state.vars, { day: 43, min: 7*60 }); G.state.daily = { ev: 9 }")
+    page.evaluate("Object.assign(G.state.vars, { day: 16, min: 7*60 }); G.state.daily = { ev: 9 }")
     W(page, "const ac = G.world.konoha().buildings.find(b => b.tplId === 'academy'); s.setMap({ map: ac.interior.id, entry: true }); return 1"); time.sleep(0.6)
     page.evaluate("G.state.vars.min = 7*60+45"); time.sleep(0.8)
     check(page.evaluate("G.state.daily.lessonRun") == 1, 'урок идёт (lessonRun)')
@@ -51,10 +51,10 @@ with sync_playwright() as p:
     # ── 2. очередь отработок: два прогула подряд не затирают друг друга ──
     b, page = fresh(p)
     page.evaluate("G.state.daily = {}; G.state.vars.day = 8; G.state.vars.min = 10*60; G.academy.checkSkip()")
-    page.evaluate("G.state.daily = {}; G.state.vars.day = 15; G.state.vars.min = 10*60; G.academy.checkSkip()")
-    page.evaluate("G.state.daily = {}; G.state.vars.day = 29; G.state.vars.min = 10*60; G.academy.checkSkip()")
+    page.evaluate("G.state.daily = {}; G.state.vars.day = 9; G.state.vars.min = 10*60; G.academy.checkSkip()")
+    page.evaluate("G.state.daily = {}; G.state.vars.day = 12; G.state.vars.min = 10*60; G.academy.checkSkip()")
     q = page.evaluate("G.state.makeupQ")
-    check(q == [8, 15, 29], 'отработки хранятся списком: %s' % q)
+    check(q == [8, 9, 12], 'отработки хранятся списком: %s' % q)
     b.close()
 
     # ── 3. команда при ничьей по сумме ──

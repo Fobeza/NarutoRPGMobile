@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: 'c519be29', date: '2026-10-22 18:38', debug: false };
+const BUILD = { release: '2.3', version: '9c38ccf0', date: '2026-10-22 18:52', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -6509,7 +6509,7 @@ G.script.extraTest = (cond) => {
 G.events.on('inv', () => G.quests.check());
 
 // События мира → шаги заданий с on: [событие, фильтр]
-for (const ev of ['training', 'fished', 'bought', 'job', 'gift', 'roof', 'battle', 'cooked', 'sold', 'crafted', 'storage', 'item-used']) G.events.on(ev, (...a) => G.quests.notify(ev, ...a));
+for (const ev of ['training', 'fished', 'bought', 'job', 'gift', 'roof', 'battle', 'cooked', 'sold', 'crafted', 'storage', 'item-used', 'lesson', 'choice', 'scene', 'exam', 'checkup']) G.events.on(ev, (...a) => G.quests.notify(ev, ...a));
 // Новый день открывает шаги, привязанные к дню (вступительные сцены)
 G.events.on('day', () => { if (G.state.started) G.quests.check(); });
 
@@ -6997,6 +6997,140 @@ G.purple = (() => {
 })();
 
 
+// ===== systems/choices.js =====
+// Выборы сюжета, которые меняют мир. Значение хранится числом во флаге ch_<id> (1 — первый вариант).
+// Последствия — таблица EFFECTS: репутация (цены в лавках и отношение жителей), дружба, флаги мира (стража, реплики жителей).
+G.CHOICES = {
+  taunt:  ['fight', 'leave', 'talk'],   // день 13: героя дразнят из-за чакры
+  hokage: ['told', 'silent'],           // день 20: рассказать Хокаге о незнакомце в плаще
+  exam:   ['honest', 'cautious'],       // день 21: показать на экзамене всю силу или сдерживаться
+};
+G.choices = (() => {
+  const EFFECTS = {
+    taunt:  { fight: { rep: -3, friend: { naruto: 2 } }, leave: { friend: { iruka: 1 } }, talk: { rep: 2, friend: { hinata: 1 } } },
+    hokage: { told: { rep: 1, flag: 'guards_up', friend: { iruka: 1 } }, silent: { friend: { naruto: 1 } } },
+    exam:   { honest: { rep: 1 }, cautious: { friend: { shikamaru: 1 } } },
+  };
+  function get(id) { const v = G.state.flags['ch_' + id]; return v ? (G.CHOICES[id] || [])[v - 1] || null : null; }
+  function set(id, name) {
+    const i = (G.CHOICES[id] || []).indexOf(name);
+    if (i < 0 || G.state.flags['ch_' + id]) return false;   // выбор делается один раз
+    G.state.flags['ch_' + id] = i + 1;
+    const e = (EFFECTS[id] || {})[name] || {};
+    if (e.rep) G.state.vars.rep = (G.state.vars.rep || 0) + e.rep;
+    for (const [who, n] of Object.entries(e.friend || {})) G.friends.add(who, n, 'quest');
+    if (e.flag) G.state.flags[e.flag] = 1;
+    G.events.emit('choice', id, name);
+    return true;
+  }
+  const is = (id, name) => get(id) === name;
+  // как деревня относится к герою: afraid / neutral / kind
+  function attitude() {
+    const f = G.state.flags;
+    let s = (G.state.vars.rep || 0) * 0.5;
+    if (is('taunt', 'fight')) s -= 2; if (is('taunt', 'talk')) s += 2;
+    if (G.purple && G.state.started) s += (G.purple.stability() - 40) / 30;
+    return s < -1 ? 'afraid' : s > 1 ? 'kind' : 'neutral';
+  }
+  // реплика случайного жителя о герое (одна и та же для одного жителя), null — обычный разговор
+  function villagerLine(n) {
+    if (!G.state.started || G.state.vars.day < 4 || !(n.id === 'villager_m' || n.id === 'villager_f')) return null;
+    const h = G.util.hash2(n.uid ? n.uid.length : 0, (n.uid || '').charCodeAt(n.uid ? n.uid.length - 1 : 0) || 0, 61);
+    if (h > 0.55) return null;   // часть жителей молчит
+    const name = G.state.hero.name || 'новичок', a = attitude();
+    const pool = {
+      afraid: ['Говорят, у новичка фиолетовая чакра. Держись от него подальше, лучше не рисковать.', name + '? Это ты вспыхиваешь искрами? Не подходи близко, ладно?', 'Из-за таких, как ты, нам тревожно. Уходи, пожалуйста.'],
+      neutral: ['Так это ты новенький с необычной чакрой? Любопытно. Главное, не разнеси мне лавку.', 'Слышала, у тебя чакра фиолетовая. Редкость.', 'Ты учишься в Академии, верно? Удачи на экзамене.'],
+      kind: ['Это ты новенький с фиолетовой чакрой? Ничего не бойся, в Конохе тебя не обидят.', 'Мы за тебя держим кулаки, ' + name + '! Сдай экзамен!', 'Хорошие ребята учатся в Академии. Ты нам нравишься.'],
+    }[a];
+    return pool[Math.floor(h / 0.55 * pool.length) % pool.length];
+  }
+  return { get, set, is, attitude, villagerLine, EFFECTS };
+})();
+G.script.actions.choice = (a) => G.choices.set(a[0], a[1]);
+// Условия сценариев: choice.taunt.fight; stab.45 — стабильность чакры не ниже 45
+(() => {
+  const prev = G.script.extraTest;
+  G.script.extraTest = (cond) => {
+    let m;
+    if ((m = cond.match(/^choice\.(\w+)\.(\w+)$/))) return G.choices.is(m[1], m[2]);
+    if ((m = cond.match(/^stab\.(\d+)$/))) return G.purple.stability() >= Number(m[1]);
+    return prev ? prev(cond) : undefined;
+  };
+})();
+// call emit имя аргумент — сообщить миру о событии (закрывает шаги заданий с on)
+G.script.actions.emit = (a) => G.events.emit(a[0], ...a.slice(1));
+// call purplectl 8 — практика контроля чакры (например, урок наставника)
+G.script.actions.purplectl = (a) => { G.state.vars.purple_ctl = Math.min(40, (G.state.vars.purple_ctl || 0) + (Number(a[0]) || 0)); };
+
+
+// ===== systems/exam.js =====
+// Экзамен на генина (день 21, воскресенье): письменный тест, метание, Буншин. Фиолетовая чакра может усилить клонов или сорваться.
+// Запускается из G.story.poll, когда текущий шаг главной ветки — «exam» и герой в Академии. Провал — пересдача через неделю.
+G.exam = (() => {
+  const DAY = 21, RETAKE = 7, PASS = 55;
+  const v = () => G.state.vars;
+  const world = () => G.scenes.stack.find((s) => s.name === 'world');
+  const dlg = (id, then) => { const w = world(); G.dialog.start(id, { bottom: 22, onEnd: () => { w && w.refreshNpcs && w.refreshNpcs(); then && then(); } }); };
+  const say = (lines, then) => { const w = world(); G.dialog.say(lines.map((l) => (typeof l === 'string' ? { text: l } : l)), { bottom: 22, onEnd: () => { w && w.softRefresh && w.softRefresh(); then && then(); } }); };
+
+  // можно ли сдавать сейчас (для шага и для запуска)
+  function open() {
+    const d = v().day, fail = v().exam_fail_day;
+    return d >= DAY && (!fail || d >= fail + RETAKE);
+  }
+  function due(w) {
+    const st = G.quests.curStep('main');
+    if (!st || st.id !== 'exam' || !open() || G.state.daily.exam_done) return false;
+    const m = v().min, b = w.map && w.map.building;
+    return m >= 8 * 60 && m < 20 * 60 && !!b && b.tplId === 'academy';
+  }
+  function start(w) {
+    G.state.daily.exam_done = 1;   // одна попытка в день, даже если вкладку выгрузят посреди экзамена
+    const res = {};
+    const finish = () => {
+      const grade = G.academy.avg() / 100, att = G.academy.attendance() / 100, iruka = G.friends.level('iruka') / 5, stab = G.purple.stability() / 100;
+      const total = Math.round(res.wr * 25 + res.thr * 20 + res.bun * 30 + grade * 10 + att * 5 + iruka * 5 + stab * 5);
+      const pass = total >= PASS && res.bun > 0.3;
+      v().exam = total; v().exam_pass = pass ? 1 : 0;
+      if (!pass) v().exam_fail_day = v().day;
+      G.game.advanceTo('15:00');
+      G.game.note(`Экзамен на генина: ${total} баллов — ${pass ? 'сдан' : 'не сдан'}`);
+      say([
+        { text: `Письменный тест: ${Math.round(res.wr * 100)}%. Метание: ${Math.round(res.thr * 100)}%. Буншин: ${Math.round(res.bun * 100)}%.` },
+        { text: `Оценки: ${G.academy.avg() || '—'}. Посещаемость: ${G.academy.attendance()}%. Итог: ${total} из 100.` },
+      ], () => dlg(pass ? (total >= 80 ? 'mq_exam_best' : 'mq_exam_pass') : 'mq_exam_fail', () => {
+        if (pass) { G.state.flags.genin = 1; G.game.earn(200); }
+        G.events.emit('exam', pass, total);
+        G.storage.save(G.state);
+      }));
+    };
+    const bunshin = () => {
+      if (!G.combat.knows('bunshin')) { res.bun = 0; return finish(); }
+      G.scenes.push(G.scenes.make('train', 'seals', { title: 'Экзамен: Буншин' }, (s) => {
+        let bun = s * 0.7 + G.combat.mastery('bunshin') * 0.12 + G.hero.stat('nin') * 0.02;
+        // выброс фиолетовой чакры: честный показ силы рискованнее, но выигрыш больше; осторожность — безопаснее
+        const honest = G.choices.is('exam', 'honest');
+        const surge = G.purple.roll(honest ? 45 : 18);
+        if (surge) bun += surge.kind === 'boost' ? (honest ? 0.25 : 0.1) : -(honest ? 0.2 : 0.1);
+        G.purple.apply(surge, w);
+        res.bun = Math.max(0, Math.min(1, bun));
+        say([{ text: surge ? (surge.kind === 'boost' ? 'Клоны вспыхивают фиолетовым светом: их больше, чем нужно!' : 'Клоны выходят кривыми: чакра дрогнула в самый неподходящий момент.') : 'Клоны вышли ровными.' }], finish);
+      }));
+    };
+    const throwing = () => say([{ who: 'iruka', text: 'Вторая часть: метание. Восемь бросков!' }], () => G.scenes.push(G.scenes.make('train', 'throw', { title: 'Экзамен: метание' }, (s) => {
+      res.thr = Math.min(1, s * 0.85 + G.hero.stat('tai') * 0.015);
+      dlg('mq_exam_choice', () => say([{ who: 'iruka', text: 'И последнее: создай клонов. Техника Буншин!' }], bunshin));
+    })));
+    dlg('mq_exam_start', () => G.scenes.push(G.scenes.make('train', 'quiz', { title: 'Экзамен: письменный тест', n: 5 }, (s) => {
+      res.wr = Math.min(1, s * 0.8 + G.hero.stat('know') * 0.02);
+      throwing();
+    })));
+  }
+  return { DAY, RETAKE, PASS, open, due, start };
+})();
+
+
 // ===== systems/friends.js =====
 // Дружба, подарки, совместные тренировки и спарринги (план §5.7). Очки дружбы: friend_<id>, уровень = очки / 5 (0..5).
 G.FRIENDS = {
@@ -7126,7 +7260,7 @@ const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
 G.calendar = {
   BDAY: { 9: 'kiba', 16: 'shino', 22: 'shikamaru', 23: 'sasuke', 27: 'hinata', 30: 'sakura', 34: 'iruka', 37: 'choji', 44: 'ino', 48: 'lee', 12: 'naruto' },
   EVENTS: {
-    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 15: 'Урок: Хенге', 17: 'Урок гендзюцу', 29: 'Урок: хождение по дереву', 43: 'Урок: Буншин',
+    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 9: 'Урок: хождение по дереву', 12: 'Урок: Хенге', 14: 'Урок: хождение по воде', 16: 'Урок: Буншин', 21: 'ЭКЗАМЕН НА ГЕНИНА',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
@@ -7143,7 +7277,7 @@ G.calendar = {
 // ───────────────────────── Академия ─────────────────────────
 G.academy = {
   SUBJ: { hist: 'История', throw: 'Метание', nin: 'Ниндзюцу', tai: 'Тайдзюцу', prac: 'Практика' },
-  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 54 && (d - 1) % 7 < 5; },
+  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 21 && (d - 1) % 7 < 5; },   // до экзамена; после выхода за ворота школы нет
   inClass() { const w = _world(); return w && w.map && w.map.name === 'Академия: класс'; },
   lessonNow() { const v = G.state.vars; return this.isSchoolDay() && v.min >= 7 * _H + 30 && v.min < 9 * _H + 30 && !G.state.daily.lesson; },
   grade(s) { const v = G.state.vars, n = v['gn_' + s] || 0; return n ? Math.round(v['gs_' + s] / n) : 0; },
@@ -7157,10 +7291,10 @@ G.academy = {
     const special = {
       2: { s: 'prac', intro: 'les_first', battle: 'dummy' },
       8: { s: 'nin', intro: 'les_kawarimi', battle: 'dummy2', learn: 'kawarimi' },
-      15: { s: 'nin', intro: 'les_henge', mg: 'seals', learn: 'henge' },
-      17: { s: 'nin', intro: 'les_genjutsu', mg: 'meditate', learn: 'fear' },
-      29: { s: 'prac', intro: 'les_tree', mg: 'tree', learnFlag: 'tech_tree' },
-      43: { s: 'nin', intro: 'les_bunshin', mg: 'seals', learn: 'bunshin' },
+      9: { s: 'prac', intro: 'les_tree', mg: 'tree', learnFlag: 'tech_tree' },
+      12: { s: 'nin', intro: 'les_henge', mg: 'seals', learn: 'henge' },
+      14: { s: 'prac', intro: 'les_water', mg: 'tree', learnFlag: 'tech_water' },
+      16: { s: 'nin', intro: 'les_bunshin', mg: 'seals', learn: 'bunshin' },
     }[d];
     if (special) return special;
     const mates = ['kiba', 'choji', 'ino', 'shikamaru', 'hinata', 'naruto', 'sasuke'];
@@ -7188,7 +7322,7 @@ G.academy = {
         if (p.learnFlag) G.state.flags[p.learnFlag] = 1;
         if (pts >= 80) G.friends.add('iruka', 1);
         G.game.advanceTo('13:00'); G.game.tire(10);
-        G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`);
+        G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`); G.events.emit('lesson', p, pts);
         const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ' Теперь можно тренировать хождение по дереву!' : '';
         _say([{ who: 'iruka', text: `${pts >= 85 ? 'Превосходно' : pts >= 65 ? 'Хорошо' : pts >= 45 ? 'Неплохо, но можешь лучше' : 'Нужно больше стараться'}, {name}! Оценка: ${this.mark(pts)} (${pts}).${learned}` }, { text: 'Уроки окончены. Время — 13:00.' }]
           .map((l) => Object.assign(l, { text: _fmt(l.text) })), () => world.softRefresh && world.softRefresh());
@@ -7257,6 +7391,7 @@ G.story = {
       return true;
     }
     const m = world.map;
+    if (G.exam && G.exam.due(world)) { G.exam.start(world); return true; }
     // урок
     if (G.academy.lessonNow() && G.academy.inClass()) { G.academy.start(world); return true; }
     if (v.makeup) { (st.makeupQ = st.makeupQ || []).push(v.makeup); v.makeup = 0; }   // старые сохранения
@@ -7325,7 +7460,7 @@ G.life_events = {
   // раз в игровой час на улице
   roll(world) {
     const v = G.state.vars, m = world.map;
-    if (!m || !m.outdoor || v.day < 3 || v.day >= 54 || G.state.daily.ev >= 2) return;
+    if (!m || !m.outdoor || v.day < 3 || G.state.daily.ev >= 2) return;
     const night = v.min >= 21 * _H && v.min < 23 * _H + 30, day = v.min >= 9 * _H && v.min < 20 * _H;
     if (!(night || day) || Math.random() > (night ? 0.18 : 0.07)) return;
     G.state.daily.ev = (G.state.daily.ev || 0) + 1;
@@ -9208,13 +9343,15 @@ end
 
 // ===== data/main_quest.js =====
 // Главная ветка «Фиолетовая чакра»: постоянная, каждый шаг — механика мира и кусочек истории.
-// Шаг: day — не раньше дня; on: [событие мира, фильтр] — закрывается действием игрока (см. G.quests.notify);
-// intro — сцена, когда шаг открылся; after — сцена после шага. Сюжет и порядок — docs/STORY.md.
+// Шаг: day — не раньше дня; when — условие; on: [событие мира, фильтр] — закрывается действием игрока (G.quests.notify);
+// reach — достаточно войти в здание; script — сцена при разговоре с target.npc; intro — сцена, когда шаг открылся; after — сцена после шага.
+// Сюжет и порядок — docs/STORY.md. Выборы с последствиями — systems/choices.js, экзамен — systems/exam.js.
 const _mqTrain = (...ids) => ['training', (id) => ids.includes(id)];
 G.QUESTS.main = {
   cat: 'story', title: 'Фиолетовая чакра',
   desc: 'Твоя чакра необычная: фиолетовая, сильная и непослушная. Рано или поздно ею кто-то заинтересуется. Нужно научиться держать её и постоять за себя, пока этого не случилось.',
   steps: [
+    // ── неделя 1: «Чужой» ──
     { id: 'dummy', day: 2, text: 'Попробовать удар по манекену на полигоне', target: { building: 'training_ground' }, on: _mqTrain('dummy', 'log', 'throw'), intro: 'mq_dummy_intro', after: 'mq_dummy_after' },
     { id: 'library', day: 3, text: 'Найти в библиотеке книгу о чакре', target: { building: 'library' }, on: _mqTrain('library'), intro: 'mq_library_intro', after: 'mq_library_after' },
     { id: 'rod', day: 4, text: 'Купить удочку в сувенирной лавке (80 рё)', target: { building: 'souvenir' }, have: { fishing_rod: 1 }, intro: 'mq_rod_intro' },
@@ -9223,16 +9360,34 @@ G.QUESTS.main = {
     { id: 'shop', day: 6, text: 'Купить в лавке кунаи или бинты', target: { building: 'weapons' }, on: ['bought', (id) => ['kunai', 'shuriken', 'bandage'].includes(id)], intro: 'mq_shop_intro' },
     { id: 'job', day: 7, text: 'Взять поручение с доски', target: { building: 'hokage_tower' }, on: ['job'], after: 'mq_job_after' },
     { id: 'roof', day: 8, text: 'Подняться на крышу (у стены дома — A)', target: { building: 'academy' }, on: ['roof'], when: () => !!G.state.flags.roofs, after: 'mq_roof_after' },
+    // ── неделя 2: «Контроль» ──
+    { id: 'tree', day: 9, text: 'Потренировать хождение по дереву на полигоне №3', target: { building: 'training_3' }, on: _mqTrain('tree'), when: () => !!G.state.flags.tech_tree, intro: 'mq_tree_intro', after: 'mq_tree_after' },
+    { id: 'checkup1', day: 10, text: 'Пройти осмотр в больнице', target: { building: 'hospital' }, reach: true, intro: 'mq_checkup1_intro', after: 'mq_checkup1_after' },
     { id: 'spar', day: 11, text: 'Провести учебный спарринг (меню общения)', target: { building: 'academy' }, on: ['battle', (a) => a && a.mode === 'spar'], intro: 'mq_spar_intro', after: 'mq_spar_after' },
-    { id: 'more', day: 12, text: 'Продолжай учиться, тренироваться и дружить. Продолжение — скоро.', target: { building: 'academy' }, when: () => false },
+    { id: 'taunt', day: 13, text: 'Дождаться вечера: у калитки тебя ждут', target: { building: 'hero_home' }, on: ['choice', (id) => id === 'taunt'], intro: 'mq_taunt' },
+    { id: 'water', day: 14, text: 'Потренировать хождение по воде на озере', target: { tile: [138, 104], label: 'Берег озера' }, on: _mqTrain('water'), when: () => !!G.state.flags.tech_water, intro: 'mq_water_intro', after: 'mq_water_after' },
+    // ── неделя 3: «Экзамен» ──
+    { id: 'dream', day: 15, text: 'Выспаться: что-то снилось этой ночью', target: { building: 'hero_home' }, on: ['scene', (id) => id === 'mq_dream'], intro: 'mq_dream' },
+    { id: 'brief', day: 15, text: 'Поговорить с Ирукой об экзамене', target: { npc: 'iruka', in: 'academy' }, script: 'mq_exam_brief' },
+    { id: 'bunshin', day: 16, text: 'Выучить Буншин на уроке в Академии', target: { building: 'academy' }, on: ['lesson', (p) => p && p.learn === 'bunshin'], after: 'mq_bunshin_after' },
+    { id: 'study', day: 17, text: 'Подготовиться к письменному тесту: чтение дома или в библиотеке', target: { building: 'library' }, on: _mqTrain('library', 'book'), intro: 'mq_study_intro' },
+    { id: 'help', day: 17, text: 'Подарить подарок другу: друзья — твоя защита', target: { building: 'academy' }, on: ['gift'], after: 'mq_help_after' },
+    { id: 'lee', day: 18, text: 'Размяться на полигоне перед экзаменом', target: { building: 'training_ground' }, on: _mqTrain('dummy', 'log', 'run', 'throw'), intro: 'mq_lee_intro', after: 'mq_lee_after' },
+    { id: 'checkup2', day: 19, text: 'Пройти вторую проверку в больнице', target: { building: 'hospital' }, reach: true, after: 'mq_checkup2_after' },
+    { id: 'hokage', day: 20, text: 'Зайти к Хокаге в Резиденцию', target: { npc: 'hokage', in: 'hokage_tower' }, script: 'mq_hokage_talk' },
+    { id: 'exam', day: 21, text: 'Сдать экзамен на генина в Академии (воскресенье, 21 июня)', target: { building: 'academy' }, on: ['exam', (pass) => !!pass], when: () => G.exam.open(), intro: 'mq_exam_day' },
+    // ── после экзамена ──
+    { id: 'gate', day: 21, text: 'Подойти к воротам: теперь тебя выпустят', target: { building: 'gate' }, reach: true, after: 'mq_gate_after' },
+    { id: 'more', day: 22, text: 'Продолжение истории — скоро. Пока гуляй, тренируйся, дружи и выполняй поручения.', target: { building: 'academy' }, when: () => false },
   ],
   reward: { text: 'Готов постоять за себя' },
 };
 
 
 // ===== data/main_story.js =====
-// Сцены главной ветки «Фиолетовая чакра» (steps в data/main_quest.js).
+// Сцены главной ветки «Фиолетовая чакра» (шаги — data/main_quest.js). Порядок — docs/STORY.md.
 G.script.parse(`
+// ───────────── Неделя 1: «Чужой» ─────────────
 === mq_dummy_intro
 : Ночью чакра не давала спать: под кожей будто бегали фиолетовые искры.
 : Нужно выпустить её хоть куда-нибудь. На полигоне Академии стоят манекены.
@@ -9282,12 +9437,196 @@ end
 : Ты моргаешь — и его нет.
 : Нужно рассказать Ируке. Или самому стать сильнее.
 end
+
+// ───────────── Неделя 2: «Контроль» ─────────────
+=== mq_tree_intro
+: Сегодня на уроке Ирука учил ходить по деревьям. Для того, у кого чакра рвётся наружу, это лучшая тренировка контроля.
+: Полигон №3 — там растут нужные деревья.
+end
+=== mq_tree_after
+: Ступни прилипают к стволу. Ты поднимаешься шаг за шагом, и фиолетовое сияние стекает по коре вниз, не оставляя следов.
+: Чем ровнее дыхание, тем тише чакра. Запомни это ощущение.
+end
+=== mq_checkup1_intro
+: Шизуне просила зайти на осмотр. Нужно понять, как твоя чакра ведёт себя с каждым днём.
+end
+=== mq_checkup1_after
+shizune: Проходи, садись. Дай руку.
+: Приборы на столе тихо гудят. Стрелка дрожит и ползёт вверх.
+shizune: Лучше, чем в первый день. Но всё ещё нестабильно.
+kakashi[Какаши]: Ничего удивительного. Такой запас на одном контроле не удержишь. Нужна практика, каждый день.
+: В углу, прислонившись к стене, стоит незнакомый шиноби в маске. Он читает книжку и, кажется, совсем не смотрит на тебя.
+kakashi[Какаши]: Я Какаши. Просто наблюдаю. Не обращай внимания.
+shizune: Продолжай медитации и хождение по дереву. И береги усталость: когда ты вымотан, чакра слушается хуже.
+call purplectl 2
+end
 === mq_spar_intro
 : Спарринг — безопасный способ проверить, чему ты научился. Попроси кого-нибудь из друзей через меню общения.
 end
 === mq_spar_after
 : В конце схватки чакра вспыхивает сама. Друг отшатывается, потом с улыбкой качает головой: «Ого».
 : Ты не боишься. Но понимаешь: пора учиться управлять.
+end
+=== mq_taunt
+: Вечером у калитки тебя окружают трое мальчишек постарше. Один тычет пальцем в твои ладони: на них вспыхивают искры.
+villager_m[Мальчишка]: Эй, чужак! Говорят, ты светишься, как гнилушка! Ты опасный?
+villager_m[Мальчишка]: Отец сказал, что таких, как ты, надо гнать из деревни!
+? Что ты сделаешь?
+* Дать отпор -> fight
+* Уйти молча -> leave
+* Заговорить с ними -> talk
+# fight
+: Ты делаешь шаг вперёд, и чакра вспыхивает фиолетовым вихрем. Мальчишки с криком разбегаются.
+naruto: Вот это да, даттебайо! ...Только не оглядывайся на окна. Соседи уже шепчутся.
+call choice taunt fight
+end
+# leave
+: Ты разворачиваешься и уходишь. За спиной смех, но ты не оборачиваешься.
+iruka: {name}. Я всё видел. Это было не слабостью: уйти порой сложнее, чем ударить.
+call choice taunt leave
+end
+# talk
+: Ты опускаешь руки, и искры гаснут.
+: — Я сам не знаю, откуда она. Но я никому не хочу вредить.
+villager_m[Мальчишка]: ...Ты вообще странный. Но не страшный.
+: Мальчишки переминаются и расходятся. Хината, наблюдавшая из-за угла, тихо кивает.
+call choice taunt talk
+end
+=== mq_water_intro
+: Хождение по воде. Сегодня Ирука объяснил на уроке, как держать чакру под ногами. Озеро — лучшее место для практики.
+end
+=== mq_water_after
+: Вода держит тебя. Под каждым шагом расходятся фиолетовые круги, будто кто-то бросает в озеро светящиеся камни.
+: Получилось. Впервые чакра послушалась с первого раза.
+end
+
+// ───────────── Неделя 3: «Экзамен» ─────────────
+=== mq_dream
+: Ночью тебе снится странный сон. Серое небо, высокая стена и чей-то голос:
+: — Не бойся. Ты ключ. Тебя ждут.
+: Лица не видно, но в груди тепло: фиолетовый свет, знакомый и родной. Потом всё гаснет.
+: Ты просыпаешься в холодном поту. Это воспоминание? Или тебе показалось?
+call emit scene mq_dream
+end
+=== mq_exam_brief
+iruka: {name}, хорошо, что зашёл. Через неделю, в воскресенье, экзамен на генина.
+iruka: Три части: письменный тест, метание и Буншин. Оценка зависит не только от экзамена: учтём оценки, посещаемость и то, как ты держишь чакру.
+iruka: Сдашь — получишь протектор и право выходить за ворота. Не сдашь — пересдача через неделю.
+iruka: Тебе не нужно быть лучшим. Нужно просто не сорваться.
+call friend iruka 1
+call step main brief
+end
+=== mq_bunshin_after
+: Буншин. Овца, Змея, Тигр. Рядом с тобой появляется клон, потом второй. Они светятся тусклым фиолетовым светом.
+iruka: Они... фиолетовые? Хм. Ничего страшного. Главное, что они держатся.
+naruto: У меня опять только больной клон... Эй, {name}, научи меня!
+end
+=== mq_study_intro
+: Письменный тест — треть оценки. Пора заглянуть в книги: в библиотеке или дома, если есть что читать.
+end
+=== mq_help_after
+: Друзья не оставили тебя одного. Кто-то делится конспектами, кто-то просто приходит и сидит рядом.
+: Когда рядом свои, чакра как будто становится тише.
+end
+=== mq_lee_intro
+: Перед экзаменом хочется размяться. На полигоне как раз кто-то тренируется.
+end
+=== mq_lee_after
+lee: Привет, соперник! Тысяча отжиманий, и экзамен у тебя в кармане!
+: Пока вы тренируетесь, чакра вырывается из-под контроля: вспышка, и Ли отлетает к дереву, смеясь.
+lee: Ого! Вот это сила юности!
+: Тебе совсем не смешно. Ладони дрожат.
+iruka: Тише, тише. Дыши. Вот так. Ты не сделал ничего плохого.
+iruka: Знаешь, что я скажу? Сила, которой боишься, не твой враг. Враг — страх, который мешает её держать.
+call friend lee 2
+call friend iruka 1
+end
+=== mq_checkup2_after
+shizune: Последняя проверка перед экзаменом.
+: Приборы гудят. Стрелка поднимается и замирает.
+if stab.45 -> good
+kakashi[Какаши]: Всё ещё нестабильно. Показываю один приём дыхания: для сдачи этого хватит.
+: Какаши учит тебя дышать так, чтобы чакра текла ровно. Стрелка прибора вздрагивает и поднимается выше.
+call purplectl 8
+-> end_part
+# good
+kakashi[Какаши]: Уже лучше. Для экзамена достаточно.
+# end_part
+kakashi[Какаши]: Завтра зайди к Хокаге-сама. Он хотел с тобой поговорить.
+call emit checkup
+end
+=== mq_hokage_talk
+hokage: А, {name}. Проходи. Присядь.
+hokage: Три недели назад ты не помнил даже своего имени. Теперь ходишь по деревне, дружишь с одноклассниками. Это дорогого стоит.
+hokage: Но я должен спросить. Ты замечал что-нибудь необычное? Чужих, наблюдателей?
+? Расскажешь о человеке в плаще?
+* Рассказать всё Хокаге -> told
+* Промолчать -> silent
+# told
+: Ты рассказываешь о библиотеке, о заказчике и о человеке на крыше.
+hokage: Ясно. Спасибо за доверие. Я усилю охрану у твоего дома. Но будь осторожен и не выходи в одиночку за стену.
+call choice hokage told
+-> end_part
+# silent
+: Ты не знаешь, можно ли ему верить. Или не хочешь, чтобы вокруг поднялся шум.
+hokage: Хорошо. Но если что-то случится, ты знаешь, где меня найти.
+call choice hokage silent
+# end_part
+hokage: Завтра экзамен. Не бойся своей чакры, {name}. Она часть тебя.
+call step main hokage
+end
+=== mq_exam_day
+: Сегодня экзамен на генина. Воскресенье, 21 июня. Академия открыта с 8:00. Не забудь отдохнуть: усталость мешает контролю.
+end
+=== mq_exam_start
+iruka: Все готовы? Тогда начинаем. Первая часть: письменный тест.
+end
+=== mq_exam_choice
+iruka: Перед Буншином: покажешь, на что способен, или будешь осторожнее?
+? Что выберешь?
+* Показать всю силу (риск, но больше шансов блеснуть) -> honest
+* Сдерживаться (надёжнее) -> cautious
+# honest
+: Ты глубоко вдыхаешь и открываешь чакре дорогу.
+call choice exam honest
+end
+# cautious
+: Ты прижимаешь чакру: ровно, коротко, без лишнего.
+call choice exam cautious
+end
+=== mq_exam_best
+iruka: Лучший результат в классе. {name}, ты молодец!
+: Ирука подходит и вручает тебе протектор Конохи. Холодный металл лежит на ладони.
+iruka: Ты стал генином. Ворота открыты для тебя.
+hokage: Помни: сила — это ответственность. Но и защита.
+call friend iruka 3
+end
+=== mq_exam_pass
+iruka: {name}, ты сдал! Поздравляю!
+: Ирука вручает тебе протектор Конохи. Ты стал генином.
+iruka: Теперь ворота открыты для тебя. Но береги себя.
+call friend iruka 2
+end
+=== mq_exam_fail
+iruka: {name}... в этот раз не хватило.
+iruka: Это не конец. Пересдача через неделю. Тренируйся, отдыхай, дружи. Я в тебя верю.
+: Ты стискиваешь кулаки. Фиолетовые искры гаснут.
+end
+=== mq_gate_after
+: У ворот стоит Идзумо. Он смотрит на твой протектор и кивает:
+villager_m[Идзумо]: Проходи, генин. Только далеко не уходи: за стеной не так спокойно, как в деревне.
+: Ты стоишь на пороге. За воротами дорога уходит вдаль, к лесу.
+: На земле у столба ты замечаешь свежие следы: кто-то долго стоял здесь и смотрел в сторону деревни.
+: Кто они? Что им нужно? Ответ придётся искать самому.
+end
+`);
+
+// Урок хождения по воде
+G.script.parse(`
+=== les_water
+iruka: Хождение по воде. Чакра выходит из ступней и держит тебя на поверхности.
+iruka: Это сложнее, чем по дереву: вода непослушна. Не выпускай слишком много и не жалей слишком мало.
+sakura: С нашей точностью это просто математика!
 end
 `);
 
@@ -13557,6 +13896,7 @@ G.guards = (() => {
   const ROUTES = [   // [откуда, куда, днём, ночью]
     ['gate', 'hokage_tower', true, true], ['market', 'teahouse', true, false], ['clan_hyuga', 'uchiha_police', true, true],
     ['academy', 'hospital', true, false], ['night_alley', 'hero_home', false, true], ['clan_inuzuka', 'clan_akimichi', true, true],
+    ['hero_home', 'academy', true, true, 'guards_up'],   // добавляется после рассказа Хокаге о незнакомце (выбор hokage)
   ];
   function point(map, tpl) {
     const b = map.buildings.find((x) => x.tplId === tpl) || (map.spots && map.spots[tpl]);
@@ -13568,19 +13908,19 @@ G.guards = (() => {
   function build(map) {
     if (map._guards) return map._guards;
     const patrols = [];
-    ROUTES.forEach(([a, b, day, night], i) => {
+    ROUTES.forEach(([a, b, day, night, need], i) => {
       const A = point(map, a), B = point(map, b);
       if (!A || !B) return;
       const path = G.nav.path(map, A.x, A.y, B.x, B.y, 60000);
       if (!path || path.length < 8) return;
       const pts = path.map(([x, y]) => ({ x: x * T + 8, y: y * T + 12 }));
       for (let k = 0; k < 2; k++) patrols.push({ id: 'chunin', name: 'Стража', pts, i: Math.max(0, 10 * i % pts.length - k * 2), step: 1, x: pts[0].x, y: pts[0].y,
-        dir: 'down', anim: 0, moving: true, day, night, serial: i * 2 + k, wait: k * 0.45, _guard: true });
+        dir: 'down', anim: 0, moving: true, day, night, need, serial: i * 2 + k, wait: k * 0.45, _guard: true });
     });
     return (map._guards = { patrols });
   }
   const night = () => { const m = G.state.vars.min % 1440; return m >= 20 * 60 || m < 6 * 60; };
-  const onDuty = (p) => (night() ? p.night : p.day);
+  const onDuty = (p) => (!p.need || G.state.flags[p.need]) && (night() ? p.night : p.day);
   function update(world, dt) {
     if (!world.map || world.map.id !== 'konoha') return;
     for (const p of build(world.map).patrols) {
@@ -14660,6 +15000,7 @@ G.streetLife = (() => {
     const name=G.state.hero.name||'сосед',mem=state().helped[n.uid];
     if(mem)return name+', спасибо за помощь! Во дворе теперь гораздо уютнее.';
     if(n.id==='iruka'&&Object.keys(G.state.learning).some(k=>k.startsWith('tr_')&&G.state.learning[k]))return name+', я вижу, ты не бросаешь упражнения. Продолжай в том же духе!';
+    const vl=G.choices&&G.choices.villagerLine(n);if(vl)return vl;
     const friendship=G.state.vars['friend_'+n.id]||0;
     if(friendship>=5)return (G.STREET_REACTIONS[n.id]||'Привет, {name}! Рад снова тебя видеть.').replace('{name}',name);
     if(G.state.flags['met_'+n.id])return 'Привет, '+name+'! Удачного дня!';
@@ -17077,7 +17418,7 @@ G.scenes.register('calendar', () => {
     if (G.calendar.BDAY[d]) out.push({ c: '#c89010', t: 'День рождения: ' + G.chars.nameOf(G.calendar.BDAY[d]) });
     if(d>112&&G.calendar.birthday(d))out.push({c:'#c89010',t:'День рождения: '+G.chars.nameOf(G.calendar.birthday(d))});
     if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00. Вход 7:30–9:30' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
-    else if (d < 54) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
+    else if (d <= 21) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
     const Q = G.state.quests || {};
     for (const id of Object.keys(Q)) if (Q[id].st === 'active' && Q[id].due === d && G.QUESTS[id]) out.push({ c: '#b8321c', t: 'Срок: ' + G.QUESTS[id].title });
     out.push({ c: '#6a5238', t: 'Погода: ' + WEATHER[G.life.weather(d)] });

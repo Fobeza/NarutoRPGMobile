@@ -59,6 +59,8 @@ function cond(id, c) {
     if (m[2] && !q.steps.some((st) => st.id === m[2])) bad.push(`${id}: условие «${c}» — в задании «${m[1]}» нет шага «${m[2]}»`);
     return;
   }
+  if ((m = s.match(/^choice\.(\w+)\.(\w+)$/))) return void ((G.CHOICES[m[1]] || []).includes(m[2]) || bad.push(`${id}: условие «${c}» — нет выбора «${m[1]}.${m[2]}»`));
+  if (/^stab\.\d+$/.test(s)) return;
   if (/^(cooldown\.\w+|weekday|rain|skill\.\w+)$/.test(s)) {
     if (s.startsWith('skill.') && !G.SKILLS.some((sk) => sk.id === s.slice(6))) bad.push(`${id}: условие «${c}» — нет навыка «${s.slice(6)}»`);
     return;

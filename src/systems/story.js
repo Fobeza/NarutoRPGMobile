@@ -10,7 +10,7 @@ const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
 G.calendar = {
   BDAY: { 9: 'kiba', 16: 'shino', 22: 'shikamaru', 23: 'sasuke', 27: 'hinata', 30: 'sakura', 34: 'iruka', 37: 'choji', 44: 'ino', 48: 'lee', 12: 'naruto' },
   EVENTS: {
-    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 15: 'Урок: Хенге', 17: 'Урок гендзюцу', 29: 'Урок: хождение по дереву', 43: 'Урок: Буншин',
+    2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 9: 'Урок: хождение по дереву', 12: 'Урок: Хенге', 14: 'Урок: хождение по воде', 16: 'Урок: Буншин', 21: 'ЭКЗАМЕН НА ГЕНИНА',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
   upcoming(n = 8) {
@@ -27,7 +27,7 @@ G.calendar = {
 // ───────────────────────── Академия ─────────────────────────
 G.academy = {
   SUBJ: { hist: 'История', throw: 'Метание', nin: 'Ниндзюцу', tai: 'Тайдзюцу', prac: 'Практика' },
-  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 54 && (d - 1) % 7 < 5; },
+  isSchoolDay(d = G.state.vars.day) { return d >= 2 && d < 21 && (d - 1) % 7 < 5; },   // до экзамена; после выхода за ворота школы нет
   inClass() { const w = _world(); return w && w.map && w.map.name === 'Академия: класс'; },
   lessonNow() { const v = G.state.vars; return this.isSchoolDay() && v.min >= 7 * _H + 30 && v.min < 9 * _H + 30 && !G.state.daily.lesson; },
   grade(s) { const v = G.state.vars, n = v['gn_' + s] || 0; return n ? Math.round(v['gs_' + s] / n) : 0; },
@@ -41,10 +41,10 @@ G.academy = {
     const special = {
       2: { s: 'prac', intro: 'les_first', battle: 'dummy' },
       8: { s: 'nin', intro: 'les_kawarimi', battle: 'dummy2', learn: 'kawarimi' },
-      15: { s: 'nin', intro: 'les_henge', mg: 'seals', learn: 'henge' },
-      17: { s: 'nin', intro: 'les_genjutsu', mg: 'meditate', learn: 'fear' },
-      29: { s: 'prac', intro: 'les_tree', mg: 'tree', learnFlag: 'tech_tree' },
-      43: { s: 'nin', intro: 'les_bunshin', mg: 'seals', learn: 'bunshin' },
+      9: { s: 'prac', intro: 'les_tree', mg: 'tree', learnFlag: 'tech_tree' },
+      12: { s: 'nin', intro: 'les_henge', mg: 'seals', learn: 'henge' },
+      14: { s: 'prac', intro: 'les_water', mg: 'tree', learnFlag: 'tech_water' },
+      16: { s: 'nin', intro: 'les_bunshin', mg: 'seals', learn: 'bunshin' },
     }[d];
     if (special) return special;
     const mates = ['kiba', 'choji', 'ino', 'shikamaru', 'hinata', 'naruto', 'sasuke'];
@@ -72,7 +72,7 @@ G.academy = {
         if (p.learnFlag) G.state.flags[p.learnFlag] = 1;
         if (pts >= 80) G.friends.add('iruka', 1);
         G.game.advanceTo('13:00'); G.game.tire(10);
-        G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`);
+        G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`); G.events.emit('lesson', p, pts);
         const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ' Теперь можно тренировать хождение по дереву!' : '';
         _say([{ who: 'iruka', text: `${pts >= 85 ? 'Превосходно' : pts >= 65 ? 'Хорошо' : pts >= 45 ? 'Неплохо, но можешь лучше' : 'Нужно больше стараться'}, {name}! Оценка: ${this.mark(pts)} (${pts}).${learned}` }, { text: 'Уроки окончены. Время — 13:00.' }]
           .map((l) => Object.assign(l, { text: _fmt(l.text) })), () => world.softRefresh && world.softRefresh());
@@ -141,6 +141,7 @@ G.story = {
       return true;
     }
     const m = world.map;
+    if (G.exam && G.exam.due(world)) { G.exam.start(world); return true; }
     // урок
     if (G.academy.lessonNow() && G.academy.inClass()) { G.academy.start(world); return true; }
     if (v.makeup) { (st.makeupQ = st.makeupQ || []).push(v.makeup); v.makeup = 0; }   // старые сохранения
@@ -209,7 +210,7 @@ G.life_events = {
   // раз в игровой час на улице
   roll(world) {
     const v = G.state.vars, m = world.map;
-    if (!m || !m.outdoor || v.day < 3 || v.day >= 54 || G.state.daily.ev >= 2) return;
+    if (!m || !m.outdoor || v.day < 3 || G.state.daily.ev >= 2) return;
     const night = v.min >= 21 * _H && v.min < 23 * _H + 30, day = v.min >= 9 * _H && v.min < 20 * _H;
     if (!(night || day) || Math.random() > (night ? 0.18 : 0.07)) return;
     G.state.daily.ev = (G.state.daily.ev || 0) + 1;

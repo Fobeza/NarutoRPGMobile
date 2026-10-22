@@ -175,6 +175,6 @@ G.script.extraTest = (cond) => {
 G.events.on('inv', () => G.quests.check());
 
 // События мира → шаги заданий с on: [событие, фильтр]
-for (const ev of ['training', 'fished', 'bought', 'job', 'gift', 'roof', 'battle', 'cooked', 'sold', 'crafted', 'storage', 'item-used']) G.events.on(ev, (...a) => G.quests.notify(ev, ...a));
+for (const ev of ['training', 'fished', 'bought', 'job', 'gift', 'roof', 'battle', 'cooked', 'sold', 'crafted', 'storage', 'item-used', 'lesson', 'choice', 'scene', 'exam', 'checkup']) G.events.on(ev, (...a) => G.quests.notify(ev, ...a));
 // Новый день открывает шаги, привязанные к дню (вступительные сцены)
 G.events.on('day', () => { if (G.state.started) G.quests.check(); });

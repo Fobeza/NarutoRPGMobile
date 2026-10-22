@@ -34,7 +34,7 @@ test('Спор можно пропустить или решить без штр
  touch(w,n);choose(0);assert.equal(G.streetLife.progress('practice'),9);assert.equal(G.state.vars.money,money+20);
 });
 test('Память соседей, дружба и успехи учёбы дают разные личные реакции',w=>{
- G.state.hero.name='Кайто';G.state.flags={};const n={id:'villager_m',uid:'resident:test'};
+ G.state.hero.name='Кайто';G.state.flags={};G.state.vars.day=1;const n={id:'villager_m',uid:'resident:test'};
  assert.equal(G.streetLife.reaction(n),null);G.state.streetLife.helped[n.uid]=1;assert.match(G.streetLife.reaction(n),/Кайто.*спасибо/);
  G.state.vars.friend_naruto=5;assert.match(G.streetLife.reaction({id:'naruto'}),/Кайто.*рамен/);
  G.state.learning.tr_seals=1;assert.match(G.streetLife.reaction({id:'iruka'}),/упражнения/);

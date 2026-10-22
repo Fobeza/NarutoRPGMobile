@@ -34,5 +34,36 @@ with sync_playwright() as p:
     page.evaluate("G.scenes.push(G.scenes.make('journal'))"); time.sleep(0.5); shot(page, 'mq_journal')
     b.close()
 
+    # ── экзамен на генина: день 21, все три части, итог и шаг «ворота» ──
+    b, page = open_page(p, URL)
+    seed(page); wait_top(page, 'world'); close_dialogs(page)
+    page.evaluate("""(() => {
+      G.state.quests = {}; G.state.frQueue = []; G.quests.start('main');
+      const f = G.state.flags; Object.assign(f, { roofs: 1, tech_tree: 1, tech_water: 1, tech_bunshin: 1, tech_kawarimi: 1 });
+      G.state.vars.day = 21; G.state.vars.min = 9 * 60; G.state.daily = {}; G.state.vars.fatigue = 5;
+      for (const id of ['dummy','library','rod','fish','falls','shop','job','roof','tree','checkup1','spar','taunt','water','dream','brief','bunshin','study','help','lee','checkup2','hokage']) G.quests.step('main', id);
+      G.state.frQueue = [];
+    })()""")
+    check(page.evaluate("G.quests.curStep('main').id") == 'exam', 'в день 21 текущий шаг — экзамен')
+    ac = page.evaluate("G.world.konoha().landmarks.academy.interior.id")
+    W(page, "s.setMap({ map: '%s', entry: true }); return 1" % ac); time.sleep(1.0)
+    for _ in range(25):
+        if top(page) in ('train',): break
+        key(page, 'KeyZ', wait=0.25)
+    check(top(page) == 'train', 'экзамен начался: письменный тест (%s)' % top(page))
+    shot(page, 'mq_exam_1')
+    for _ in range(160):
+        done = page.evaluate("G.state.vars.exam != null && !G.scenes.busy && G.scenes.top().name === 'world' && G.state.frQueue.length === 0")
+        if done: break
+        if top(page) == 'train':
+            page.evaluate("G.scenes.top().finishNow && G.scenes.top().finishNow(0.9)")
+            time.sleep(0.8)
+        key(page, 'KeyZ', wait=0.3)
+    ex = page.evaluate("[G.state.vars.exam, G.state.vars.exam_pass, G.state.flags.genin, G.quests.curStep('main') && G.quests.curStep('main').id]")
+    check(ex[0] is not None and ex[1] == 1 and ex[2] == 1, 'экзамен оценён и сдан: %s' % ex)
+    check(ex[3] == 'gate', 'после экзамена шаг «ворота»: %s' % ex[3])
+    shot(page, 'mq_exam_done')
+    b.close()
+
 report()
 sys.exit(1 if fails or errors else 0)
