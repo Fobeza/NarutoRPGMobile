@@ -75,6 +75,15 @@ G.game = (() => {
         st.marker = null;
       }
       st.layoutVersion = 3;
+      // «Дороги Листа» убраны (2.3): герой с карты экспедиции возвращается к Академии, служебные поля чистятся
+      if (st.pos && String(st.pos.map).startsWith('adv:') && G.world) {
+        const k = G.world.konoha();
+        st.pos = G.world.outsideOf(k.landmarks.academy || G.world.heroHome());
+        st.marker = null;
+      }
+      for (const bag of [st.flags, st.vars, st.daily]) if (bag) for (const key of Object.keys(bag)) if (key.startsWith('adv_')) delete bag[key];
+      for (const id of Object.keys(st.quests || {})) if (id.startsWith('adv_')) delete st.quests[id];
+      if (st.tracked && String(st.tracked).startsWith('adv_')) st.tracked = null;
       // сохранение до этапа 3.5 (цели без заданий) → задание «Первый день»
       if (st.started && !Object.keys(st.quests).length) {
         const f = st.flags;

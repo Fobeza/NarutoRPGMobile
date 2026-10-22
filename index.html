@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '44db5ba7', date: '2026-10-22 14:55', debug: false };
+const BUILD = { release: '2.3', version: '5e91ef18', date: '2026-10-22 15:36', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -5531,6 +5531,15 @@ G.game = (() => {
         st.marker = null;
       }
       st.layoutVersion = 3;
+      // «Дороги Листа» убраны (2.3): герой с карты экспедиции возвращается к Академии, служебные поля чистятся
+      if (st.pos && String(st.pos.map).startsWith('adv:') && G.world) {
+        const k = G.world.konoha();
+        st.pos = G.world.outsideOf(k.landmarks.academy || G.world.heroHome());
+        st.marker = null;
+      }
+      for (const bag of [st.flags, st.vars, st.daily]) if (bag) for (const key of Object.keys(bag)) if (key.startsWith('adv_')) delete bag[key];
+      for (const id of Object.keys(st.quests || {})) if (id.startsWith('adv_')) delete st.quests[id];
+      if (st.tracked && String(st.tracked).startsWith('adv_')) st.tracked = null;
       // сохранение до этапа 3.5 (цели без заданий) → задание «Первый день»
       if (st.started && !Object.keys(st.quests).length) {
         const f = st.flags;
@@ -6316,96 +6325,6 @@ Object.assign(G.TECHS, {
 G.TECH_ORDER.push('katon', 'suiton', 'raiton', 'fuuton');
 
 
-// ===== data/adventures.js =====
-// «Дороги Листа»: задания, учебные программы, архив и рецепты дополнения.
-G.ADVENTURES = {
-  clans: [
-    { id:'nara', name:'Нара', gift:'shogi', perk:'Свиток тактики: +1 фокус в новых миссиях' },
-    { id:'hyuga', name:'Хьюга', gift:'herb_blue', perk:'Дыхательная практика: +10 чакры перед вылазкой' },
-    { id:'inuzuka', name:'Инузука', gift:'dog_treat', perk:'Следопыты отмечают тайник в лесу' },
-    { id:'yamanaka', name:'Яманака', gift:'flowers_m', perk:'Семейный рецепт цветочного чая' },
-    { id:'aburame', name:'Абураме', gift:'bug_jar', perk:'Жуки находят безопасный обход дозорного' },
-    { id:'akimichi', name:'Акимичи', gift:'chips', perk:'Секретный рецепт походных онигири' },
-  ],
-  mentors: [
-    { id:'iruka', name:'Ирука', stat:'ctrl', mg:'tree', lesson:'Контроль чакры и водная техника', flag:'adv_wallrun', tech:'suiton' },
-    { id:'lee', name:'Рок Ли', stat:'spd', mg:'run', lesson:'Ритм прыжков и Вихрь Листа', flag:'adv_runner', grant:'combo_whirl' },
-    { id:'shikamaru', name:'Шикамару', stat:'know', mg:'quiz', lesson:'Чтение намерений', flag:'adv_tactician', grant:'tactic' },
-    { id:'asuma', name:'Асума', stat:'nin', mg:'seals', lesson:'Футон: Порыв', flag:'adv_wind', tech:'fuuton' },
-    { id:'anko', name:'Анко', stat:'nin', mg:'seals', lesson:'Катон: Огненный шар', flag:'adv_fire', tech:'katon' },
-    { id:'kakashi', name:'Какаши', stat:'ctrl', mg:'seals', lesson:'Райтон: Разряд', flag:'adv_lightning', tech:'raiton' },
-  ],
-  books: [
-    { id:'watch', title:'Дневник дозорного', text:'Мост смыло весенним паводком. Мы привязали проволоку к двум столбам: так можно перебраться даже без водной техники. Запас оставили у лесного поста.', map:'adv:forest', x:9, y:8 },
-    { id:'seal', title:'Письмо хранителю', text:'Три печати хранят архив. Сначала приходит Вода, затем над лесом поднимается Ветер, и лишь потом загорается Огонь. Силой барьер не открыть.', map:'adv:tower2', x:3, y:3 },
-    { id:'clans', title:'Соглашение кланов', text:'Кланы доверяют делам. Помощь каравану сближает с Яманака и Нара; спасение людей у реки ценят Хьюга и Инузука. Подарок сам по себе не заменит службу.', map:'adv:cellar', x:4, y:3 },
-    { id:'genin', title:'Полевые записи команды', text:'Генин отвечает за возвращение всей команды. Перед миссией изучи следы, подготовь инструменты и договорись о сигналах. Враг, с которым удалось поговорить, тоже может стать союзником.', map:'adv:outpost', x:24, y:6 },
-  ],
-  recipes: [
-    { id:'adv_onigiri', name:'Походные онигири', need:{rice:2,vegetables:1}, flag:'adv_recipe_onigiri', effect:{food:55,energy:15}, friend:'choji' },
-    { id:'adv_flower_tea', name:'Цветочный чай', need:{herb:2,herb_blue:1}, flag:'adv_recipe_tea', effect:{energy:25,chakra:20,mood:10}, friend:'ino' },
-    { id:'adv_tomato_rice', name:'Рис с томатами', need:{rice:1,tomato:2}, flag:'adv_recipe_rice', effect:{food:40,hp:15}, friend:'sasuke' },
-  ],
-  seasons: [
-    { name:'Весна', color:'#edb6c8', gather:'herb', text:'Цветение. В лесу удобно собирать лечебные травы.' },
-    { name:'Лето', color:'#85b457', gather:'berries', text:'Созрели ягоды. Длинные светлые вечера на реке.' },
-    { name:'Осень', color:'#d99852', gather:'vegetables', text:'Листопад. У поста делятся свежим урожаем.' },
-    { name:'Зима', color:'#c2dce9', gather:'herb_blue', text:'На тропах снег. У реки остались морозные лотосы.' },
-  ],
-};
-
-// Координаты цели относятся к новой карте, а не к сетке Конохи.
-const _advStep = (id,text,map,x,y) => ({id,text,target:{map,point:[x*16+8,y*16+12],label:text}});
-Object.assign(G.QUESTS, {
-  adv_cargo:{title:'Пропавший груз',cat:'errand',desc:'Разведай лесную тропу, выбери подход к дозорному и верни груз. Решение запомнят кланы.',steps:[
-    _advStep('scout','Осмотри следы в лесу','adv:forest',13,14),
-    _advStep('prepare','Подготовь подход у поста','adv:forest',18,14),
-    _advStep('cargo','Верни груз у дозорного','adv:forest',26,13),
-    _advStep('report','Доложи на доске экспедиций','konoha',0,0),
-  ],reward:{money:100,text:'100 рё и доверие кланов'}},
-  adv_rescue:{title:'Переправа после паводка',cat:'errand',desc:'Выбери порядок спасения людей и груза у реки. Сначала узнай, кто в опасности.',steps:[
-    _advStep('survey','Изучи обстановку у реки','adv:river',10,11),
-    _advStep('bridge','Натяни страховку через реку','adv:river',15,14),
-    _advStep('people','Помоги людям на другом берегу','adv:river',25,12),
-    _advStep('report','Доложи о спасении','konoha',0,0),
-  ],reward:{money:120,text:'120 рё и помощь посту'}},
-  adv_archive:{title:'Закрытый архив',cat:'secret',desc:'Найди подсказку о печатях, открой барьер и реши судьбу хранителя.',steps:[
-    _advStep('letter','Прочитай письмо на втором этаже','adv:tower2',3,3),
-    _advStep('seal','Открой барьер на балконе','adv:balcony',8,3),
-    _advStep('guardian','Встреться с хранителем в подвале','adv:cellar',10,5),
-    _advStep('report','Доложи об архиве','konoha',0,0),
-  ],reward:{money:150,text:'150 рё и архивный свиток'}},
-  adv_dispute:{title:'Сначала выслушать',cat:'friend',desc:'Сакура и Ино спорят из-за пропавшего букета. Выслушай обеих до решения.',steps:[
-    _advStep('sakura','Выслушай Сакуру через доску встреч','konoha',0,0),
-    _advStep('ino','Выслушай Ино через доску встреч','konoha',0,0),
-    _advStep('resolve','Помоги подругам договориться','konoha',0,0),
-  ],reward:{text:'Новое отношение подруг'}},
-  adv_genin1:{title:'Генин: разведка границы',cat:'story',desc:'Первая командная миссия. Проверь пост, изучи донесение и доставь отчёт.',steps:[
-    _advStep('brief','Получи инструктаж у командного стенда','adv:outpost',6,6),
-    _advStep('scout','Проверь лесной сигнальный столб','adv:forest',29,7),
-    _advStep('report','Верни отчёт командному стенду','adv:outpost',6,6),
-  ],reward:{money:160,text:'160 рё, следующий ранг миссий'}},
-  adv_genin2:{title:'Генин: охрана переправы',cat:'story',desc:'Команда сопровождает обоз. Подготовь переправу и выбери способ остановить налётчика.',steps:[
-    _advStep('brief','Подготовь вылазку у командного стенда','adv:outpost',6,6),
-    _advStep('escort','Защити обоз у реки','adv:river',27,20),
-    _advStep('report','Доложи командному стенду','adv:outpost',6,6),
-  ],reward:{money:190,text:'190 рё, командный опыт'}},
-  adv_genin3:{title:'Генин: допуск к экзамену',cat:'story',desc:'Выдержи учебную дуэль с тремя фазами и получи направление на экзамен чунина.',steps:[
-    _advStep('brief','Получи последнее задание на посту','adv:outpost',6,6),
-    _advStep('trial','Пройди испытание у тренировочного знака','adv:outpost',22,18),
-    _advStep('report','Забери направление на экзамен','adv:outpost',6,6),
-  ],reward:{money:220,text:'Допуск к экзамену чунина'}},
-});
-for(const r of G.ADVENTURES.recipes)G.ITEMS[r.id]={name:r.name,price:0,cat:'food',effect:r.effect,desc:'Семейный рецепт. Приготовь дома из ингредиентов; можно подарить другу.'};
-
-// Новые противники используют расширенные правила только в миссиях дополнения.
-G.ENEMIES.adv_guard=Object.assign({},G.ENEMIES.thief,{name:'Лесной дозорный',grow:false,hp:85,tai:4,spd:5,traits:['smart','adaptive'],lines:{start:'Дальше нельзя. У меня приказ.',lose:'Хорошо. Давай разберёмся без угроз.'}});
-G.ENEMIES.adv_keeper=Object.assign({},G.ENEMIES.iruka,{name:'Хранитель архива',spr:'chunin',hp:110,ch:80,tai:5,nin:5,spd:5,focus:2,phase2:false,traits:['smart','adaptive'],advPhases:true,lines:{start:'Покажи, что умеешь менять тактику.',low:'Следующая стойка!',lose:'Ты достоин хранить знания.'}});
-G.ENEMIES.adv_trial=Object.assign({},G.ENEMIES.adv_keeper,{name:'Экзаменатор поста',hp:150,tai:7,nin:6,spd:7});
-G.TECHS.doton={name:'Дотон: Земляной щит',seals:_S(['Змея','Бык','Собака']),ch:16,w:8,el:'earth',desc:'Земляное укрытие снижает урон двух атак на 40%.'};
-G.TECH_ORDER.push('doton');
-
-
 // ===== systems/quests.js =====
 // Система заданий: состояние в G.state.quests, отслеживаемое — G.state.tracked.
 // События (G.events 'quest'): ('new', id) ('step', id, stepText) ('done', id) ('fail', id)
@@ -6809,6 +6728,7 @@ G.life = (() => {
       const r = G.util.rng(day * 7919 + 13)();
       return r < 0.58 ? 'sun' : r < 0.82 ? 'cloud' : 'rain';
     },
+    season() { return { name: 'Лето', color: '#85b457' }; },   // зимы и осени в игре нет
     raining() { return this.weather() === 'rain'; },
 
     weekday(day = G.state.vars.day) { return (day - 1) % 7 < 5; },   // Пн–Пт
@@ -13711,11 +13631,8 @@ G.roofs = {
   clampIn(r, x, y) { return [Math.max(r.x + 5, Math.min(r.x + r.w - 5, x)), Math.max(r.y + 6, Math.min(r.y + r.h - 2, y))]; },
   climb(world, b) {
     const p = world.player, r = this.of(world.map, b), v = G.actors.DIRV[p.dir];
-    const wall=!!G.state.flags.adv_wallrun;
-    if(wall&&G.state.vars.chakra<8){world.showToast('Для бега по стене нужно 8 чакры');return;}
     const [x, y] = this.clampIn(r, p.x + v[0] * 20, p.dir === 'up' ? r.y + r.h - 4 : p.y + v[1] * 20 - (p.y - (r.y + r.h)) * 0.5);
     this.startJump(p, x, y, true);
-    if(wall){G.state.vars.chakra-=8;p.jump.wall=true;p.jump.dur=0.85;p.jump.h=0;}
     if (!G.state.flags.tip_roofs) { G.state.flags.tip_roofs = 1; world.showToast('На крыше: A — прыжок или спуск'); }
   },
   startJump(p, x1, y1, toRoof) {
@@ -14353,494 +14270,6 @@ end
 })();
 
 
-// ===== world/frontier.js =====
-// Новые карты. Переходы — видимые указатели, лестницы и двери с тем же действием A, что и в деревне.
-G.frontier = (() => {
-  const T=16, ID=G.tiles.ID;
-  const titles={forest:'Лесная тропа',river:'Старая переправа',outpost:'Пограничный пост',tower:'Дом экспедиций',tower2:'Дом экспедиций: второй этаж',balcony:'Балкон печатей',cellar:'Архив под домом',cave:'Пещера под корнями',parkour:'Крыши учебного квартала'};
-  function obj(m,kind,x,y,id,title,label='Осмотреть',extra={}){
-    return m.addObject(kind,x*T+8,y*T+14,{box:null,adv:id,title,actionLabel:label,...extra});
-  }
-  const transitionCache={};
-  function transition(type){
-    if(transitionCache[type])return transitionCache[type];
-    const img=G.gfx.canvas(22,26),c=img.getContext('2d');
-    if(type==='door'){
-      c.fillStyle='#543c2c';c.fillRect(1,0,20,26);c.fillStyle='#b18d58';c.fillRect(3,2,16,24);c.fillStyle='#36565b';c.fillRect(5,4,12,19);
-      c.fillStyle='#d7bc80';c.fillRect(10,4,1,19);c.fillRect(5,11,12,1);c.fillRect(13,16,2,2);c.fillStyle='#e7cf9b';c.fillRect(2,24,18,2);
-    }else{
-      c.fillStyle='#463d36';c.fillRect(1,2,20,24);for(let i=0;i<5;i++){const y=type==='up'?22-i*4:6+i*4,w=18-i*2;c.fillStyle=i%2?'#a78d68':'#c9b38b';c.fillRect(11-w/2,y,w,4);c.fillStyle='#e7d5ad';c.fillRect(11-w/2,y,w,1);}
-      c.fillStyle='#d4b66d';c.fillRect(0,3,2,22);c.fillRect(20,3,2,22);
-    }
-    return transitionCache[type]={img,w:22,h:26,ox:-11,oy:-24};
-  }
-  function portal(m,x,y,to,title){const from=m.id.slice(4),inner=['tower','tower2','balcony','cellar'].includes(from),type=({'tower:tower2':'up','tower2:tower':'down','cellar:balcony':'up'})[from+':'+to]||'door';return obj(m,'sign',x,y,'travel:'+to,title,'Перейти',inner||to==='tower'?transition(type):{});}
-  function base(key,w,h,outdoor,floor){
-    const m=new G.WorldMap('adv:'+key,w,h,{name:titles[key],outdoor,bg:outdoor?'#283a2b':'#17141e'});
-    m.adv=true;m.spawn={x:4*T+8,y:(h-4)*T+12,dir:'up'};
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++)m.set(x,y,x===0||y<(!outdoor?2:1)||x===w-1||y===h-1?outdoor?ID.CLIFF:ID.IWALL:floor);
-    m.districts.push({x:0,y:0,w,h,label:titles[key]});
-    return m;
-  }
-  function path(m,x0,y0,x1,y1,t=ID.PATH){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)m.set(x,y,t);}
-  function scenery(m,key){
-    const rnd=G.util.rng(key==='forest'?817:892),skip=m.objects.map(o=>({x:o.x,y:o.y}));
-    for(let y=3;y<m.h-3;y+=3)for(let x=3;x<m.w-2;x+=3){
-      const tx=x+rnd.int(-1,1),ty=y+rnd.int(-1,1),px=tx*T+rnd.int(4,12),py=ty*T+14;
-      if(m.get(tx,ty)!==ID.GRASS||m.block[ty*m.w+tx]||skip.some(o=>Math.hypot(o.x-px,o.y-py)<44)||!rnd.chance(.8))continue;
-      const roll=rnd(),kind=roll<.48?'tree':roll<.65?'pine':roll<.78?'maple':roll<.88?'fern':'bush';
-      if(m.objects.some(o=>o.box&&Math.hypot(o.x-px,o.y-py)<27))continue;
-      m.addObject(kind,px,py);
-    }
-  }
-  function make(key){
-    let m;
-    if(key==='forest'){
-      m=base(key,40,30,true,ID.GRASS);
-      path(m,3,13,36,15);path(m,3,14,5,26);path(m,8,7,10,14);path(m,28,6,30,15);
-      portal(m,4,25,'konoha','Вернуться в Коноху');portal(m,36,14,'river','К старой переправе');portal(m,30,6,'outpost','К пограничному посту');
-      obj(m,'scroll',13,14,'tracks','Следы потерянной повозки','Изучить');
-      obj(m,'crate',18,13,'prepare','Запасы перед дозорным','Подготовить');
-      obj(m,'parcel',26,13,'cargo','Дозорный и потерянный груз','Решить');
-      obj(m,'bush',12,20,'vines','Корни скрывают узкую щель','Срезать');path(m,11,15,13,21);
-      obj(m,'flowerpot',9,22,'season','Сезонная поляна','Собрать');path(m,7,21,11,23);
-      obj(m,'sign',29,7,'signal','Сигнальный столб границы','Проверить');
-      obj(m,'chest',7,10,'clan_cache','Тайник следопытов','Открыть');path(m,6,9,10,11);
-      scenery(m,key);
-    }else if(key==='river'){
-      m=base(key,40,28,true,ID.GRASS);
-      path(m,2,13,37,16);path(m,8,9,11,16);path(m,24,10,27,22);
-      for(let y=1;y<m.h-1;y++)path(m,16,y,21,y,ID.WATER);
-      portal(m,3,15,'forest','Назад на лесную тропу');portal(m,36,15,'outpost','К пограничному посту');
-      obj(m,'sign',10,11,'survey','Следы паводка','Оценить');obj(m,'crate',15,14,'bridge','Столбы страховки','Натянуть');
-      obj(m,'laundry',25,12,'rescue','Люди на затопленном берегу','Спасти');
-      obj(m,'parcel',27,20,'escort','Обоз у переправы','Защитить');
-      path(m,13,23,24,24,ID.PLANKS);path(m,13,16,15,24);path(m,22,16,24,24);
-      obj(m,'sign',13,22,'detour','Нижний мост: безопасный длинный обход','Осмотреть');scenery(m,key);
-    }else if(key==='outpost'){
-      m=base(key,34,26,true,ID.GRASS);path(m,3,5,30,8,ID.COBBLE);path(m,4,6,7,22,ID.PATH);path(m,6,17,28,20,ID.DIRT);path(m,23,6,26,19,ID.PATH);
-      portal(m,4,22,'forest','На лесную тропу');portal(m,29,18,'river','К переправе');portal(m,15,6,'tower','В дом экспедиций');
-      const tpl=G.BUILDINGS.house_t,spr=G.buildgfx.make('house_t',tpl,618);
-      m.addBuilding({id:'adv-house',tplId:'house_t',tplDef:tpl,tx:14,ty:2,tw:tpl.w,th:tpl.h,spr,name:'Дом экспедиций',door:{tx:15,ty:6},interior:{id:'adv:tower'}});
-      for(let y=2;y<=6;y++)for(let x=14;x<=17;x++)if(x!==15||y!==6)m.setBlock(x,y);
-      obj(m,'village_board',6,6,'team','Командный стенд','Миссии');obj(m,'dummy',22,18,'trial','Испытание для генинов','Испытать');
-      obj(m,'kitchen',10,7,'recipes','Полевая кухня','Рецепты');
-      for(let x=11;x<26;x+=3)m.addObject('fence',x*T,4*T+14,{box:null});
-      m.addObject('stall',18*T,9*T,{box:null});
-      scenery(m,key);
-    }else if(key==='parkour'){
-      m=base(key,48,20,true,ID.GRAVEL);m._roofs=[];
-      for(let i=0;i<6;i++){
-        const x=48+i*112,y=110+(i%2?10:0),w=80,h=64;
-        const b={tx:x/T,ty:(y+30)/T,tw:w/T,th:4,sortY:y+h+30};m._roofs.push({x,y,w,h,b});
-        for(let ty=Math.floor((y+30)/T);ty<Math.ceil((y+h+24)/T);ty++)for(let tx=x/T;tx<(x+w)/T;tx++)m.setBlock(tx,ty);
-        const img=G.gfx.canvas(w,h+32),c=img.getContext('2d');
-        c.fillStyle='#b99766';c.fillRect(4,10,w-8,h+22);c.fillStyle='#624936';c.fillRect(3,h,w-6,3);
-        for(let xx=12;xx<w-10;xx+=24){c.fillStyle='#e7d3a5';c.fillRect(xx-2,h+7,15,19);c.fillStyle='#4a6972';c.fillRect(xx,h+9,11,14);c.fillStyle='#ae9872';c.fillRect(xx+5,h+9,1,14);c.fillRect(xx,h+15,11,1);}
-        c.fillStyle=['#5f7a78','#a56a4f','#667d66'][i%3];c.fillRect(0,0,w,h);
-        for(let a=0;a<h;a+=8){c.fillStyle=a%16?'#79938a':'#476361';c.fillRect(0,a,w,1);for(let xx=(a%16?0:8);xx<w;xx+=16){c.fillStyle='#3f5959';c.fillRect(xx,a,1,8);}}
-        c.fillStyle='#d5b77d';c.fillRect(0,0,w,3);c.fillRect(0,h-3,w,3);
-        m.objects.push({kind:'course_roof',x,y,ox:0,oy:0,w,h:h+32,img,box:null,sortY:y+h+32});
-      }
-      m.spawn={x:72,y:144,dir:'right'};portal(m,3,17,'konoha','Выход из учебного квартала');
-    }else if(['tower','tower2','balcony','cellar','cave'].includes(key)){
-      m=base(key,16,12,key==='balcony',key==='cave'?ID.MOSS:key==='cellar'?ID.DARKSTONE:ID.FLOOR);
-      if(key==='balcony')m.bg='#9fb8bf';
-      m.spawn={x:4*T+8,y:8*T+12,dir:'up'};
-      if(key==='tower'){
-        portal(m,4,9,'outpost','На пограничный пост');portal(m,12,3,'tower2','Лестница на второй этаж');obj(m,'shelf',3,3,'archive_start','Карта закрытого архива','Задание');obj(m,'table',9,6,'shogi','Доска мини-шоги','Играть');
-        m.addObject('window',5*T,25,{box:null});m.addObject('plant',13*T,8*T,{box:null});m.addObject('bonsai',2*T,7*T,{box:null});
-        path(m,7,5,10,7,ID.RUG);m.addObject('cushion',8*T,7*T,{box:null});m.addObject('cushion',10*T,7*T,{box:null});m.addObject('bookpile',5*T,4*T,{box:null});
-      }else if(key==='tower2'){
-        portal(m,12,8,'tower','Лестница вниз');portal(m,8,3,'balcony','Дверь на балкон');m.addObject('futon',10*T,6*T,{box:null});m.addObject('desk',3*T,4*T,{box:null});
-        path(m,9,4,12,6,ID.TATAMI);m.addObject('window',4*T,25,{box:null});m.addObject('window',11*T,25,{box:null});m.addObject('wardrobe',13*T,3*T,{box:null});m.addObject('family_photo',5*T,28,{box:null});m.addObject('bookpile',4*T,5*T,{box:null});m.addObject('cushion',3*T,5*T,{box:null});m.addObject('herb_bundle',13*T,7*T,{box:null});
-      }else if(key==='balcony'){
-        portal(m,4,9,'tower2','Вернуться на второй этаж');obj(m,'emblem',8,3,'seal','Барьер трёх печатей','Печати');obj(m,'chest',12,5,'cellar_door','Скрытый спуск в архив','Спуститься');
-        for(let x=1;x<15;x++){m.addObject('fence',x*T,11*T-2,{box:null});m.addObject('fence',x*T,2*T+2,{box:null});}
-        m.addObject('planter',2*T,4*T,{box:null});m.addObject('planter',13*T,8*T,{box:null});m.addObject('bench',6*T,8*T,{box:null});
-      }else if(key==='cellar'){
-        portal(m,4,9,'balcony','Подняться на балкон');obj(m,'scroll',10,5,'guardian','Хранитель архива','Говорить');m.addObject('shelf',12*T,3*T,{box:null});m.addObject('scroll',8*T,29,{box:null});
-        for(const x of [2,6,9,13])m.addObject('shelf',x*T,3*T,{box:null});m.addObject('bigdesk',7*T,7*T,{box:null});m.addObject('bookpile',7*T,7*T,{box:null});m.addObject('andon',2*T,8*T,{box:null});m.addObject('andon',13*T,8*T,{box:null});
-        m.npcs.push(G.world.makeNpc({id:'chunin',name:'Хранитель архива',x:10*T+8,y:5*T+14,dir:'down',talk:['Я храню знания прежних дозорных.']}));
-      }else{
-        portal(m,4,9,'forest','Вернуться из пещеры');obj(m,'chest',10,4,'cave_cache','Сундук под корнями','Открыть');
-        for(let x=2;x<14;x+=3)m.addObject('rock',x*T,3*T,{box:null});
-      }
-    }else return null;
-    for(const b of G.ADVENTURES.books)if(b.map===m.id)obj(m,'scroll',b.x,b.y,'book:'+b.id,b.title,'Читать');
-    m.finalize();return m;
-  }
-  function patch(m){
-    if(!m.adv)return;
-    if(m.id==='adv:river'){
-      const built=!!G.state.flags.adv_bridge;if(m._bridge!==built){m._bridge=built;path(m,16,14,21,15,built?ID.PLANKS:ID.WATER);m.finalize();delete m._walk;delete m._wk;delete m._ov;}
-    }
-    if(m.id==='adv:balcony'){const o=m.objects.find(o=>o.adv==='cellar_door');if(o&&G.state.flags.adv_seal_open&&!o._open){Object.assign(o,transition('down'));o._open=true;m.finalize();}else if(o&&!G.state.flags.adv_seal_open&&o._open){const spr=G.tiles.object('chest');Object.assign(o,{img:spr.img,w:spr.w,h:spr.h,ox:spr.ox,oy:spr.oy,_open:false});m.finalize();}}
-  }
-  const get=G.world.get.bind(G.world);
-  G.world.get=function(id){if(String(id).startsWith('adv:')){const m=this.maps[id]||(this.maps[id]=make(id.slice(4)));if(m){patch(m);return m;}return this.konoha();}return get(id);};
-  const pop=G.world.populateKonoha.bind(G.world);
-  G.world.populateKonoha=function(m){
-    pop(m);
-    for(const [tpl,id,title,to,dx,dy]of [['academy','hub','Доска экспедиций',null,3,8],['gate','travel:forest','Тропа за воротами','forest',2,6]]){
-      const b=m.buildings.find(b=>b.tplId===tpl)||m.buildings.find(b=>b.tplId==='academy');
-      const spot=this.freeTile(m,(b?.tx||78)+dx,(b?.ty||45)+dy);if(spot)obj(m,'village_board',...spot,id,title,to?'Перейти':'Приключения');
-    }
-  };
-  return {make,patch,titles,obj};
-})();
-
-
-// ===== systems/adventures.js =====
-// Состояние дополнения хранится в числовых vars/flags: старые сохранения остаются совместимыми.
-G.adventure = (() => {
-  const D=G.ADVENTURES, V=()=>G.state.vars, F=()=>G.state.flags;
-  const wld=()=>G.scenes.stack.find(s=>s.name==='world');
-  function save(){const w=wld();if(w)w.savePos();if(G.state.started)G.storage.save(G.state);}
-  function say(text,then){G.dialog.say((Array.isArray(text)?text:[text]).map(t=>typeof t==='string'?{text:t}:t),{bottom:24,onEnd:then});}
-  function choose(title,text,rows){G.scenes.push(G.scenes.make('pick',{title,text,options:rows.map(r=>({label:r.label,sub:r.sub,desc:r.desc,off:r.off}))},i=>{if(i>=0&&!rows[i].off)rows[i].act();}));}
-  function step(id,key){return G.quests.curStep(id)?.id===key&&G.quests.step(id,key);}
-  function once(key,fn){if(F()[key])return false;F()[key]=1;fn();return true;}
-  function missing(need){return Object.entries(need).filter(([id,n])=>G.game.count(id)<n).map(([id,n])=>G.ITEMS[id].name+' '+G.game.count(id)+'/'+n).join(', ');}
-  function spend(need){if(missing(need))return false;for(const [id,n]of Object.entries(need))G.game.take(id,n);return true;}
-  function trust(id,n){V()['adv_clan_'+id]=Math.max(0,Math.min(10,(V()['adv_clan_'+id]||0)+n));unlockClan(id);}
-  function unlockClan(id){
-    if((V()['adv_clan_'+id]||0)<6)return;
-    F()['adv_clan_'+id]=1;
-    if(id==='yamanaka')F().adv_recipe_tea=1;
-    if(id==='akimichi')F().adv_recipe_onigiri=1;
-  }
-  function active(id){if(!G.quests.active(id))return false;return true;}
-  function start(id){
-    if(id.startsWith('adv_genin')&&!F().game_clear)return false;
-    const n=Number(id.slice(-1));if(id.startsWith('adv_genin')&&n>1&&!G.quests.done('adv_genin'+(n-1)))return false;
-    const ok=G.quests.start(id);if(ok){G.quests.track(id);save();}return ok;
-  }
-  function report(id){
-    if(id.startsWith('adv_genin')&&wld()?.map.id!=='adv:outpost')return false;
-    if(!step(id,'report'))return false;
-    if(id==='adv_cargo'){F().adv_service=1;trust('yamanaka',3);trust('nara',F().adv_cargo_peace?4:2);}
-    if(id==='adv_rescue'){F().adv_service=1;trust('hyuga',4);trust('inuzuka',3);F().adv_recipe_onigiri=1;}
-    if(id==='adv_archive'){trust('aburame',3);F().tech_doton=1;}
-    if(id==='adv_genin3')F().adv_chunin_entry=1;
-    save();return true;
-  }
-  function missionMenu(teamOnly=false){
-    const ids=teamOnly?['adv_genin1','adv_genin2','adv_genin3']:['adv_cargo','adv_rescue','adv_archive','adv_dispute'];
-    choose(teamOnly?'КОМАНДНЫЕ МИССИИ':'ДОСКА ЭКСПЕДИЦИЙ',teamOnly?teamText():'Разведка, подготовка, решение и отчёт. Выбор влияет на доверие.',ids.map(id=>{
-      const q=G.quests.state(id),d=G.QUESTS[id],cur=G.quests.curStep(id),n=Number(id.slice(-1));
-      return {label:d.title,sub:q?.st==='done'?'Готово':cur?.id==='report'?'Отчёт':q?'В работе':'Новое',desc:cur?.text||d.desc,
-        off:q?.st==='done'?'Задание завершено':teamOnly&&!F().game_clear?'Откроется после сюжетного выпуска':teamOnly&&n>1&&!G.quests.done('adv_genin'+(n-1))?'Сначала заверши предыдущую миссию':null,
-        act:()=>{if(!q){start(id);say(d.desc);return;}if(cur?.id==='report'){if(!report(id)){say('Доложи команде на пограничном посту.');return;}say(id==='adv_genin3'?'Команда получила направление на экзамен чунина. Три первые миссии генинов завершены.':'Отчёт принят. Награда и изменения отношений сохранены.');return;}
-          G.quests.track(id);if(id==='adv_dispute')dispute();else say(cur.text+'\nПуть: меню «Приключения» — «Территории».');}
-      };
-    }));
-  }
-  function teamNumber(){return [7,8,10].find(n=>F()['team_'+n])||G.friends.team();}
-  function teamIds(){return {7:['naruto','sasuke','sakura'],8:['hinata','kiba','shino'],10:['shikamaru','choji','ino']}[teamNumber()];}
-  function teamText(){const team=teamNumber();return 'Команда '+team+'. '+({7:'Наруто, Саске и Сакура',8:'Хината, Киба и Шино',10:'Шикамару, Чоджи и Ино'}[team])+'. '+(F().adv_chunin_entry?'Допуск к экзамену получен.':'Три миссии после выпуска.');}
-  function travel(key,world=wld()){
-    if(!world)return false;
-    if(key!=='konoha'&&(!G.hero.ready()||!F().enrolled)){say('Сначала заверши вступительный тест у Ируки. Затем тебе разрешат самостоятельные вылазки.');return false;}
-    if(key==='cellar'&&!F().adv_seal_open){say('Спуск закрыт барьером. Письмо на втором этаже подскажет порядок печатей.');return false;}
-    if(key==='cave'&&!F().adv_vines){say('Вход скрывают корни на лесной тропе. Их можно срезать кунаем.');return false;}
-    if(key==='parkour'){courseMenu();return true;}
-    if(world._course)world._course=null;
-    G.game.advance(10);
-    const pos=key==='konoha'?G.world.outsideOf(G.world.konoha().landmarks.academy||G.world.heroHome()):{map:'adv:'+key,entry:true};
-    if(key!=='konoha'&&!G.frontier.titles[key])return false;
-    world.goTo(pos);return true;
-  }
-  function territories(){
-    choose('ТЕРРИТОРИИ',season().name+'. '+season().text,[...['forest','river','outpost','tower'].map(key=>({label:G.frontier.titles[key],desc:{forest:'Следы, дозорный, тайный проход и сезонная поляна.',river:'Переправа, спасение и сопровождение обоза.',outpost:'Командные миссии, полевая кухня и испытание.',tower:'Два этажа, балкон и запечатанный подвал.'}[key],act:()=>travel(key)})),{label:'Вернуться в Коноху',act:()=>travel('konoha')}]);
-  }
-  function menu(){
-    if(!G.hero.ready()||!F().enrolled){say('Сначала заверши вступительный тест у Ируки. Доска экспедиций станет доступна после зачисления.');return;}
-    choose('ДОРОГИ ЛИСТА',season().name+' · '+(F().game_clear?'Жизнь генина':'Вылазки учеников'),[
-      {label:'Миссии и отчёты',desc:'Четыре истории с выбором и последствиями.',act:()=>missionMenu()},
-      {label:'Территории',act:territories},
-      {label:'Друзья и встречи',act:friendsMenu},
-      {label:'Доверие кланов',act:clansMenu},
-      {label:'Выбрать наставника',act:mentorsMenu},
-      {label:'Паркур и погоня',act:courseMenu},
-      {label:'Настроить техники',act:techMenu},
-      {label:'Архив и рецепты',act:libraryMenu},
-      {label:'Миссии после выпуска',desc:teamText(),act:()=>missionMenu(true)},
-      {label:'Как играть',act:()=>say(['У новых указателей, лестниц, следов и предметов нажимай A. Указатель над предметом отмечает доступное действие.','Задания записаны в обычном журнале. Кнопка «Цель» ведёт к нужному переходу между новыми картами.','На крышах двигайся к соседнему дому: на краю герой перепрыгнет зазор. Погоня и испытание считают время только в мире.','Дымовая бомба, проволока и кунай полезны вне боя. Каждый путь и нужные припасы указаны перед выбором.'])},
-    ]);
-  }
-  function prepare(kind){
-    if(!['talk','smoke','lure','fight'].includes(kind))return false;
-    if(G.quests.curStep('adv_cargo')?.id!=='prepare')return false;
-    if(kind==='smoke'&&!spend({smoke_bomb:1}))return false;
-    if(kind==='lure'&&!spend({kunai:1}))return false;
-    V().adv_approach={talk:1,smoke:2,lure:3,fight:4}[kind]||1;
-    F().adv_distracted=kind==='smoke'||kind==='lure'?1:0;
-    step('adv_cargo','prepare');save();return true;
-  }
-  function cargo(method,world=wld()){
-    if(G.quests.curStep('adv_cargo')?.id!=='cargo')return false;
-    if(method==='peace'&&(V().adv_approach!==1&&!(F().adv_clan_aburame)))return false;
-    if(method==='quiet'&&!F().adv_distracted&&!F().adv_clan_aburame)return false;
-    const finish=peace=>{if(!step('adv_cargo','cargo'))return;F().adv_cargo_peace=peace?1:0;save();say(peace?'Дозорный сверяет печать на накладной и возвращает груз. Вы договорились.':'Груз возвращён. Осталось доложить на доске экспедиций.');};
-    if(method==='fight'){fight('adv_guard','forest',res=>{if(res.win)finish(false);else say('Дозорный удержал груз. Можно подготовиться и попробовать снова.');});return true;}
-    finish(method==='peace');return true;
-  }
-  function fight(enemy,terrain,cb){const world=wld();if(!world)return;const teamMission=['adv_genin1','adv_genin2','adv_genin3'].some(id=>G.quests.active(id));G.flow.battle({enemy,mode:'ko',terrain,advanced:true,allies:teamMission?teamIds():null,onEnd:res=>{cb(res);save();}},world);}
-  function bridge(){
-    if(G.quests.curStep('adv_rescue')?.id!=='bridge')return false;
-    if(!spend({wire:1}))return false;
-    F().adv_bridge=1;step('adv_rescue','bridge');G.frontier.patch(G.world.get('adv:river'));save();return true;
-  }
-  function rescue(order){
-    if(!['people','cargo'].includes(order))return false;
-    if(G.quests.curStep('adv_rescue')?.id!=='people'||!F().adv_bridge)return false;
-    V().adv_rescue_order=order==='people'?1:2;
-    if(order==='people'){G.friends.add('hinata',2);trust('hyuga',1);}
-    else {G.game.earn(35);trust('hyuga',-1);}
-    step('adv_rescue','people');save();return true;
-  }
-  function readBook(id){
-    const b=D.books.find(b=>b.id===id);if(!b)return false;
-    once('adv_book_'+id,()=>{G.train.addXp('know',2);G.game.note('Архив: '+b.title);});
-    if(id==='seal')step('adv_archive','letter');
-    if(id==='clans')F().adv_recipe_rice=1;
-    save();say(b.text);return true;
-  }
-  function sealInput(el){
-    if(G.quests.curStep('adv_archive')?.id!=='seal')return false;
-    const seq=['water','wind','fire'],i=V().adv_seal_progress||0;
-    if(el!==seq[i]){V().adv_seal_progress=0;return false;}
-    V().adv_seal_progress=i+1;
-    if(i===2){F().adv_seal_open=1;step('adv_archive','seal');save();}
-    return true;
-  }
-  function sealMenu(){
-    if(F().adv_seal_open)return say('Три печати светятся. Спуск в архив открыт справа.');
-    if(G.quests.curStep('adv_archive')?.id!=='seal')return say('Здесь три знака. Сначала прочитай письмо на втором этаже и возьми задание об архиве.');
-    choose('ТРИ ПЕЧАТИ','Верных печатей: '+(V().adv_seal_progress||0)+'/3. Подсказка — в письме.',[['water','Вода'],['fire','Огонь'],['wind','Ветер']].map(([id,label])=>({label,act:()=>{const ok=sealInput(id);if(F().adv_seal_open)say('Барьер погас. Открылась лестница в архив.');else if(!ok)say('Печати сбросились. Вспомни порядок из письма.',sealMenu);else sealMenu();}})));
-  }
-  function guardian(peace){
-    if(G.quests.curStep('adv_archive')?.id!=='guardian')return false;
-    if(peace){if(!F().adv_book_clans||!F().adv_book_genin)return false;F().adv_guardian_peace=1;step('adv_archive','guardian');save();say('Ты цитируешь соглашение кланов и клятву команды. Хранитель принимает твой ответ и опускает оружие.');}
-    else fight('adv_keeper','field',res=>{if(res.win){step('adv_archive','guardian');save();say('Три стойки пройдены. Хранитель доверяет тебе архив.');}else say('Хранитель предлагает потренироваться и вернуться. Архив останется открыт.');});
-    return true;
-  }
-  function teamAction(){
-    if(!F().game_clear)return say('Командный стенд предназначен для выпускников. Пока доступны ученические экспедиции.');
-    const id=['adv_genin1','adv_genin2','adv_genin3'].find(id=>G.quests.active(id));
-    if(id&&G.quests.curStep(id)?.id==='brief'){
-      step(id,'brief');if(F().adv_clan_hyuga)V().chakra=Math.min(100,V().chakra+10);save();
-      return say(teamText()+'\n'+G.quests.curStep(id).text);
-    }
-    missionMenu(true);
-  }
-  function mentorsMenu(){
-    choose('НАСТАВНИК','Занятие: 35 минут и 8 энергии. Две успешные тренировки открывают особый навык.',D.mentors.map((m,i)=>({label:m.name,sub:(V()['adv_lessons_'+m.id]||0)+'/2',desc:m.lesson+(F()[m.flag]?' · навык изучен':''),act:()=>choose(m.name.toUpperCase(),m.lesson,[
-      {label:'Стать учеником',act:()=>{V().adv_mentor=i+1;save();say(m.name+' будет вести твою подготовку. Другие программы можно выбрать позже.');}},
-      {label:'Пройти занятие',off:V().adv_mentor!==i+1?'Сначала выбери этого наставника':V().energy<8?'Нужно 8 энергии':G.state.daily['adv_lesson_'+m.id]?'Сегодня занятие уже пройдено':null,act:()=>G.scenes.push(G.scenes.make('train',m.mg,{title:m.lesson,n:4},score=>mentorResult(i,score)))},
-    ])})));
-  }
-  function mentorResult(i,score){
-    if(!Number.isFinite(score)||score<0||score>1)return false;
-    const m=D.mentors[i];if(!m||V().adv_mentor!==i+1||G.state.daily['adv_lesson_'+m.id])return false;
-    G.game.advance(35);V().energy=Math.max(0,V().energy-8);
-    if(score<.5){save();say('Попытка завершена. Для зачёта нужна половина верных действий. Можно повторить занятие.');return false;}
-    G.state.daily['adv_lesson_'+m.id]=1;V()['adv_lessons_'+m.id]=(V()['adv_lessons_'+m.id]||0)+1;G.train.addXp(m.stat,4);
-    const learned=V()['adv_lessons_'+m.id]>=2;if(learned){F()[m.flag]=1;if(m.id==='iruka')F().roofs=1;if(m.tech)F()['tech_'+m.tech]=1;if(m.grant)F()[m.grant]=1;}
-    save();say(learned?'Программа освоена: '+m.lesson+'. Приём доступен в бою.':'Занятие зачтено. Ещё одна тренировка в другой день — и навык твой.');return true;
-  }
-  function clansMenu(){choose('КЛАНЫ','Доверие 6/10 открывает семейный навык. Без выполненной экспедиции подарки дают максимум 4.',D.clans.map(c=>({label:c.name,sub:(V()['adv_clan_'+c.id]||0)+'/10',desc:c.perk,act:()=>choose('КЛАН '+c.name.toUpperCase(),c.perk,[
-    {label:'Передать подарок',desc:G.ITEMS[c.gift].name+' · доверие +1',off:!G.game.count(c.gift)?'Нужно: '+G.ITEMS[c.gift].name:G.state.daily['adv_gift_'+c.id]?'Один подарок клану в день':!F().adv_service&&(V()['adv_clan_'+c.id]||0)>=4?'Сначала помоги в экспедиции':null,act:()=>{if(!spend({[c.gift]:1}))return;G.state.daily['adv_gift_'+c.id]=1;trust(c.id,1);save();say('Семья благодарит за подарок. Доверие: '+V()['adv_clan_'+c.id]+'/10.');}},
-    {label:'Узнать о помощи',act:()=>say(['Нара и Яманака ценят мирное возвращение потерянного груза. Хьюга и Инузука ждут помощи на переправе. Абураме интересуется знаниями закрытого архива.','После первой завершённой экспедиции доверие можно поднять подарками до семейного навыка.'])},
-  ])})));}
-  function season(day=V().day){return D.seasons[Math.floor((day-1)/28)%4];}
-  function syncSeason(m){if(!m.outdoor)return;const s=season();if(m._advSeason!==s.name){m._advSeason=s.name;m.chunks.clear();}}
-  function gather(){if(G.state.daily.adv_gather)return false;G.state.daily.adv_gather=1;G.game.give(season().gather,2);G.game.advance(5);save();return true;}
-  function friendsMenu(){choose('ДРУЗЬЯ И ВСТРЕЧИ',appointmentText(),[
-    {label:'Назначить встречу',act:()=>choose('С КЕМ ВСТРЕТИТЬСЯ','Завтра, на 90 минут. Встреча видна в календаре.',Object.keys(G.FRIENDS).map((id,i)=>({label:G.chars.nameOf(id),act:()=>choose('МЕСТО И ВРЕМЯ','Выбери удобное место.',[['teahouse','Чайная, 16:00',960],['river','Переправа, 17:00',1020],['outpost','Пост, 18:00',1080]].map(([place,label,min])=>({label,act:()=>{scheduleMeeting(id,place,V().day+1,min);say('Встреча назначена: '+appointmentText());}})))})))},
-    {label:'Текущая встреча',desc:appointmentText(),act:()=>say(appointmentText())},
-    {label:'Отменить встречу',off:!V().adv_meet_day?'Встреча не назначена':null,act:()=>{clearMeeting();save();say('Встреча отменена. Можно выбрать новое время.');}},
-    {label:'Дни рождения',act:birthdaysMenu},
-    {label:'Помирить Ино и Сакуру',act:()=>{if(!G.quests.state('adv_dispute'))start('adv_dispute');dispute();}},
-    {label:'Партия мини-шоги',desc:'В доме экспедиций есть игровая доска. Короткая версия 3 на 4 клетки.',act:()=>{const w=wld();if(w?.map.id==='adv:tower')G.scenes.push(G.scenes.make('shogi'));else say('Доска стоит в доме экспедиций. Зайди туда через пограничный пост или меню территорий.');}},
-  ]);}
-  const friendIds=Object.keys(G.FRIENDS),places=['teahouse','river','outpost'];
-  function scheduleMeeting(id,place,day,min){if(!friendIds.includes(id)||!places.includes(place)||day<=V().day||!Number.isInteger(day)||day>9999||![960,1020,1080].includes(min))return false;V().adv_meet_friend=friendIds.indexOf(id)+1;V().adv_meet_place=places.indexOf(place)+1;V().adv_meet_day=day;V().adv_meet_min=min;F().adv_meet_attended=0;save();return true;}
-  function clearMeeting(){for(const k of ['friend','place','day','min'])V()['adv_meet_'+k]=0;F().adv_meet_attended=0;}
-  function meeting(){const v=V(),id=friendIds[v.adv_meet_friend-1],place=places[v.adv_meet_place-1];return id&&place&&v.adv_meet_day?{id,place,day:v.adv_meet_day,min:v.adv_meet_min}:null;}
-  function appointmentText(){const a=meeting();return a?'День '+a.day+', '+G.game.clock(a.min)+': '+G.chars.nameOf(a.id)+', '+({teahouse:'чайная Конохи',river:'старая переправа',outpost:'пограничный пост'}[a.place])+(F().adv_meet_attended?' · встреча состоялась':''):'Встреча пока не назначена.';}
-  function meetingNow(){const a=meeting();return a&&a.day===V().day&&V().min>=a.min&&V().min<a.min+90?a:null;}
-  function meetingPoint(a){if(a.place==='teahouse'){const b=G.world.konoha().buildings.find(b=>b.tplId==='teahouse'),p=G.world.outsideOf(b),spot=G.world.freeTile(G.world.konoha(),Math.floor(p.x/16)+2,Math.floor(p.y/16)+1);return{map:'konoha',x:spot[0]*16+8,y:spot[1]*16+12};}return {map:'adv:'+a.place,x:a.place==='river'?11*16+8:8*16+8,y:a.place==='river'?18*16+12:13*16+12};}
-  function attend(){const a=meetingNow();if(!a||F().adv_meet_attended)return false;F().adv_meet_attended=1;G.friends.add(a.id,3);G.game.mood(8);save();return true;}
-  function appointmentMenu(){const a=meetingNow();if(!a)return;attend();choose(G.chars.nameOf(a.id).toUpperCase(),'Рад тебя видеть. Чем займёмся? ',[
-    {label:'Совместная тренировка',off:G.state.daily.adv_meet_activity?'Сегодня уже позанимались':null,act:()=>{G.state.daily.adv_meet_activity=1;G.scenes.push(G.scenes.make('train',G.FRIENDS[a.id].train==='library'?'quiz':'run',{title:'Тренировка с другом',n:4},score=>{G.game.advance(25);G.train.addXp('spd',score*3);save();say('Спасибо за компанию. Увидимся!');}));}},
-    {label:'Поговорить',act:()=>say([{who:a.id,text:(G.FRIEND_LINES[a.id]?.[1]||['Хороший день для встречи.'])[0]}])},
-  ]);}
-  function birthdaysMenu(){const today=G.calendar.birthday(),days=Object.entries(G.calendar.BDAY).map(([day,id])=>({day:Number(day),id})).filter(b=>b.day>=((V().day-1)%112)+1).slice(0,4);
-    choose('ДНИ РОЖДЕНИЯ',today?'Сегодня: '+G.chars.nameOf(today):'Ближайшие праздники игрового календаря.',[
-      {label:'Приготовить сюрприз сегодня',off:!today?'Сегодня нет дня рождения':F()['adv_party_'+V().day]?'Сюрприз уже подарен':null,desc:'Любимый подарок + рис + молоко. Дружба +4.',act:()=>{if(!birthdaySurprise())return say('Нужны рис, молоко и любимый подарок именинника. Продукты продаются на рынке.');say([{who:today,text:'Ты это всё приготовил для меня? Спасибо! Я запомню этот день.'},'У чайной появился праздничный стол. Можно прийти к друзьям до конца дня.']);}},
-      ...days.map(b=>({label:'День '+b.day+': '+G.chars.nameOf(b.id),act:()=>say('Любимые подарки: '+(G.FRIENDS[b.id]?.love||[]).map(id=>G.ITEMS[id].name).join(', ')+'. Сюрприз готовится в день рождения через это меню.')})),
-    ]);
-  }
-  function birthdaySurprise(){const today=G.calendar.birthday();if(!today||F()['adv_party_'+V().day])return false;const gift=G.FRIENDS[today]?.love.find(id=>!id.startsWith('adv_')&&G.game.count(id));if(!gift)return false;const need={rice:1,milk:1};need[gift]=(need[gift]||0)+1;if(!spend(need))return false;F()['adv_party_'+V().day]=1;V().adv_party_friend=friendIds.indexOf(today)+1;V().adv_party_day=V().day;G.friends.add(today,4);G.game.advance(30);save();return true;}
-  function dispute(){
-    const s=G.quests.curStep('adv_dispute');if(!s)return say('История завершена. '+(F().adv_reconciled?'Подруги снова общаются.':'Подругам нужно время.'));
-    if(s.id==='sakura')return say([{who:'sakura',text:'Я оставила букет для больницы у чайной. Ино унесла его и даже не спросила. Мне обидно.'}],()=>{step('adv_dispute','sakura');save();dispute();});
-    if(s.id==='ino')return say([{who:'ino',text:'Ливень начался! Я отнесла букет в лавку, чтобы он не промок. А Сакура решила, будто я его украла...'}],()=>{step('adv_dispute','ino');save();dispute();});
-    choose('ПРИМИРЕНИЕ','Теперь известны обе стороны. Что предложишь?',[
-      {label:'Объяснить и отнести букет вместе',desc:'Обе подруги получают поддержку.',act:()=>resolveDispute('both')},
-      {label:'Поддержать только Сакуру',desc:'Сакура +2, Ино -1.',act:()=>resolveDispute('sakura')},
-      {label:'Поддержать только Ино',desc:'Ино +2, Сакура -1.',act:()=>resolveDispute('ino')},
-    ]);
-  }
-  function resolveDispute(choice){if(!['both','sakura','ino'].includes(choice)||!step('adv_dispute','resolve'))return false;F().adv_reconciled=choice==='both'?1:0;G.friends.add('sakura',choice==='both'?3:choice==='sakura'?2:-1);G.friends.add('ino',choice==='both'?3:choice==='ino'?2:-1);if(choice==='both')F().adv_recipe_tea=1;save();say(choice==='both'?'Сакура и Ино договариваются: сначала спрашивать, потом обижаться. Вместе вы относите букет в больницу. Ино делится рецептом чая.':'Ты высказался. Одна подруга благодарна, другая пока держится в стороне.');return true;}
-  function techProfile(id){const n=V()['adv_tech_'+id]||0;return [{name:'Обычная',ch:1,w:1,dmg:1},{name:'Экономная',ch:.75,w:1,dmg:.85},{name:'Быстрая',ch:1.2,w:.75,dmg:1}][n]||{name:'Обычная',ch:1,w:1,dmg:1};}
-  function techMenu(){choose('НАСТРОЙКА ТЕХНИК','Меняется расход чакры и темп. Настройка сохраняется.',G.TECH_ORDER.filter(id=>G.TECHS[id].el).map(id=>({label:G.TECHS[id].name,sub:techProfile(id).name,off:!G.combat.knows(id)?'Сначала изучи технику':null,act:()=>choose('ФОРМА ТЕХНИКИ',G.TECHS[id].name,[['Обычная','Исходные свойства.'],['Экономная','Чакра -25%, урон -15%.'],['Быстрая','Вес хода -25%, чакра +20%.']].map(([label,desc],n)=>({label,desc,act:()=>{V()['adv_tech_'+id]=n;save();say('Выбрана форма: '+label+'.');}})))})));}
-  function cookRecipe(id){const r=D.recipes.find(r=>r.id===id);if(!r||!F()[r.flag]||!spend(r.need))return false;G.game.give(id);G.game.advance(20);G.train.addXp('ctrl',1);save();return true;}
-  function recipeMenu(){choose('СЕМЕЙНЫЕ РЕЦЕПТЫ','Готовые блюда остаются в сумке: их можно съесть или подарить.',D.recipes.map(r=>({label:r.name,desc:Object.entries(r.need).map(([id,n])=>G.ITEMS[id].name+' x'+n).join(', '),off:!F()[r.flag]?{adv_onigiri:'Помоги на переправе или заслужи доверие Акимичи',adv_flower_tea:'Помири подруг или заслужи доверие Яманака',adv_tomato_rice:'Прочитай соглашение кланов в архиве'}[r.id]:missing(r.need)?'Нужно: '+missing(r.need):null,act:()=>{if(cookRecipe(r.id))say('Приготовлено: '+r.name+'. Блюдо в сумке.');}})));}
-  function libraryMenu(){choose('АРХИВ И РЕЦЕПТЫ','Найдено записей: '+D.books.filter(b=>F()['adv_book_'+b.id]).length+'/'+D.books.length,[
-    ...D.books.map(b=>({label:b.title,off:!F()['adv_book_'+b.id]?'Найди запись: '+G.frontier.titles[b.map.slice(4)]:null,act:()=>say(b.text)})),
-    {label:'Семейные рецепты',act:()=>{const w=wld();if(w?.map.building?.tplId==='hero_home'||w?.map.id==='adv:outpost')recipeMenu();else say('Готовить можно на домашней кухне или на пограничном посту.');}},
-  ]);}
-  function courseMenu(){choose('КРЫШИ УЧЕБНОГО КВАРТАЛА','Шесть крыш. Двигайся вправо; прыжки с края автоматические. Пауза останавливает часы.',[
-    {label:'Испытание на время',desc:'Золото до 18 с, серебро до 28 с, бронза до 45 с. Награда за первую медаль.',act:()=>startCourse(false)},
-    {label:'Погоня за посыльным',desc:'Посыльный бежит впереди. Догони его после второй отметки за 24 с.',act:()=>startCourse(true)},
-    {label:'Мои результаты',act:()=>say('Лучшее время: '+(V().adv_course_best?V().adv_course_best.toFixed(1)+' с':'нет')+'. Медаль: '+(['нет','бронза','серебро','золото'][V().adv_course_medal||0])+'. Погонь выиграно: '+(V().adv_chases||0)+'.')},
-  ]);}
-  function startCourse(chase){const w=wld();if(!w)return;F().roofs=1;w.setMap({map:'adv:parkour',x:72,y:144,dir:'right',roof:1});w.banner=null;w._course={chase,t:0,next:0,runner:{x:104,y:144,dir:'right',anim:0,moving:true,leg:0,roof:true}};w.showToast(chase?'Догони посыльного после второй отметки':'Пройди шесть золотых отметок');}
-  function courseResult(seconds,chase,won){
-    if(!won)return false;
-    if(chase){V().adv_chases=(V().adv_chases||0)+1;once('adv_chase_reward',()=>G.game.earn(60));}
-    else {V().adv_course_best=Math.min(V().adv_course_best||999,seconds);const medal=seconds<=18?3:seconds<=28?2:seconds<=45?1:0;V().adv_course_medal=Math.max(V().adv_course_medal||0,medal);if(medal)once('adv_course_reward',()=>G.game.earn(40));}
-    save();return true;
-  }
-  function courseTick(w,dt){
-    const c=w._course;if(!c||w.map.id!=='adv:parkour')return;
-    c.t+=dt;const rects=G.roofs.rects(w.map),p=w.player;
-    if(!p.roof&&!p.jump){w._course=null;say('Ты спустился на землю. Забег завершён. Начни заново через меню паркура.');return;}
-    const r=rects[c.next];if(r&&!p.jump&&p.roof&&Math.hypot(p.x-(r.x+r.w/2),p.y-(r.y+r.h/2))<28)c.next++;
-    if(c.chase){const a=c.runner;a.anim+=dt*10;if(a.jump){const j=a.jump;j.t+=dt;const k=Math.min(1,j.t/j.dur);a.x=j.x0+(j.x1-j.x0)*k;a.y=j.y0+(j.y1-j.y0)*k;if(k===1){a.jump=null;a.roof=true;a.leg++;}}
-      else if(a.leg<5){const cur=rects[a.leg],nxt=rects[a.leg+1],edge=cur.x+cur.w-5;if(a.x<edge)a.x=Math.min(edge,a.x+50*dt);else {const target={x:nxt.x+6,y:nxt.y+nxt.h/2};G.roofs.startJump(a,target.x,target.y,true);}}
-    }
-    const caught=c.chase&&c.next>=2&&!p.jump&&!c.runner.jump&&Math.hypot(p.x-c.runner.x,p.y-c.runner.y)<22;
-    const done=c.chase?caught:c.next>=rects.length,won=done&&(!c.chase||c.t<=24),timeout=c.chase?c.t>24:c.t>60;
-    if(done||timeout){w._course=null;courseResult(c.t,c.chase,won);say(won?(c.chase?'Посыльный догнан!':'Маршрут пройден!')+' Время: '+c.t.toFixed(1)+' с.':'Время вышло. Можно повторить забег.');}
-  }
-  function probe(world){
-    const p=world.player;if(p.jump)return null;
-    const ap=world._appointment;if(ap&&Math.hypot(ap.x-p.x,ap.y-p.y)<30)return {show:true,label:'Встреча',title:G.chars.nameOf(ap.id),targetRect:{x:ap.x-8,y:ap.y-23,w:16,h:24},run:appointmentMenu};
-    if(p.roof)return null;
-    const v=G.actors.DIRV[p.dir],fx=p.x+v[0]*12,fy=p.y-3+v[1]*12;
-    const near=world.map.query({x:fx-22,y:fy-22,w:44,h:44}).filter(o=>o.adv&&Math.hypot(o.x-fx,o.y-7-fy)<21).sort((a,b)=>Math.hypot(a.x-fx,a.y-fy)-Math.hypot(b.x-fx,b.y-fy));
-    const o=near[0];if(!o)return null;
-    return {show:true,label:o.actionLabel||'Осмотреть',title:o.title,targetRect:world.map.drawRect(o),run:()=>interact(o.adv,world)};
-  }
-  function interact(id,world=wld()){
-    if(id.startsWith('travel:'))return travel(id.slice(7),world);
-    if(id.startsWith('book:'))return readBook(id.slice(5));
-    if(id==='hub')return menu();
-    if(id==='team')return teamAction();
-    if(id==='archive_start'){if(!G.quests.state('adv_archive'))start('adv_archive');return say('Старый архив закрыт. Письмо на втором этаже подскажет, как снять барьер на балконе.');}
-    if(id==='tracks'){if(!active('adv_cargo'))return say('Колеи ведут к лесному дозорному. На доске экспедиций есть поручение о пропавшем грузе.');if(step('adv_cargo','scout')){once('adv_supply',()=>{G.game.give('wire',1);G.game.give('smoke_bomb',1);G.game.give('kunai',1);});save();}return say('На колее печать торговцев. Дозорный принял повозку за контрабанду. У ящиков впереди выбери способ действий. Получены учебные припасы.');}
-    if(id==='prepare')return choose('ПОДХОД К ДОЗОРНОМУ','Каждый путь ведёт к грузу. Сначала изучи следы.',[
-      {label:'Сверить накладную и поговорить',act:()=>{if(prepare('talk'))say('Ты готов объяснить ошибку. Подойди к дозорному.');else say('Сейчас этот этап недоступен. Проверь журнал.');}},
-      ...[['smoke','Дымовая завеса','smoke_bomb'],['lure','Ложный звук кунаем','kunai']].map(([k,label,it])=>({label,desc:'Расход: '+G.ITEMS[it].name+' x1. Дозорный отвлечётся.',off:missing({[it]:1})?'Нужно: '+G.ITEMS[it].name:null,act:()=>{if(prepare(k))say('Дозорный покинул пост. Теперь можно забрать груз без боя.');}})),
-      {label:'Подготовиться к дуэли',act:()=>{if(prepare('fight'))say('Ты выбрал силовой путь. Подойди к грузу.');}},
-    ]);
-    if(id==='cargo')return choose('ДОЗОРНЫЙ','Дозорный охраняет ошибочно задержанную повозку.',[
-      {label:'Убедить по накладной',off:V().adv_approach!==1&&!F().adv_clan_aburame?'Подготовь мирный подход у ящиков':null,act:()=>{if(!cargo('peace'))say('Сначала выполни предыдущие шаги задания.');}},
-      {label:'Пройти мимо отвлечённого дозорного',off:!F().adv_distracted&&!F().adv_clan_aburame?'Нужны дымовая завеса или приманка':null,act:()=>{if(!cargo('quiet'))say('Проверь текущую цель задания.');}},
-      {label:'Вызвать на дуэль',act:()=>{if(!cargo('fight'))say('Сначала осмотри следы и подготовь подход.');}},
-    ]);
-    if(id==='survey'){if(step('adv_rescue','survey')){once('adv_rescue_wire',()=>G.game.give('wire',1));save();}return say('Люди держатся на островке, а ниже по течению застрял груз. Страховка из проволоки позволит пересечь воду. Один моток приготовлен у столбов.');}
-    if(id==='bridge')return say(bridge()?'Страховка натянута. Деревянные настилы теперь соединяют берега.':'Нужно задание о спасении, осмотр берега и один моток проволоки. Внизу есть длинный обход.');
-    if(id==='rescue')return choose('СПАСЕНИЕ','Люди в опасности, часть груза уже уплывает. Реши, что спасать первым.',[
-      {label:'Сначала вытащить людей',desc:'Доверие Хьюга и благодарность Хинаты.',act:()=>{if(rescue('people'))say('Все люди на берегу. Несколько ящиков унесло, но пост поможет с припасами.');else say('Сначала осмотри берег и подготовь страховку.');}},
-      {label:'Сначала закрепить ценный груз',desc:'+35 рё за груз. Люди выберутся позже с патрулём; доверие снизится.',act:()=>{if(rescue('cargo'))say('Груз сохранён. Людей забрал прибывший патруль, но они долго ждали помощи.');else say('Сначала подготовь переправу.');}},
-    ]);
-    if(id==='seal')return sealMenu();
-    if(id==='cellar_door')return travel('cellar',world);
-    if(id==='guardian')return choose('ХРАНИТЕЛЬ','У архива есть испытание силы и путь доверия.',[
-      {label:'Сослаться на соглашение и записи',off:!F().adv_book_clans||!F().adv_book_genin?'Прочитай соглашение в подвале и записи на посту':null,act:()=>{if(!guardian(true))say('Сначала открой архив по заданию.');}},
-      {label:'Пройти три стойки в бою',desc:'Фазы: защита, натиск, стихии. Враг запоминает повторяемые действия.',act:()=>{if(!guardian(false))say('Сейчас испытание не требуется.');}},
-    ]);
-    if(id==='vines'){
-      if(F().adv_vines)return travel('cave',world);
-      return choose('ПРОХОД ПОД КОРНЯМИ','За корнями видна пещера.',[{label:'Срезать корни кунаем',off:!G.game.count('kunai')?'Нужен кунай':null,act:()=>{if(spend({kunai:1})){F().adv_vines=1;save();say('Проход открыт. Осмотри щель ещё раз, чтобы войти.');}}}]);
-    }
-    if(id==='cave_cache'){if(once('adv_cave_cache',()=>{G.game.earn(70);G.game.give('herb_blue',2);G.train.addXp('know',3);})){save();return say('В старом сундуке: 70 рё и два лотоса. На стене вырезаны имена прежних дозорных.');}return say('Сундук пуст. Имена дозорных всё ещё видны на стене.');}
-    if(id==='clan_cache'){if(!F().adv_clan_inuzuka)return say('Следы уводят под корни. Инузука помогут найти тайник, когда доверие достигнет 6.');if(once('adv_clan_cache',()=>{G.game.give('chakra_pill',2);G.game.earn(40);})){save();return say('Следопыты нашли спрятанные припасы: две пилюли чакры и 40 рё.');}return say('Тайник уже открыт.');}
-    if(id==='season')return say(gather()?'Собрано: '+G.ITEMS[season().gather].name+' x2. '+season().text:'Сегодня на поляне уже собрали всё спелое.');
-    if(id==='signal'){if(step('adv_genin1','scout')){save();return say('Команда обнаружила обрыв сигнальной нити и восстановила связь. Вернитесь на пост.');}return say('Сигнальный столб связывает пост с Конохой.');}
-    if(id==='escort')return choose('ОХРАНА ОБОЗА','Налётчик требует плату за проход. Есть три способа.',[
-      {label:'Объяснить условия мирного прохода',desc:'Доступно после мирного возвращения груза или доверия Нара.',off:!F().adv_cargo_peace&&!F().adv_clan_nara?'Нужна репутация переговорщика':null,act:()=>escort('peace')},
-      {label:'Прикрыть обоз дымом',off:!G.game.count('smoke_bomb')?'Нужна дымовая бомба':null,act:()=>escort('smoke')},
-      {label:'Сразиться с налётчиком',act:()=>escort('fight')},
-    ]);
-    if(id==='trial'){if(G.quests.curStep('adv_genin3')?.id!=='trial')return say('Сначала получи миссию допуска у командного стенда.');return fight('adv_trial','ring',r=>{if(r.win){step('adv_genin3','trial');save();say('Испытание пройдено. Вернись к командному стенду за направлением.');}else say('Экзаменатор предлагает повторить после подготовки.');});}
-    if(id==='recipes')return recipeMenu();
-    if(id==='shogi')return G.scenes.push(G.scenes.make('shogi'));
-    if(id==='detour')return say('Нижний мост сохранился. Можно обойти реку, но для спасательной операции нужна короткая страховочная переправа.');
-  }
-  function escort(method){
-    if(!['peace','smoke','fight'].includes(method))return false;
-    if(G.quests.curStep('adv_genin2')?.id!=='escort')return false;
-    if(method==='peace'&&!F().adv_cargo_peace&&!F().adv_clan_nara)return false;
-    if(method==='smoke'&&!spend({smoke_bomb:1}))return false;
-    const done=()=>{if(step('adv_genin2','escort')){V().adv_escort_method={peace:1,smoke:2,fight:3}[method];save();say('Обоз прошёл. Команда возвращается с докладом на пост.');}};
-    if(method==='fight')fight('adv_guard','river',r=>{if(r.win)done();else say('Обоз ждёт на безопасном берегу. Можно попробовать ещё раз.');});else done();return true;
-  }
-  function update(world,dt){
-    syncSeason(world.map);G.frontier.patch(world.map);courseTick(world,dt);
-    const a=meeting(),now=meetingNow();world._appointment=null;
-    if(a&&(V().day>a.day||V().day===a.day&&V().min>=a.min+90)){G.game.note(F().adv_meet_attended?'Встреча с '+G.chars.nameOf(a.id)+' состоялась.':'Встреча с '+G.chars.nameOf(a.id)+' пропущена. Можно назначить новую.');clearMeeting();save();}
-    if(now){const p=meetingPoint(now);if(p.map===world.map.id)world._appointment={id:now.id,...p,dir:'down',anim:0,_appointment:true};}
-    if(now&&world.npcs.some(n=>n.id===now.id)){world.npcs=world.npcs.filter(n=>n.id!==now.id);world.others=[world.player,...world.npcs];}
-  }
-  function draw(ctx,world){
-    const p=world.player,m=world.map,now=world.time;
-    for(const o of m._advMarkers||(m._advMarkers=m.objects.filter(o=>o.adv)))if(Math.abs(o.x-p.x)<220&&Math.abs(o.y-p.y)<220){G.font.small.draw(ctx,o.adv.startsWith('travel:')?'>':'!',o.x,o.y-24+Math.sin(now*3),{align:'center',color:'#f4d46a',outline:'#24362e'});}
-    if(m.id==='adv:forest'&&!G.state.flags.q_adv_cargo_cargo){const x=F().adv_distracted?23*16+Math.sin(now)*8:26*16-14;G.chars.draw(ctx,'chunin',F().adv_distracted?'left':'down',F().adv_distracted?G.chars.WALK[Math.floor(now*5)%4]:0,x,13*16+12);}
-    if(m.id==='adv:river'&&!G.state.flags.q_adv_rescue_people){G.chars.draw(ctx,'villager_f','left',0,25*16+8,11*16+12);G.chars.draw(ctx,'kid_m','left',0,26*16+8,12*16+12);}
-    if(m.id==='adv:outpost'&&G.state.flags.q_adv_rescue_people){G.chars.draw(ctx,'villager_f','down',0,12*16+8,8*16+12);G.chars.draw(ctx,'kid_m','down',0,13*16+8,8*16+12);}
-    if(m.id==='adv:outpost'&&F().game_clear)teamIds().forEach((id,i)=>{G.chars.draw(ctx,id,'down',0,(9+i*2)*16+8,14*16+12);});
-    if(m.id==='konoha'&&V().adv_party_day===V().day){const b=m.buildings.find(b=>b.tplId==='teahouse'),a=G.world.outsideOf(b),id=friendIds[V().adv_party_friend-1];if(id){ctx.fillStyle='#c89559';ctx.fillRect(a.x+18,a.y+10,26,8);G.chars.draw(ctx,id,'down',0,a.x+28,a.y+3);G.font.small.draw(ctx,'С праздником!',a.x+30,a.y-27,{align:'center',color:'#f4d46a',outline:'#24362e'});}}
-    if(world._appointment){const a=world._appointment;G.chars.draw(ctx,a.id,a.dir,0,a.x,a.y);G.font.small.draw(ctx,'Встреча',a.x,a.y-30,{align:'center',color:'#f4d46a',outline:'#24362e'});}
-    const c=world._course;if(c){const rs=G.roofs.rects(m);rs.forEach((r,i)=>{ctx.strokeStyle=i<c.next?'#76b48b':'#f4d46a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(r.x+r.w/2,r.y+r.h/2,12,5,0,0,7);ctx.stroke();G.font.small.draw(ctx,String(i+1),r.x+r.w/2,r.y+r.h/2-18,{align:'center',color:'#fff2c3',outline:'#24362e'});});
-      if(c.chase){const a=c.runner,j=a.jump,lift=j?Math.sin(Math.PI*Math.min(1,j.t/j.dur))*j.h:0;G.chars.draw(ctx,'thief','right',G.chars.WALK[Math.floor(a.anim)%4],a.x,a.y-lift);}
-    }
-    if(m.outdoor&&G.storage.settings.fx!==false){const s=season(),winter=s===D.seasons[3];if(s!==D.seasons[1]){ctx.fillStyle=s.color;for(let i=0;i<20;i++){const x=world.cam.x+((i*43+now*(winter?5:12))%220),y=world.cam.y+((i*31+now*15)%270);ctx.globalAlpha=.65;ctx.fillRect(x,y,winter?1:2,1);}ctx.globalAlpha=1;}}
-  }
-  function drawHud(ctx,world){const c=world._course;if(!c)return;G.ui.panel(ctx,6,33,G.screen.W-12,24,'night');G.font.small.draw(ctx,(c.chase?'ПОГОНЯ':'ПАРКУР')+' '+c.t.toFixed(1)+' с · '+Math.min(6,c.next)+'/6',12,41,{color:'#f4d46a'});}
-  const oldVisible=G.life.visible.bind(G.life);
-  G.life.visible=function(n){const a=meetingNow(),party=V().adv_party_day===V().day&&friendIds[V().adv_party_friend-1],team=F().game_clear&&wld()?.map?.id==='adv:outpost'&&teamIds().includes(n.id);if((a&&n.id===a.id||party&&n.id===party||team)&&!n._appointment)return false;return oldVisible(n);};
-  const seasonalImages=new WeakMap(),seasonalKinds=new Set(['tree','pine','maple','ginkgo','sakura','bush','bush3','hedge','fern']);
-  function seasonalImage(o,m){const s=season(),winter=s===D.seasons[3];if(!m.outdoor||!seasonalKinds.has(o.kind)||s!==D.seasons[2]&&!winter)return o.img;let cache=seasonalImages.get(o.img);if(!cache){cache={};seasonalImages.set(o.img,cache);}if(!cache[s.name]){const img=G.gfx.canvas(o.w,o.h),c=img.getContext('2d');c.drawImage(o.img,0,0);c.globalCompositeOperation='source-atop';c.globalAlpha=winter?.65:.36;c.fillStyle=winter?'#e6ece6':'#db8b42';c.fillRect(0,0,o.w,Math.max(1,o.h-10));cache[s.name]=img;}return cache[s.name];}
-  const oldRender=G.tiles.renderTile;
-  G.tiles.renderTile=function(ctx,m,tx,ty,x,y){oldRender(ctx,m,tx,ty,x,y);if(!m.outdoor)return;const s=season(),t=m.get(tx,ty),h=G.util.hash2(tx,ty,917);if(G.tiles.GRASSY.has(t)){
-    ctx.save();if(s===D.seasons[3]){ctx.fillStyle='#dde7df';ctx.globalAlpha=.8;ctx.fillRect(x,y,16,16);ctx.globalAlpha=1;ctx.fillStyle='#b9ced2';ctx.fillRect(x+h*11,y+12,4,1);}
-    else if(s!==D.seasons[1]&&h>.55){ctx.fillStyle=s.color;for(let i=0;i<4;i++)ctx.fillRect(x+(h*17+i*7)%15,y+(h*13+i*5)%15,2,1);}ctx.restore();}};
-  const birthday=G.calendar.birthday.bind(G.calendar);G.calendar.birthday=function(day=V().day){return birthday(((day-1)%112)+1);};
-  for(const r of D.recipes)if(G.FRIENDS[r.friend])G.FRIENDS[r.friend].love.push(r.id);
-  const baseCook=G.flow.cook;G.flow.cook=(a,w)=>choose('ДОМАШНЯЯ КУХНЯ','Приготовить обычную еду или семейное блюдо в сумку.',[{label:'Обычная готовка',act:()=>baseCook(a,w)},{label:'Семейные рецепты',act:recipeMenu}]);
-  const baseResolve=G.nav.resolve.bind(G.nav);G.nav.resolve=function(t,s){if(t?.point)return {map:t.map,x:t.point[0],y:t.point[1],label:t.label||s.text,icon:'📍'};return baseResolve(t,s);};
-  const baseHop=G.nav.hop.bind(G.nav);
-  G.nav.hop=function(m,t){
-    if(!t)return null;if(m.id===t.map)return{x:t.x,y:t.y,final:true};
-    const graph={konoha:['forest'],forest:['konoha','river','outpost','cave'],river:['forest','outpost'],outpost:['forest','river','tower'],tower:['outpost','tower2'],tower2:['tower','balcony'],balcony:['tower2','cellar'],cellar:['balcony'],cave:['forest'],parkour:['konoha']};
-    const from=m.id==='konoha'?'konoha':m.id.slice(4),to=t.map==='konoha'?'konoha':t.map.startsWith('adv:')?t.map.slice(4):'konoha';
-    if((m.id==='konoha'||m.adv)&&(t.map.startsWith('adv:')||m.adv)){
-      const q=[[from]],seen=new Set([from]);for(let i=0;i<q.length;i++){const path=q[i],last=path[path.length-1];if(last===to){const next=path[1],o=m.objects.find(o=>o.adv==='travel:'+next||(next==='cellar'&&o.adv==='cellar_door')||(next==='cave'&&o.adv==='vines'));if(o)return{x:o.x,y:o.y,exit:true};break;}for(const n of graph[last]||[])if(!seen.has(n)){seen.add(n);q.push([...path,n]);}}
-    }
-    return baseHop(m,t);
-  };
-  // Цели отчёта ведут к реальной доске, даже если генератор передвинул её на свободную клетку.
-  const resolve=G.nav.resolve.bind(G.nav);G.nav.resolve=function(t,s){if(t?.point&&t.map==='konoha'){const b=G.world.konoha().objects.find(o=>o.adv==='hub');if(b)return{map:'konoha',x:b.x,y:b.y,label:s.text,icon:'📍'};}return resolve(t,s);};
-  return {menu,missionMenu,territories,travel,start,report,step,prepare,cargo,bridge,rescue,readBook,sealInput,guardian,escort,trust,mentorResult,season,gather,scheduleMeeting,meeting,meetingNow,meetingPoint,appointmentText,attend,birthdaySurprise,resolveDispute,techProfile,cookRecipe,startCourse,courseResult,probe,interact,update,draw,drawHud,seasonalImage,syncSeason,save};
-})();
-
-
 // ===== world/village_daily.js =====
 // Повседневная жизнь Конохи. Занятия используют существующих жителей; животные не блокируют проходы.
 G.villageDaily = (() => {
@@ -14932,8 +14361,7 @@ G.villageDaily = (() => {
     return role;
   }
   function roleFor(w,n,seed){
-    const hour=G.state.vars.min/60,winter=G.adventure.season().name==='Зима',d=n._daily;d.partner=null;d.lead=false;
-    if(winter)return'warm';
+    const hour=G.state.vars.min/60,d=n._daily;d.partner=null;d.lead=false;
     if(kid(n)){
       const o=partnerFor(w,n,52);
       if(o)return pair(w,n,o,seed%2?'catch':'tag');   // мяч или догонялки — вдвоём
@@ -15257,7 +14685,7 @@ G.worldMotion = (() => {
       ctx.drawImage(img,0,crown,o.w,o.h-crown,x,y+crown,o.w,o.h-crown);
       for(let row=0;row<crown;row+=step){const h=Math.min(step,crown-row),dx=wind*(1-row/crown)*(trees.has(o.kind)?1.25:.8);ctx.drawImage(img,0,row,o.w,h,x+dx,y+row,o.w,h);}
       const hour=G.state.vars.min/60;
-      if(flower&&hour>=8&&hour<18&&!G.life.raining()&&G.adventure.season().name!=='Зима'&&G.util.hash2(o.x,o.y,21)>.65){
+      if(flower&&hour>=8&&hour<18&&!G.life.raining()&&G.util.hash2(o.x,o.y,21)>.65){
         const q=t*.9+o.x,bx=o.x+Math.sin(q)*11,by=y-6+Math.sin(q*1.7)*4,wing=Math.sin(t*22)>0?3:1;
         ctx.fillStyle='#eac47d';ctx.fillRect(bx-wing,by,wing,2);ctx.fillStyle='#b5c9e0';ctx.fillRect(bx+1,by-1,wing,2);ctx.fillStyle='#705442';ctx.fillRect(bx,by,1,3);
       }
@@ -15290,7 +14718,7 @@ G.worldMotion = (() => {
   function atmosphere(ctx,w,vis){
     if(!enabled(w))return;
     const t=w.time,rain=G.life.raining(),hour=G.state.vars.min/60;
-    const night=hour>=19||hour<5,season=G.adventure.season().name;
+    const night=hour>=19||hour<5,season=G.life.season().name;
     let budget=36;
     for(const o of vis){
       if(budget<=0)break;
@@ -15504,7 +14932,7 @@ G.cartography=(()=>{
   const colors={hero:'#fff2cf',home:'#9ddb9d',quest:'#ffb65b',offer:'#ffdf73',shop:'#a8d8f0',food:'#efb18d',training:'#d7b4ec',friend:'#a4dfbd',place:'#ded3b7',target:'#ff8d6f'};
   function atlas(m){
     if(G.storage.settings.mapDetail==='simple')return m.overview();
-    const season=G.adventure?.season().name||'',key=season;
+    const season=G.life.season().name,key=season;
     if(m._atlas?.key===key)return m._atlas.image;
     const c=G.gfx.canvas(m.w*R,m.h*R,true),ctx=c.getContext('2d'),ID=G.tiles.ID;
     for(let y=0;y<m.h;y++)for(let x=0;x<m.w;x++){
@@ -15519,7 +14947,7 @@ G.cartography=(()=>{
     // Те же крыши, деревья, ограды, цветы и мостки, которые игрок видит во время прогулки.
     const objects=m.objects.slice().sort((a,b)=>(a.layer==='floor'?-1e6:a.sortY??a.y)-(b.layer==='floor'?-1e6:b.sortY??b.y));
     for(const o of objects){
-      if(o.img){const image=G.adventure?G.adventure.seasonalImage(o,m):o.img;ctx.drawImage(image,(o.x+o.ox)*R/T,(o.y+o.oy)*R/T,o.w*R/T,o.h*R/T);}
+      if(o.img){ctx.drawImage(o.img,(o.x+o.ox)*R/T,(o.y+o.oy)*R/T,o.w*R/T,o.h*R/T);}
       else if(o.anim){ctx.save();ctx.scale(R/T,R/T);G.world.drawAnim(ctx,o,0);ctx.restore();}
     }
     m._atlas={key,image:c};return c;
@@ -16054,7 +15482,6 @@ G.scenes.register('world', (pos) => {
       pl.vx = pl.vy = 0; pl.moving = false;
       pl.jump = null; pl.roof = !!(p.roof && m.outdoor && G.roofs && G.roofs.at(m, pl.x, pl.y));
       this.map = m;
-      if (G.adventure) { G.adventure.syncSeason(m); this._appointment=null; if(m.id!=='adv:parkour')this._course=null; }
       if (G.villageStories) G.villageStories.sync(m);
       // Сохранение могло остаться на месте передвинутой мебели.
       if (!pl.roof && m.blockedRect(G.actors.feet(pl))) {
@@ -16130,11 +15557,11 @@ G.scenes.register('world', (pos) => {
         else if (a === 'askname') G.scenes.push(G.scenes.make('nameinput', () => this.talk('hosp_after_name')));
         return;
       }
-      if (!m.adv && G.story && G.story.poll(this)) return;
+      if (G.story && G.story.poll(this)) return;
       if (this.goalFlash) this.goalFlash = Math.max(0, this.goalFlash - dt);
 
       if (I.pressed('menu')) { G.audio.sfx.select(); G.scenes.push(G.scenes.make('menu')); return; }
-      if (I.pressed('map')) { G.audio.sfx.select(); if(m.adv)G.adventure.territories();else G.scenes.push(G.scenes.make('mapview', this)); return; }
+      if (I.pressed('map')) { G.audio.sfx.select(); G.scenes.push(G.scenes.make('mapview', this)); return; }
       if (I.pressed('goal')) this.showTrail();
       if (this.trail) { this.trail.t += dt; if (this.trail.t > this.trail.dur) this.trail = null; }
 
@@ -16150,7 +15577,7 @@ G.scenes.register('world', (pos) => {
       const tired = v.energy < 10 || v.food <= 0;
       if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast(v.food <= 0 ? 'Голодный — не до бега' : 'Нет сил бежать'); }
       const run = I.held('b') && !tired;
-      const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * (G.state.flags.adv_runner?1.08:1) * dt;
+      const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * dt;
       G.actors.playerContact(m, p, ax.x, ax.y, this.others, dt);
       p.moving = !!(ax.x || ax.y);
       if (p.moving) {
@@ -16183,8 +15610,7 @@ G.scenes.register('world', (pos) => {
         if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
       }
 
-      if (G.life2 && !m.adv) G.life2.poll(this, dt);
-      if (G.adventure) G.adventure.update(this,dt);
+      if (G.life2) G.life2.poll(this, dt);
       if (G.villageStories) G.villageStories.update(this,dt);
       if (G.villageDaily) G.villageDaily.update(this,dt);
       if (G.roofPatrol) G.roofPatrol.update(this,dt);
@@ -16302,7 +15728,6 @@ G.scenes.register('world', (pos) => {
       const p = this.player, m = this.map;
       if (p.jump) return null;
       const door=this.doorAction();if(door)return door;
-      if(G.adventure){const a=G.adventure.probe(this);if(a)return a;}
       if (G.roofs && p.roof) {
         const a=G.roofs.action(this);
         return a?{show:true,label:a.label,title:a.kind==='jump'?'Следующая крыша':'Место приземления',targetRect:{x:a.point.x-6,y:a.point.y-5,w:12,h:8},run:()=>G.roofs.interact(this)}:null;
@@ -16361,7 +15786,7 @@ G.scenes.register('world', (pos) => {
         if (o.talk) return { show: true, label: 'Осмотреть', title:o.name,targetRect:{x:o.x+o.ox,y:o.y+o.oy,w:o.w,h:o.h},run: () => this.talk(o.talk) };
         if (o.door && o.door.tx === Math.floor(fx / T) && p.dir === 'up') return { show: true, label: 'Войти', title:o.name,
           targetRect:{x:o.door.tx*T+1,y:o.door.ty*T,w:14,h:16},run: () => this.enterBuilding(o) };
-        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: G.state.flags.adv_wallrun?'Бежать вверх':'На крышу',title:o.name,
+        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: 'На крышу',title:o.name,
           targetRect:{x:p.x+v[0]*12-6,y:p.y+v[1]*12-10,w:12,h:10},run: () => G.roofs.climb(this, o) };
         return { show: false, run: () => { this.showToast(o.locked ? o.name + ' — заперто' : o.name); G.audio.sfx.blip(); } };
       }
@@ -16575,14 +16000,13 @@ G.scenes.register('world', (pos) => {
           if (G.util.rectsOverlap(pr, { x: it.x + it.ox + 2, y: it.y + it.oy + pad, w: it.w - 4, h: it.h - pad })) alpha = 0.45;
         }
         if (alpha < 1) ctx.globalAlpha = alpha;
-        const img=G.adventure?G.adventure.seasonalImage(it,m):it.img;
+        const img=it.img;
         if(!G.villageDaily||!G.villageDaily.drawObject(ctx,this,it,img))ctx.drawImage(img, it.x + it.ox, it.y + it.oy);
         if (alpha < 1) ctx.globalAlpha = 1;
       }
 
       if(G.worldMotion)G.worldMotion.atmosphere(ctx,this,vis);
       if(G.roofPatrol)G.roofPatrol.draw(ctx,this,cx,cy,W,VH);
-      if(G.adventure)G.adventure.draw(ctx,this);
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
       if(G.villageStories)G.villageStories.draw(ctx,this);
       if(G.villageDaily)G.villageDaily.draw(ctx,this,vis);
@@ -16624,7 +16048,6 @@ G.scenes.register('world', (pos) => {
       this.drawHud(ctx);
       this.drawStrip(ctx);
       this.drawNotes(ctx, W);
-      if(G.adventure)G.adventure.drawHud(ctx,this);
 
       if (this.banner) {
         const a = Math.min(1, this.banner.t * 2, (2.4 - this.banner.t) * 4);
@@ -17912,9 +17335,6 @@ G.scenes.register('calendar', () => {
     for (const e of G.STORY) if (e.day === d && STORY_NAMES[e.id] && ev !== STORY_NAMES[e.id]) out.push({ c: '#c8581a', t: STORY_NAMES[e.id] });
     if (G.calendar.BDAY[d]) out.push({ c: '#c89010', t: 'День рождения: ' + G.chars.nameOf(G.calendar.BDAY[d]) });
     if(d>112&&G.calendar.birthday(d))out.push({c:'#c89010',t:'День рождения: '+G.chars.nameOf(G.calendar.birthday(d))});
-    const ap=G.adventure.meeting();if(ap&&ap.day===d)out.push({c:'#6c5aa8',t:G.adventure.appointmentText()});
-    if(d>=55&&G.state.flags.game_clear)out.push({c:'#34836c',t:G.state.flags.adv_chunin_entry?'Допуск к экзамену чунина получен':'Командные миссии доступны на посту'});
-    out.push({c:'#7a8458',t:'Сезон: '+G.adventure.season(d).name});
     if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00. Вход 7:30–9:30' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
     else if (d < 54) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
     const Q = G.state.quests || {};
@@ -17926,7 +17346,6 @@ G.scenes.register('calendar', () => {
     const m = [];
     if (G.calendar.EVENTS[d] || G.STORY.some((e) => e.day === d && STORY_NAMES[e.id])) m.push('#c8581a');
     if (G.calendar.BDAY[d]) m.push('#c89010');
-    if(G.adventure.meeting()?.day===d)m.push('#6c5aa8');
     const Q = G.state.quests || {};
     if (Object.keys(Q).some((id) => Q[id].st === 'active' && Q[id].due === d)) m.push('#b8321c');
     return m;
@@ -18945,7 +18364,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   P.hp = mode === 'ko' || mode === 'survive' ? Math.max(1, Math.round(hpMax * (V.hp == null ? 100 : V.hp) / 100)) : hpMax;
   P.ch = Math.round(chMax * clamp(V.chakra == null ? 100 : V.chakra, 10, 100) / 100);
   P.br = P.brMax; P.focus = P.focusMax;
-  if(opts.advanced&&(G.state.flags.adv_clan_nara||G.state.flags.adv_tactician)){P.focusMax++;P.focus=P.focusMax;}
+  
   if (opts.will) P.will = opts.will;
   // уличные противники растут вместе с героем (баланс): HP +1,5%/день, Тай +1 за 2 недели, Скор +1 за 3
   if (ed.grow) { const d = V.day || 1; ed = Object.assign({}, ed, { hp: Math.round(ed.hp * (1 + 0.025 * d)), tai: ed.tai + Math.floor(d / 9), spd: ed.spd + Math.floor(d / 14), end: ed.end + Math.floor(d / 21) }); }
@@ -18960,7 +18379,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   let usedTough = false, lowSaid = false, eTurns = 0, pTurns = 0, result = null, lastPTai = false;
   let react = null, seals = null, rhythm = null, target = null, moment = null;
   let stats = { perfect: 0, reacts: 0, used: {} };
-  const profile=tid=>G.adventure?G.adventure.techProfile(tid):{ch:1,w:1,dmg:1};
+  const profile=()=>({ch:1,w:1,dmg:1});
   const remember=kind=>{if(!has('adaptive'))return;P.advRepeat=P.advStyle===kind?(P.advRepeat||0)+1:1;P.advStyle=kind;};
   const pName = G.state.hero.name;
 
@@ -20677,7 +20096,7 @@ G.scenes.register('ending', () => {
     { title: 'РАСПРЕДЕЛЕНИЕ ПО КОМАНДАМ', col: '#8ae070', lines: ['Через неделю всех выпускников собирают в классе.', 'Ирука зачитывает списки...', `${T[0]}: ${T[1]}`, '«Четвёртый член команды — по особому решению Хокаге».'] },
     { title: T[0], col: '#8ae070', lines: [T[2], T[3]] },
     { title: 'ТВОИ 8 НЕДЕЛЬ', col: P.light, lines: [`Дней прожито: ${v.day} · Боёв: ${v.battles || 0}, побед: ${v.wins || 0}`, `Тренировок: ${v.trainings || 0} · Поручений: ${v.jobs || 0}`, `Секретных свитков: ${v.scrolls || 0}/20 · Репутация: ${v.rep || 0}`, `Экзамен: ${v.exam || 0} баллов · Посещаемость: ${G.academy.attendance()}%`, 'Лучшие друзья: ' + top.join(', ')] },
-    { title: 'НОВАЯ ГЛАВА', col: P.orange, lines: ['Ты окончил Академию. Команда ждёт тебя на пограничном посту.', 'В меню «Приключения» открылись три миссии генинов: разведка, охрана переправы и допуск к экзамену чунина.', 'После этой страницы ты вернёшься домой и сможешь продолжить игру.', '', 'Фан-игра по мотивам «Наруто» Масаси Кисимото.'] },
+    { title: 'НОВАЯ ГЛАВА', col: P.orange, lines: ['Ты окончил Академию.', 'После этой страницы ты вернёшься домой и сможешь продолжить игру.', '', 'Фан-игра по мотивам «Наруто» Масаси Кисимото.'] },
   ];
   if(f.promise_final)pages.splice(4,0,{title:'ПЕРВОЕ ОБЕЩАНИЕ',col:P.orange,lines:['Юта признался в своём участии и помогает вернуть украденное. Днём он работает на складе, вечером учится вести свою службу доставки.',v.promise_trust>=2?'Он сам приходит к Ируке с каждой накладной. Твоя поддержка помогла ему перестать прятаться.':'Ваше доверие восстанавливается постепенно. На этот раз Юта отвечает за свои решения.','Наруто ждёт у качелей с двумя порциями рамена. «Я же говорил: мы справимся!»']});
   let i = 0, t = 0;
@@ -20739,7 +20158,6 @@ G.scenes.register('menu', () => {
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
     { label: 'Обучение', act: () => { G.scenes.pop(); G.learning.menu(); } },
-    { label: 'Приключения', act: () => { G.scenes.pop(); G.adventure.menu(); } },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
@@ -20978,7 +20396,7 @@ G.miniShogi = (() => {
 G.scenes.register('shogi',()=>{
   const M=G.miniShogi;let state=M.initial(),selected=null,hand=null,cursor=10,wait=.4,result='',rewarded=false;const repeats=new Map();
   function geom(){const size=Math.min(52,Math.floor((G.screen.W-36)/3),Math.floor((G.screen.H-180)/4)),x=(G.screen.W-size*3)/2;return{size,x,y:65};}
-  function finish(text,win){result=text;if(!rewarded){rewarded=true;G.game.advance(15);if(win&&!G.state.daily.adv_shogi){G.state.daily.adv_shogi=1;G.friends.add('shikamaru',2);G.train.addXp('know',3);}G.adventure.save();}}
+  function finish(text,win){result=text;if(!rewarded){rewarded=true;G.game.advance(15);if(win&&!G.state.daily.shogi_win){G.state.daily.shogi_win=1;G.friends.add('shikamaru',2);G.train.addXp('know',3);}if(G.state.started)G.storage.save(G.state);}}
   function play(m){const legal=M.moves(state).find(a=>a.to===m.to&&a.from===m.from&&a.drop===m.drop);if(!legal)return false;state=M.apply(state,legal);selected=null;hand=null;wait=.45;
     if(state.winner)finish(state.winner===1?'Победа! Шикамару одобрительно кивает.':'Шикамару выиграл. Попробуй другую тактику.',state.winner===1);
     else if(!M.moves(state).length)finish(state.turn===1?'Нет допустимых ходов. Шикамару победил.':'У соперника нет ходов. Ты победил!',state.turn===-1);
@@ -21267,27 +20685,17 @@ G.learning = (() => {
   task('tree',29,'Чакра под ногами','training_ground','Пройди урок Ируки, затем потренируй хождение по дереву на полигоне №3.',()=>!!L().tr_tree,{train:'tree',grant:'tech_tree',mg:'tree'});
   task('water',31,'На другой берег','lake','Изучи удержание на воде у Ируки, затем выполни тренировку у озера.',()=>!!L().tr_water,{train:'water',grant:'tech_water',mg:'tree'});
   task('trap',33,'Ловушка для торопливого','training_ground','Получи учебник у Ируки, затем поставь ловушку в спарринге.',()=>!!L().trap,{supply:{book_traps:1,wire:2}});
-  task('quiet',35,'Доставка без шума','mission_board','Верни пропавший груз скрытно или мирно через доску экспедиций.',()=>done('adv_cargo'));
-  task('out',38,'За воротами','gate','Пройди экспедицию у реки и вернись с отчётом.',()=>done('adv_rescue'));
-  task('mentor',40,'Найди своего учителя','academy','Выбери наставника в разделе Приключения и заверши занятие.',()=>['iruka','lee','shikamaru'].some(id=>V()['adv_lessons_'+id]>0));
   task('bunshin',43,'Пуф - и нас трое','academy','Изучи Буншин, затем создай клонов в учебном бою.',()=>used('bunshin'),{tech:'bunshin',mg:'seals'});
   task('tactics',46,'Один приём дважды','academy','Примени Финт и Анализ: проверь привычки противника и смени тактику.',()=>!!L().feint&&!!L().analyze);
   task('will',48,'Держись, я рядом','academy','В учебном бою накопи Волю Огня и используй её.',()=>!!L().will);
   task('prepare',50,'План спасения','hero_home','Подготовь дымовую бомбу, бинт и хотя бы один кунай.',()=>['smoke_bomb','bandage','kunai'].every(id=>G.game.count(id)>0));
   task('exam',54,'Готов к выпуску','academy','Пройди выпускной экзамен: тест, метание и Буншин.',()=>V().exam!=null);
   task('promise',54,'Первое обещание','mission_board','Спаси Юту и рабочих. Останови Гэндо у склада.',()=>!!F().mizuki_beaten);
-  task('team',55,'Теперь мы команда','gate','Пройди разведку границы и доложи на пограничном посту.',()=>done('adv_genin1'));
   task('fish',9,'Удочка для терпеливого','souvenir','Купи удочку, подойди к воде и вытащи первый улов.',()=>V().fished>0,{optional:true});
   task('herbs',11,'Аптечка своими руками','hero_home','Собери травы и приготовь лекарство за домашним столом.',()=>!!L().crafted,{optional:true});
   task('gift',12,'Подарок со смыслом','flowers','Выбери подарок другу в меню общения. Любимые подарки и дни рождения помогают сблизиться.',()=>!!L().gift,{optional:true});
   task('books',14,'Ответ в книге','library','Выполни занятие в библиотеке или прочитай книгу дома.',()=>!!L().tr_library||!!L().tr_book,{optional:true,train:'library'});
   task('secret',16,'Секрет под камнем','waterfall','Осматривай предметы вне дороги и найди один секретный свиток.',()=>V().scrolls>0,{optional:true});
-  task('meet',20,'Я тебя подожду','teahouse','Назначь встречу через Приключения и приди на неё вовремя.',()=>!!L().meeting,{optional:true});
-  task('parkour',22,'Курьерский маршрут','academy','Пройди испытание на время через Приключения - Паркур и погоня.',()=>V().adv_course_medal>0,{optional:true});
-  task('clan',39,'Доверяют делам','clan_nara','Помоги кланам в экспедиции, затем заслужи один семейный навык.',()=>G.ADVENTURES.clans.some(c=>!!F()['adv_clan_'+c.id]),{optional:true});
-  task('archive',41,'Закрытый архив','gate','Найди письмо, разгадай печати, встреться с хранителем и доложи.',()=>done('adv_archive'),{optional:true});
-  task('recipe',42,'Семейный обед','hero_home','Открой рецепт у клана и приготовь блюдо в сумку.',()=>!!L().recipe,{optional:true});
-  task('form',44,'Своя форма техники','academy','Изучи стихию, выбери экономную или быструю форму и примени её.',()=>G.TECH_ORDER.some(t=>G.TECHS[t].el&&V()['adv_tech_'+t]>0&&used(t)),{optional:true});
   task('storage',3,'Собирайся налегке','hero_home','Положи один лишний предмет в домашний сундук. Его можно забрать перед вылазкой.',()=>!!L().storage,{optional:true});
   task('heal',5,'Сначала перевязка','hospital','После спарринга получи бинт в аптеке и примени его в сумке, когда нужно лечение.',()=>!!L().heal,{optional:true});
   task('cook',7,'Обед на завтра','hero_home','Купи продукты на рынке и приготовь еду на домашней кухне.',()=>!!L().cook,{optional:true});
@@ -21349,8 +20757,6 @@ G.learning = (() => {
   const gift=G.friends.gift;G.friends.gift=function(...a){const r=gift.apply(this,a);L().gift=1;return r;};
   G.events.on('crafted',()=>{L().crafted=1;});
   G.events.on('storage',()=>{L().storage=1;});G.events.on('sold',()=>{L().sold=1;});G.events.on('cooked',()=>{L().cook=1;});G.events.on('item-used',id=>{if(['bandage','ointment'].includes(id))L().heal=1;});
-  const use=G.game.give;G.game.give=function(id,n=1){const r=use.call(this,id,n);if(n>0&&G.ADVENTURES.recipes.some(x=>x.id===id))L().recipe=1;return r;};
-  const attend=G.adventure.attend;G.adventure.attend=function(...a){const r=attend.apply(this,a);if(r)L().meeting=1;return r;};
   const makeWorld=G.scenes.registry.world;G.scenes.register('world',pos=>{const w=makeWorld(pos),update=w.update;w.update=function(dt){update.call(w,dt);if(G.scenes.top()===w&&!G.scenes.busy)poll(w);};return w;});
   return {entries,menu,poll,lesson,show,go};
 })();

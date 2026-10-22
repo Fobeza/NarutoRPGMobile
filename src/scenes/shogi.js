@@ -27,7 +27,7 @@ G.miniShogi = (() => {
 G.scenes.register('shogi',()=>{
   const M=G.miniShogi;let state=M.initial(),selected=null,hand=null,cursor=10,wait=.4,result='',rewarded=false;const repeats=new Map();
   function geom(){const size=Math.min(52,Math.floor((G.screen.W-36)/3),Math.floor((G.screen.H-180)/4)),x=(G.screen.W-size*3)/2;return{size,x,y:65};}
-  function finish(text,win){result=text;if(!rewarded){rewarded=true;G.game.advance(15);if(win&&!G.state.daily.adv_shogi){G.state.daily.adv_shogi=1;G.friends.add('shikamaru',2);G.train.addXp('know',3);}G.adventure.save();}}
+  function finish(text,win){result=text;if(!rewarded){rewarded=true;G.game.advance(15);if(win&&!G.state.daily.shogi_win){G.state.daily.shogi_win=1;G.friends.add('shikamaru',2);G.train.addXp('know',3);}if(G.state.started)G.storage.save(G.state);}}
   function play(m){const legal=M.moves(state).find(a=>a.to===m.to&&a.from===m.from&&a.drop===m.drop);if(!legal)return false;state=M.apply(state,legal);selected=null;hand=null;wait=.45;
     if(state.winner)finish(state.winner===1?'Победа! Шикамару одобрительно кивает.':'Шикамару выиграл. Попробуй другую тактику.',state.winner===1);
     else if(!M.moves(state).length)finish(state.turn===1?'Нет допустимых ходов. Шикамару победил.':'У соперника нет ходов. Ты победил!',state.turn===-1);

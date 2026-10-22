@@ -48,8 +48,8 @@ test('Сюжетные персонажи не получают работу, т
 test('Бельё колышется между кадрами; выключение эффектов возвращает обычный рисунок',()=>{
   const w=world(),o=w.map.objects.find(o=>o.kind==='laundry');assert.ok(o);const c1=h.recordingCtx(),c2=h.recordingCtx();w.time=0;assert.ok(G.villageDaily.drawObject(c1,w,o,o.img));w.time=1;G.villageDaily.drawObject(c2,w,o,o.img);assert.notDeepEqual(c1.log,c2.log);G.storage.settings.fx=false;assert.equal(G.villageDaily.drawObject(c1,w,o,o.img),false);
 });
-test('Деревенская жизнь не переносится в комнаты и экспедиции; новая игра очищает старые реакции',()=>{
-  const w=world(),s=G.villageDaily.ensure(w);s.animals[0].pet=5;w.setMap({map:'adv:outpost',entry:true});G.villageDaily.update(w,1);assert.equal(w._dailyLife,null);assert.deepEqual(G.villageDaily.actors(w),[]);G.game.newState();G.state.started=true;G.state.flags.hosp_done=1;w.setMap(G.world.outsideOf(G.world.heroHome()));const fresh=G.villageDaily.ensure(w);assert.notEqual(fresh,s);assert.ok(fresh.animals.every(a=>a.pet===0));
+test('Деревенская жизнь не переносится в комнаты; новая игра очищает старые реакции',()=>{
+  const w=world(),s=G.villageDaily.ensure(w);s.animals[0].pet=5;w.setMap({map:G.world.heroHome().interior.id,entry:true});G.villageDaily.update(w,1);assert.equal(w._dailyLife,null);assert.deepEqual(G.villageDaily.actors(w),[]);G.game.newState();G.state.started=true;G.state.flags.hosp_done=1;w.setMap(G.world.outsideOf(G.world.heroHome()));const fresh=G.villageDaily.ensure(w);assert.notEqual(fresh,s);assert.ok(fresh.animals.every(a=>a.pet===0));
 });
 test('Фоновые звуки не пытаются включить заблокированное аудио',()=>{
   const w=world(),A=G.audio,keep={ready:A.ready,tone:A.tone,noise:A.noise,noiseF:A.noiseF,pluck:A.pluck,bellTone:A.bellTone};let calls=0;

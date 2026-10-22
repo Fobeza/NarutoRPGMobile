@@ -109,7 +109,7 @@ for (const [qid, q] of Object.entries(QUESTS)) {
     if (!t.building && !t.npc && !t.obj && !t.tile && !t.point) bad.push(`задание ${qid}/${st.id}: у шага нет цели`);
     if(t.point){
       if(!Array.isArray(t.point)||t.point.length!==2||t.point.some(n=>!Number.isFinite(n)||n<0))bad.push(`задание ${qid}/${st.id}: неверные координаты`);
-      if(t.map!=='konoha'&&!G.frontier.titles[String(t.map).replace('adv:','')])bad.push(`задание ${qid}/${st.id}: неизвестная карта`);
+      if(t.map!=='konoha')bad.push(`задание ${qid}/${st.id}: неизвестная карта`);
     }
     for (const i of Object.keys(st.have || {})) if (!ITEMS[i]) bad.push(`задание ${qid}/${st.id}: нет предмета «${i}»`);
   }
@@ -317,8 +317,6 @@ function auditRoom(m, key) {
 section('ШРИФТ');
 const glyphs = new Set(G.font.chars());
 const missing = new Map();
-function adventureTexts(o){if(!o||typeof o!=='object')return;for(const [k,v]of Object.entries(o)){if(['name','title','text','perk','lesson'].includes(k)&&typeof v==='string')texts.push(v);else if(v&&typeof v==='object')adventureTexts(v);}}
-adventureTexts(G.ADVENTURES);
 for(const job of Object.values(G.VILLAGE_DAILY.jobs)){texts.push(job.label,job.verb,job.talk,job.help,...job.lines);}
 texts.push(...G.VILLAGE_DAILY.conversations.flat(),...Object.values(G.VILLAGE_DAILY.greetings).flat(),...G.VILLAGE_DAILY.animals.map(a=>a.name));
 for (const t of texts) {

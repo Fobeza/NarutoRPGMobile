@@ -4,7 +4,7 @@ G.cartography=(()=>{
   const colors={hero:'#fff2cf',home:'#9ddb9d',quest:'#ffb65b',offer:'#ffdf73',shop:'#a8d8f0',food:'#efb18d',training:'#d7b4ec',friend:'#a4dfbd',place:'#ded3b7',target:'#ff8d6f'};
   function atlas(m){
     if(G.storage.settings.mapDetail==='simple')return m.overview();
-    const season=G.adventure?.season().name||'',key=season;
+    const season=G.life.season().name,key=season;
     if(m._atlas?.key===key)return m._atlas.image;
     const c=G.gfx.canvas(m.w*R,m.h*R,true),ctx=c.getContext('2d'),ID=G.tiles.ID;
     for(let y=0;y<m.h;y++)for(let x=0;x<m.w;x++){
@@ -19,7 +19,7 @@ G.cartography=(()=>{
     // Те же крыши, деревья, ограды, цветы и мостки, которые игрок видит во время прогулки.
     const objects=m.objects.slice().sort((a,b)=>(a.layer==='floor'?-1e6:a.sortY??a.y)-(b.layer==='floor'?-1e6:b.sortY??b.y));
     for(const o of objects){
-      if(o.img){const image=G.adventure?G.adventure.seasonalImage(o,m):o.img;ctx.drawImage(image,(o.x+o.ox)*R/T,(o.y+o.oy)*R/T,o.w*R/T,o.h*R/T);}
+      if(o.img){ctx.drawImage(o.img,(o.x+o.ox)*R/T,(o.y+o.oy)*R/T,o.w*R/T,o.h*R/T);}
       else if(o.anim){ctx.save();ctx.scale(R/T,R/T);G.world.drawAnim(ctx,o,0);ctx.restore();}
     }
     m._atlas={key,image:c};return c;

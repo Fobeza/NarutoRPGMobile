@@ -82,7 +82,7 @@ G.worldMotion = (() => {
       ctx.drawImage(img,0,crown,o.w,o.h-crown,x,y+crown,o.w,o.h-crown);
       for(let row=0;row<crown;row+=step){const h=Math.min(step,crown-row),dx=wind*(1-row/crown)*(trees.has(o.kind)?1.25:.8);ctx.drawImage(img,0,row,o.w,h,x+dx,y+row,o.w,h);}
       const hour=G.state.vars.min/60;
-      if(flower&&hour>=8&&hour<18&&!G.life.raining()&&G.adventure.season().name!=='Зима'&&G.util.hash2(o.x,o.y,21)>.65){
+      if(flower&&hour>=8&&hour<18&&!G.life.raining()&&G.util.hash2(o.x,o.y,21)>.65){
         const q=t*.9+o.x,bx=o.x+Math.sin(q)*11,by=y-6+Math.sin(q*1.7)*4,wing=Math.sin(t*22)>0?3:1;
         ctx.fillStyle='#eac47d';ctx.fillRect(bx-wing,by,wing,2);ctx.fillStyle='#b5c9e0';ctx.fillRect(bx+1,by-1,wing,2);ctx.fillStyle='#705442';ctx.fillRect(bx,by,1,3);
       }
@@ -115,7 +115,7 @@ G.worldMotion = (() => {
   function atmosphere(ctx,w,vis){
     if(!enabled(w))return;
     const t=w.time,rain=G.life.raining(),hour=G.state.vars.min/60;
-    const night=hour>=19||hour<5,season=G.adventure.season().name;
+    const night=hour>=19||hour<5,season=G.life.season().name;
     let budget=36;
     for(const o of vis){
       if(budget<=0)break;

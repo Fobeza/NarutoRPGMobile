@@ -88,8 +88,7 @@ G.villageDaily = (() => {
     return role;
   }
   function roleFor(w,n,seed){
-    const hour=G.state.vars.min/60,winter=G.adventure.season().name==='Зима',d=n._daily;d.partner=null;d.lead=false;
-    if(winter)return'warm';
+    const hour=G.state.vars.min/60,d=n._daily;d.partner=null;d.lead=false;
     if(kid(n)){
       const o=partnerFor(w,n,52);
       if(o)return pair(w,n,o,seed%2?'catch':'tag');   // мяч или догонялки — вдвоём

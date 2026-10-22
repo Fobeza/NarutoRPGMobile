@@ -41,7 +41,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   P.hp = mode === 'ko' || mode === 'survive' ? Math.max(1, Math.round(hpMax * (V.hp == null ? 100 : V.hp) / 100)) : hpMax;
   P.ch = Math.round(chMax * clamp(V.chakra == null ? 100 : V.chakra, 10, 100) / 100);
   P.br = P.brMax; P.focus = P.focusMax;
-  if(opts.advanced&&(G.state.flags.adv_clan_nara||G.state.flags.adv_tactician)){P.focusMax++;P.focus=P.focusMax;}
+  
   if (opts.will) P.will = opts.will;
   // уличные противники растут вместе с героем (баланс): HP +1,5%/день, Тай +1 за 2 недели, Скор +1 за 3
   if (ed.grow) { const d = V.day || 1; ed = Object.assign({}, ed, { hp: Math.round(ed.hp * (1 + 0.025 * d)), tai: ed.tai + Math.floor(d / 9), spd: ed.spd + Math.floor(d / 14), end: ed.end + Math.floor(d / 21) }); }
@@ -56,7 +56,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   let usedTough = false, lowSaid = false, eTurns = 0, pTurns = 0, result = null, lastPTai = false;
   let react = null, seals = null, rhythm = null, target = null, moment = null;
   let stats = { perfect: 0, reacts: 0, used: {} };
-  const profile=tid=>G.adventure?G.adventure.techProfile(tid):{ch:1,w:1,dmg:1};
+  const profile=()=>({ch:1,w:1,dmg:1});
   const remember=kind=>{if(!has('adaptive'))return;P.advRepeat=P.advStyle===kind?(P.advRepeat||0)+1:1;P.advStyle=kind;};
   const pName = G.state.hero.name;
 

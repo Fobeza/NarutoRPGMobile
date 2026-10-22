@@ -27,7 +27,7 @@ JS_FILES = [
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
-    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/combat.js", "data/adventures.js",
+    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/combat.js",
     # ── игровые системы ──
     "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
@@ -39,7 +39,7 @@ JS_FILES = [
     "world/village_extra.js", "world/interior_details.js", "world/village_life.js", "world/cast.js",
     "data/schedule.js", "systems/schedule.js",     # расписание — последним из «мира»: переставляет всех жителей
     "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/guards.js", "world/fx.js", "world/village_stories.js",
-    "world/frontier.js", "systems/adventures.js", "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/street_events.js", "world/cartography.js", "engine/debug.js",
+    "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/street_events.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
     "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",

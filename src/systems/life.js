@@ -19,6 +19,7 @@ G.life = (() => {
       const r = G.util.rng(day * 7919 + 13)();
       return r < 0.58 ? 'sun' : r < 0.82 ? 'cloud' : 'rain';
     },
+    season() { return { name: 'Лето', color: '#85b457' }; },   // зимы и осени в игре нет
     raining() { return this.weather() === 'rain'; },
 
     weekday(day = G.state.vars.day) { return (day - 1) % 7 < 5; },   // Пн–Пт

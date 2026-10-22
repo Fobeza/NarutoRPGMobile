@@ -25,11 +25,8 @@ G.roofs = {
   clampIn(r, x, y) { return [Math.max(r.x + 5, Math.min(r.x + r.w - 5, x)), Math.max(r.y + 6, Math.min(r.y + r.h - 2, y))]; },
   climb(world, b) {
     const p = world.player, r = this.of(world.map, b), v = G.actors.DIRV[p.dir];
-    const wall=!!G.state.flags.adv_wallrun;
-    if(wall&&G.state.vars.chakra<8){world.showToast('Для бега по стене нужно 8 чакры');return;}
     const [x, y] = this.clampIn(r, p.x + v[0] * 20, p.dir === 'up' ? r.y + r.h - 4 : p.y + v[1] * 20 - (p.y - (r.y + r.h)) * 0.5);
     this.startJump(p, x, y, true);
-    if(wall){G.state.vars.chakra-=8;p.jump.wall=true;p.jump.dur=0.85;p.jump.h=0;}
     if (!G.state.flags.tip_roofs) { G.state.flags.tip_roofs = 1; world.showToast('На крыше: A — прыжок или спуск'); }
   },
   startJump(p, x1, y1, toRoof) {

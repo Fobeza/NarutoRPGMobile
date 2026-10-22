@@ -84,7 +84,6 @@ G.scenes.register('world', (pos) => {
       pl.vx = pl.vy = 0; pl.moving = false;
       pl.jump = null; pl.roof = !!(p.roof && m.outdoor && G.roofs && G.roofs.at(m, pl.x, pl.y));
       this.map = m;
-      if (G.adventure) { G.adventure.syncSeason(m); this._appointment=null; if(m.id!=='adv:parkour')this._course=null; }
       if (G.villageStories) G.villageStories.sync(m);
       // Сохранение могло остаться на месте передвинутой мебели.
       if (!pl.roof && m.blockedRect(G.actors.feet(pl))) {
@@ -160,11 +159,11 @@ G.scenes.register('world', (pos) => {
         else if (a === 'askname') G.scenes.push(G.scenes.make('nameinput', () => this.talk('hosp_after_name')));
         return;
       }
-      if (!m.adv && G.story && G.story.poll(this)) return;
+      if (G.story && G.story.poll(this)) return;
       if (this.goalFlash) this.goalFlash = Math.max(0, this.goalFlash - dt);
 
       if (I.pressed('menu')) { G.audio.sfx.select(); G.scenes.push(G.scenes.make('menu')); return; }
-      if (I.pressed('map')) { G.audio.sfx.select(); if(m.adv)G.adventure.territories();else G.scenes.push(G.scenes.make('mapview', this)); return; }
+      if (I.pressed('map')) { G.audio.sfx.select(); G.scenes.push(G.scenes.make('mapview', this)); return; }
       if (I.pressed('goal')) this.showTrail();
       if (this.trail) { this.trail.t += dt; if (this.trail.t > this.trail.dur) this.trail = null; }
 
@@ -180,7 +179,7 @@ G.scenes.register('world', (pos) => {
       const tired = v.energy < 10 || v.food <= 0;
       if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast(v.food <= 0 ? 'Голодный — не до бега' : 'Нет сил бежать'); }
       const run = I.held('b') && !tired;
-      const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * (G.state.flags.adv_runner?1.08:1) * dt;
+      const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * dt;
       G.actors.playerContact(m, p, ax.x, ax.y, this.others, dt);
       p.moving = !!(ax.x || ax.y);
       if (p.moving) {
@@ -213,8 +212,7 @@ G.scenes.register('world', (pos) => {
         if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
       }
 
-      if (G.life2 && !m.adv) G.life2.poll(this, dt);
-      if (G.adventure) G.adventure.update(this,dt);
+      if (G.life2) G.life2.poll(this, dt);
       if (G.villageStories) G.villageStories.update(this,dt);
       if (G.villageDaily) G.villageDaily.update(this,dt);
       if (G.roofPatrol) G.roofPatrol.update(this,dt);
@@ -332,7 +330,6 @@ G.scenes.register('world', (pos) => {
       const p = this.player, m = this.map;
       if (p.jump) return null;
       const door=this.doorAction();if(door)return door;
-      if(G.adventure){const a=G.adventure.probe(this);if(a)return a;}
       if (G.roofs && p.roof) {
         const a=G.roofs.action(this);
         return a?{show:true,label:a.label,title:a.kind==='jump'?'Следующая крыша':'Место приземления',targetRect:{x:a.point.x-6,y:a.point.y-5,w:12,h:8},run:()=>G.roofs.interact(this)}:null;
@@ -391,7 +388,7 @@ G.scenes.register('world', (pos) => {
         if (o.talk) return { show: true, label: 'Осмотреть', title:o.name,targetRect:{x:o.x+o.ox,y:o.y+o.oy,w:o.w,h:o.h},run: () => this.talk(o.talk) };
         if (o.door && o.door.tx === Math.floor(fx / T) && p.dir === 'up') return { show: true, label: 'Войти', title:o.name,
           targetRect:{x:o.door.tx*T+1,y:o.door.ty*T,w:14,h:16},run: () => this.enterBuilding(o) };
-        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: G.state.flags.adv_wallrun?'Бежать вверх':'На крышу',title:o.name,
+        if (G.roofs && G.roofs.canClimb(this, o)) return { show: true, label: 'На крышу',title:o.name,
           targetRect:{x:p.x+v[0]*12-6,y:p.y+v[1]*12-10,w:12,h:10},run: () => G.roofs.climb(this, o) };
         return { show: false, run: () => { this.showToast(o.locked ? o.name + ' — заперто' : o.name); G.audio.sfx.blip(); } };
       }
@@ -605,14 +602,13 @@ G.scenes.register('world', (pos) => {
           if (G.util.rectsOverlap(pr, { x: it.x + it.ox + 2, y: it.y + it.oy + pad, w: it.w - 4, h: it.h - pad })) alpha = 0.45;
         }
         if (alpha < 1) ctx.globalAlpha = alpha;
-        const img=G.adventure?G.adventure.seasonalImage(it,m):it.img;
+        const img=it.img;
         if(!G.villageDaily||!G.villageDaily.drawObject(ctx,this,it,img))ctx.drawImage(img, it.x + it.ox, it.y + it.oy);
         if (alpha < 1) ctx.globalAlpha = 1;
       }
 
       if(G.worldMotion)G.worldMotion.atmosphere(ctx,this,vis);
       if(G.roofPatrol)G.roofPatrol.draw(ctx,this,cx,cy,W,VH);
-      if(G.adventure)G.adventure.draw(ctx,this);
       if (p.roof || p.jump) G.roofs.drawPlayer(ctx, this);
       if(G.villageStories)G.villageStories.draw(ctx,this);
       if(G.villageDaily)G.villageDaily.draw(ctx,this,vis);
@@ -654,7 +650,6 @@ G.scenes.register('world', (pos) => {
       this.drawHud(ctx);
       this.drawStrip(ctx);
       this.drawNotes(ctx, W);
-      if(G.adventure)G.adventure.drawHud(ctx,this);
 
       if (this.banner) {
         const a = Math.min(1, this.banner.t * 2, (2.4 - this.banner.t) * 4);

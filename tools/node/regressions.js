@@ -148,7 +148,8 @@ test('Сохранения раскладки 2 переезжают в плот
   G.state.layoutVersion = 2; G.state.pos = {map:'konoha',x:(house.tx + 1) * 16 + 8,y:(house.ty + 1) * 16 + 12,dir:'down'}; G.game.fix(G.state);
   assert.equal(G.state.pos.map, 'konoha'); assert.ok(!k.blockedRect(G.actors.feet({}, G.state.pos.x, G.state.pos.y)));
   G.state.layoutVersion = 2; G.state.pos = {map:'adv:parkour',x:72,y:144,dir:'right'}; G.game.fix(G.state);
-  assert.equal(G.state.pos.map, 'adv:parkour');
+  assert.equal(G.state.pos.map, 'konoha');   // карта экспедиции удалена в 2.3 — герой у Академии
+  assert.ok(!k.blockedRect(G.actors.feet({}, G.state.pos.x, G.state.pos.y)));
   assert.ok(G.storage.valid({state:G.state}));
 });
 test('Плотность по умолчанию: точка не меньше 1.25 CSS, выбор игрока не трогаем, экран заполняется по высоте', () => {

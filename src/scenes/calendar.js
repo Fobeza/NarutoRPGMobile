@@ -17,9 +17,6 @@ G.scenes.register('calendar', () => {
     for (const e of G.STORY) if (e.day === d && STORY_NAMES[e.id] && ev !== STORY_NAMES[e.id]) out.push({ c: '#c8581a', t: STORY_NAMES[e.id] });
     if (G.calendar.BDAY[d]) out.push({ c: '#c89010', t: 'День рождения: ' + G.chars.nameOf(G.calendar.BDAY[d]) });
     if(d>112&&G.calendar.birthday(d))out.push({c:'#c89010',t:'День рождения: '+G.chars.nameOf(G.calendar.birthday(d))});
-    const ap=G.adventure.meeting();if(ap&&ap.day===d)out.push({c:'#6c5aa8',t:G.adventure.appointmentText()});
-    if(d>=55&&G.state.flags.game_clear)out.push({c:'#34836c',t:G.state.flags.adv_chunin_entry?'Допуск к экзамену чунина получен':'Командные миссии доступны на посту'});
-    out.push({c:'#7a8458',t:'Сезон: '+G.adventure.season(d).name});
     if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00. Вход 7:30–9:30' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
     else if (d < 54) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
     const Q = G.state.quests || {};
@@ -31,7 +28,6 @@ G.scenes.register('calendar', () => {
     const m = [];
     if (G.calendar.EVENTS[d] || G.STORY.some((e) => e.day === d && STORY_NAMES[e.id])) m.push('#c8581a');
     if (G.calendar.BDAY[d]) m.push('#c89010');
-    if(G.adventure.meeting()?.day===d)m.push('#6c5aa8');
     const Q = G.state.quests || {};
     if (Object.keys(Q).some((id) => Q[id].st === 'active' && Q[id].due === d)) m.push('#b8321c');
     return m;

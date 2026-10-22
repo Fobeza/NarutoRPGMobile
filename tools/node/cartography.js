@@ -25,7 +25,7 @@ test('Выбор задания сохраняет слежение и убир�
 test('Настройки карты переживают загрузку, повреждённые значения заменяются допустимыми',()=>{
  Object.assign(G.storage.settings,{mapDetail:'simple',mapMarkerSize:1.3,mapLabels:false});G.storage.saveSettings();Object.assign(G.storage.settings,{mapDetail:'detailed',mapMarkerSize:1,mapLabels:true});G.storage.loadSettings();assert.equal(G.storage.settings.mapDetail,'simple');assert.equal(G.storage.settings.mapMarkerSize,1.3);assert.equal(G.storage.settings.mapLabels,false);G.storage._set(G.storage.KEY_SETTINGS,{mapDetail:'oops',mapMarkerSize:999});G.storage.loadSettings();assert.equal(G.storage.settings.mapDetail,'detailed');assert.equal(G.storage.settings.mapMarkerSize,1);
 });
-test('Комнаты и новые территории рисуют мини-карту без ложных координат и исключений',({w})=>{
- const c=h.recordingCtx();for(const key of ['adv:forest','adv:tower',G.world.heroHome().interior.id]){w.setMap({map:key,entry:true});G.cartography.minimap(c,w,G.screen.W);}assert.ok(!c.log.some(s=>s.includes('NaN')));
+test('Деревня и комнаты рисуют мини-карту без ложных координат и исключений',({w})=>{
+ const c=h.recordingCtx();for(const pos of [G.world.outsideOf(G.world.heroHome()),{map:G.world.heroHome().interior.id,entry:true}]){w.setMap(pos);G.cartography.minimap(c,w,G.screen.W);}assert.ok(!c.log.some(s=>s.includes('NaN')));
 });
 console.log(`ИТОГ картографии: ✔ ${passed}  ✘ ${failed}`);process.exitCode=failed?1:0;
