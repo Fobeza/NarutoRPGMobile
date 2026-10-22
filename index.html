@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '2d448d2a', date: '2026-10-22 17:22', debug: false };
+const BUILD = { release: '2.3', version: 'c519be29', date: '2026-10-22 18:38', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -6378,6 +6378,7 @@ G.quests = (() => {
       if (current.consume) for (const [item, n] of Object.entries(current.need || {})) G.game.take(item, n);
       G.state.flags[`q_${id}_${current.id}`] = 1;
       s.step++;
+      if (current.after) this.queue(current.after);   // сцена после шага
       if (s.step >= d.steps.length) this.complete(id);
       else { emit('step', id, d.steps[s.step - 1].text); this.check(); }
       return true;
@@ -6410,18 +6411,33 @@ G.quests = (() => {
     track(id) { if (this.active(id)) G.state.tracked = id; },
     tracked() { const t = G.state.tracked; return t && this.active(t) ? t : null; },
 
-    // Доступен ли шаг сейчас по времени
+    // Доступен ли шаг сейчас: день (day), условие (when) и часы (time)
+    dayOk(step) { return !step || ((!step.day || G.state.vars.day >= step.day) && (!step.when || !!step.when())); },
     timeOk(step, min = G.state.vars.min) {
+      if (!this.dayOk(step)) return false;
       if (!step || !step.time) return true;
       const [a, b] = step.time;
       return (min >= a && min < b) || (min + 1440 >= a && min + 1440 < b);
     },
 
-    // Автоматические шаги: «есть предметы»
+    // Автоматические шаги: «есть предметы». Вступительные сцены шагов (intro) — один раз, когда шаг стал доступен.
     check() {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.have && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) this.step(id, st.id);
+        if (st && st.have && this.dayOk(st) && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) { this.step(id, st.id); continue; }
+        if (st && st.intro && this.dayOk(st) && !G.state.flags['qi_' + id + '_' + st.id]) { G.state.flags['qi_' + id + '_' + st.id] = 1; this.queue(st.intro); }
+      }
+    },
+    // Сцена в очередь: проигрывается, когда мир свободен (G.story.poll), и не теряется при выгрузке вкладки
+    queue(scriptId) { const q = G.state.frQueue || (G.state.frQueue = []); if (!q.includes(scriptId)) q.push(scriptId); },
+    // Событие мира (training, fished, bought, job, gift, roof, battle, cooked, sold…): закрывает шаг с on: [имя, фильтр?]
+    notify(name, ...args) {
+      for (const id of this.activeList()) {
+        const st = this.curStep(id);
+        if (!st || !st.on || st.on[0] !== name || !this.dayOk(st)) continue;
+        const f = st.on[1];
+        if (f !== undefined && !(typeof f === 'function' ? f(...args) : f === args[0])) continue;
+        this.step(id, st.id);
       }
     },
     // Вход в здание
@@ -6491,6 +6507,11 @@ G.script.extraTest = (cond) => {
 };
 // Предметы меняются → проверить шаги «есть предметы»
 G.events.on('inv', () => G.quests.check());
+
+// События мира → шаги заданий с on: [событие, фильтр]
+for (const ev of ['training', 'fished', 'bought', 'job', 'gift', 'roof', 'battle', 'cooked', 'sold', 'crafted', 'storage', 'item-used']) G.events.on(ev, (...a) => G.quests.notify(ev, ...a));
+// Новый день открывает шаги, привязанные к дню (вступительные сцены)
+G.events.on('day', () => { if (G.state.started) G.quests.check(); });
 
 
 // ===== systems/nav.js =====
@@ -7035,7 +7056,7 @@ G.friends = {
     let n = 1, react = 'Спасибо.';
     if (f.love.includes(item)) { n = 4; react = 'love'; } else if ((f.like || []).includes(item)) { n = 2; react = 'like'; } else if ((f.hate || []).includes(item)) { n = -1; react = 'hate'; } else react = 'ok';
     if (bday && n > 0) n *= 2;
-    G.game.give(item, -1); n = this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1;
+    G.game.give(item, -1); n = this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1; G.events.emit('gift', id, item);
     return { react, n, bday };
   },
   // командный путь для эпилога
@@ -7293,7 +7314,7 @@ G.life_events = {
       const id = opts[i].id, j = G.JOBS[id];
       G.scenes.push(G.scenes.make('train', j.mg, { title: j.name, sortCats: j.cats }, (s) => {
         const pay = Math.round(j.pay * (0.4 + 0.6 * s));
-        d['job_' + id] = 1; G.game.earn(pay); G.game.advance(j.min); G.game.tire(j.fatigue);
+        d['job_' + id] = 1; G.events.emit('job', id, pay); G.game.earn(pay); G.game.advance(j.min); G.game.tire(j.fatigue);
         v.rep = (v.rep || 0) + 1; v.jobs = (v.jobs || 0) + 1;
         for (const [k, n] of Object.entries(j.xp)) G.train.addXp(k, n * (0.5 + s));
         G.game.note(`Поручение «${j.name}»: +${pay} рё`);
@@ -7719,6 +7740,7 @@ G.outdoor = {
     G.scenes.push(G.scenes.make('fishing', { spot, left: () => this.FISH_DAY - (G.state.daily.fish || 0) }, (id) => {
       d.fish = (d.fish || 0) + 1; G.game.advance(20); G.game.tire(3);
       if (id) { G.game.give(id, 1); v.fished = (v.fished || 0) + 1; if (id === 'carp') G.game.note('Поймал золотого карпа!'); G.train.addXp('ctrl', 0.5); }
+      G.events.emit('fished', id);
     }, () => { world.softRefresh && world.softRefresh(); }));
   },
 
@@ -8428,11 +8450,16 @@ hokage: {name}... Хорошо. Хоть что-то у тебя осталос�
 : Дорога, ветер, чьи-то голоса... но лица и названия ускользают, как вода сквозь пальцы.
 # go
 shizune: Потеря памяти. Бывает после сильного потрясения. Может вернуться через день, а может — через годы.
+shizune: Но есть кое-что страннее. Хокаге-сама, посмотрите на показания... Чакра у него фиолетовая.
+hokage: Фиолетовая? За всю жизнь такой не встречал.
+shizune: Её намного больше, чем у любого ученика Академии, и она сильнее. Но она совсем не слушается: прибор вышел из строя, едва я его включила.
+: Ты смотришь на ладони. Между пальцами пробегают искры цвета сирени.
 iruka: Хокаге-сама, а если он из чужой деревни? Мы ведь ничего о нём не знаем.
 hokage: Посмотри на него, Ирука. Он напуган и растерян, а не опасен. Выставить мальчика на улицу я не позволю.
 hokage: Решено: {name} остаётся в Конохе. Ему нужен дом, еда и дело, которое даст силы жить дальше.
-hokage: А лучший способ найти себя — стать шиноби. Ирука, в твоём выпускном классе найдётся место?
-iruka: ...До экзамена на генина всего восемь недель. Догнать будет тяжело. Но если он готов — я возьмусь.
+hokage: А лучший способ найти себя — научиться владеть собой. Ирука, в твоём выпускном классе найдётся место?
+iruka: ...До экзамена на генина три недели. Догнать будет тяжело. Но если он готов — я возьмусь.
+hokage: Сдашь экзамен — получишь право выходить за ворота. До тех пор ты под присмотром, прости. Такая чакра привлекает внимание, и не только добрых людей. Учись быстро.
 ? Что скажешь?
 * Я готов! -> yes
 * А я смогу?.. -> doubt
@@ -8486,9 +8513,11 @@ if rain -> rainy
 : Утро. По крыше барабанит дождь.
 # next
 : Вчерашний день был длинным: Академия, Наруто, рамен у Теучи...
+: Теперь у тебя есть главная задача: научиться держать фиолетовую чакру и постоять за себя. Журнал заданий подскажет, куда идти.
 : С сегодняшнего дня ты живёшь по часам Конохи. Уроки — по будням с 8:00 до 13:00. В класс пускают с 7:30, прийти нужно до 9:30.
 : Следи за усталостью: уставшему тяжело тренироваться и бегать. Еда и отдых снимают её. Дома всегда можно сварить рис.
 : После 23:00 ученикам нельзя на улицу — патрули отправят домой. А в 2 часа ночи ты просто уснёшь где стоишь.
+call quest start main
 end
 
 // ───────────── Академия ─────────────
@@ -8499,10 +8528,10 @@ call met iruka
 iruka: А, {name}! Пришёл. Как самочувствие? Головные боли, провалы в памяти?
 iruka: Бумаг на тебя, конечно, нет — вместо документов у нас слово самого Хокаге. Для зачисления этого хватит.
 iruka: Поздравляю! С сегодняшнего дня ты — ученик выпускного класса Академии Конохи.
-iruka: До экзамена на генина восемь недель. Догнать остальных будет непросто, но я в тебя верю. А память... не торопи её. Занимайся — и, может, вспомнишь.
+iruka: До экзамена на генина три недели. Догнать остальных будет непросто, но я в тебя верю. А память... не торопи её. Занимайся — и, может, вспомнишь.
 ? Что ответишь?
 * Я не подведу, сенсей! -> brave
-* Восемь недель?.. Это мало. -> worry
+* Три недели?.. Это мало. -> worry
 # brave
 set var.friend_iruka += 1
 iruka: Вот это настрой! Так держать.
@@ -8882,7 +8911,7 @@ if var.day > 1 -> later
 : Календарь. День 1 обведён красным: «Первый день в Академии!»
 end
 # later
-: Календарь. Прошедшие дни зачёркнуты. До экзамена на генина — восемь недель с первого дня.
+: Календарь. Прошедшие дни зачёркнуты. Экзамен на генина — в воскресенье, 21 июня.
 : Уроки — по будням с 8:00 до 13:00. Прийти нужно до 9:30, ранний вход с 7:30. Суббота и воскресенье свободны.
 end
 
@@ -9173,6 +9202,92 @@ call rep 4
 end
 === ev_thief_lose
 : Вор растворяется в темноте. Ты остаёшься сидеть на земле, потирая ушибы.
+end
+`);
+
+
+// ===== data/main_quest.js =====
+// Главная ветка «Фиолетовая чакра»: постоянная, каждый шаг — механика мира и кусочек истории.
+// Шаг: day — не раньше дня; on: [событие мира, фильтр] — закрывается действием игрока (см. G.quests.notify);
+// intro — сцена, когда шаг открылся; after — сцена после шага. Сюжет и порядок — docs/STORY.md.
+const _mqTrain = (...ids) => ['training', (id) => ids.includes(id)];
+G.QUESTS.main = {
+  cat: 'story', title: 'Фиолетовая чакра',
+  desc: 'Твоя чакра необычная: фиолетовая, сильная и непослушная. Рано или поздно ею кто-то заинтересуется. Нужно научиться держать её и постоять за себя, пока этого не случилось.',
+  steps: [
+    { id: 'dummy', day: 2, text: 'Попробовать удар по манекену на полигоне', target: { building: 'training_ground' }, on: _mqTrain('dummy', 'log', 'throw'), intro: 'mq_dummy_intro', after: 'mq_dummy_after' },
+    { id: 'library', day: 3, text: 'Найти в библиотеке книгу о чакре', target: { building: 'library' }, on: _mqTrain('library'), intro: 'mq_library_intro', after: 'mq_library_after' },
+    { id: 'rod', day: 4, text: 'Купить удочку в сувенирной лавке (80 рё)', target: { building: 'souvenir' }, have: { fishing_rod: 1 }, intro: 'mq_rod_intro' },
+    { id: 'fish', day: 4, text: 'Порыбачить у реки или на пирсе', target: { building: 'pier' }, on: ['fished'], after: 'mq_fish_after' },
+    { id: 'falls', day: 5, text: 'Помедитировать у водопада', target: { building: 'waterfall' }, on: _mqTrain('falls'), intro: 'mq_falls_intro', after: 'mq_falls_after' },
+    { id: 'shop', day: 6, text: 'Купить в лавке кунаи или бинты', target: { building: 'weapons' }, on: ['bought', (id) => ['kunai', 'shuriken', 'bandage'].includes(id)], intro: 'mq_shop_intro' },
+    { id: 'job', day: 7, text: 'Взять поручение с доски', target: { building: 'hokage_tower' }, on: ['job'], after: 'mq_job_after' },
+    { id: 'roof', day: 8, text: 'Подняться на крышу (у стены дома — A)', target: { building: 'academy' }, on: ['roof'], when: () => !!G.state.flags.roofs, after: 'mq_roof_after' },
+    { id: 'spar', day: 11, text: 'Провести учебный спарринг (меню общения)', target: { building: 'academy' }, on: ['battle', (a) => a && a.mode === 'spar'], intro: 'mq_spar_intro', after: 'mq_spar_after' },
+    { id: 'more', day: 12, text: 'Продолжай учиться, тренироваться и дружить. Продолжение — скоро.', target: { building: 'academy' }, when: () => false },
+  ],
+  reward: { text: 'Готов постоять за себя' },
+};
+
+
+// ===== data/main_story.js =====
+// Сцены главной ветки «Фиолетовая чакра» (steps в data/main_quest.js).
+G.script.parse(`
+=== mq_dummy_intro
+: Ночью чакра не давала спать: под кожей будто бегали фиолетовые искры.
+: Нужно выпустить её хоть куда-нибудь. На полигоне Академии стоят манекены.
+end
+=== mq_dummy_after
+: Удар приходится в манекен — и вокруг кулака вспыхивает фиолетовое сияние. Дерево трескается.
+iruka: Что тут... {name}? Это твоя чакра?
+iruka: Не пугайся. Её много, и она тебя пока не слушается. Это нормально. Но не вздумай тренироваться один без присмотра.
+iruka: Заглядывай в библиотеку: там есть книги о чакре. А мне пора, у меня тетради.
+end
+=== mq_library_intro
+: В Академии говорят, что в библиотеке есть что почитать о чакре. Может, там написано, что с тобой.
+end
+=== mq_library_after
+villager_f[Библиотекарь]: Нашёл? «Основы чакры», верно. Странно... Эту книгу вчера брал какой-то незнакомец. Расспрашивал, не появился ли в деревне новичок.
+villager_f[Библиотекарь]: Я ничего не сказала. Но будь осторожен, юноша.
+: По спине пробегает холодок. Кому понадобился ты?
+end
+=== mq_rod_intro
+: Говорят, у реки хорошо думается. И рыба — это еда, а еда снимает усталость. Удочка продаётся в сувенирной лавке.
+end
+=== mq_fish_after
+: Поплавок дёргается. Рядом на пирс опускается Ирука с удочкой на плече.
+iruka: Вот ты где. Не против, если я посижу рядом?
+iruka: Знаешь, в деревне не все рады необычному. Когда я был мальчишкой, меня тоже сторонились.
+iruka: Но те, кто тебе по-настоящему друг, не боятся странной чакры. Они боятся только за тебя.
+iruka: А за такой силой часто приходят. Поэтому учись, {name}. Чем скорее, тем лучше.
+call friend iruka 2
+end
+=== mq_falls_intro
+: Водопад — самое тихое место в деревне. Если где-то и научиться дышать ровно, то здесь.
+end
+=== mq_falls_after
+: Ты закрываешь глаза и слушаешь воду. Чакра перестаёт метаться и течёт ровно.
+: Вода у ног на мгновение светится фиолетовым — и гаснет. У тебя получилось её удержать. Пусть недолго.
+end
+=== mq_shop_intro
+: Кунаи, бинты, запасы... Если за тобой придут, стоит быть готовым. Оружейная — на Главной улице.
+end
+=== mq_job_after
+: Заказчик долго благодарит, потом тихо спрашивает:
+: — Говорят, в деревне новичок с необычной чакрой. Не знаешь, о ком речь? Просто любопытно.
+: Ты пожимаешь плечами. Но осадок остаётся.
+end
+=== mq_roof_after
+: С крыши видно всю Коноху. И человека в плаще у дальней стены: он смотрит прямо на тебя.
+: Ты моргаешь — и его нет.
+: Нужно рассказать Ируке. Или самому стать сильнее.
+end
+=== mq_spar_intro
+: Спарринг — безопасный способ проверить, чему ты научился. Попроси кого-нибудь из друзей через меню общения.
+end
+=== mq_spar_after
+: В конце схватки чакра вспыхивает сама. Друг отшатывается, потом с улыбкой качает головой: «Ого».
+: Ты не боишься. Но понимаешь: пора учиться управлять.
 end
 `);
 
@@ -13261,6 +13376,7 @@ G.roofs = {
     const p = world.player, r = this.of(world.map, b), v = G.actors.DIRV[p.dir];
     const [x, y] = this.clampIn(r, p.x + v[0] * 20, p.dir === 'up' ? r.y + r.h - 4 : p.y + v[1] * 20 - (p.y - (r.y + r.h)) * 0.5);
     this.startJump(p, x, y, true);
+    G.events.emit('roof');
     if (!G.state.flags.tip_roofs) { G.state.flags.tip_roofs = 1; world.showToast('На крыше: A — прыжок или спуск'); }
   },
   startJump(p, x1, y1, toRoof) {
@@ -15955,7 +16071,7 @@ G.scenes.register('world', (pos) => {
         const icon = st ? G.QUEST_CATS[G.QUESTS[qid].cat].icon : '📍';
         F.draw(ctx, icon, 6, y + 7, { color: st ? G.QUEST_CATS[G.QUESTS[qid].cat].color : '#ff9a4a' });
         let txt = st ? st.text : 'Метка: ' + (mk.label || 'место');
-        const suffix = ok ? '' : ' ⏰ с ' + G.game.clock(st.time[0]);
+        const suffix = ok ? '' : st.day && G.state.vars.day < st.day ? ' · с ' + G.game.date(st.day) : st.time && G.quests.dayOk(st) ? ' ⏰ с ' + G.game.clock(st.time[0]) : '';
         while (F.measure(txt + suffix) > maxW - 14 && txt.length > 4) txt = txt.slice(0, -2) + '…';
         F.draw(ctx, txt + suffix, 18, y + 7, { color: !ok ? '#9a8a76' : flash ? '#ffd23a' : '#f8eed0', shadow: '#160c06' });
       } else {
@@ -16436,6 +16552,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       say(it.cat === 'food' ? `Ты съел: ${it.name}. Вкуснотища!` : `${it.name} — готово. Силы вернулись!`);
     } else {
       g.give(it.id, qty);
+      G.events.emit('bought', it.id, qty);
       G.audio.sfx.confirm();
       say(`Куплено: ${it.name}${qty > 1 ? ' ×' + qty : ''}`);
     }
@@ -16912,6 +17029,7 @@ G.scenes.register('journal', () => {
         const col = v.done ? C.ok : v.cur ? C.ink : C.inkFaint;
         F.small.draw(ctx, mark, x0, y, { color: v.done ? C.ok : C.red });
         F.small.wrap(txt, tw - 16).forEach((ln) => { F.small.draw(ctx, ln, x0 + 14, y, { color: col }); y += 12; });
+        if (v.cur && v.st.day && G.state.vars.day < v.st.day) { F.small.draw(ctx, `Откроется ${G.game.date(v.st.day)}`, x0 + 14, y, { color: '#3a62a0' }); y += 12; }
         if (v.cur && v.st.time) {
           const ok = G.quests.timeOk(v.st);
           F.small.draw(ctx, `⏰ ${G.game.clock(v.st.time[0])}–${G.game.clock(v.st.time[1] % 1440)}${ok ? '' : ' (сейчас нельзя)'}`, x0 + 14, y, { color: ok ? '#3a62a0' : '#b8321c' }); y += 12;

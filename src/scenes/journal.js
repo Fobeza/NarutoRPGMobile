@@ -98,6 +98,7 @@ G.scenes.register('journal', () => {
         const col = v.done ? C.ok : v.cur ? C.ink : C.inkFaint;
         F.small.draw(ctx, mark, x0, y, { color: v.done ? C.ok : C.red });
         F.small.wrap(txt, tw - 16).forEach((ln) => { F.small.draw(ctx, ln, x0 + 14, y, { color: col }); y += 12; });
+        if (v.cur && v.st.day && G.state.vars.day < v.st.day) { F.small.draw(ctx, `Откроется ${G.game.date(v.st.day)}`, x0 + 14, y, { color: '#3a62a0' }); y += 12; }
         if (v.cur && v.st.time) {
           const ok = G.quests.timeOk(v.st);
           F.small.draw(ctx, `⏰ ${G.game.clock(v.st.time[0])}–${G.game.clock(v.st.time[1] % 1440)}${ok ? '' : ' (сейчас нельзя)'}`, x0 + 14, y, { color: ok ? '#3a62a0' : '#b8321c' }); y += 12;

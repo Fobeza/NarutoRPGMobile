@@ -56,7 +56,7 @@ G.friends = {
     let n = 1, react = 'Спасибо.';
     if (f.love.includes(item)) { n = 4; react = 'love'; } else if ((f.like || []).includes(item)) { n = 2; react = 'like'; } else if ((f.hate || []).includes(item)) { n = -1; react = 'hate'; } else react = 'ok';
     if (bday && n > 0) n *= 2;
-    G.game.give(item, -1); n = this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1;
+    G.game.give(item, -1); n = this.add(id, n, 'gift'); G.state.daily['gift_' + id] = 1; G.events.emit('gift', id, item);
     return { react, n, bday };
   },
   // командный путь для эпилога

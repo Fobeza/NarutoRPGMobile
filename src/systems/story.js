@@ -198,7 +198,7 @@ G.life_events = {
       const id = opts[i].id, j = G.JOBS[id];
       G.scenes.push(G.scenes.make('train', j.mg, { title: j.name, sortCats: j.cats }, (s) => {
         const pay = Math.round(j.pay * (0.4 + 0.6 * s));
-        d['job_' + id] = 1; G.game.earn(pay); G.game.advance(j.min); G.game.tire(j.fatigue);
+        d['job_' + id] = 1; G.events.emit('job', id, pay); G.game.earn(pay); G.game.advance(j.min); G.game.tire(j.fatigue);
         v.rep = (v.rep || 0) + 1; v.jobs = (v.jobs || 0) + 1;
         for (const [k, n] of Object.entries(j.xp)) G.train.addXp(k, n * (0.5 + s));
         G.game.note(`Поручение «${j.name}»: +${pay} рё`);

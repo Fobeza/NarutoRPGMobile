@@ -27,6 +27,7 @@ G.roofs = {
     const p = world.player, r = this.of(world.map, b), v = G.actors.DIRV[p.dir];
     const [x, y] = this.clampIn(r, p.x + v[0] * 20, p.dir === 'up' ? r.y + r.h - 4 : p.y + v[1] * 20 - (p.y - (r.y + r.h)) * 0.5);
     this.startJump(p, x, y, true);
+    G.events.emit('roof');
     if (!G.state.flags.tip_roofs) { G.state.flags.tip_roofs = 1; world.showToast('На крыше: A — прыжок или спуск'); }
   },
   startJump(p, x1, y1, toRoof) {

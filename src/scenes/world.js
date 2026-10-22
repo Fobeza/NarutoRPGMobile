@@ -929,7 +929,7 @@ G.scenes.register('world', (pos) => {
         const icon = st ? G.QUEST_CATS[G.QUESTS[qid].cat].icon : '📍';
         F.draw(ctx, icon, 6, y + 7, { color: st ? G.QUEST_CATS[G.QUESTS[qid].cat].color : '#ff9a4a' });
         let txt = st ? st.text : 'Метка: ' + (mk.label || 'место');
-        const suffix = ok ? '' : ' ⏰ с ' + G.game.clock(st.time[0]);
+        const suffix = ok ? '' : st.day && G.state.vars.day < st.day ? ' · с ' + G.game.date(st.day) : st.time && G.quests.dayOk(st) ? ' ⏰ с ' + G.game.clock(st.time[0]) : '';
         while (F.measure(txt + suffix) > maxW - 14 && txt.length > 4) txt = txt.slice(0, -2) + '…';
         F.draw(ctx, txt + suffix, 18, y + 7, { color: !ok ? '#9a8a76' : flash ? '#ffd23a' : '#f8eed0', shadow: '#160c06' });
       } else {

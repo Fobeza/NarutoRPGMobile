@@ -44,6 +44,7 @@ G.quests = (() => {
       if (current.consume) for (const [item, n] of Object.entries(current.need || {})) G.game.take(item, n);
       G.state.flags[`q_${id}_${current.id}`] = 1;
       s.step++;
+      if (current.after) this.queue(current.after);   // сцена после шага
       if (s.step >= d.steps.length) this.complete(id);
       else { emit('step', id, d.steps[s.step - 1].text); this.check(); }
       return true;
@@ -76,18 +77,33 @@ G.quests = (() => {
     track(id) { if (this.active(id)) G.state.tracked = id; },
     tracked() { const t = G.state.tracked; return t && this.active(t) ? t : null; },
 
-    // Доступен ли шаг сейчас по времени
+    // Доступен ли шаг сейчас: день (day), условие (when) и часы (time)
+    dayOk(step) { return !step || ((!step.day || G.state.vars.day >= step.day) && (!step.when || !!step.when())); },
     timeOk(step, min = G.state.vars.min) {
+      if (!this.dayOk(step)) return false;
       if (!step || !step.time) return true;
       const [a, b] = step.time;
       return (min >= a && min < b) || (min + 1440 >= a && min + 1440 < b);
     },
 
-    // Автоматические шаги: «есть предметы»
+    // Автоматические шаги: «есть предметы». Вступительные сцены шагов (intro) — один раз, когда шаг стал доступен.
     check() {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.have && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) this.step(id, st.id);
+        if (st && st.have && this.dayOk(st) && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) { this.step(id, st.id); continue; }
+        if (st && st.intro && this.dayOk(st) && !G.state.flags['qi_' + id + '_' + st.id]) { G.state.flags['qi_' + id + '_' + st.id] = 1; this.queue(st.intro); }
+      }
+    },
+    // Сцена в очередь: проигрывается, когда мир свободен (G.story.poll), и не теряется при выгрузке вкладки
+    queue(scriptId) { const q = G.state.frQueue || (G.state.frQueue = []); if (!q.includes(scriptId)) q.push(scriptId); },
+    // Событие мира (training, fished, bought, job, gift, roof, battle, cooked, sold…): закрывает шаг с on: [имя, фильтр?]
+    notify(name, ...args) {
+      for (const id of this.activeList()) {
+        const st = this.curStep(id);
+        if (!st || !st.on || st.on[0] !== name || !this.dayOk(st)) continue;
+        const f = st.on[1];
+        if (f !== undefined && !(typeof f === 'function' ? f(...args) : f === args[0])) continue;
+        this.step(id, st.id);
       }
     },
     // Вход в здание
@@ -157,3 +173,8 @@ G.script.extraTest = (cond) => {
 };
 // Предметы меняются → проверить шаги «есть предметы»
 G.events.on('inv', () => G.quests.check());
+
+// События мира → шаги заданий с on: [событие, фильтр]
+for (const ev of ['training', 'fished', 'bought', 'job', 'gift', 'roof', 'battle', 'cooked', 'sold', 'crafted', 'storage', 'item-used']) G.events.on(ev, (...a) => G.quests.notify(ev, ...a));
+// Новый день открывает шаги, привязанные к дню (вступительные сцены)
+G.events.on('day', () => { if (G.state.started) G.quests.check(); });

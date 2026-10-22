@@ -107,6 +107,30 @@ test('Календарь по месяцам: 28 дней, июнь → июль
   for (const d of [1, 40, 100, 200, 500]) assert.equal(G.life.season().name, 'Лето');
   assert.ok(G.calendar.upcoming(5).every(e => e.d <= G.state.vars.day + 28));
 });
+test('Главная ветка: шаги по дням, закрываются событиями мира, сцены уходят в очередь', () => {
+  const v = G.state.vars, Q = G.quests; G.state.frQueue = [];
+  v.day = 1; assert.ok(Q.start('main'));
+  Q.check(); assert.equal(G.state.frQueue.length, 0, 'шаг дня 2 ещё закрыт');
+  G.events.emit('training', 'dummy'); assert.equal(Q.curStep('main').id, 'dummy', 'не раньше дня 2');
+  v.day = 2; Q.check(); assert.deepEqual(G.state.frQueue, ['mq_dummy_intro']);
+  Q.check(); assert.equal(G.state.frQueue.length, 1, 'вступление не дублируется');
+  G.events.emit('training', 'meditate'); assert.equal(Q.curStep('main').id, 'dummy', 'чужое событие не закрывает шаг');
+  G.events.emit('training', 'dummy'); assert.equal(Q.curStep('main').id, 'library');
+  assert.ok(G.state.frQueue.includes('mq_dummy_after'));
+  v.day = 4; G.events.emit('training', 'library'); assert.equal(Q.curStep('main').id, 'rod');
+  G.game.give('fishing_rod', 1); assert.equal(Q.curStep('main').id, 'fish');
+  G.events.emit('fished', 'fish'); assert.equal(Q.curStep('main').id, 'falls');
+  v.day = 5; G.events.emit('training', 'falls'); assert.equal(Q.curStep('main').id, 'shop');
+  G.events.emit('bought', 'ramen_miso'); assert.equal(Q.curStep('main').id, 'shop', 'нужен кунай или бинт');
+  v.day = 6; G.events.emit('bought', 'kunai'); assert.equal(Q.curStep('main').id, 'job');
+  v.day = 7; G.events.emit('job', 'tora', 100); assert.equal(Q.curStep('main').id, 'roof');
+  v.day = 8; G.events.emit('roof'); assert.equal(Q.curStep('main').id, 'roof', 'крыши открывает сцена Наруто');
+  G.state.flags.roofs = 1; G.events.emit('roof'); assert.equal(Q.curStep('main').id, 'spar');
+  v.day = 11; G.events.emit('battle', { mode: 'ko' }, {}); assert.equal(Q.curStep('main').id, 'spar');
+  G.events.emit('battle', { mode: 'spar' }, {}); assert.equal(Q.curStep('main').id, 'more');
+  v.day = 99; Q.check(); assert.ok(Q.active('main'), 'ветка не завершается сама');
+  for (const st of G.QUESTS.main.steps) for (const k of ['intro', 'after']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });

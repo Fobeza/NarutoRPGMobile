@@ -69,6 +69,7 @@ G.outdoor = {
     G.scenes.push(G.scenes.make('fishing', { spot, left: () => this.FISH_DAY - (G.state.daily.fish || 0) }, (id) => {
       d.fish = (d.fish || 0) + 1; G.game.advance(20); G.game.tire(3);
       if (id) { G.game.give(id, 1); v.fished = (v.fished || 0) + 1; if (id === 'carp') G.game.note('Поймал золотого карпа!'); G.train.addXp('ctrl', 0.5); }
+      G.events.emit('fished', id);
     }, () => { world.softRefresh && world.softRefresh(); }));
   },
 

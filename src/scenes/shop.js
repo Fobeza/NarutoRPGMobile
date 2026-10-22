@@ -39,6 +39,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       say(it.cat === 'food' ? `Ты съел: ${it.name}. Вкуснотища!` : `${it.name} — готово. Силы вернулись!`);
     } else {
       g.give(it.id, qty);
+      G.events.emit('bought', it.id, qty);
       G.audio.sfx.confirm();
       say(`Куплено: ${it.name}${qty > 1 ? ' ×' + qty : ''}`);
     }
