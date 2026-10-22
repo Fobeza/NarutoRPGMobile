@@ -1,18 +1,18 @@
 // Предметы и лавки (план §5.4).
 // cat: food — съедается сразу; tool/med — в подсумок (pouch); gift, book, misc — в сумку; service — услуга на месте.
-// effect: { food, energy, mood, hp, minutes } — применяется при покупке еды и услуг.
+// effect: { rest (усталость −n), mood, hp, minutes } — применяется при покупке еды и услуг.
 G.ITEMS = {
   // ── Ичираку ──
-  ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', ramen: true, effect: { food: 35, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
-  ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', ramen: true, effect: { food: 45, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
-  ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', ramen: true, effect: { food: 70, energy: 10, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
+  ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
+  ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
+  ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
   // ── Якинику Q ──
-  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { food: 80, mood: 10, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
+  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, mood: 10, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
   // ── Данго и чайная ──
-  dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { food: 10, mood: 5, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
-  sweet_tea:    { name: 'Сладкий чай',       price: 15,  cat: 'food', effect: { food: 3, energy: 3, minutes: 10 }, desc: 'Тёплый и сладкий.' },
-  green_tea:    { name: 'Зелёный чай',       price: 15,  cat: 'food', effect: { energy: 6, minutes: 15 }, desc: 'Бодрит немного.' },
-  mochi:        { name: 'Рисовые лепёшки',   price: 25,  cat: 'food', effect: { food: 15, energy: 3, minutes: 15 }, desc: 'Мягкие моти с бобовой пастой.' },
+  dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, mood: 5, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
+  sweet_tea:    { name: 'Сладкий чай',       price: 15,  cat: 'food', effect: { rest: 5, minutes: 10 }, desc: 'Тёплый и сладкий.' },
+  green_tea:    { name: 'Зелёный чай',       price: 15,  cat: 'food', effect: { rest: 6, minutes: 15 }, desc: 'Бодрит немного.' },
+  mochi:        { name: 'Рисовые лепёшки',   price: 25,  cat: 'food', effect: { rest: 12, minutes: 15 }, desc: 'Мягкие моти с бобовой пастой.' },
   // ── Оружейная ──
   kunai:        { name: 'Кунай',             price: 15,  cat: 'tool', pouch: true, desc: 'Бросок или ближний бой. Основа арсенала шиноби.' },
   shuriken:     { name: 'Сюрикен',           price: 10,  cat: 'tool', pouch: true, desc: 'Быстрый бросок. Урон меньше, чем у куная.' },
@@ -25,7 +25,7 @@ G.ITEMS = {
   ointment:     { name: 'Мазь',              price: 50,  cat: 'med', pouch: true, effect: { injury: 1, hp: 10 }, desc: 'Снимает день травмы, здоровье +10%. Применить в сумке.' },
   chakra_pill:  { name: 'Пилюля чакры',      price: 80,  cat: 'med', pouch: true, effect: { chakra: 50 }, desc: 'Чакра +50%. Применить в сумке или в бою.' },
   antidote:     { name: 'Противоядие',       price: 40,  cat: 'med', pouch: true, effect: { poison: 1 }, desc: 'Снимает отравление. Применить в сумке.' },
-  herb_tea:     { name: 'Травяной чай',      price: 30,  cat: 'misc', effect: { sleep: 1 }, desc: 'Перед сном: энергия и чакра полностью, здоровье +50%.' },
+  herb_tea:     { name: 'Травяной чай',      price: 30,  cat: 'misc', effect: { sleep: 1 }, desc: 'Перед сном: усталость снимается, чакра полностью, здоровье +50%.' },
   // ── Книжная лавка ──
   book_history: { name: 'История Конохи',    price: 80,  cat: 'book', desc: 'Книга для чтения дома за столом (+Знания).' },
   book_traps:   { name: 'Теория ловушек',    price: 200, cat: 'book', desc: 'Свиток о ловушках. Без него в бою нельзя ставить ловушки.' },
@@ -57,14 +57,14 @@ G.ITEMS = {
   boot:         { name: 'Старый сапог',      price: 2,   cat: 'misc', desc: 'Улов так себе. Рынок купит за гроши.' },
   herb:         { name: 'Лечебная трава',    price: 12,  cat: 'misc', desc: 'Из трав дома можно сделать мазь, чай или пилюлю.' },
   herb_blue:    { name: 'Голубой лотос',     price: 45,  cat: 'gift', desc: 'Редкий цветок у воды. Для пилюль чакры — или в подарок.' },
-  berries:      { name: 'Лесные ягоды',      price: 6,   cat: 'food', effect: { food: 6, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие, прямо с куста.' },
-  candy:        { name: 'Леденцы',           price: 5,   cat: 'food', effect: { food: 2, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие.' },
+  berries:      { name: 'Лесные ягоды',      price: 6,   cat: 'food', effect: { rest: 4, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие, прямо с куста.' },
+  candy:        { name: 'Леденцы',           price: 5,   cat: 'food', effect: { rest: 1, mood: 2, minutes: 2 }, desc: 'Кисло-сладкие.' },
   towel:        { name: 'Полотенце',         price: 20,  cat: 'misc', desc: 'Пригодится после тренировки.' },
   notebook:     { name: 'Тетрадь',           price: 10,  cat: 'misc', desc: 'Для конспектов на уроках Ируки.' },
   // ── Для заданий ──
   bouquet_ino:  { name: 'Букет для Хинаты',  price: 0,   cat: 'misc', quest: true, desc: 'Букет от Ино. Нужно отнести Хинате к особняку Хьюга.' },
   // ── Услуги ──
-  onsen_bath:   { name: 'Искупаться',        price: 30,  cat: 'service', effect: { energy: 100, mood: 10, minutes: 60 }, desc: 'Горячий источник: энергия полностью.' },
+  onsen_bath:   { name: 'Искупаться',        price: 30,  cat: 'service', effect: { rest: 100, mood: 10, minutes: 60 }, desc: 'Горячий источник: усталость снимается полностью.' },
 };
 
 // Лавки: id совпадает с шаблоном здания (tplId). keeper — кто стоит за прилавком.

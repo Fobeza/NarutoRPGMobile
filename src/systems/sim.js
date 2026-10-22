@@ -147,7 +147,7 @@ G.sim = {
     const I = G.ITEMS;
     return {
       avgJob: Math.round(avgJob), jobScore: 0.8, jobPay: Math.round(avgJob * (0.4 + 0.6 * 0.8)),
-      ramen: I.ramen_miso.price, foodPerDay: 6 * 16, riceFree: 2 * 25,
+      ramen: I.ramen_miso.price, fatiguePerDay: Math.round(0.07 * 60 * 16), riceRest: 15,
       fishSell: G.outdoor.sellPrice('fish'), carpSell: G.outdoor.sellPrice('carp'), herbSell: G.outdoor.sellPrice('herb'),
       kunai: I.kunai.price, bandage: I.bandage.price, pill: I.chakra_pill.price, rod: I.fishing_rod.price,
     };

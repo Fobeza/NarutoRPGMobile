@@ -65,9 +65,9 @@ G.outdoor = {
     const v = G.state.vars, d = G.state.daily;
     if (!G.game.count('fishing_rod')) return world.talk([{ text: 'Вода прозрачная, видно рыбу. Была бы удочка... (сувенирная лавка, 80 рё)' }]);
     if ((d.fish || 0) >= this.FISH_DAY) return world.talk([{ text: 'Рыба больше не клюёт. Приходи завтра.' }]);
-    if (v.energy < 5) return world.talk([{ text: 'Ты слишком устал даже для рыбалки.' }]);
+    if (G.game.vigor() < 5) return world.talk([{ text: 'Ты слишком устал даже для рыбалки.' }]);
     G.scenes.push(G.scenes.make('fishing', { spot, left: () => this.FISH_DAY - (G.state.daily.fish || 0) }, (id) => {
-      d.fish = (d.fish || 0) + 1; G.game.advance(20); v.energy = Math.max(0, v.energy - 3);
+      d.fish = (d.fish || 0) + 1; G.game.advance(20); G.game.tire(3);
       if (id) { G.game.give(id, 1); v.fished = (v.fished || 0) + 1; if (id === 'carp') G.game.note('Поймал золотого карпа!'); G.train.addXp('ctrl', 0.5); }
     }, () => { world.softRefresh && world.softRefresh(); }));
   },

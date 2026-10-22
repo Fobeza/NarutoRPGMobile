@@ -71,7 +71,7 @@ G.academy = {
         if (p.learn && !G.state.flags['tech_' + p.learn]) { G.state.flags['tech_' + p.learn] = 1; G.game.note('Изучена техника: ' + G.TECHS[p.learn].name); }
         if (p.learnFlag) G.state.flags[p.learnFlag] = 1;
         if (pts >= 80) G.friends.add('iruka', 1);
-        G.game.advanceTo('13:00'); v.energy = Math.max(0, v.energy - 10); v.food = Math.max(0, v.food - 10);
+        G.game.advanceTo('13:00'); G.game.tire(10);
         G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`);
         const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ' Теперь можно тренировать хождение по дереву!' : '';
         _say([{ who: 'iruka', text: `${pts >= 85 ? 'Превосходно' : pts >= 65 ? 'Хорошо' : pts >= 45 ? 'Неплохо, но можешь лучше' : 'Нужно больше стараться'}, {name}! Оценка: ${this.mark(pts)} (${pts}).${learned}` }, { text: 'Уроки окончены. Время — 13:00.' }]
@@ -173,13 +173,13 @@ G.story = {
 
 // ───────────────────────── Случайные события и доска поручений ─────────────────────────
 G.JOBS = {
-  tora:     { name: 'Поймать кошку Тору',     pay: 150, mg: 'cat',  min: 90,  energy: 15, xp: { spd: 4 }, text: 'Кошка жены даймё снова сбежала!' },
-  weed:     { name: 'Прополка огорода',       pay: 70,  mg: 'sort', min: 90,  energy: 14, xp: { end: 4 }, cats: ['Сорняк', 'Овощ'], text: 'Бабушка Тоё просит помочь в огороде.' },
-  market:   { name: 'Разгрузка на рынке',     pay: 90,  mg: 'sort', min: 120, energy: 18, xp: { end: 3, tai: 2 }, cats: ['Рыба', 'Овощи'], text: 'Нужны крепкие руки!' },
-  hospital: { name: 'Помощь в больнице',      pay: 80,  mg: 'sort', min: 90,  energy: 10, xp: { know: 4 }, cats: ['Травы', 'Бинты'], text: 'Рассортировать лекарства.' },
-  delivery: { name: 'Доставка цветов Яманака', pay: 80, mg: 'run',  min: 60,  energy: 14, xp: { spd: 4 }, text: 'Букеты по всей деревне — бегом!' },
-  river:    { name: 'Уборка реки',            pay: 60,  mg: 'sort', min: 90,  energy: 14, xp: { end: 4 }, cats: ['Мусор', 'Рыба'], text: 'Достать мусор, отпустить рыбу.' },
-  scrolls:  { name: 'Разбор свитков в архиве', pay: 70, mg: 'quiz', min: 90,  energy: 6,  xp: { know: 5 }, text: 'Архив Резиденции просит помощи.' },
+  tora:     { name: 'Поймать кошку Тору',     pay: 150, mg: 'cat',  min: 90,  fatigue: 15, xp: { spd: 4 }, text: 'Кошка жены даймё снова сбежала!' },
+  weed:     { name: 'Прополка огорода',       pay: 70,  mg: 'sort', min: 90,  fatigue: 14, xp: { end: 4 }, cats: ['Сорняк', 'Овощ'], text: 'Бабушка Тоё просит помочь в огороде.' },
+  market:   { name: 'Разгрузка на рынке',     pay: 90,  mg: 'sort', min: 120, fatigue: 18, xp: { end: 3, tai: 2 }, cats: ['Рыба', 'Овощи'], text: 'Нужны крепкие руки!' },
+  hospital: { name: 'Помощь в больнице',      pay: 80,  mg: 'sort', min: 90,  fatigue: 10, xp: { know: 4 }, cats: ['Травы', 'Бинты'], text: 'Рассортировать лекарства.' },
+  delivery: { name: 'Доставка цветов Яманака', pay: 80, mg: 'run',  min: 60,  fatigue: 14, xp: { spd: 4 }, text: 'Букеты по всей деревне — бегом!' },
+  river:    { name: 'Уборка реки',            pay: 60,  mg: 'sort', min: 90,  fatigue: 14, xp: { end: 4 }, cats: ['Мусор', 'Рыба'], text: 'Достать мусор, отпустить рыбу.' },
+  scrolls:  { name: 'Разбор свитков в архиве', pay: 70, mg: 'quiz', min: 90,  fatigue: 6,  xp: { know: 5 }, text: 'Архив Резиденции просит помощи.' },
 };
 G.events = G.events || {};
 G.life_events = {
@@ -192,13 +192,13 @@ G.life_events = {
     const v = G.state.vars, d = G.state.daily;
     if (v.min < 8 * _H || v.min >= 18 * _H) return world.talk([{ text: 'Доска поручений. Работа выдаётся с 8:00 до 18:00.' }]);
     const ids = this.todayJobs();
-    const opts = ids.map((id) => { const j = G.JOBS[id]; return { label: j.name, sub: j.pay + ' рё', desc: `${j.text} ${j.min} мин, энергия −${j.energy}.`, off: d['job_' + id] ? 'Уже выполнено сегодня' : v.energy < j.energy ? 'Ты слишком устал' : null, id }; });
+    const opts = ids.map((id) => { const j = G.JOBS[id]; return { label: j.name, sub: j.pay + ' рё', desc: `${j.text} ${j.min} мин, усталость +${j.fatigue}.`, off: d['job_' + id] ? 'Уже выполнено сегодня' : G.game.vigor() < j.fatigue ? 'Ты слишком устал' : null, id }; });
     G.scenes.push(G.scenes.make('pick', { title: 'Доска поручений', text: 'Неофициальные задания для учеников Академии.', options: opts }, (i) => {
       if (i < 0) return;
       const id = opts[i].id, j = G.JOBS[id];
       G.scenes.push(G.scenes.make('train', j.mg, { title: j.name, sortCats: j.cats }, (s) => {
         const pay = Math.round(j.pay * (0.4 + 0.6 * s));
-        d['job_' + id] = 1; G.game.earn(pay); G.game.advance(j.min); v.energy = Math.max(0, v.energy - j.energy); v.food = Math.max(0, v.food - 6);
+        d['job_' + id] = 1; G.game.earn(pay); G.game.advance(j.min); G.game.tire(j.fatigue);
         v.rep = (v.rep || 0) + 1; v.jobs = (v.jobs || 0) + 1;
         for (const [k, n] of Object.entries(j.xp)) G.train.addXp(k, n * (0.5 + s));
         G.game.note(`Поручение «${j.name}»: +${pay} рё`);
@@ -245,27 +245,27 @@ Object.assign(G.flow, {
   cook: (a, w) => {
     const c = (id) => G.game.count(id), d = G.state.daily;
     const recipes = [
-      { label: 'Рис (из запасов)', need: {}, food: 25, mood: 0, off: G.state.vars.cd_rice && G.state.vars.cd_rice > G.life.absMin() ? 'Запасы риса закончились до вечера' : null, cd: true },
-      { label: 'Бэнто: рис, рыба, овощи', need: { rice: 1, fish: 1, vegetables: 1 }, food: 55, mood: 6, bento: true, desc: 'Сытно. Тренировки сегодня +10%.' },
-      { label: 'Омлет с рисом', need: { eggs: 1, rice: 1 }, food: 35, energy: 6, mood: 3 },
-      { label: 'Мисо-суп с рыбой', need: { fish: 1, vegetables: 1 }, food: 30, energy: 4, mood: 4 },
-      { label: 'Унаги-дон', need: { eel: 1, rice: 1 }, food: 60, energy: 10, mood: 10, desc: 'Угорь на рисе. Сытно и бодрит!' },
-      { label: 'Жареная рыба', need: { fish: 1 }, food: 22, mood: 2 },
-      { label: 'Молоко', need: { milk: 1 }, food: 8, mood: 2 },
+      { label: 'Рис (из запасов)', need: {}, rest: 15, mood: 0, off: G.state.vars.cd_rice && G.state.vars.cd_rice > G.life.absMin() ? 'Запасы риса закончились до вечера' : null, cd: true },
+      { label: 'Бэнто: рис, рыба, овощи', need: { rice: 1, fish: 1, vegetables: 1 }, rest: 33, mood: 6, bento: true, desc: 'Усталость −33. Тренировки сегодня +10%.' },
+      { label: 'Омлет с рисом', need: { eggs: 1, rice: 1 }, rest: 27, mood: 3 },
+      { label: 'Мисо-суп с рыбой', need: { fish: 1, vegetables: 1 }, rest: 22, mood: 4 },
+      { label: 'Унаги-дон', need: { eel: 1, rice: 1 }, rest: 46, mood: 10, desc: 'Угорь на рисе. Сытно и бодрит!' },
+      { label: 'Жареная рыба', need: { fish: 1 }, rest: 13, mood: 2 },
+      { label: 'Молоко', need: { milk: 1 }, rest: 5, mood: 2 },
     ];
     const opts = recipes.map((r) => {
       const miss = Object.entries(r.need).filter(([k, n]) => c(k) < n).map(([k]) => G.ITEMS[k].name);
-      return { label: r.label, sub: Object.keys(r.need).length ? '' : 'бесплатно', desc: r.desc || ('Сытость +' + r.food), off: r.off || (miss.length ? 'Нужно: ' + miss.join(', ') + ' (рынок)' : null) };
+      return { label: r.label, sub: Object.keys(r.need).length ? '' : 'бесплатно', desc: r.desc || ('Усталость −' + r.rest), off: r.off || (miss.length ? 'Нужно: ' + miss.join(', ') + ' (рынок)' : null) };
     });
     G.scenes.push(G.scenes.make('pick', { title: 'Кухня', options: opts }, (i) => {
       if (i < 0) return;
       const r = recipes[i];
       for (const [k, n] of Object.entries(r.need)) G.game.give(k, -n);
-      G.game.eat(r.food); G.game.mood(r.mood || 0); if (r.energy) G.game.rest(r.energy); if (r.bento) d.bento = 1;
+      G.game.rest(r.rest); G.game.mood(r.mood || 0); if (r.bento) d.bento = 1;
       if (r.cd) G.state.vars.cd_rice = G.life.absMin() + 240;
       G.game.advance(20);
       G.events.emit('cooked', r.label);
-      w.talk([{ text: `${r.label}: готово и съедено! Сытость +${r.food}.` }]);
+      w.talk([{ text: `${r.label}: готово и съедено! Усталость −${r.rest}.` }]);
     }));
   },
   flower: (a, w) => {

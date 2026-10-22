@@ -176,8 +176,8 @@ G.scenes.register('world', (pos) => {
       if (p.jump) G.roofs.updateJump(this, dt);
       const ax = p.jump ? { x: 0, y: 0 } : I.axis();
       const v = G.state.vars;
-      const tired = v.energy < 10 || v.food <= 0;
-      if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast(v.food <= 0 ? 'Голодный — не до бега' : 'Нет сил бежать'); }
+      const tired = v.fatigue > 90;
+      if (I.held('b') && tired && (ax.x || ax.y) && !G.state.daily.noRun) { G.state.daily.noRun = 1; this.showToast('Нет сил бежать'); }
       const run = I.held('b') && !tired;
       const speed = (run ? G.CONFIG.RUN_SPEED * G.hero.runMul() : G.CONFIG.WALK_SPEED * G.hero.walkMul()) * dt;
       G.actors.playerContact(m, p, ax.x, ax.y, this.others, dt);
@@ -470,10 +470,8 @@ G.scenes.register('world', (pos) => {
       if (shop && crossed(shop.hours[1] - 15)) this.showToast('Лавка закроется через 15 минут');
       if (shop && crossed(shop.hours[1])) this.showToast('Лавка закрылась');
       // нужды
-      if (v.food < 25 && !d.hungry) { d.hungry = 1; this.showToast('Живот урчит... Пора поесть'); this.tip('food', '🍜 Сытость', 'Еда — в Ичираку, данго-лавке или дома (рис бесплатно)'); }
-      if (v.food <= 0 && !d.starving) { d.starving = 1; this.notes.push({ title: 'x Голод!', text: 'Энергия тает вдвое быстрее', col: '#c04a3a', t: 3 }); }
-      if (v.energy < 20 && !d.tired) { d.tired = 1; this.showToast('Ты устал... Пора отдохнуть'); }
-      if (v.energy <= 0) return this.faint('tired');
+      if (v.fatigue > 80 && !d.tired) { d.tired = 1; this.showToast('Ты устал... Пора отдохнуть'); this.tip('fatigue', '😓 Усталость', 'Еда и отдых снимают усталость: Ичираку, данго-лавка или дома (рис бесплатно)'); }
+      if (v.fatigue >= 100) return this.faint('tired');
       // ночь
       if (crossed(22 * 60)) this.tip('night', '🌙 Поздно', 'С 23:00 ученикам нельзя на улицу — патруль отправит домой');
       if (crossed(23 * 60) && m.outdoor) { this.notes.push({ title: '🌙 Комендантский час', text: 'Ученикам пора по домам!', col: '#9ab0ff', t: 3 }); G.audio.sfx.error(); }
@@ -489,7 +487,7 @@ G.scenes.register('world', (pos) => {
           const hb = G.world.konoha().buildings.find((b) => b.tplId === 'hospital');
           if (hb && hb.interior) this.setMap({ map: hb.interior.id, entry: true });
           G.game.advance(180);
-          v.energy = 35; G.game.mood(-10);
+          v.fatigue = 65; G.game.mood(-10);
           G.game.note('Обморок от усталости — очнулся в больнице');
           this.pendingTalk = 'faint_hospital';
         }, 1.2);
@@ -907,11 +905,11 @@ G.scenes.register('world', (pos) => {
       F.draw(ctx, clk, cx, 5, { color: v.min >= 23 * 60 ? '#ff8a6a' : night ? '#9ab0ff' : '#f8eed0' });
       const mt = v.money + ' рё';
       F.draw(ctx, mt, W - 6, 5, { align: 'right', color: '#f4d46a' });
-      // здоровье, чакра, сытость, энергия: значок + бамбуковая шкала
-      const bars = [['heart', C.hp, v.hp / 100], ['drop', C.chakra, v.chakra / 100], ['bowl', C.food, v.food / 100], ['bolt', C.energy, v.energy / 100]];
-      const cell = (W - 8) / 4;
+      // здоровье, чакра, усталость: значок + бамбуковая шкала (у усталости полная шкала — плохо)
+      const bars = [['heart', C.hp, v.hp / 100], ['drop', C.chakra, v.chakra / 100], ['bolt', C.fatigue, v.fatigue / 100]];
+      const cell = (W - 8) / 3;
       bars.forEach(([ic, col, val], i) => {
-        const x = Math.round(4 + i * cell), low = i >= 2 && val < 0.2 && Math.floor(this.time * 3) % 2 === 0;
+        const x = Math.round(4 + i * cell), low = i === 2 && val > 0.8 && Math.floor(this.time * 3) % 2 === 0;
         U.icon(ctx, ic, x, 15, low ? '#ff6a4a' : col);
         U.gauge(ctx, x + 13, 18, Math.round(cell) - 17, 6, val, low ? '#e04a4a' : col);
       });

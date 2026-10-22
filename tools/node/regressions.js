@@ -73,15 +73,24 @@ test('В спарринге расходники конечны, запас вн
   assert.ok(b.sim.press('tool', 'Бинт')); settle(b); b.P.hp = 10;
   assert.equal(b.sim.press('tool', 'Бинт'), false); assert.equal(G.game.count('bandage'), 1);
 });
+test('Усталость: набор, отдых, еда и миграция сохранения (энергия и сытость заменены)', () => {
+  G.state.vars.fatigue = 0; G.game.advance(60); assert.ok(G.state.vars.fatigue > 3 && G.state.vars.fatigue < 8);
+  G.game.tire(200); assert.equal(G.state.vars.fatigue, 100); G.game.rest(30); assert.equal(G.state.vars.fatigue, 70);
+  G.game.eat(50); assert.equal(G.state.vars.fatigue, 40); assert.equal(G.game.vigor(), 60);
+  const old = JSON.parse(JSON.stringify(G.state)); delete old.vars.fatigue; Object.assign(old.vars, { energy: 30, food: 5 });
+  G.game.fix(old); assert.equal(old.vars.fatigue, 70); assert.equal(old.vars.energy, undefined); assert.equal(old.vars.food, undefined);
+  G.state.vars.fatigue = 100; assert.equal(G.game.useItem('berries').ok, false);   // нет в сумке
+  assert.ok(Object.values(G.ITEMS).filter(i => i.cat === 'food').every(i => i.effect.rest > 0));
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });
 test('Ягоды, мазь, чай и противоядие можно применить из сумки', () => {
   G.state.inv = { berries: 1, ointment: 1, herb_tea: 1, antidote: 1 };
-  Object.assign(G.state.vars, { food: 20, hp: 20, injury: 2, poison: 1 });
+  Object.assign(G.state.vars, { fatigue: 60, hp: 20, injury: 2, poison: 1 });
   for (const id of Object.keys(G.state.inv)) assert.ok(G.game.useItem(id).ok, id);
-  assert.ok(G.state.vars.food > 20); assert.ok(G.state.vars.hp > 20); assert.equal(G.state.vars.injury, 1); assert.equal(G.state.vars.poison, 0);
-  G.state.vars.min = 23 * 60; G.game.sleep(); assert.equal(G.state.vars.energy, 100); assert.equal(G.state.vars.chakra, 100);
+  assert.ok(G.state.vars.fatigue < 60); assert.ok(G.state.vars.hp > 20); assert.equal(G.state.vars.injury, 1); assert.equal(G.state.vars.poison, 0);
+  G.state.vars.min = 23 * 60; G.game.sleep(); assert.equal(G.state.vars.fatigue, 0); assert.equal(G.state.vars.chakra, 100);
 });
 test('Пилюля при полной чакре не расходуется ни в сумке, ни в бою', () => {
   G.state.inv = { chakra_pill: 1 }; assert.equal(G.game.useItem('chakra_pill').ok, false);

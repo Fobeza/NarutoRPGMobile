@@ -62,9 +62,9 @@ G.scenes.register('bag', () => {
       text(ctx,`${game.dayName()}, ${v.day} · ${game.clock()}`,12,g.infoY+5*z,z,true,{color:C.inkDim,maxW:(W-24)/z-G.font.small.measure(`${v.money} рё`)-8});
       text(ctx,`${v.money} рё`,W-12,g.infoY+5*z,z,true,{align:'right',color:'#8a5a10'});
       text(ctx,'Цель: '+(game.goalText()||'—'),12,g.infoY+18*z,z,true,{color:C.redDark,maxW:(W-24)/z});
-      [['Сытость',v.food,C.food],['Энергия',v.energy,C.energy]].forEach(([nm,val,col],i)=>{
-        const x=12+i*(W-24)/2;text(ctx,nm,x,g.infoY+31*z,z,true,{color:C.inkDim});
-        U.gauge(ctx,x+54*z,g.infoY+33*z,Math.floor((W-24)/2)-54*z-4,6*z,val/100,col);
+      [['Усталость',v.fatigue,C.fatigue]].forEach(([nm,val,col],i)=>{
+        const x=12;text(ctx,nm,x,g.infoY+31*z,z,true,{color:C.inkDim});
+        U.gauge(ctx,x+64*z,g.infoY+33*z,W-24-64*z,6*z,val/100,col);
       });
       const gr=g.grid;U.panel(ctx,gr.x,gr.y,gr.w,gr.h,'well');
       cards(g,L).forEach(r=>{

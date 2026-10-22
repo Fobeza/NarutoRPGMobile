@@ -35,7 +35,7 @@ G.scenes.register('daysum', (summary, onDone) => {
         const late = summary.bed > 23 * 60;
         rows.push([summary.faint ? `Уснул без сил в ${G.game.clock(summary.bed)}` : `Отбой в ${G.game.clock(summary.bed)}${late ? ' — поздно' : ''}`, summary.faint || late ? C.err : '#3a62a0']);
         const wt = G.life.WEATHER[summary.weather];
-        rows.push([`Подъём ${G.game.clock(summary.wake)} · энергия ${summary.wakeEnergy} · ${wt.icon} ${wt.name.toLowerCase()}`, C.ok]);
+        rows.push([`Подъём ${G.game.clock(summary.wake)} · усталость ${summary.wakeFatigue} · ${wt.icon} ${wt.name.toLowerCase()}`, C.ok]);
       }
       const tw = W - 52;
       const h = 30 + rows.reduce((n, [txt]) => n + S.wrap(txt, tw).length * 12 + 2, 0);

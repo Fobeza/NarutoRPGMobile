@@ -53,7 +53,7 @@ with sync_playwright() as p:
     check(page.evaluate("G.friends.pts('choji')") >= 4, 'любимый подарок: +4 (Чоджи, %s)' % page.evaluate("G.friends.pts('choji')"))
     page.evaluate("G.state.inv = JSON.parse(%r)" % inv0)
     # ── 4. доска поручений ──
-    page.evaluate("G.state.vars.min = 10 * 60; G.state.vars.energy = 90")
+    page.evaluate("G.state.vars.min = 10 * 60; G.state.vars.fatigue = 10")
     m0 = page.evaluate("G.state.vars.money")
     W(page, "s.talk('board'); return 1"); time.sleep(0.6)
     check(top(page) == 'pick', 'доска поручений открылась'); shot(page, 'life_board')

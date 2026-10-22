@@ -76,9 +76,9 @@ G.friends = {
     const opts = [
       { label: 'Поговорить', act: 'talk' },
       { label: 'Подарить', sub: gifts.length ? '' : 'нечего', off: d['gift_' + id] ? 'Сегодня уже дарил' : !gifts.length ? 'Нечего дарить — загляни в лавки' : null, act: 'gift' },
-      { label: 'Тренировка вместе', sub: '', off: !t ? 'Не тренируется' : d['trw_' + id] ? 'Сегодня уже тренировались' : G.state.vars.energy < 15 ? 'Ты устал' : lvl < 1 && id !== 'iruka' ? 'Пока не доверяет (дружба 1)' : null, act: 'train', desc: 'Прогресс +50% и дружба.' },
+      { label: 'Тренировка вместе', sub: '', off: !t ? 'Не тренируется' : d['trw_' + id] ? 'Сегодня уже тренировались' : G.game.vigor() < 15 ? 'Ты устал' : lvl < 1 && id !== 'iruka' ? 'Пока не доверяет (дружба 1)' : null, act: 'train', desc: 'Прогресс +50% и дружба.' },
     ];
-    if (f.spar) opts.push({ label: 'Спарринг', off: d['spar_' + id] ? 'Сегодня уже был' : G.state.vars.energy < 15 ? 'Ты устал' : null, act: 'spar', desc: 'Бой до 30% HP. Победа — уважение и опыт.' });
+    if (f.spar) opts.push({ label: 'Спарринг', off: d['spar_' + id] ? 'Сегодня уже был' : G.game.vigor() < 15 ? 'Ты устал' : null, act: 'spar', desc: 'Бой до 30% HP. Победа — уважение и опыт.' });
     opts.push({ label: 'Пока', act: 'bye' });
     G.scenes.push(G.scenes.make('pick', { title: name + '  ' + '♥'.repeat(lvl) + '·'.repeat(5 - lvl), options: opts }, (i) => {
       const a = i >= 0 ? opts[i].act : 'bye';
@@ -102,7 +102,7 @@ G.friends = {
       else if (a === 'spar') {
         d['spar_' + id] = 1;
         G.flow.battle({ enemy: f.spar, mode: 'spar', terrain: 'field', onEnd: (res) => {
-          this.add(id, 2, 'spar'); G.game.advance(40); G.state.vars.energy = Math.max(0, G.state.vars.energy - 12);
+          this.add(id, 2, 'spar'); G.game.advance(40); G.game.tire(12);
           if (res.win) { G.state.vars['spwin_' + id] = (G.state.vars['spwin_' + id] || 0) + 1; G.state.vars.rep = (G.state.vars.rep || 0) + 1; }
           if (id === 'sasuke' && res.win) G.state.vars.rival = (G.state.vars.rival || 0) + 1;
           const l = G.ENEMIES[f.spar].lines; world.talk([{ who: id, text: G.util.fmt(res.win ? l.lose : l.win, { name: G.state.hero.name }) }]);

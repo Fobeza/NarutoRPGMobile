@@ -77,7 +77,7 @@
   let src = '';
   for (const [id, [text, tr]] of Object.entries(spots)) {
     const t = G.TRAININGS[tr];
-    src += `=== ${id}\n: ${text}\n? ${t.name} (${t.minutes} мин, энергия −${t.energy})\n* Тренироваться -> go\n* Не сейчас -> no\n# go\ncall train ${tr}\nend\n# no\nend\n`;
+    src += `=== ${id}\n: ${text}\n? ${t.name} (${t.minutes} мин, усталость +${t.fatigue})\n* Тренироваться -> go\n* Не сейчас -> no\n# go\ncall train ${tr}\nend\n# no\nend\n`;
   }
   for (let i = 0; i < 20; i++) src += `=== scroll_${i}\ncall scroll ${i}\nend\n`;
   G.script.parse(src);

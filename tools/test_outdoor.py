@@ -90,13 +90,13 @@ with sync_playwright() as p:
     page.evaluate("G.state.inv.herb = 3")
     W(page, "G.outdoor.craftMenu(s); return 1"); time.sleep(0.3); key(page, "KeyZ"); time.sleep(0.3); close_dialogs(page)
     check(page.evaluate("G.game.count('ointment') + (G.state.chest.ointment || 0)") == 1 and inv(page, 'herb') == 0, "мазь из 3 трав сохранена в сумке или сундуке")
-    page.evaluate("Object.assign(G.state.inv, { eel: 1, rice: 1 }); G.state.vars.food = 20")
+    page.evaluate("Object.assign(G.state.inv, { eel: 1, rice: 1 }); G.state.vars.fatigue = 80")
     W(page, "G.flow.cook({}, s); return 1"); time.sleep(0.3)
     pick(page, "Обычная готовка"); pick(page, "Унаги-дон"); close_dialogs(page)   # с 1.6 кухня сначала спрашивает: обычная или семейная
-    check(inv(page, 'eel') == 0 and page.evaluate("G.state.vars.food") >= 75, "унаги-дон: сытость %d" % page.evaluate("Math.round(G.state.vars.food)"))
+    check(inv(page, 'eel') == 0 and page.evaluate("G.state.vars.fatigue") <= 36, "унаги-дон: усталость %d" % page.evaluate("Math.round(G.state.vars.fatigue)"))
 
     print("— крыши")
-    page.evaluate("Object.assign(G.state.vars, { day: 4, min: 14 * 60 + 5, energy: 90 }); G.state.daily = { lesson: 1 }")
+    page.evaluate("Object.assign(G.state.vars, { day: 4, min: 14 * 60 + 5, fatigue: 10 }); G.state.daily = { lesson: 1 }")
     W(page, "s.setMap({ map: 'konoha', x: 62 * 16 + 8, y: 46 * 16 + 8, dir: 'down' }); return 1"); time.sleep(1.0)
     for _ in range(30):
         if page.evaluate("G.state.flags.roofs"): break

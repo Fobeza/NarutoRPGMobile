@@ -15,7 +15,7 @@ G.scenes.register('cheats', () => {
     { label: '+1000 рё', act: () => { G.game.earn(1000); say('+1000 рё'); } },
     { label: 'Время +1 час', act: () => { G.game.advance(60); say(G.game.clock()); } },
     { label: 'Вечер (19:00)', act: () => { G.game.advanceTo('19:00'); say(G.game.clock()); } },
-    { label: 'Сытость и энергия 100', act: () => { G.state.vars.food = 100; G.state.vars.energy = 100; say('Готово'); } },
+    { label: 'Усталость 0', act: () => { G.state.vars.fatigue = 0; say('Готово'); } },
     { label: 'Кунаи ×5, бинты ×3', act: () => { G.game.give('kunai', 5); G.game.give('bandage', 3); say('Выдано'); } },
     { label: '> Дом героя', act: () => tp('hero_home') },
     { label: '> Академия', act: () => tp('academy') },

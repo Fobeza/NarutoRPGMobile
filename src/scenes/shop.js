@@ -28,13 +28,12 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     const total = it.price * qty;
     if (!g.canPay(total)) { G.audio.sfx.error(); say('Не хватает рё!', true); return; }
     if (it.pouch && g.pouchUsed() + qty > g.pouchMax()) { G.audio.sfx.error(); say('Подсумок полон!', true); return; }
-    if (it.cat === 'food' && it.effect.food && G.state.vars.food >= 95) { G.audio.sfx.error(); say('Ты уже сыт. Больше не влезет.', true); return; }
+    if (it.cat === 'food' && it.effect.rest && G.state.vars.fatigue <= 5) { G.audio.sfx.error(); say('Ты бодр и не голоден. Больше не влезет.', true); return; }
     g.pay(total);
     G.audio.sfx.coin();
     if (it.cat === 'food' || it.cat === 'service') {
       const e = it.effect || {};
-      if (e.food) g.eat(e.food);
-      if (e.energy) g.rest(e.energy);
+      if (e.rest) g.rest(e.rest);
       if (e.mood) g.mood(e.mood);
       if (e.minutes) g.advance(e.minutes);
       G.audio.sfx.confirm();
@@ -173,7 +172,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const qy = inf.y + inf.h - 24;
       if (it.cat === 'food' || it.cat === 'service') {
         const v = G.state.vars;
-        F.small.draw(ctx, it.cat === 'food' ? `Сытость: ${Math.round(v.food)}/100` : `Энергия: ${Math.round(v.energy)}/100`, inf.x + 12, qy + 4, { color: C.inkDim });
+        F.small.draw(ctx, `Усталость: ${Math.round(v.fatigue)}/100`, inf.x + 12, qy + 4, { color: C.inkDim });
         F.draw(ctx, it.price + ' рё', inf.x + inf.w - 12, qy + 3, { align: 'right', color: '#8a5a10' });
       } else {
         U.button(ctx, L.minus.x, L.minus.y, L.minus.w, L.minus.h, '−', qty > 1 ? (qmode ? 'sel' : 'normal') : 'dis');

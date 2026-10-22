@@ -80,7 +80,7 @@ end
 | `met` | `call met tenten` | отметить знакомство |
 | `battle` | `call battle tenten spar field win_id lose_id` | бой (режим, арена, сценарии после победы/поражения, `-` — нет) |
 | `train` | `call train throw tenten` | тренировка-мини-игра (с другом) |
-| `eat` / `rest` / `mood` | `call eat 25` | сытость / энергия / настроение |
+| `eat` / `rest` / `mood` | `call eat 25` | еда (усталость −60% от числа) / усталость −n / настроение |
 | `time` / `wait` | `call wait 30` | перевести часы на время / подождать минут |
 | `sleep` / `home` | `call sleep` | лечь спать / отправить домой |
 | `cooldown` | `call cooldown rice 240` | пауза (минут) для условия `cooldown.rice` |
