@@ -237,6 +237,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g);
       this.drawFx(ctx);
+      if (phase === 'choose' && D.hint) this.drawHint(ctx, g);
       // всплывающие числа
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
@@ -249,6 +250,15 @@ G.scenes.register('battle', (opts, onEnd) => {
         F.draw(ctx, ed.name, W / 2, AH / 2 - 16, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
         FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
       }
+    },
+    // пузырь над врагом: что он, похоже, сделает (точность — в строке панели)
+    drawHint(ctx, g) {
+      const x = g.ex, y = g.yb - 84, col = { strike: '#ff8a6a', block: '#8ab8ff', evade: '#8aff9a', tech: '#d8a0ff', idle: '#d8c8a0' }[D.hint] || '#fff';
+      const bob = Math.round(Math.sin(t * 4) * 1.5);
+      ctx.fillStyle = PAL.ink; ctx.fillRect(x - 21, y - 8 + bob, 42, 15); ctx.fillRect(x - 3, y + 7 + bob, 6, 4);
+      ctx.fillStyle = '#fff6dc'; ctx.fillRect(x - 20, y - 7 + bob, 40, 13); ctx.fillRect(x - 2, y + 6 + bob, 4, 3);
+      FS.draw(ctx, '? ' + (ACT_NAME[D.hint] || '?'), x, y - 4 + bob, { align: 'center', color: '#2e1e14' });
+      ctx.fillStyle = col; ctx.fillRect(x - 20, y + 5 + bob, 40, 1);
     },
     drawFx(ctx) {
       for (const f of fx.fxs) {
@@ -349,7 +359,8 @@ G.scenes.register('battle', (opts, onEnd) => {
         });
       } else if (phase === 'end') {
         F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 62, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
-        if (endT > 1) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 96, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        FS.draw(ctx, `Раундов ${result.turns} · ударов ${stats.hits} · уклонов ${stats.evades} · приёмов ${stats.techs}`, W / 2, py + 80, { align: 'center', color: '#e8c890' });
+        if (endT > 1) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 98, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
       }
     },
     drawMini(ctx, g) {
