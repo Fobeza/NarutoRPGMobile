@@ -194,6 +194,34 @@ test('Побочные ветки: открываются по дружбе, ш�
   G.events.emit('battle', { enemy: 'shikamaru', mode: 'spar' }, {}); assert.equal(Q.curStep('arc_shikamaru').id, 'talk');
   for (const q of ['arc_naruto', 'arc_iruka', 'arc_hinata', 'arc_shikamaru']) for (const st of G.QUESTS[q].steps) for (const k of ['after', 'script']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
 });
+test('Ветки Тентен, Нэдзи, Какаши, Анко: открытие, шаги, награда, сцены', () => {
+  const v = G.state.vars, F = G.state.flags, Q = G.quests; G.state.quests = {}; G.state.started = true; G.state.inv = {}; v.money = 0; v.purple_ctl = 0; v.day = 9; F.genin = 0;
+  assert.equal(Q.scriptFor('tenten'), null, 'Тентен открывается с 10 дня');
+  v.day = 12; assert.equal(Q.scriptFor('tenten'), 'arc_tenten_offer'); assert.equal(Q.scriptFor('neji'), 'arc_neji_offer');
+  assert.equal(Q.scriptFor('kakashi'), null, 'Какаши — только после экзамена'); assert.notEqual(Q.scriptFor('anko'), 'arc_anko_offer');
+  Q.start('arc_tenten'); G.game.give('shuriken', 3); assert.equal(Q.curStep('arc_tenten').id, 'give'); assert.equal(Q.scriptFor('tenten'), 'arc_tenten_give');
+  Q.step('arc_tenten', 'give'); assert.equal(G.game.count('shuriken'), 0);
+  G.events.emit('training', 'dummy', 0.8, null); assert.equal(Q.curStep('arc_tenten').id, 'throw');
+  G.events.emit('training', 'throw', 0.8, null); G.events.emit('bought', 'kunai'); assert.equal(Q.curStep('arc_tenten').id, 'talk');
+  Q.step('arc_tenten', 'talk'); assert.ok(Q.done('arc_tenten')); assert.equal(v.money, 100);
+  Q.start('arc_neji'); G.quests.onEnterMap({ building: { tplId: 'clan_hyuga' } }); assert.equal(Q.curStep('arc_neji').id, 'med');
+  G.events.emit('training', 'falls', 0.8, null); G.events.emit('training', 'dummy', 0.8, null); Q.step('arc_neji', 'talk'); assert.ok(Q.done('arc_neji')); assert.equal(v.purple_ctl, 7);
+  F.genin = 1; v.day = 23; assert.equal(Q.scriptFor('kakashi'), 'arc_kakashi_offer'); G.state.quests.sm_anko_dango = { done: true }; G.state.quests.sm_anko_tea = { done: true }; G.state.quests.sm_anko_sell = { done: true }; assert.equal(Q.scriptFor('anko'), 'arc_anko_offer');
+  Q.start('arc_kakashi'); G.game.give('flowers_s', 1); assert.equal(Q.scriptFor('kakashi'), 'arc_kakashi_give'); Q.step('arc_kakashi', 'give');
+  G.events.emit('training', 'meditate', 0.9, null); Q.step('arc_kakashi', 'talk'); assert.ok(Q.done('arc_kakashi'));
+  Q.start('arc_anko'); G.game.give('dango', 3); Q.step('arc_anko', 'give'); G.events.emit('fished', 'carp'); G.events.emit('battle', { enemy: 'anko', mode: 'spar' }, {});
+  assert.equal(Q.curStep('arc_anko').id, 'talk'); Q.step('arc_anko', 'talk'); assert.ok(Q.done('arc_anko'));
+  for (const q of Object.keys(G.QUESTS).filter((id) => id.startsWith('arc_'))) for (const st of G.QUESTS[q].steps) for (const k of ['after', 'script']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
+});
+test('Все сцены сюжета: символы есть в шрифте, говорящие известны', () => {
+  const chars = new Set(G.font.chars()), bad = new Set();
+  const text = (id, t) => { for (const ch of String(t || '')) if (ch !== ' ' && !chars.has(ch) && !chars.has(ch.toUpperCase())) bad.add(`${id}: «${ch}»`); };
+  for (const [id, sc] of Object.entries(G.script.library)) for (const op of sc.ops || []) {
+    if (op.text) text(id, op.text); if (op.prompt) text(id, op.prompt); for (const o of op.options || []) text(id, o.text);
+    if (op.who && op.op === 'say') assert.ok(G.chars.DEFS[op.who] || op.who === 'hero' || op.who === 'narrator', `${id}: неизвестный говорящий ${op.who}`);
+  }
+  assert.deepEqual([...bad].slice(0, 12), []);
+});
 test('Малые задания: просьба, предметы списываются, награда', () => {
   const v = G.state.vars, Q = G.quests; G.state.quests = {}; v.day = 8; v.money = 0; G.state.started = true; G.state.inv = {}; v.friend_choji = 0;
   const small = Object.keys(G.QUESTS).filter((id) => id.startsWith('sm_')); assert.ok(small.length >= 12);

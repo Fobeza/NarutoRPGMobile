@@ -145,3 +145,62 @@ Object.assign(G.QUESTS, {
     reward: { money: 100, vars: { friend_sasuke: 3, rival: 1 }, text: 'Признание соперника' },
   },
 });
+
+// ───────────── Ветки взрослых и старших: открываются позже (Тентен, Нэдзи, Какаши, Анко) ─────────────
+const _day = (n) => () => G.state.started && G.state.vars.day >= n;
+Object.assign(G.QUESTS, {
+  // ───────────── Тентен: «Оружие мастера» ─────────────
+  arc_tenten: {
+    cat: 'friend', title: 'Оружие мастера',
+    desc: 'Тентен любит оружие больше всего на свете. Она учит бросать так, чтобы попадать.',
+    offer: { npc: 'tenten', script: 'arc_tenten_offer', when: _day(10) },
+    steps: [
+      { id: 'buy', text: 'Купить три сюрикена в оружейной лавке', target: { building: 'weapons' }, have: { shuriken: 3 } },
+      { id: 'give', text: 'Отдать сюрикены Тентен', target: { npc: 'tenten' }, need: { shuriken: 3 }, consume: true, script: 'arc_tenten_give' },
+      { id: 'throw', text: 'Потренировать метание на полигоне', target: { building: 'training_ground' }, on: ['training', (id) => id === 'throw'], after: 'arc_tenten_throw' },
+      { id: 'kunai', text: 'Купить кунай про запас', target: { building: 'weapons' }, on: ['bought', (id) => id === 'kunai'], after: 'arc_tenten_kunai' },
+      { id: 'talk', text: 'Поговорить с Тентен', target: { npc: 'tenten' }, script: 'arc_tenten_end' },
+    ],
+    reward: { money: 100, vars: { purple_ctl: 2 }, text: 'Уроки Тентен: метание точнее' },
+  },
+  // ───────────── Нэдзи: «Судьба и выбор» ─────────────
+  arc_neji: {
+    cat: 'friend', title: 'Судьба и выбор',
+    desc: 'Нэдзи верит, что судьбу не изменить. Ты чужой здесь, и тебе есть что ему сказать.',
+    offer: { npc: 'neji', script: 'arc_neji_offer', when: _day(12) },
+    steps: [
+      { id: 'manor', text: 'Дойти до особняка Хьюга', target: { building: 'clan_hyuga' }, reach: true, after: 'arc_neji_manor' },
+      { id: 'med', text: 'Помедитировать у водопада', target: { building: 'training_ground' }, on: ['training', (id) => id === 'meditate' || id === 'falls'], after: 'arc_neji_med' },
+      { id: 'run', text: 'Потренироваться на манекенах', target: { building: 'training_ground' }, on: ['training', (id) => id === 'dummy' || id === 'run'], after: 'arc_neji_dummy' },
+      { id: 'talk', text: 'Поговорить с Нэдзи', target: { npc: 'neji' }, script: 'arc_neji_end' },
+    ],
+    reward: { money: 80, vars: { purple_ctl: 5 }, text: 'Слова Нэдзи: контроль чакры +5' },
+  },
+  // ───────────── Какаши: «Имена на камне» ─────────────
+  arc_kakashi: {
+    cat: 'friend', title: 'Имена на камне',
+    desc: 'Какаши часто стоит у мемориала. Он наблюдает и за тобой. Может, пора ответить ему тем же.',
+    offer: { npc: 'kakashi', script: 'arc_kakashi_offer', when: () => _day(21)() && !!G.state.flags.genin },
+    steps: [
+      { id: 'flowers', text: 'Купить маленький букет в цветочной лавке', target: { building: 'flowers' }, have: { flowers_s: 1 } },
+      { id: 'give', text: 'Отдать букет Какаши у мемориала', target: { npc: 'kakashi' }, need: { flowers_s: 1 }, consume: true, script: 'arc_kakashi_give' },
+      { id: 'med', text: 'Помедитировать, как советует Какаши', target: { building: 'training_ground' }, on: ['training', (id) => id === 'meditate' || id === 'falls'], after: 'arc_kakashi_med' },
+      { id: 'talk', text: 'Поговорить с Какаши', target: { npc: 'kakashi' }, script: 'arc_kakashi_end' },
+    ],
+    reward: { money: 150, vars: { purple_ctl: 6 }, text: 'Урок Какаши: контроль чакры +6' },
+  },
+  // ───────────── Анко: «Горькое и сладкое» ─────────────
+  arc_anko: {
+    cat: 'friend', title: 'Горькое и сладкое',
+    desc: 'Анко любит данго, острое и честный бой. Покажи, что ты не просто ученик.',
+    offer: { npc: 'anko', script: 'arc_anko_offer', when: () => _day(22)() && !!G.state.flags.genin },
+    steps: [
+      { id: 'dango', text: 'Купить три данго', target: { building: 'dango' }, have: { dango: 3 } },
+      { id: 'give', text: 'Отдать данго Анко', target: { npc: 'anko' }, need: { dango: 3 }, consume: true, script: 'arc_anko_give' },
+      { id: 'fish', text: 'Поймать рыбу на пристани', target: { building: 'pier' }, on: ['fished', (id) => !!id], after: 'arc_anko_fish' },
+      { id: 'spar', text: 'Провести спарринг с Анко', target: { npc: 'anko' }, on: ['battle', (a) => a && a.enemy === 'anko'], after: 'arc_anko_spar' },
+      { id: 'talk', text: 'Поговорить с Анко', target: { npc: 'anko' }, script: 'arc_anko_end' },
+    ],
+    reward: { money: 120, vars: { purple_ctl: 3 }, text: 'Уважение Анко' },
+  },
+});
