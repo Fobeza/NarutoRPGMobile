@@ -13,6 +13,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   const TERRAIN = opts.terrain || (mode === 'spar' ? 'field' : 'field');
   let phase = 'intro', t = 0, menu = 'main', focus = 0, mini = null, ev = [], evI = 0, evT = 0, result = null, endT = 0, said = null;
   const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
+  let tip = !G.state.flags.duel_tip;   // обучающая подсказка первого боя: не блокирует ввод, гаснет после первого действия
   let stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -80,6 +81,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   // запускает мини-игру для действия или сразу раунд (предмет)
   function begin(act, q) {
     menu = 'main';
+    if (tip) { tip = false; G.state.flags.duel_tip = 1; }
     if (act.startsWith('item:') || q != null) { runRound(act, q != null ? q : 0.5); return; }
     if (act.startsWith('tech:')) {
       const T = G.TECHS[act.slice(5)], seq = T.seals.slice(), pal = seq.slice();
@@ -238,6 +240,10 @@ G.scenes.register('battle', (opts, onEnd) => {
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g);
       this.drawFx(ctx);
       if (phase === 'choose' && D.hint) this.drawHint(ctx, g);
+      if (tip && phase === 'choose') {
+        U.panel(ctx, 8, 56, W - 16, 74, 'inner');
+        ['Блок бьёт Удар, Удар бьёт Уклон,', 'Уклон бьёт Блок. Приём пробивает Блок.', 'Следи за пузырём «?» над врагом:', 'это намёк, но он не всегда верен.'].forEach((ln, i) => FS.draw(ctx, ln, W / 2, 62 + i * 15, { align: 'center', color: '#2e1e14' }));
+      }
       // всплывающие числа
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
