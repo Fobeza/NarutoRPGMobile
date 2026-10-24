@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "2.3"                              # подготовленный набор графики; игровой масштаб сохранён
+RELEASE = "2.5"                              # карточная «Дуэль», 21 тактика и мобильный интерфейс
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -27,7 +27,7 @@ JS_FILES = [
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
-    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/duel_data.js",
+    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/duel_data.js", "data/cards.js",
     # ── игровые системы ──
     "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/duel.js", "systems/choices.js", "systems/exam.js", "systems/sim.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",

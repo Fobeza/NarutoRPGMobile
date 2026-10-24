@@ -35,7 +35,7 @@ G.houseArt = (() => {
   }
 
   // уникальные здания: пятно и дверь — по картинке
-  for (const [name, a] of Object.entries(data.art)) {
+  for (const a of Object.values(data.art)) {
     const tpl = a.kind === 'unique' && G.BUILDINGS[a.tpl];
     if (tpl) { tpl.w = a.w; tpl.h = a.h; tpl.door = tpl.door ? [a.dx, a.h - 1] : tpl.door; }
   }

@@ -56,7 +56,7 @@
       ],
       reward,
     };
-    src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Поможешь?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\nend\n`;
+    src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Поможешь?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\ncall step ${id} give\nend\n`;
   }
   for (const [id, npc, inB, title, ask, ev, flt, pay, friend, thanks, day] of D) {
     const reward = { money: pay, text: pay + ' рё' };

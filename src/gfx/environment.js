@@ -2,7 +2,7 @@
 // Все узоры детерминированы: перерисовка чанка и загрузка сохранения не меняют фактуру.
 G.environment = (() => {
   const H = G.util.hash2;
-  const ink = '#493b35', wood = '#a5754d', edge = '#d4aa73', dark = '#674a39';
+  const ink = '#493b35', edge = '#d4aa73', dark = '#674a39';
   const p = (c, x, y, col, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
   const rect = (c, x, y, w, h, fill, line = ink) => {
     p(c, x, y, line, w, h); p(c, x + 1, y + 1, fill, w - 2, h - 2);

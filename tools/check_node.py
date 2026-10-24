@@ -16,7 +16,7 @@ import os, shutil, subprocess, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECKS = os.path.join(ROOT, "tools", "node", "checks.js")
-SUITES = ["regressions.js", "village.js", "daily.js", "motion.js", "entries.js", "cartography.js", "release2.js", "street.js"]
+SUITES = ["regressions.js", "strategies.js", "village.js", "daily.js", "motion.js", "entries.js", "cartography.js", "release2.js", "street.js"]
 
 
 def main():

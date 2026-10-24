@@ -52,7 +52,6 @@ G.life2 = (() => {
     if (Math.random() < 0.3) lines.push({ who: n.id, name: n.name, text: pick(['Если что — заходи ещё.', 'Ладно, не буду тебя задерживать.', 'Береги себя, ниндзя.', 'Передавай привет Ируке-сенсею.']) });
     return lines;
   }
-  const NAMES = {};
   // ── расстановка жителей ──
   const basePop = G.world.populateKonoha.bind(G.world);
   G.world.populateKonoha = function (m) {

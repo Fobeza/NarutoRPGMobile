@@ -1,10 +1,10 @@
 // Календарь (месяц = 4 недели, 2 страницы за игру) и расписания персонажей.
 G.scenes.register('calendar', () => {
-  const F = G.font, P = G.PAL;
+  const F = G.font;
   const STORY_NAMES = { tora: 'Пропал кот Тора', konohamaru: 'Мелкий Коноханамару', iruka_story: 'Вечер с Ирукой', hinata_rain: 'Дождь и Хината', ino_sakura: 'Ино и Сакура',
     sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', roofs: 'Крыши с Наруто' };
   const WEATHER = { sun: 'ясно', cloud: 'облачно', rain: 'дождь' };
-  let tab = 0, sel = G.state.vars.day, ci = 0, wk = true, scroll = 0;
+  let tab = 0, sel = G.state.vars.day, ci = 0, wk = true;
   const ids = G.schedule.who();
   const page = () => Math.floor((sel - 1) / 28);
   const limit = () => Math.min(9999,Math.max(112,Math.ceil((G.state.vars.day+28)/28)*28));
@@ -49,8 +49,8 @@ G.scenes.register('calendar', () => {
           if (col >= 0 && col < 7 && row >= 0 && row < 4) { sel = page() * 28 + row * 7 + col + 1; G.audio.sfx.select(); }
           else if (t.y >= 42 && t.y < GY) { sel = t.x < W / 2 ? Math.max(1, sel - 28) : Math.min(limit(), sel + 28); G.audio.sfx.select(); }
         } else {
-          if (t.y < 68) { ci = (ci + (t.x < W / 2 ? ids.length - 1 : 1)) % ids.length; scroll = 0; G.audio.sfx.select(); }
-          else if (t.y < 90) { wk = !wk; scroll = 0; G.audio.sfx.select(); }
+          if (t.y < 68) { ci = (ci + (t.x < W / 2 ? ids.length - 1 : 1)) % ids.length; G.audio.sfx.select(); }
+          else if (t.y < 90) { wk = !wk; G.audio.sfx.select(); }
         }
         return;
       }
@@ -61,9 +61,9 @@ G.scenes.register('calendar', () => {
         if (I.repeat('up', dt)) { sel = Math.max(1, sel - 7); G.audio.sfx.select(); }
         if (I.repeat('down', dt)) { sel = Math.min(limit(), sel + 7); G.audio.sfx.select(); }
       } else {
-        if (I.repeat('left', dt)) { ci = (ci + ids.length - 1) % ids.length; scroll = 0; G.audio.sfx.select(); }
-        if (I.repeat('right', dt)) { ci = (ci + 1) % ids.length; scroll = 0; G.audio.sfx.select(); }
-        if (I.pressed('up') || I.pressed('down')) { wk = !wk; scroll = 0; G.audio.sfx.select(); }
+        if (I.repeat('left', dt)) { ci = (ci + ids.length - 1) % ids.length; G.audio.sfx.select(); }
+        if (I.repeat('right', dt)) { ci = (ci + 1) % ids.length; G.audio.sfx.select(); }
+        if (I.pressed('up') || I.pressed('down')) { wk = !wk; G.audio.sfx.select(); }
       }
     },
     draw(ctx) {

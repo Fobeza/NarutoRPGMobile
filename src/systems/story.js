@@ -5,6 +5,7 @@ const _dlg = (id, then) => { const w = G.scenes.stack.find((s) => s.name === 'wo
 const _say = (lines, then) => { const w = G.scenes.stack.find((s) => s.name === 'world'); G.dialog.say(lines.map((l) => typeof l === 'string' ? { text: l } : l), { bottom: 22, onEnd: () => { w && w.refreshNpcs(); then && then(); } }); };
 const _world = () => G.scenes.stack.find((s) => s.name === 'world');
 const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
+const _practiceName = (p) => ({ tech_tree: 'хождение по дереву', tech_water: 'хождение по воде' }[p.learnFlag] || 'упражнение');
 
 // ───────────────────────── Календарь ─────────────────────────
 G.calendar = {
@@ -74,7 +75,7 @@ G.academy = {
         if (pts >= 80) G.friends.add('iruka', 1);
         G.game.advanceTo('13:00'); G.game.tire(10);
         G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`); G.events.emit('lesson', p, pts);
-        const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ' Теперь можно тренировать хождение по дереву!' : '';
+        const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ` Теперь можно тренировать ${_practiceName(p)}!` : '';
         _say([{ who: 'iruka', text: `${pts >= 85 ? 'Превосходно' : pts >= 65 ? 'Хорошо' : pts >= 45 ? 'Неплохо, но можешь лучше' : 'Нужно больше стараться'}, {name}! Оценка: ${this.mark(pts)} (${pts}).${learned}` }, { text: 'Уроки окончены. Время — 13:00.' }]
           .map((l) => Object.assign(l, { text: _fmt(l.text) })), () => world.softRefresh && world.softRefresh());
       };
@@ -113,7 +114,7 @@ G.story = {
   // Событие помечается «было» (st_<id>) в момент начала. Если вкладку Safari выгрузили посреди боя или экзамена,
   // в сохранении остаётся флаг без результата, и без этой починки игру нельзя пройти. Вызывается из G.game.fix().
   recover(st) {
-    const f = st.flags || {}, v = st.vars || {}, d = st.daily || {};
+    const f = st.flags || {}, d = st.daily || {};
     const fixes = [];
     // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
     if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
@@ -149,7 +150,7 @@ G.story = {
     if (st.makeupQ && st.makeupQ.length && v.min >= 13 * _H && v.min < 18 * _H && m && m.outdoor === false && G.academy.inClass()) {
       const d = st.makeupQ.shift(), p = G.academy.plan(d);
       if (p.learn && !f['tech_' + p.learn]) { f['tech_' + p.learn] = 1; G.game.note('Изучена техника: ' + G.TECHS[p.learn].name); _say([{ who: 'iruka', text: _fmt(`{name}, ты пропустил урок. Ладно, объясню после уроков: техника «${G.TECHS[p.learn].name}».`) }, { text: 'Ты выучил технику, но Ирука вздыхает.' }]); return true; }
-      if (p.learnFlag && !f[p.learnFlag]) { f[p.learnFlag] = 1; _say([{ who: 'iruka', text: _fmt('{name}, ты пропустил урок. Ладно, объясню после уроков хождение по дереву.') }, { text: 'Теперь можно тренировать хождение по дереву, но Ирука вздыхает.' }]); return true; }
+      if (p.learnFlag && !f[p.learnFlag]) { f[p.learnFlag] = 1; const practice = _practiceName(p); _say([{ who: 'iruka', text: _fmt(`{name}, ты пропустил урок. Ладно, объясню после уроков: ${practice}.`) }, { text: `Теперь можно тренировать ${practice}, но Ирука вздыхает.` }]); return true; }
     }
     // события находят героя сами
     for (const e of G.STORY) {

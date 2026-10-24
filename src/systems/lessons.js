@@ -85,12 +85,10 @@ G.lessons = (() => {
     out.push(': Ты занимаешь своё место за партой. Класс стихает.', `iruka: Тема сегодня: «${topic.title}».`);
     for (const l of topic.lec) out.push('iruka: ' + l);
     out.push(': По классу шелестят страницы тетрадей. Кто-то зевает, кто-то записывает.');
-    let k = 0;
     for (const [who, q, a, funny] of topic.qa) {
       out.push('iruka: ' + q, `${who}${funny ? '(sad)' : ''}: ${a}`);
       out.push(funny ? 'iruka: Н-да... Садись. Кто-нибудь поможет?' : 'iruka: Верно. Садись.');
       if (funny) out.push('sakura: Это же очевидно! Шаннаро...' , 'naruto: Эй, я не виноват, что вопрос хитрый!');
-      k++;
     }
     out.push('iruka: ' + '{name}, теперь вопрос тебе.');
     ask(out, topic.hero[0], topic.hero[1][topic.hero[2]], topic.hero[1].filter((_, i) => i !== topic.hero[2]), 'h' + id);

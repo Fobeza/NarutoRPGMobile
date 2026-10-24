@@ -90,7 +90,7 @@ G.quests = (() => {
     check() {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.have && this.dayOk(st) && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) { this.step(id, st.id); continue; }
+        if (st && st.have && this.timeOk(st) && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) { this.step(id, st.id); continue; }
         if (st && st.intro && this.dayOk(st) && !G.state.flags['qi_' + id + '_' + st.id]) { G.state.flags['qi_' + id + '_' + st.id] = 1; this.queue(st.intro); }
       }
     },
@@ -100,7 +100,7 @@ G.quests = (() => {
     notify(name, ...args) {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (!st || !st.on || st.on[0] !== name || !this.dayOk(st)) continue;
+        if (!st || !st.on || st.on[0] !== name || !this.timeOk(st)) continue;
         const f = st.on[1];
         if (f !== undefined && !(typeof f === 'function' ? f(...args) : f === args[0])) continue;
         this.step(id, st.id);
@@ -112,14 +112,14 @@ G.quests = (() => {
       if (!tpl) return;
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.reach && st.target.building === tpl) this.step(id, st.id);
+        if (st && st.reach && st.target.building === tpl && this.timeOk(st)) this.step(id, st.id);
       }
     },
     // Сон: шаг «лечь спать», провал просроченных
     onSleep(newDay) {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.target.obj === 'futon') this.step(id, st.id);
+        if (st && st.target.obj === 'futon' && this.timeOk(st)) this.step(id, st.id);
       }
       for (const id of this.activeList()) { const s = S()[id]; if (s.due != null && newDay > s.due) this.fail(id); }
     },

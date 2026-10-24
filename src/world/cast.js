@@ -2,7 +2,7 @@
 // Шикаку, Иноичи, Тёдза, Фугаку, Микото, Итачи, Джирайя, Орочимару, Хомура, Кохару, Данзо.
 // Внешность — G.chars.DEFS/STY, расписание — G.SCHED (data/schedule.js), здесь — реплики и расстановка по улицам.
 G.cast = (() => {
-  const T = 16, P = G.PAL;
+  const T = 16;
   const D = G.chars.DEFS;
   // внешность — data/characters.js
 

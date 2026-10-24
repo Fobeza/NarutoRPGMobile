@@ -11,14 +11,14 @@ async function tapId(id){const p=await page.evaluate(id=>{const h=G.scenes.top()
 const FAILS=[];
 for(const [width,height]of [[320,568],[393,759],[430,932]])for(const density of ['big','mid','fine']){
   await page.setViewportSize({width,height});await seed();await page.evaluate(d=>{G.storage.settings.density=d;G.screen.resize();G.state.flags.tech_chakra_shot=1;G.scenes.push(G.scenes.make('battle',{enemy:'dummy',mode:'spar'},()=>{}));},density);await page.waitForFunction(()=>G.scenes.top().state==='menu',null,{timeout:6000}).catch(async()=>{await page.evaluate(()=>{G.input.tapNow={x:5,y:5};});await page.waitForFunction(()=>G.scenes.top().state==='menu');});await page.waitForTimeout(70);
-  for(const menu of ['main','tech','item','main']){
-    const info=await page.evaluate(menu=>{const b=G.scenes.top(),rects=b.openMenu(menu),r=G.screen.canvas.getBoundingClientRect();return {W:G.screen.W,H:G.screen.H,scale:r.width/G.screen.W,rects};},menu);
-    assert.ok(info.rects.length>=(menu==='main'?7:2),'Кнопок меню '+menu+': '+info.rects.length);
-    for(const r of info.rects){assert.ok(r.x>=0&&r.y>=0&&r.x+r.w<=info.W&&r.y+r.h<=info.H,'Кнопка за экраном '+JSON.stringify({r,info:{W:info.W,H:info.H}}));assert.ok(r.w*info.scale>=43.9&&r.h*info.scale>=43.9,'Малая кнопка '+menu+' '+JSON.stringify({r,scale:info.scale,width,density}));}
-    for(let i=0;i<info.rects.length;i++)for(let j=i+1;j<info.rects.length;j++){const a=info.rects[i],b=info.rects[j];assert.ok(!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y),'Пересечение кнопок '+menu+' '+a.id+'/'+b.id);}
-  }
-  await tapId('strike');assert.equal(await page.evaluate(()=>G.scenes.top().phase),'mini','Удар открывает кольцо тайминга: '+width+'x'+height+' / '+density);
-  console.log('✔ Касания и кнопки >=44 CSS: '+width+'x'+height+' / '+density);
+  const info=await page.evaluate(()=>{const b=G.scenes.top(),rects=b.openMenu('main'),r=G.screen.canvas.getBoundingClientRect();return {W:G.screen.W,H:G.screen.H,scale:r.width/G.screen.W,rects};});
+  assert.ok(info.rects.length>=8,'Карты и команды панели');
+  for(const r of info.rects){assert.ok(r.x>=0&&r.y>=0&&r.x+r.w<=info.W&&r.y+r.h<=info.H,'Кнопка за экраном '+JSON.stringify({r,info:{W:info.W,H:info.H}}));assert.ok(r.w*info.scale>=43.9&&r.h*info.scale>=43.9,'Малая кнопка '+JSON.stringify({r,scale:info.scale,width,density}));}
+  for(let i=0;i<info.rects.length;i++)for(let j=i+1;j<info.rects.length;j++){const a=info.rects[i],b=info.rects[j];assert.ok(!(a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y),'Пересечение кнопок '+a.id+'/'+b.id);}
+  const card=await page.evaluate(()=>{const s=G.scenes.top(),c=s.D.hand.slice(1).find(c=>G.duel.canPlay(s.D,c).ok)||s.D.hand[0];return 'card:'+c.uid;});
+  await tapId(card);await tapId('play');const played=await page.evaluate(()=>({phase:G.scenes.top().phase,cards:G.scenes.top().D.stats.cards,ap:G.scenes.top().D.P.ap}));
+  assert.equal(played.cards,1,'Карта разыграна касанием: '+width+'x'+height+' / '+density);assert.equal(played.ap,2);assert.notEqual(played.phase,'mini');
+  console.log('✔ Карточные касания и кнопки >=44 CSS: '+width+'x'+height+' / '+density);
   if(width===393&&density==='fine'){await page.waitForTimeout(800);await page.screenshot({path:path.join(shots,'battle-393x759.png')});}
 }
 await seed();const lighting=await page.evaluate(()=>{

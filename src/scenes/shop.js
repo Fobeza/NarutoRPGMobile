@@ -8,11 +8,11 @@ G.scenes.register('shop', (shopId, opts = {}) => {
   const title = opts.title || keeperName;
   const bought = [];
   let idx = 0, qty = 1, msg = null, msgT = 0, msgErr = false, qmode = false;
-  const P = () => G.PAL;
 
   const locked = (it) => it.week && G.game.week() < it.week;
+  const onSite = (it) => it.cat === 'service' || !!it.instant;
   const maxQty = (it) => {
-    if (it.cat === 'food' || it.cat === 'service') return 1;
+    if (onSite(it)) return 1;
     let n = Math.floor(G.state.vars.money / it.price);
     if (it.pouch) n = Math.min(n, G.game.pouchMax() - G.game.pouchUsed());
     return G.util.clamp(n, 1, 20);
@@ -28,10 +28,10 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     const total = it.price * qty;
     if (!g.canPay(total)) { G.audio.sfx.error(); say('Не хватает рё!', true); return; }
     if (it.pouch && g.pouchUsed() + qty > g.pouchMax()) { G.audio.sfx.error(); say('Подсумок полон!', true); return; }
-    if (it.cat === 'food' && it.effect.rest && G.state.vars.fatigue <= 5) { G.audio.sfx.error(); say('Ты бодр и не голоден. Больше не влезет.', true); return; }
+    if (it.cat === 'food' && onSite(it) && it.effect.rest && G.state.vars.fatigue <= 5) { G.audio.sfx.error(); say('Ты бодр и не голоден. Больше не влезет.', true); return; }
     g.pay(total);
     G.audio.sfx.coin();
-    if (it.cat === 'food' || it.cat === 'service') {
+    if (onSite(it)) {
       const e = it.effect || {};
       if (e.rest) g.rest(e.rest);
       if (e.minutes) g.advance(e.minutes);
@@ -39,10 +39,10 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       say(it.cat === 'food' ? `Ты съел: ${it.name}. Вкуснотища!` : `${it.name} — готово. Силы вернулись!`);
     } else {
       g.give(it.id, qty);
-      G.events.emit('bought', it.id, qty);
       G.audio.sfx.confirm();
       say(`Куплено: ${it.name}${qty > 1 ? ' ×' + qty : ''}`);
     }
+    G.events.emit('bought', it.id, qty);
     bought.push({ id: it.id, qty });
     qty = 1;
   }
@@ -104,7 +104,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
           if (i >= 0 && i < n && (i !== idx || qmode)) { idx = i; qty = 1; qmode = false; G.audio.sfx.select(); }
           return;
         }
-        if (items[idx].cat !== 'food' && items[idx].cat !== 'service') {
+        if (!onSite(items[idx])) {
           if (inR(t, L.minus) && qty > 1) { qty--; G.audio.sfx.blip(); return; }
           if (inR(t, L.plus) && qty < mq) { qty++; G.audio.sfx.blip(); return; }
         }
@@ -117,7 +117,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H, F = G.font, U = G.ui, C = U.C;
+      const F = G.font, U = G.ui, C = U.C;
       const L = this.layout();
       U.backdrop(ctx);
 
@@ -170,7 +170,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, inf.h < 70 ? 1 : 2);
       textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 20 + i * 11, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
       const qy = inf.y + inf.h - 24;
-      if (it.cat === 'food' || it.cat === 'service') {
+      if (onSite(it)) {
         const v = G.state.vars;
         F.small.draw(ctx, `Усталость: ${Math.round(v.fatigue)}/100`, inf.x + 12, qy + 4, { color: C.inkDim });
         F.draw(ctx, it.price + ' рё', inf.x + inf.w - 12, qy + 3, { align: 'right', color: '#8a5a10' });
@@ -184,7 +184,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       }
 
       // кнопки внизу + деньги
-      U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, it.cat === 'food' || it.cat === 'service' ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
+      U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, onSite(it) ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
       U.button(ctx, L.exitB.x, L.exitB.y, L.exitB.w, L.exitB.h, 'Выйти', 'normal');
       F.small.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + h.h - 12, { align: 'right', color: '#8a5a10' });
     },

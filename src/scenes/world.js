@@ -917,7 +917,7 @@ G.scenes.register('world', (pos) => {
     },
 
     drawStrip(ctx) {
-      const W = G.screen.W, U = G.ui, F = G.font.small, C = U.C;
+      const W = G.screen.W, U = G.ui, F = G.font.small;
       const y = G.screen.H - STRIP_H;
       U.panel(ctx, 0, y, W, STRIP_H, 'plank');
       const mk = G.state.marker;

@@ -74,7 +74,11 @@ function call(id, op) {
   switch (op.name) {
     case 'give': case 'take': if (a[0] && !ITEMS[a[0]]) bad.push(`${id}: call ${op.name} — нет предмета «${a[0]}»`); break;
     case 'quest': if (a[0] === 'start' && a[1] && !QUESTS[a[1]]) bad.push(`${id}: call quest start — нет задания «${a[1]}»`); break;
-    case 'step': case 'qfail': if (a[0] && !QUESTS[a[0]]) bad.push(`${id}: call ${op.name} — нет задания «${a[0]}»`); break;
+    case 'step':
+      if (a[0] && !QUESTS[a[0]]) bad.push(`${id}: call step — нет задания «${a[0]}»`);
+      else if (a[0] && a[1] && !QUESTS[a[0]].steps.some((st) => st.id === a[1])) bad.push(`${id}: call step — в задании «${a[0]}» нет шага «${a[1]}»`);
+      break;
+    case 'qfail': if (a[0] && !QUESTS[a[0]]) bad.push(`${id}: call qfail — нет задания «${a[0]}»`); break;
     case 'learn': if (a[0] && !TECHS[a[0]]) bad.push(`${id}: call learn — нет техники «${a[0]}»`); break;
     case 'combo': if (a[0] && !COMBOS[a[0]]) bad.push(`${id}: call combo — нет комбо «${a[0]}»`); break;
     case 'train': if (a[0] && !TRAIN[a[0]]) bad.push(`${id}: call train — нет тренировки «${a[0]}»`); break;
@@ -104,6 +108,9 @@ for (const [qid, q] of Object.entries(QUESTS)) {
   for (const st of q.steps || []) {
     texts.push(st.text);
     if (st.script && !L[st.script]) bad.push(`задание ${qid}/${st.id}: нет сценария «${st.script}»`);
+    if (st.script && L[st.script] && !L[st.script].ops.some((op) => op.op === 'call' && op.name === 'step' && op.args[0] === qid && op.args[1] === st.id)) {
+      bad.push(`задание ${qid}/${st.id}: сценарий «${st.script}» не вызывает call step ${qid} ${st.id}`);
+    }
     const t = st.target || {};
     if (t.npc && !DEFS[t.npc]) bad.push(`задание ${qid}/${st.id}: NPC «${t.npc}» не в DEFS`);
     if (t.building && !draftTpls.has(t.building)) bad.push(`задание ${qid}/${st.id}: здания «${t.building}» нет в раскладке`);
@@ -113,7 +120,7 @@ for (const [qid, q] of Object.entries(QUESTS)) {
       if(!Array.isArray(t.point)||t.point.length!==2||t.point.some(n=>!Number.isFinite(n)||n<0))bad.push(`задание ${qid}/${st.id}: неверные координаты`);
       if(t.map!=='konoha')bad.push(`задание ${qid}/${st.id}: неизвестная карта`);
     }
-    for (const i of Object.keys(st.have || {})) if (!ITEMS[i]) bad.push(`задание ${qid}/${st.id}: нет предмета «${i}»`);
+    for (const i of [...Object.keys(st.have || {}), ...Object.keys(st.need || {})]) if (!ITEMS[i]) bad.push(`задание ${qid}/${st.id}: нет предмета «${i}»`);
   }
   if (q.offer) {
     if (q.offer.script && !L[q.offer.script]) bad.push(`задание ${qid}: нет сценария предложения «${q.offer.script}»`);
@@ -341,9 +348,10 @@ function smoke(name, make, n = 3) {
   G.scenes.stack.length = 0;
   try {
     const s = make();
+    if (typeof s.update !== 'function' || typeof s.draw !== 'function') throw new Error('сцене нужны методы update и draw');
     G.scenes.push(s);
     const ctx = h.recordingCtx(G.screen.W, G.screen.H);
-    for (let i = 0; i < n; i++) { s.update && s.update(1 / 60); s.draw && s.draw(ctx); }
+    for (let i = 0; i < n; i++) { s.update(1 / 60); s.draw(ctx); }
     if (!ctx.log.length) sceneFails.push(`${name}: ничего не нарисовал`);
     s.exit && s.exit();
   } catch (e) { sceneFails.push(`${name}: ${e.message}`); }

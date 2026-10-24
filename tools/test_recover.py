@@ -75,7 +75,7 @@ with sync_playwright() as p:
         if B(page, "return s.state") == 'menu': ok = True; break
         key(page, 'KeyZ', wait=0.25)
     check(ok, 'бой с Наруто: дошли до меню действий')
-    B(page, "s.D.P.hp = 10; s.play('item:bandage', 0.5); return 1"); time.sleep(2.5)
+    B(page, "s.D.P.hp = 10; const D=s.D; if(!D.hand.some(c=>c.id==='bandage')){for(const z of [D.deck,D.discard]){const i=z.findIndex(c=>c.id==='bandage');if(i>=0){D.hand.push(z.splice(i,1)[0]);break;}}} s.play('item:bandage'); return 1"); time.sleep(2.5)
     check(B(page, "return s.D.inv.bandage") == 1 and page.evaluate("G.state.inv.bandage") == 2, 'в спарринге бинт тратится в бою, но не из сумки')
     B(page, "s.debugWin(); return 1"); time.sleep(1.8); key(page, 'KeyZ'); time.sleep(0.5)
     check(page.evaluate("G.state.inv.bandage") == 2 and top(page) == 'world', 'после спарринга сумка цела')
