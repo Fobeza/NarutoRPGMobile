@@ -143,7 +143,7 @@ G.WorldMap = class {
   // V9: плавные пятна света и тени на земле — гладкий шум в мировых координатах (швов между тайлами и чанками нет),
   // трава заметнее, дороги и камень — едва; ступени между оттенками размыты дизерингом.
   groundLight(c, gx, gy, tw, th) {
-    const T = G.CONFIG.TILE, ID = G.tiles.ID, S = G.shade, Hh = G.util.hash2;
+    const T = G.CONFIG.TILE, S = G.shade, Hh = G.util.hash2;
     const GR = G.tiles.GRASSY, RD = G.tiles.ROADY;
     const lat = (ix, iy, sd) => Hh(ix, iy, 900 + sd);
     const vn = (x, y, wl, sd) => {            // билинейный шум с плавным сглаживанием

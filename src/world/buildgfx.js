@@ -589,7 +589,7 @@ G.buildgfx = (() => {
     },
 
     clan(c, o) {
-      const { W, HF, OV, seed, tpl, id } = o;
+      const { W, HF, OV, tpl, id } = o;
       const wh = wallH(tpl, id), wy = OV + HF - wh;
       const uchiha = id.startsWith('uchiha') || id === 'sasuke_home';
       wall(c, 0, wy, W, wh, uchiha ? '#d8d0c8' : '#e8e0d0', '#3a2a20');
@@ -657,7 +657,7 @@ G.buildgfx = (() => {
 
     // Академия: широкое оранжевое здание, большая вывеска с листом
     academy(c, o) {
-      const { W, HF, OV, seed, tpl } = o;
+      const { W, HF, OV, tpl } = o;
       const wh = 48, wy = OV + HF - wh;
       wall(c, 0, wy, W, wh, '#f0d8b0', '#a84a2a');
       const dx = tpl.door[0] * T + 2;

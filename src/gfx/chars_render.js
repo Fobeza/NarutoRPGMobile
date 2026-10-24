@@ -201,7 +201,7 @@
     const ex = new Set(st.ex || []);
     const b = f === 0 ? 0 : 1;                      // покачивание при ходьбе
     const fat = st.body === 'fat';
-    const sk = col.s, kid = st.kid;
+    const sk = col.s;
     const swing = f === 1 ? 1 : f === 2 ? -1 : 0;   // качание рук/ног
     const tx0 = fat ? 8 : 10, tx1 = fat ? 24 : 22;  // ширина торса
     const torsoBot = 33 + (fat ? 1 : 0);
@@ -286,7 +286,6 @@
 
   function drawTop(B, st, ex, col, dir, b, fat, torsoBot) {
     const t = col.t, T = col.T, a = col.a;
-    const cx = 16;
     if (dir === 'down') {
       if (st.top === 'jacket') {
         fill(B, R(15.2, 22.6 + b, 16.8, torsoBot - 1 + b), T, { flat: true });                  // молния
@@ -337,7 +336,6 @@
 
   function drawArms(B, st, ex, col, dir, b, swing, fat) {
     const sl = st.sleeve, sc = col.t, hand = col.s;
-    const ay = (s) => b + s * 1.1;
     const mk = (x0, x1, dy) => {
       const y0 = 22.4 + b + dy, y1 = 31.4 + b + dy;
       if (sl === 'short') { fill(B, RR(x0, y0, x1, y0 + 4.8, 1.6), sc, { seam: true }); fill(B, RR(x0 + 0.4, y0 + 3.6, x1 - 0.4, y1, 1.4), hand, { seam: true }); }

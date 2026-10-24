@@ -225,7 +225,6 @@ G.scenes.register('mapview', (world) => {
       this.t += dt;
       const I = G.input;
       if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.toast = null; }
-      const W = G.screen.W, H = G.screen.H;
 
       if(this.legend){if(I.tapNow||I.pressed('a')||I.pressed('b')||I.pressed('menu')||I.pressed('map'))this.legend=false;return;}
 

@@ -118,7 +118,7 @@ G.roofs = {
     if(j&&j.wall){ctx.fillStyle='#80cfee';for(let i=0;i<4;i++)ctx.fillRect(p.x+(i%2?3:-3),p.y+i*4,2,2);}
     G.shade.shadow(ctx,p.x+lift*0.1,p.y-1,5,1.5,0.3);
     if(j){
-      const k=Math.min(1,j.t/j.dur),dx=j.x1-j.x0,dy=j.y1-j.y0;
+      const dx=j.x1-j.x0,dy=j.y1-j.y0;
       ctx.fillStyle='rgba(222,232,205,0.35)';
       for(let i=1;i<=3;i++)ctx.fillRect(Math.round(p.x-dx*0.025*i-3),Math.round(p.y-lift-dy*0.025*i-7),3,0.5);
     }

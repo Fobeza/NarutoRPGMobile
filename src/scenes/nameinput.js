@@ -4,9 +4,7 @@ G.scenes.register('nameinput', (onDone) => {
   const el = () => document.getElementById('text-entry');
   const inp = () => document.getElementById('te-input');
   const hint = () => document.getElementById('te-hint');
-  let stage = 'typing';
   let onOk = null, onKey = null;
-  let t = 0;
 
   // Разрешены буквы, которые есть в пиксельном шрифте, пробел и дефис
   const ALLOWED = /^[A-Za-zА-Яа-яЁё\- ]+$/;
@@ -25,7 +23,6 @@ G.scenes.register('nameinput', (onDone) => {
     resume() {},
 
     openEntry() {
-      stage = 'typing';
       const box = el();
       box.classList.remove('hidden');
       const i = inp();
@@ -40,7 +37,6 @@ G.scenes.register('nameinput', (onDone) => {
         box.classList.add('hidden');
         G.state.hero.name = r.ok;
         G.audio.sfx.confirm();
-        stage = 'done';
         G.scenes.pop();
         onDone && onDone();
       };
@@ -52,7 +48,8 @@ G.scenes.register('nameinput', (onDone) => {
 
     exit() { el().classList.add('hidden'); },
 
-    update(dt) { t += dt; },
+    // Менеджер сцен вызывает update у верхней сцены напрямую, даже если ей не нужна анимация.
+    update() {},
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, U = G.ui;

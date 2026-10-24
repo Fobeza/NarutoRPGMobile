@@ -71,7 +71,7 @@ G.fx = (() => {
     const daylight = sun(min).sun * (G.life.raining() ? 0.28 : 1);
     if (daylight <= 0) return;
     if (!map._sunlight) {
-      const c = G.gfx.canvas(map.w * T, map.h * T), cc = c.getContext('2d'), ID = G.tiles.ID;
+      const c = G.gfx.canvas(map.w * T, map.h * T), cc = c.getContext('2d');
       cc.save(); cc.beginPath();
       for (let y = 2; y < map.h - 1; y++) for (let x = 1; x < map.w - 1; x++) {
         const id = map.get(x, y);

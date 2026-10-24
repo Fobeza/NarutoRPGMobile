@@ -52,7 +52,7 @@ G.scenes.register('journal', () => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H-offset(), F = G.font, U = G.ui, C = U.C;
+      const W = G.screen.W, F = G.font, U = G.ui, C = U.C;
       U.backdrop(ctx);
       const g=G.touch.header();U.title(ctx, 'ЗАДАНИЯ', g.titleX, g.titleY, 90);
       ctx.save();ctx.translate(0,offset());

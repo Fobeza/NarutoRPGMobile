@@ -72,7 +72,7 @@ G.scenes.register('title', () => {
       x.fillStyle = '#8a7268'; x.fillRect(Math.round(cx0), Math.round(cy0) - 1, 1 + Math.floor(Hh(i, 5, 33) * 6), 1);
     }
     // четыре высеченных лица: формы с объёмом, свет луны слева сверху
-    const { E, R, RR, PO, LN, OR, AND, SUB } = G.icons.shapes, I = G.icons;
+    const { E, R, RR, PO, OR, AND } = G.icons.shapes, I = G.icons;
     const FW = Math.min(96, Math.floor(W * 0.3)), FH = Math.round(FW * 100 / 72);
     const st = '#86685c', hairC = '#6e564e';
     const HAIR = [

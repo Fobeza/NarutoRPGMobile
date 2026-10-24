@@ -3,7 +3,7 @@
 G.scenes.register('fishing', (opts, onCatch, onClose) => {
   const W = G.screen.W, F = G.font, P = G.PAL, AU = G.audio, In = G.input;
   const NAMES = { fish: 'Рыба', eel: 'Угорь', carp: 'Золотой карп', boot: 'Старый сапог', herb_blue: 'Голубой лотос' };
-  let phase = 'ready', t = 0, wait = 0, bite = null, fishId = null, str = 1;
+  let phase = 'ready', t = 0, wait = 0, fishId = null, str = 1;
   let tension = 0.3, prog = 0, slack = 0, pull = 0, pullT = 0, msg = '', result = null;
   const hookWin = () => 0.75 + (G.hero.has('eagle_eye') ? 0.25 : 0) + G.hero.stat('spd') * 0.02;
   const S = {

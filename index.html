@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '2.3', version: '39b25e9e', date: '2026-10-23 10:03', debug: false };
+const BUILD = { release: '2.5', version: '2b5bdef8', date: '2026-10-24 19:37', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -2822,7 +2822,7 @@ G.CHAR_ART = {"hero":{"w":96,"h":160,"pal":["#f2ceac","#deb28d","#cf996e","#aa8f
     const ex = new Set(st.ex || []);
     const b = f === 0 ? 0 : 1;                      // покачивание при ходьбе
     const fat = st.body === 'fat';
-    const sk = col.s, kid = st.kid;
+    const sk = col.s;
     const swing = f === 1 ? 1 : f === 2 ? -1 : 0;   // качание рук/ног
     const tx0 = fat ? 8 : 10, tx1 = fat ? 24 : 22;  // ширина торса
     const torsoBot = 33 + (fat ? 1 : 0);
@@ -2907,7 +2907,6 @@ G.CHAR_ART = {"hero":{"w":96,"h":160,"pal":["#f2ceac","#deb28d","#cf996e","#aa8f
 
   function drawTop(B, st, ex, col, dir, b, fat, torsoBot) {
     const t = col.t, T = col.T, a = col.a;
-    const cx = 16;
     if (dir === 'down') {
       if (st.top === 'jacket') {
         fill(B, R(15.2, 22.6 + b, 16.8, torsoBot - 1 + b), T, { flat: true });                  // молния
@@ -2958,7 +2957,6 @@ G.CHAR_ART = {"hero":{"w":96,"h":160,"pal":["#f2ceac","#deb28d","#cf996e","#aa8f
 
   function drawArms(B, st, ex, col, dir, b, swing, fat) {
     const sl = st.sleeve, sc = col.t, hand = col.s;
-    const ay = (s) => b + s * 1.1;
     const mk = (x0, x1, dy) => {
       const y0 = 22.4 + b + dy, y1 = 31.4 + b + dy;
       if (sl === 'short') { fill(B, RR(x0, y0, x1, y0 + 4.8, 1.6), sc, { seam: true }); fill(B, RR(x0 + 0.4, y0 + 3.6, x1 - 0.4, y1, 1.4), hand, { seam: true }); }
@@ -3316,7 +3314,7 @@ G.CHAR_ART = {"hero":{"w":96,"h":160,"pal":["#f2ceac","#deb28d","#cf996e","#aa8f
 // Все узоры детерминированы: перерисовка чанка и загрузка сохранения не меняют фактуру.
 G.environment = (() => {
   const H = G.util.hash2;
-  const ink = '#493b35', wood = '#a5754d', edge = '#d4aa73', dark = '#674a39';
+  const ink = '#493b35', edge = '#d4aa73', dark = '#674a39';
   const p = (c, x, y, col, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
   const rect = (c, x, y, w, h, fill, line = ink) => {
     p(c, x, y, line, w, h); p(c, x + 1, y + 1, fill, w - 2, h - 2);
@@ -4824,7 +4822,6 @@ G.icons = (() => {
   }
 
   // ---------- общие заготовки ----------
-  const W = '#f4f0e8';
   function bowl(B, broth, o = {}) {
     const big = o.big ? 2 : 0;
     fill(B, E(24, 26, 19 + big, 7), broth, { lit: 0.25, dark: 0.3 });                       // бульон
@@ -5908,7 +5905,7 @@ G.houseArt = (() => {
   }
 
   // уникальные здания: пятно и дверь — по картинке
-  for (const [name, a] of Object.entries(data.art)) {
+  for (const a of Object.values(data.art)) {
     const tpl = a.kind === 'unique' && G.BUILDINGS[a.tpl];
     if (tpl) { tpl.w = a.w; tpl.h = a.h; tpl.door = tpl.door ? [a.dx, a.h - 1] : tpl.door; }
   }
@@ -5956,15 +5953,16 @@ G.houseArt = (() => {
 
 // ===== data/items.js =====
 // Предметы и лавки (план §5.4).
-// cat: food — съедается сразу; tool/med — в подсумок (pouch); gift, book, misc — в сумку; service — услуга на месте.
-// effect: { rest (усталость −n), hp, minutes } — применяется при покупке еды и услуг.
+// cat: food — еда в сумку; instant — блюдо съедается сразу после покупки; tool/med — в подсумок (pouch).
+// gift, book, misc — в сумку; service — услуга на месте.
+// effect: { rest (усталость −n), hp, minutes } — применяется при использовании, а у instant/service — при покупке.
 G.ITEMS = {
   // ── Ичираку ──
-  ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
-  ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
-  ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
+  ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', instant: true, ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
+  ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', instant: true, ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
+  ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', instant: true, ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
   // ── Якинику Q ──
-  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
+  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', instant: true, effect: { rest: 48, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
   // ── Данго и чайная ──
   dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
   sweet_tea:    { name: 'Сладкий чай',       price: 15,  cat: 'food', effect: { rest: 5, minutes: 10 }, desc: 'Тёплый и сладкий.' },
@@ -6166,23 +6164,23 @@ G.hero = {
 
 
 // ===== data/duel_data.js =====
-// Данные боя «Дуэль»: печати, техники (для мини-игры печатей), противники со стилями, арены. Правила боя — systems/duel.js, docs/COMBAT.md.
+// Данные карточной «Дуэли»: техники и их печати для тренировок, противники со стилями, арены. Правила — systems/duel.js, docs/COMBAT.md.
 G.SEALS = ['Крыса', 'Бык', 'Тигр', 'Заяц', 'Дракон', 'Змея', 'Лошадь', 'Овца', 'Обезьяна', 'Птица', 'Собака', 'Кабан'];
 G.SEAL_COL = ['#9a9aa8', '#a8683a', '#e8a03a', '#e8dcc0', '#4a8ad0', '#6ab04a', '#c87a4a', '#f4ecd8', '#c8a050', '#f0a0c0', '#b0a090', '#8a5a3a'];
 const _S = (names) => names.map((n) => G.SEALS.indexOf(n));
 
-// Техники ниндзюцу/гендзюцу. learn — флаг, открывающий технику. ch — чакра, w — вес на шкале ходов.
+// Техники ниндзюцу/гендзюцу. ch — стоимость чакры, seals — последовательность печатей.
 G.TECHS = {
-  kawarimi: { name: 'Каварими',       seals: _S(['Овца', 'Кабан', 'Бык', 'Собака', 'Змея']), ch: 8,  w: 0,  reaction: true, desc: 'Реакция: вместо тебя полено, ты — за спиной врага.' },
-  henge:    { name: 'Хенге',          seals: _S(['Собака', 'Кабан', 'Овца']),                ch: 8, w: 9,  desc: 'Превратиться в камень: враг теряет тебя, засада ×2.' },
-  fear:     { name: 'Ложный страх',   seals: _S(['Тигр', 'Змея', 'Крыса', 'Птица']),         ch: 12, w: 10, gen: true, desc: 'Гендзюцу: враг видит кошмар и теряет ходы.' },
-  bunshin:  { name: 'Буншин',         seals: _S(['Овца', 'Змея', 'Тигр']),                   ch: 14, w: 10, desc: 'Два иллюзорных клона принимают удары на себя.' },
-  sexy:     { name: 'Секси-дзюцу',    seals: _S(['Овца']),                                   ch: 6,  w: 6,  desc: 'Подарок Наруто. Противник-мужчина в нокдауне. Позор.' },
-  shunshin: { name: 'Шуншин',         seals: _S(['Тигр']),                                   ch: 15, w: 2,  desc: 'Мгновенный шаг в любую точку и ход вне очереди.' },
+  kawarimi: { name: 'Каварими',       seals: _S(['Овца', 'Кабан', 'Бык', 'Собака', 'Змея']), ch: 8,  desc: 'Замена поленом в ответ на атаку и контрудар из-за спины.' },
+  henge:    { name: 'Хенге',          seals: _S(['Собака', 'Кабан', 'Овца']),                ch: 8,  desc: 'Превращение сбивает врага с толку: он пропускает действие в конце хода.' },
+  fear:     { name: 'Ложный страх',   seals: _S(['Тигр', 'Змея', 'Крыса', 'Птица']),         ch: 12, gen: true, desc: 'Гендзюцу: кошмар ослабляет атаки врага на два действия и снимает его блок.' },
+  bunshin:  { name: 'Буншин',         seals: _S(['Овца', 'Змея', 'Тигр']),                   ch: 14, desc: 'Два иллюзорных клона принимают удары на себя.' },
+  sexy:     { name: 'Секси-дзюцу',    seals: _S(['Овца']),                                   ch: 6,  desc: 'Подарок Наруто. Противник-мужчина в нокдауне. Позор.' },
+  shunshin: { name: 'Шуншин',         seals: _S(['Тигр']),                                   ch: 15, desc: 'Мгновенный удар от Скорости и полное уклонение от ответной атаки.' },
 };
 G.TECH_ORDER = ['henge', 'fear', 'bunshin', 'sexy', 'shunshin'];
 // Первая боевая техника ниндзюцу: выстрел чакрой (урок Ируки в день 2)
-G.TECHS.chakra_shot = { name: 'Выстрел чакры', seals: _S(['Тигр', 'Заяц']), ch: 10, w: 8, desc: 'Сгусток чакры бьёт на расстоянии: небольшой урон, не требует стихии.' };
+G.TECHS.chakra_shot = { name: 'Выстрел чакры', seals: _S(['Тигр', 'Заяц']), ch: 10, desc: 'Сгусток чакры бьёт на расстоянии и не даёт уклониться; усиливается меткой куная.' };
 G.TECH_ORDER.unshift('chakra_shot');
 
 
@@ -6195,26 +6193,26 @@ G.COMBOS = {
 
 // Противники. hp — здоровье в новой шкале; tai/nin/gen/spd/end/know — характеристики (как у героя);
 // style: dummy (стоит), rush (напирает), counter (отвечает на последнее действие героя), reader (читает частоту действий),
-// turtle (защищается), trickster (обманывает намёками), brute (медленный, тяжёлые удары каждые три раунда);
-// tech — коронный приём: kind dmg (урон), drain (крадёт чакру), bind (запрещает уклон), fear (портит тайминг героя); cost — чакра.
+// turtle (защищается), trickster (ослабляет следующий ход иллюзиями), brute (готовит тяжёлый удар каждые три хода);
+// tech — коронный приём: kind dmg (урон), drain (крадёт чакру), bind (запрещает обычный уклон), fear (−1 карта и действие); cost — чакра.
 G.ENEMIES = {
   dummy: {name:'Манекен',spr:'dummy',male:false,grow:false,dmg:0,hp:25,ch:0,tai:1,nin:0,gen:0,spd:1,end:1,know:0,style:'dummy',lines:{start:'...',hurt:'*скрип*'}},
   dummy2: {name:'Манекен Ируки',spr:'dummy',male:false,grow:false,dmg:4,hp:30,ch:0,tai:2,nin:0,gen:0,spd:2,end:2,know:0,style:'dummy',lines:{start:'*скрип-скрип*'}},
   kiba: {name:'Киба',spr:'kiba',male:true,grow:false,dmg:17.5,hp:55,ch:34,tai:7,nin:3,gen:1,spd:6,end:5,know:2,style:'rush',tech:{name:'Гацуга',power:1.8,kind:'dmg',cost:16},lines:{start:'Новенький? Мы с Акамару тебя мигом уделаем!',hurt:'Акамару, это ничего!',low:'Чёрт... да ты не так прост!',win:'Ха! Сила стаи!',lose:'Ладно-ладно... в следующий раз!'}},
   naruto: {name:'Наруто',spr:'naruto',male:true,grow:false,dmg:20.5,hp:70,ch:80,tai:6,nin:4,gen:1,spd:7,end:10,know:1,style:'rush',tech:{name:'Теневые клоны',power:1.6,kind:'dmg',cost:20},lines:{start:'Даттебайо! Покажу тебе стиль будущего Хокаге!',hurt:'Ай-ай! Это нечестно!',low:'Я никогда не сдаюсь!',win:'Ура! Видел?!',lose:'Эх... ты крутой! Ещё раз!'}},
-  sasuke: {name:'Саске',spr:'sasuke',male:true,grow:false,dmg:25.9,hp:80,ch:60,tai:8,nin:6,gen:3,spd:8,end:8,know:5,style:'counter',tech:{name:'Огненный шар',power:2.2,kind:'dmg',cost:22},lines:{start:'Хм. Посмотрим, чего ты стоишь.',hurt:'Тц.',low:'Не может быть...',win:'Ты слабак.',lose:'...Неплохо. В следующий раз я не проиграю.'}},
-  shikamaru: {name:'Шикамару',spr:'shikamaru',male:true,grow:false,dmg:38.9,hp:90,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
-  hinata: {name:'Хината',spr:'hinata',male:false,grow:false,dmg:34.8,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
-  choji: {name:'Чоджи',spr:'choji',male:true,grow:false,dmg:13.2,hp:90,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
-  ino: {name:'Ино',spr:'ino',male:false,grow:false,dmg:29.5,hp:70,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
+  sasuke: {name:'Саске',spr:'sasuke',male:true,grow:false,dmg:38.9,hp:128,ch:60,tai:8,nin:6,gen:3,spd:8,end:8,know:5,style:'counter',tech:{name:'Огненный шар',power:2.2,kind:'dmg',cost:22},lines:{start:'Хм. Посмотрим, чего ты стоишь.',hurt:'Тц.',low:'Не может быть...',win:'Ты слабак.',lose:'...Неплохо. В следующий раз я не проиграю.'}},
+  shikamaru: {name:'Шикамару',spr:'shikamaru',male:true,grow:false,dmg:58.4,hp:135,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0.65,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
+  hinata: {name:'Хината',spr:'hinata',male:false,grow:false,dmg:31,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
+  choji: {name:'Чоджи',spr:'choji',male:true,grow:false,dmg:29,hp:144,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
+  ino: {name:'Ино',spr:'ino',male:false,grow:false,dmg:50.2,hp:84,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
   lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
   bully: {name:'Хулиган',spr:'bully',male:true,grow:true,dmg:19.1,hp:50,ch:20,tai:4,nin:1,gen:0,spd:3,end:4,know:1,style:'rush',tech:{name:'Бросок кунаев',power:1.3,kind:'dmg',cost:10},lines:{start:'Эй, мелкий! Гони деньги!',hurt:'Ах ты!',win:'Ха, слабак!',lose:'Б-бежим отсюда!'}},
   senior: {name:'Старшеклассник',spr:'bully',male:true,grow:false,dmg:25,hp:80,ch:40,tai:7,nin:4,gen:2,spd:8,end:9,know:8,style:'counter',tech:{name:'Бросок кунаев',power:1.5,kind:'dmg',cost:12},lines:{start:'Свиток? Попробуй отними, малявка!',hurt:'Тц, шустрый!',low:'Да кто ты такой?!',win:'Свиток останется у нас.',lose:'Ладно-ладно, забирай!'}},
   thief: {name:'Ночной вор',spr:'thief',male:true,grow:true,dmg:29,hp:50,ch:30,tai:4,nin:2,gen:2,spd:7,end:4,know:4,style:'trickster',tech:{name:'Дымовая завеса',power:0,kind:'fear',cost:12},lines:{start:'Ученичок? Не мешай работать.',hurt:'Шустрый...',win:'Сладких снов.',lose:'Сдаюсь! Отдам всё!'}},
   dog: {name:'Бродячий пёс',spr:'dog',male:false,grow:true,dmg:21.5,hp:40,ch:0,tai:5,nin:0,gen:0,spd:7,end:3,know:0,style:'rush',tech:{name:'Рывок',power:1.3,kind:'dmg',cost:0},lines:{start:'Р-р-р-гав!',lose:'Скуль-скуль...'}},
-  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,dmg:27,hp:75,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
+  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,dmg:45.9,hp:113,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
   shino: {name:'Шино',spr:'shino',male:true,grow:false,dmg:30,hp:90,ch:70,tai:3,nin:6,gen:2,spd:4,end:5,know:8,style:'reader',tech:{name:'Жуки-разрушители',power:1,kind:'drain',cost:18},lines:{start:'Мои жуки уже в пути. Сдавайся — это логично.',hurt:'Интересно.',low:'Колония слабеет... но я не отступлю.',win:'Расчёт был верным.',lose:'Невероятно. Жуки... ошиблись.'}},
-  anko: {name:'Анко',spr:'anko',male:false,grow:false,dmg:28,hp:85,ch:80,tai:7,nin:7,gen:3,spd:8,end:6,know:6,style:'trickster',tech:{name:'Змеиная хватка',power:0,kind:'bind',cost:18},lines:{start:'Покажи, на что способен, малявка!',hurt:'Ха! Неплохо!',low:'Даже не думала, что придётся вспотеть!',win:'Мало данго ты ешь, парень.',lose:'Ладно-ладно... ты меня удивил.'}},
+  anko: {name:'Анко',spr:'anko',male:false,grow:false,dmg:28,hp:85,ch:80,tai:7,nin:7,gen:3,spd:8,end:6,know:6,style:'trickster',tech:{name:'Змеиная хватка',power:0.55,kind:'bind',cost:18},lines:{start:'Покажи, на что способен, малявка!',hurt:'Ха! Неплохо!',low:'Даже не думала, что придётся вспотеть!',win:'Мало данго ты ешь, парень.',lose:'Ладно-ладно... ты меня удивил.'}},
   asuma: {name:'Асума',spr:'asuma',male:true,grow:false,dmg:30,hp:90,ch:90,tai:8,nin:7,gen:2,spd:7,end:8,know:8,style:'counter',tech:{name:'Клинки чакры',power:1.9,kind:'dmg',cost:20},lines:{start:'Шикамару твердит, что ты упрямый. Проверим.',hurt:'Хм, неплохо!',low:'Ладно, хватит играть.',win:'Вырастешь — станешь опасным.',lose:'Вот это да. Респект, малыш.'}},
   konohamaru: {name:'Конохамару',spr:'konohamaru',male:true,grow:false,dmg:12,hp:45,ch:30,tai:3,nin:2,gen:1,spd:5,end:3,know:1,style:'trickster',tech:{name:'Проделка',power:1.2,kind:'dmg',cost:10},lines:{start:'Босс сказал, нужно сначала победить тебя! Сексуальное дзюцу-у-у!',hurt:'Ай! Я же внук Хокаге!',win:'Я круче всех!',lose:'Погоди... я вырасту и вернусь!'}},
 
@@ -6241,12 +6239,59 @@ G.combat = {
 
 // ── Стихийные техники (изучаются у наставников) ──
 Object.assign(G.TECHS, {
-  katon:   { name: 'Катон: Огненный шар', seals: _S(['Змея', 'Овца', 'Обезьяна', 'Кабан', 'Лошадь', 'Тигр']), ch: 22, w: 11, el: 'fire',  desc: 'Огненный шар: мощный урон, слабее по мокрым.' },
-  suiton:  { name: 'Суйтон: Водяная пуля', seals: _S(['Бык', 'Заяц', 'Дракон']),                            ch: 14, w: 9,  el: 'water', desc: 'Струя воды: умеренный урон, враг промокает (молния ×1,6).' },
-  raiton:  { name: 'Райтон: Разряд',       seals: _S(['Бык', 'Заяц', 'Обезьяна']),                           ch: 18, w: 10, el: 'bolt',  desc: 'Электрический разряд, может оглушить. По мокрым ×1,6.' },
-  fuuton:  { name: 'Футон: Порыв',         seals: _S(['Тигр', 'Дракон', 'Заяц']),                            ch: 15, w: 8,  el: 'wind',  desc: 'Ветер отбрасывает врага и сбивает его ритм.' },
+  katon:   { name: 'Катон: Огненный шар', seals: _S(['Змея', 'Овца', 'Обезьяна', 'Кабан', 'Лошадь', 'Тигр']), ch: 22, el: 'fire',  desc: 'Огненный шар: мощный урон, слабее по мокрым.' },
+  suiton:  { name: 'Суйтон: Водяная пуля', seals: _S(['Бык', 'Заяц', 'Дракон']),                            ch: 14, el: 'water', desc: 'Струя воды: умеренный урон, враг промокает (молния ×1,6).' },
+  raiton:  { name: 'Райтон: Разряд',       seals: _S(['Бык', 'Заяц', 'Обезьяна']),                           ch: 18, el: 'bolt',  desc: 'Электрический разряд, может оглушить. По мокрым ×1,6.' },
+  fuuton:  { name: 'Футон: Порыв',         seals: _S(['Тигр', 'Дракон', 'Заяц']),                            ch: 15, el: 'wind',  desc: 'Ветер снимает защиту, ослабляет ответную атаку и позволяет взять карту.' },
 });
 G.TECH_ORDER.push('katon', 'suiton', 'raiton', 'fuuton');
+
+
+// ===== data/cards.js =====
+// Карточная дуэль: базовая колода и описания карт. Правила и эффекты — systems/duel.js.
+// cost — постоянная чакра боя; ap — действия за ход (по умолчанию 1); exhaust — после розыгрыша уходит из колоды до конца боя.
+G.CARDS = {
+  strike:  { name: 'Удар',      kind: 'tai',   cost: 0, text: 'Урон от Тайдзюцу. Серия тайдзюцу в одном ходу усиливает следующие удары.' },
+  guard:   { name: 'Блок',      kind: 'def',   cost: 0, text: 'Блок от Выносливости. Поглощает урон врага в конце этого хода.' },
+  evade:   { name: 'Уклон',     kind: 'def',   cost: 0, text: '65% уклонение от каждого удара в этом ходу. Не действует под теневой связкой.' },
+  kunai:   { name: 'Кунай',     kind: 'skill', cost: 0, text: 'Небольшой урон от Скорости и метка: следующая техника по цели усилена на 50%.' },
+  focus:   { name: 'Фокус',     kind: 'skill', cost: 0, exhaust: true, text: 'Восстановить чакру. Следующая атакующая техника в этом бою усилена на 25%.' },
+  combo:   { name: 'Серия',     kind: 'tai',   cost: 0, text: 'Три быстрых удара. Каждый засчитывается в серию тайдзюцу.' },
+  feint:   { name: 'Финт',      kind: 'skill', cost: 0, text: 'Снимает блок и уклонение врага, наносит урон и делает его уязвимым до конца хода.' },
+  analyze: { name: 'Анализ',    kind: 'skill', cost: 0, exhaust: true, text: 'Взять две карты и усилить следующую атакующую технику на 25%.' },
+  stance:  { name: 'Стойка',    kind: 'def',   cost: 0, text: 'Небольшой блок и контрудар, если враг атакует в этом ходу.' },
+  breath:  { name: 'Дыхание',   kind: 'def',   cost: 0, exhaust: true, text: 'Немного лечит и снижает усталость. Уходит из колоды после применения.' },
+
+  bandage:     { name: 'Бинт',          kind: 'item', cost: 0, exhaust: true, item: true, text: 'Восстановить 25% здоровья. Тратит один бинт.' },
+  chakra_pill: { name: 'Пилюля',        kind: 'item', cost: 0, exhaust: true, item: true, text: 'Восстановить 50% чакры. Тратит одну пилюлю.' },
+  smoke_bomb:  { name: 'Дымовая',       kind: 'item', cost: 0, exhaust: true, item: true, text: 'Полностью избежать атак врага в этом ходу. Тратит дымовую бомбу.' },
+  flash_bomb:  { name: 'Вспышка',       kind: 'item', cost: 0, exhaust: true, item: true, text: 'Враг пропускает действие в конце хода. Тратит световую бомбу.' },
+};
+
+// Техники становятся картами автоматически после изучения. Их цена и стихия уже заданы в G.TECHS.
+for (const [id, t] of Object.entries(G.TECHS)) {
+  G.CARDS[id] = {
+    name: t.name.replace(/^(Катон|Суйтон|Райтон|Футон): /, ''), kind: t.gen ? 'gen' : 'nin', cost: t.ch, tech: true,
+    exhaust: ['kawarimi', 'henge', 'sexy', 'shunshin'].includes(id),
+    text: t.desc,
+  };
+}
+G.CARDS.kawarimi.text = 'Полностью избежать атаки и нанести контрудар. Срабатывает только против атакующего намерения.';
+G.CARDS.henge.text = 'Враг пропускает действие в конце хода. Одно надёжное превращение за бой.';
+G.CARDS.fear.text = 'Страх на два действия: враг наносит на 35% меньше урона и теряет блок.';
+G.CARDS.bunshin.text = 'Два клона. Каждый принимает на себя один удар; после призыва вы берёте карту.';
+G.CARDS.sexy.text = 'Противник-мужчина пропускает действие. На остальных — слабость на один ход.';
+G.CARDS.shunshin.text = 'Сильный удар от Скорости и полное уклонение от ответной атаки.';
+G.CARDS.katon.text = 'Большой урон и горение на два хода. По мокрой цели урон ниже.';
+G.CARDS.suiton.text = 'Урон и мокрый статус на два хода. Подготавливает усиленный Райтон.';
+G.CARDS.raiton.text = 'Электрический урон. По мокрой цели ×1,6 и оглушение на действие.';
+G.CARDS.fuuton.text = 'Урон, слабость на один ход и дополнительная карта. Снимает защиту врага.';
+G.CARDS.release = { name: 'Выброс', kind: 'nin', cost: 25, tech: true, exhaust: true, release: true, text: 'Требует накал 60. Мощный урон сквозь защиту; нестабильная чакра может усилить выброс или дать отдачу.' };
+
+// Двенадцать базовых карт: у нового героя уже есть атака, защита, добор и несколько связок.
+G.CARD_BASE_DECK = ['strike', 'strike', 'guard', 'guard', 'evade', 'kunai', 'focus', 'combo', 'feint', 'analyze', 'stance', 'breath'];
+G.CARD_ITEM_ORDER = ['bandage', 'chakra_pill', 'smoke_bomb', 'flash_bomb'];
+G.CARD_TECH_LIMIT = 1; // по одной копии каждой изученной техники, чтобы базовая колода не терялась
 
 
 // ===== systems/quests.js =====
@@ -6342,7 +6387,7 @@ G.quests = (() => {
     check() {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.have && this.dayOk(st) && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) { this.step(id, st.id); continue; }
+        if (st && st.have && this.timeOk(st) && Object.entries(st.have).every(([k, n]) => G.game.count(k) >= n)) { this.step(id, st.id); continue; }
         if (st && st.intro && this.dayOk(st) && !G.state.flags['qi_' + id + '_' + st.id]) { G.state.flags['qi_' + id + '_' + st.id] = 1; this.queue(st.intro); }
       }
     },
@@ -6352,7 +6397,7 @@ G.quests = (() => {
     notify(name, ...args) {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (!st || !st.on || st.on[0] !== name || !this.dayOk(st)) continue;
+        if (!st || !st.on || st.on[0] !== name || !this.timeOk(st)) continue;
         const f = st.on[1];
         if (f !== undefined && !(typeof f === 'function' ? f(...args) : f === args[0])) continue;
         this.step(id, st.id);
@@ -6364,14 +6409,14 @@ G.quests = (() => {
       if (!tpl) return;
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.reach && st.target.building === tpl) this.step(id, st.id);
+        if (st && st.reach && st.target.building === tpl && this.timeOk(st)) this.step(id, st.id);
       }
     },
     // Сон: шаг «лечь спать», провал просроченных
     onSleep(newDay) {
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.target.obj === 'futon') this.step(id, st.id);
+        if (st && st.target.obj === 'futon' && this.timeOk(st)) this.step(id, st.id);
       }
       for (const id of this.activeList()) { const s = S()[id]; if (s.due != null && newDay > s.due) this.fail(id); }
     },
@@ -6916,306 +6961,436 @@ G.purple = (() => {
 
 
 // ===== systems/duel.js =====
-// Ядро боя «Дуэль»: чистая логика без экрана и без записи в сохранение (экран — scenes/duel.js, симулятор — tools/node/balance.js).
-// Правила — docs/COMBAT.md. Раунд: герой и противник одновременно выбирают действие; исход решает пара.
-//   Блок бьёт Удар, Удар бьёт Уклон, Уклон бьёт Блок. Приём (техника) пробивает Блок, но промахивается по Уклону.
-// Качество q (0..1) приходит от мини-игры (тайминг для удара и блока, печати для приёма); у ботов и тестов — задаётся числом.
+// Карточная дуэль: чистая логика без экрана и без записи в сохранение.
+// Игрок тратит до трёх действий на карты, затем враг выполняет видимое заранее намерение.
 G.duel = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const ACTS = ['strike', 'block', 'evade'];
-  const BEATS = { block: 'strike', strike: 'evade', evade: 'block' };   // ключ побеждает значение
-  const KIND_ICON = { strike: 'strike', block: 'block', evade: 'evade', tech: 'tech', idle: 'idle' };
-  const SPAR_END = 0.3;          // спарринг идёт до 30% здоровья
-  const FAT_ROUND = 2.5;         // усталость за раунд
-  const HEAT_ROUND = 7, HEAT_HIT = 5, HEAT_MAX = 100, RELEASE_HEAT = 60, RELEASE_COST = 25;
-  const BOOST = 1.5;
-  // Настройки баланса (меняются симулятором и подгоняются под окна tools/targets.json)
-  const TUNE = { hp: 1, dmgBase: 4, dmgPer: 1.2 };
+  const SPAR_END = 0.3, RELEASE_HEAT = 60, RELEASE_COST = 25, BOOST = 1.5;
+  const FAT_CARD = 0.45, FAT_ROUND = 1.1, HEAT_CARD = 3, HEAT_HIT = 5;
+  const TUNE = { hp: 1.35, enemyDmg: 2.8, hand: 5, ap: 3 };
 
-  // Простая детерминируемая случайность (для тестов и симулятора): rng = () => [0,1)
   function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const fatMul = (D) => D.P.fat > 90 ? 0.7 : D.P.fat > 70 ? 0.85 : 1;
+  const isAttack = (D) => D.intent && ['strike', 'multi', 'tech', 'drain', 'bind'].includes(D.intent.kind);
+  const cardDef = (id) => G.CARDS[id];
 
-  // ── создание боя ──
-  // opts: { enemy, mode: ko|spar|survive, rounds, stats, skills, techs: [id], hp (0..100 %), chakra (0..100 %), fatigue,
-  //         stability, rng, inv, day, trainingFight }
+  // ── создание колоды и состояния ──
   function create(opts) {
     const rng = opts.rng || Math.random;
     const stats = opts.stats || G.state.hero.stats || {}, st = (k) => stats[k] || G.STAT_BASE;
-    const skills = opts.skills || G.state.hero.skills || [];
-    const has = (s) => skills.includes(s);
+    const skills = opts.skills || G.state.hero.skills || [], has = (s) => skills.includes(s);
     let ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
     const day = opts.day != null ? opts.day : G.state.vars.day;
     if (ed.grow) ed = Object.assign({}, ed, { hp: Math.round(ed.hp * (1 + 0.025 * day)), tai: ed.tai + Math.floor(day / 9), spd: ed.spd + Math.floor(day / 14), end: ed.end + Math.floor(day / 21) });
     const hpMax = Math.round((60 + st('end') * 5) * (has('tough') ? 1.1 : 1));
     const chMax = Math.round((30 + st('chakra') * 10) * (has('big_chakra') ? 1.25 : 1));
-    const mode = opts.mode || 'ko';
-    const real = mode === 'ko' || mode === 'survive';
+    const mode = opts.mode || 'ko', real = mode === 'ko' || mode === 'survive';
     const P = {
       st, name: opts.name || (G.state && G.state.hero && G.state.hero.name) || 'Герой',
       hpMax, hp: real ? Math.max(1, Math.round(hpMax * (opts.hp == null ? 100 : opts.hp) / 100)) : hpMax,
       chMax, ch: Math.round(chMax * clamp(opts.chakra == null ? 100 : opts.chakra, 10, 100) / 100),
-      fat: opts.fatigue == null ? 10 : opts.fatigue, fat0: opts.fatigue == null ? 10 : opts.fatigue, heat: 0,
-      clones: 0, shield: 0, status: {}, hist: [], chain: 0, techs: (opts.techs || []).filter((t) => G.TECHS[t]),
+      fat: opts.fatigue == null ? 10 : opts.fatigue, fat0: opts.fatigue == null ? 10 : opts.fatigue,
+      heat: 0, ap: TUNE.ap, block: 0, dodge: 0, riposte: 0, chain: 0, focus: 0, clones: 0,
+      status: {}, hist: [], turnCards: [], techs: (opts.techs || []).filter((t) => G.TECHS[t]),
       knows: (t) => (opts.techs || []).includes(t),
     };
     P.stab0 = opts.stability != null ? opts.stability : (G.purple && G.state.started ? G.purple.stability() : 40);
     const ehp = Math.round(ed.hp * TUNE.hp);
-    const E = Object.assign({}, ed, { id: opts.enemy, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, charge: 0 });
-    const D = { opts, rng, mode, rounds: opts.rounds || 6, P, E, round: 0, over: null, intent: null, hint: null, log: [], inv: Object.assign({}, opts.inv || {}), trainingFight: mode === 'spar', stats: { perfect: 0, used: {} }, turns: 0 };
+    const E = Object.assign({}, ed, { id: opts.enemy, dmg: (ed.dmg != null ? ed.dmg : 4 + ed.tai * 1.2) * TUNE.enemyDmg, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, block: 0, dodge: 0, charged: 0 });
+    const D = {
+      opts, rng, mode, rounds: opts.rounds || 6, P, E, round: 0, over: null, phase: 'player', intent: null,
+      log: [], inv: Object.assign({}, opts.inv || {}), trainingFight: mode === 'spar',
+      stats: { used: {}, sequence: [], cards: 0, damage: 0, taken: 0 }, turns: 0, deck: [], hand: [], discard: [], exhaust: [], usedItems: [],
+      prevCards: [], notice: '', last: null, _uid: 0,
+    };
     D.has = has;
-    nextIntent(D);
+    const ids = G.CARD_BASE_DECK.slice();
+    for (const t of P.techs) for (let i = 0; i < G.CARD_TECH_LIMIT; i++) ids.push(t);
+    if (opts.surge !== false) ids.push('release');
+    for (const id of G.CARD_ITEM_ORDER) {
+      const copies = Math.min(D.inv[id] || 0, id === 'bandage' ? 2 : 1);
+      for (let i = 0; i < copies; i++) ids.push(id);
+    }
+    D.deck = ids.filter((id) => G.CARDS[id]).map((id) => ({ id, uid: ++D._uid }));
+    shuffle(D, D.deck);
+    startTurn(D, true);
     return D;
   }
 
-  // Стабильность чакры героя прямо сейчас: усталость в бою снижает её
-  function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
-  function fatMul(D) { return D.P.fat > 70 ? 0.85 : D.P.fat > 90 ? 0.7 : 1; }
-  // Ширина окна тайминга 0..1 для экрана и ботов: шире при высокой стабильности и малой усталости
-  function window(D) { return clamp(0.3 + stability(D) / 250 - D.P.fat / 400 - (D.P.status.fear ? 0.12 : 0), 0.12, 0.7); }
-
-  // ── намёк о ходе противника ──
-  function hintAccuracy(D) { return clamp(0.2 + 0.04 * D.P.st('know') + 0.015 * D.P.st('spd') + (D.has('analyst') ? 0.1 : 0) - (D.E.style === 'trickster' ? 0.2 : 0), 0.15, 0.9); }
-
-  // ── решение противника ──
-  const WEIGHTS = {
-    rush: [50, 12, 18], counter: [30, 25, 25], turtle: [18, 45, 22], reader: [30, 25, 25], trickster: [35, 15, 35], brute: [55, 15, 5], dummy: [0, 0, 0],
-  };
-  function best(vs) { return Object.keys(BEATS).find((k) => BEATS[k] === vs); }   // чем побеждается действие vs
-  function mostCommon(hist) { const c = {}; for (const a of hist.slice(-6)) c[a] = (c[a] || 0) + 1; let m = null; for (const [a, n] of Object.entries(c)) if (!m || n > c[m]) m = a; return m; }
-  function decide(D) {
-    const E = D.E, rng = D.rng;
-    if (E.style === 'dummy') return 'idle';
-    if (E.status.stun > 0) return 'idle';
-    if (E.status.fear > 0 && rng() < 0.35) return 'idle';   // страх: враг теряется
-    const techOk = E.tech && E.ch >= E.tech.cost && E.cd <= 0;
-    if (E.style === 'brute') { E.charge++; if (E.charge >= 3 && techOk) { E.charge = 0; return 'tech'; } }
-    else if (techOk && rng() < (E.style === 'rush' ? 0.22 : 0.16)) return 'tech';
-    const hist = D.P.hist, last = hist[hist.length - 1];
-    const adapt = clamp(0.25 + 0.04 * E.know, 0.2, 0.7);
-    if (E.style === 'counter' && last && rng() < adapt) return last === 'tech' ? 'evade' : best(last);
-    if (E.style === 'reader' && hist.length >= 2 && rng() < adapt) { const m = mostCommon(hist); return m && m !== 'tech' ? best(m) : 'block'; }
-    const w = WEIGHTS[E.style] || WEIGHTS.rush; let r = rng() * (w[0] + w[1] + w[2]);
-    for (let i = 0; i < 3; i++) { r -= w[i]; if (r <= 0) return ACTS[i]; }
-    return 'strike';
-  }
-  function nextIntent(D) {
-    D.intent = decide(D);
-    const truthful = D.rng() < hintAccuracy(D);
-    const pool = ['strike', 'block', 'evade', 'tech'].filter((a) => a !== D.intent);
-    D.hint = truthful ? D.intent : pool[Math.floor(D.rng() * pool.length)];
-    D.hintTrue = truthful;
-  }
-
-  // ── урон ──
-  const heroStrike = (D) => (6 + D.P.st('tai') * 1.5) * fatMul(D);
-  const enemyStrike = (D) => (D.E.dmg != null ? D.E.dmg : TUNE.dmgBase + D.E.tai * TUNE.dmgPer);   // dmg — урон обычного удара противника из данных
-  const Q = (q) => 0.75 + 0.5 * clamp(q, 0, 1);
-  function techPower(D, id) {
-    const t = G.TECHS[id], nin = D.P.st('nin') + (t.gen ? D.P.st('gen') - D.P.st('nin') : 0);
-    const mast = G.combat && G.state ? G.combat.mastery(id) : 0;
-    const base = { chakra_shot: 1.25, katon: 2.2, suiton: 1.5, raiton: 1.8, fuuton: 1.3 }[id] || 0;
-    return base * (6 + nin * 1.8) * (1 + mast * 0.06) * fatMul(D);
-  }
-  const SPECIAL = ['kawarimi', 'henge', 'fear', 'bunshin', 'sexy', 'shunshin'];
-
-  // доступные игроку действия сейчас: [{id, label, cost?, off?}]
-  function options(D) {
-    const P = D.P, out = [{ id: 'strike' }, { id: 'block' }, { id: 'evade' }];
-    out.push({ id: 'tech', techs: P.techs.map((t) => ({ id: t, name: G.TECHS[t].name, cost: G.TECHS[t].ch, off: P.ch < G.TECHS[t].ch ? 'мало чакры' : null })) });
-    out.push({ id: 'release', cost: RELEASE_COST, off: P.heat < RELEASE_HEAT ? 'накал ' + Math.round(P.heat) + '/' + RELEASE_HEAT : P.ch < RELEASE_COST ? 'мало чакры' : null });
+  function shuffle(D, a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(D.rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function draw(D, n) {
+    const out = [];
+    while (n-- > 0) {
+      if (!D.deck.length) {
+        if (!D.discard.length) break;
+        D.deck = D.discard.splice(0); shuffle(D, D.deck);
+      }
+      const c = D.deck.pop(); D.hand.push(c); out.push(c);
+    }
     return out;
   }
+  function startTurn(D, first = false) {
+    if (D.over) return;
+    D.round++;
+    const P = D.P;
+    P.ap = TUNE.ap; P.block = 0; P.dodge = 0; P.riposte = 0; P.chain = 0; P.turnCards = [];
+    if (!first) P.ch = Math.min(P.chMax, P.ch + Math.round(6 + P.st('ctrl') * 0.5));
+    D.phase = 'player';
+    if (P.status.fear > 0) P.ap = Math.max(1, P.ap - 1);
+    nextIntent(D);
+    const size = Math.max(3, TUNE.hand - (P.status.fear > 0 ? 1 : 0));
+    draw(D, Math.max(0, size - D.hand.length));
+  }
 
-  // ── раунд ──
-  // pAct: 'strike'|'block'|'evade'|'tech:<id>'|'release'|'item:<id>'; q — качество мини-игры 0..1
-  function play(D, pAct, q = 0.5) {
-    if (D.over) return [];
-    const P = D.P, E = D.E, rng = D.rng, ev = [];
-    D.round++; D.turns++;
-    const eAct = D.intent;
-    const kind = pAct.startsWith('tech:') ? 'tech' : pAct.startsWith('item:') ? 'item' : pAct;
-    const techId = kind === 'tech' ? pAct.slice(5) : null;
-    P.hist.push(kind === 'release' ? 'tech' : kind === 'item' ? 'block' : kind); if (P.hist.length > 12) P.hist.shift();
-    E.hist.push(eAct); if (E.hist.length > 12) E.hist.shift();
-    D.stats.used[pAct] = (D.stats.used[pAct] || 0) + 1;
-    let pDmgToE = 0, eDmgToP = 0;
-    // who — кто действует (p/e); to — кто получает урон (по умолчанию противоположная сторона)
-    let fxId = null;   // какая техника сработала: экран боя рисует по ней эффект
-    const note = (who, type, text, extra) => ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p', fx: fxId }, extra || {}));
+  // ── намерения противника ──
+  function strikeIntent(D) { return { kind: 'strike', name: 'Удар', dmg: D.E.dmg != null ? D.E.dmg : 4 + D.E.tai * 1.2, hits: 1 }; }
+  function techIntent(D, charged = false) {
+    const E = D.E, t = E.tech;
+    if (!t) return strikeIntent(D);
+    const power = (t.power || 1) * (charged ? 1.25 : 1);
+    return { kind: t.kind === 'dmg' ? 'tech' : t.kind, name: t.name + (charged ? ' +' : ''), dmg: (E.dmg || 8) * power, hits: 1, cost: t.cost || 0, charged };
+  }
+  function weighted(D, entries) {
+    let r = D.rng() * entries.reduce((s, x) => s + x[1], 0);
+    for (const [value, weight] of entries) { r -= weight; if (r <= 0) return value; }
+    return entries[entries.length - 1][0];
+  }
+  function decide(D) {
+    const E = D.E;
+    if (E.style === 'dummy') return { kind: 'idle', name: 'Ждёт' };
+    if (E.charged) return techIntent(D, true);
+    const techOk = E.tech && E.ch >= (E.tech.cost || 0) && E.cd <= 0;
+    if (E.style === 'brute' && D.round % 3 === 1) return { kind: 'charge', name: 'Замах', interrupt: 3 };
+    const prev = D.prevCards, tai = prev.filter((id) => G.CARDS[id] && G.CARDS[id].kind === 'tai').length;
+    const tech = prev.filter((id) => G.CARDS[id] && G.CARDS[id].tech).length;
+    const adapt = clamp(0.25 + E.know * 0.04, 0.2, 0.7);
+    if ((E.style === 'reader' || E.style === 'counter') && tai >= 2 && D.rng() < adapt) return { kind: 'block', name: 'Читает удары', block: 10 + E.end * 1.3 };
+    if (E.style === 'reader' && tech >= 2 && D.rng() < adapt) return { kind: 'evade', name: 'Читает печати', dodge: 0.55 };
+    const choice = weighted(D, E.style === 'turtle' ? [['block', 38], ['strike', 22], ['tech', 24], ['evade', 16]]
+      : E.style === 'trickster' ? [['evade', 28], ['strike', 27], ['tech', 25], ['multi', 12], ['block', 8]]
+      : E.style === 'brute' ? [['strike', 60], ['tech', 20], ['block', 15], ['multi', 5]]
+      : E.style === 'counter' ? [['strike', 32], ['block', 28], ['evade', 20], ['tech', 20]]
+      : E.style === 'reader' ? [['strike', 28], ['block', 28], ['evade', 25], ['tech', 19]]
+      : [['strike', 43], ['multi', 22], ['tech', 17], ['evade', 10], ['block', 8]]);
+    if (choice === 'tech') return techOk ? techIntent(D) : strikeIntent(D);
+    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * 0.58, hits: 2 };
+    if (choice === 'block') return { kind: 'block', name: 'Защита', block: 9 + E.end * 1.2 };
+    if (choice === 'evade') return { kind: 'evade', name: 'Манёвр', dodge: 0.55 };
+    return strikeIntent(D);
+  }
+  function nextIntent(D) {
+    const E = D.E;
+    E.block = 0; E.dodge = 0;
+    D.intent = decide(D);
+    if (D.intent.charged) E.charged = 0;
+    if (D.intent.kind === 'charge') E.chargeBroken = 0;
+    if (D.intent.block) E.block = D.intent.block;
+    if (D.intent.dodge) E.dodge = D.intent.dodge;
+  }
+  function intentDamage(D) {
+    const i = D.intent;
+    if (!i || !isAttack(D) || D.E.status.stun > 0) return 0;
+    const mul = (D.E.status.fear > 0 ? 0.65 : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
+    return Math.round((i.dmg || 0) * (i.hits || 1) * mul);
+  }
+  function expectedIncoming(D) {
+    let total = 0;
+    if (!isAttack(D) || D.E.status.stun > 0) return 0;
+    const i = D.intent, mul = (D.E.status.fear > 0 ? 0.65 : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
+    let block = D.P.block, clones = D.P.clones;
+    for (let n = 0; n < (i.hits || 1); n++) {
+      const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
+      let d = (i.dmg || 0) * mul * (1 - dodge);
+      if (clones > 0 && d > 0) { clones--; d = 0; }
+      const absorbed = Math.min(block, d); block -= absorbed; d -= absorbed;
+      total += Math.max(0, d);
+    }
+    return Math.round(total);
+  }
 
-    // — статусы врага
-    const eStun = E.status.stun > 0, eFear = E.status.fear > 0, bound = P.status.bind > 0;
-    const eAttacking = !eStun && (eAct === 'strike' || eAct === 'tech');
-    // — затраты чакры
-    let surge = null, pTechMul = 1;
-    const eEvading = eAct === 'evade' && !eStun, eBlocking = eAct === 'block' && !eStun;
+  // ── формулы карт ──
+  function comboBonus() {
+    if (!G.combat || !G.state || !G.state.flags) return 0;
+    let b = 0; for (const [id, c] of Object.entries(G.COMBOS || {})) if (G.combat.knowsCombo(id) && id !== 'academy') b += c.bonus || 0; return b;
+  }
+  function mastery(id) { return G.combat && G.state ? G.combat.mastery(id) : 0; }
+  function damageFormula(D, id) {
+    const P = D.P, tai = P.st('tai'), nin = P.st('nin'), spd = P.st('spd'), mul = fatMul(D);
+    const taiMul = (1 + Math.min(P.chain, 4) * (0.08 + comboBonus())) * mul;
+    const techMul = (1 + mastery(id) * 0.06) * (P.focus ? 1.25 : 1) * (D.E.status.mark ? 1.5 : 1) * mul;
+    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount, hits, tech: false }, extra);
+    const t = (amount, extra = {}) => Object.assign({ amount: amount * techMul, hits: 1, tech: true }, extra);
+    if (id === 'strike') return f((5 + tai) * taiMul);
+    if (id === 'kunai') return f((4 + spd * 0.6) * mul);
+    if (id === 'combo') return f((2 + tai * 0.45) * taiMul, 3);
+    if (id === 'feint') return f((4 + tai * 0.5) * mul);
+    if (id === 'chakra_shot') return t(7 + nin * 1.3, { ignoreDodge: true });
+    if (id === 'shunshin') return t(10 + spd * 1.4);
+    if (id === 'katon') return t((14 + nin * 1.8) * (D.E.status.wet > 0 ? 0.6 : 1), { el: 'fire' });
+    if (id === 'suiton') return t(8 + nin * 1.25, { el: 'water' });
+    if (id === 'raiton') return t((10 + nin * 1.5) * (D.E.status.wet > 0 ? 1.6 : 1), { el: 'bolt' });
+    if (id === 'fuuton') return t(7 + nin * 1.1, { el: 'wind' });
+    if (id === 'release') return t(18 + (nin + P.st('chakra')) * 1.5, { ignoreDodge: true, pierce: true, release: true });
+    return null;
+  }
+  function preview(D, id) {
+    const P = D.P, f = damageFormula(D, id);
+    if (f) {
+      const lines = [f.hits > 1 ? `${f.hits} × ${Math.round(f.amount)}` : `${Math.round(f.amount)} урон`];
+      if (id === 'kunai') lines.push('Метка +50%');
+      else if (id === 'combo') lines.push('Тай-серия');
+      else if (id === 'feint') lines.push('Снять защиту');
+      else if (id === 'katon') lines.push('Горение ×2');
+      else if (id === 'suiton') lines.push('Мокрый ×2');
+      else if (id === 'raiton') lines.push(D.E.status.wet > 0 ? 'Оглушение!' : 'Нужен Суйтон');
+      else if (id === 'fuuton') lines.push('+1 карта');
+      else if (id === 'shunshin') lines.push('Уклон 100%');
+      else if (id === 'release') lines.push('Сквозь защиту');
+      else if (f.tech && (P.focus || D.E.status.mark)) lines.push('Усилено');
+      return lines;
+    }
+    const block = Math.round(8 + P.st('end') * 1.1), stance = Math.round(5 + P.st('end') * 0.7);
+    const table = {
+      guard: [`${block} блок`], evade: ['65% уклон'], focus: [`+${Math.round(8 + P.st('ctrl'))} чакры`, 'Техника +25%'],
+      analyze: ['+2 карты', 'Техника +25%'], stance: [`${stance} блок`, `${Math.round(5 + P.st('tai') * 0.6)} ответ`],
+      breath: [`+${Math.round(3 + P.st('end') * 0.3)} зд.`, '−4 усталости'], kawarimi: ['Уклон 100%', `${Math.round(8 + P.st('tai') * 0.8)} ответ`],
+      henge: ['Отмена хода'], fear: ['Страх ×2', '−35% урона'], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
+      bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: ['Отмена хода'],
+    };
+    return table[id] || [G.CARDS[id] ? G.CARDS[id].kind : ''];
+  }
 
-    // Предмет: занимает раунд, враг действует как обычно
-    if (kind === 'item') {
-      const id = pAct.slice(5), need = (id === 'bandage' && P.hp < P.hpMax) || (id === 'chakra_pill' && P.ch < P.chMax) || id === 'smoke_bomb' || id === 'flash_bomb';
-      const ok = (D.inv[id] || 0) > 0 && need;
-      if (!ok) note('p', 'info', (D.inv[id] || 0) > 0 ? 'Сейчас не нужно' : 'Нет в сумке');
-      if (ok) {
-        D.inv[id]--; D.usedItems = (D.usedItems || []).concat(id);
-        if (id === 'bandage') { const h = Math.round(P.hpMax * 0.25); P.hp = Math.min(P.hpMax, P.hp + h); note('p', 'heal', `Бинт: +${h} здоровья`); }
-        if (id === 'chakra_pill') { const c = Math.round(P.chMax * 0.5); P.ch = Math.min(P.chMax, P.ch + c); note('p', 'chakra', `Пилюля: +${c} чакры`); }
-        if (id === 'smoke_bomb') { P.status.smoke = 1; note('p', 'status', 'Дымовая завеса: следующая атака врага промахнётся'); }
-        if (id === 'flash_bomb') { E.status.stun = 3; note('p', 'status', 'Вспышка: враг ослеплён на раунд'); }
-      }
+  // ── розыгрыш карты ──
+  function findCard(D, ref) {
+    if (typeof ref === 'number') return D.hand[ref] || null;
+    if (ref && typeof ref === 'object' && ref.uid) return D.hand.find((c) => c.uid === ref.uid) || null;
+    let id = String(ref == null ? '' : ref);
+    if (id.startsWith('uid:')) return D.hand.find((c) => c.uid === Number(id.slice(4))) || null;
+    if (id.startsWith('tech:') || id.startsWith('item:')) id = id.slice(5);
+    return D.hand.find((c) => c.id === id) || null;
+  }
+  function canPlay(D, ref) {
+    if (D.over || D.phase !== 'player') return { ok: false, why: 'Сейчас ход врага' };
+    const c = findCard(D, ref);
+    if (!c) return { ok: false, why: 'Карты нет в руке' };
+    const d = cardDef(c.id), P = D.P;
+    if (P.ap < (d.ap || 1)) return { ok: false, why: 'Не хватает действий' };
+    if (P.ch < d.cost) return { ok: false, why: `Нужно ${d.cost} чакры` };
+    if (d.release && P.heat < RELEASE_HEAT) return { ok: false, why: `Накал ${Math.floor(P.heat)}/${RELEASE_HEAT}` };
+    if (c.id === 'bandage' && P.hp >= P.hpMax) return { ok: false, why: 'Здоровье уже полное' };
+    if (c.id === 'chakra_pill' && P.ch >= P.chMax) return { ok: false, why: 'Чакра уже полная' };
+    if (d.item && (D.inv[c.id] || 0) <= 0) return { ok: false, why: 'Предмет закончился' };
+    if (c.id === 'kawarimi' && !isAttack(D)) return { ok: false, why: 'Враг не атакует' };
+    if (c.id === 'evade' && P.status.bind > 0) return { ok: false, why: 'Теневая связка мешает уклону' };
+    if (c.id === 'smoke_bomb' && !isAttack(D)) return { ok: false, why: 'Враг не атакует' };
+    return { ok: true, card: c, def: d };
+  }
+  function note(ev, who, type, text, extra) { ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p' }, extra || {})); }
+  function playerDamage(D, c, formula, ev) {
+    const E = D.E;
+    let total = 0;
+    for (let n = 0; n < formula.hits; n++) {
+      let d = formula.amount * (E.status.vuln > 0 ? 1.25 : 1);
+      if (!formula.ignoreDodge) d *= 1 - E.dodge;
+      const blocked = formula.pierce ? 0 : Math.min(E.block, d);
+      E.block -= blocked; d = Math.max(0, d - blocked); d = Math.round(d);
+      E.hp = clamp(E.hp - d, 0, E.hpMax); total += d;
+      note(ev, 'p', d > 0 ? (formula.tech ? 'tech' : 'hit') : 'blocked', d > 0 ? cardDef(c.id).name : `${cardDef(c.id).name}: блок`, { dmg: d, to: 'e', fx: c.id });
+    }
+    D.stats.damage += total;
+    return total;
+  }
+  function heal(D, amount, ev, text) { const n = Math.max(0, Math.min(Math.round(amount), D.P.hpMax - D.P.hp)); D.P.hp += n; note(ev, 'p', 'heal', text || `Лечение +${n}`, { heal: n, to: 'p' }); }
+  function gainBlock(D, amount, ev) { const n = Math.round(amount); D.P.block += n; note(ev, 'p', 'block', `Блок +${n}`, { block: n, to: 'p' }); }
+  function surgeRoll(D, c) {
+    if (D.opts.surge === false) return null;
+    const stab = stability(D), chance = clamp((1 - stab / 100) * cardDef(c.id).cost / 40, 0, 0.4);
+    return D.rng() < chance ? { kind: D.rng() < 0.35 + stab * 0.004 ? 'boost' : 'backfire' } : null;
+  }
+  function play(D, ref) {
+    const check = canPlay(D, ref);
+    D.notice = check.ok ? '' : check.why;
+    if (!check.ok) return [];
+    const c = check.card, def = check.def, P = D.P, E = D.E, ev = [];
+    D.hand.splice(D.hand.indexOf(c), 1);
+    P.ap -= def.ap || 1; P.ch -= def.cost;
+    P.fat = clamp(P.fat + FAT_CARD + (def.tech ? 0.5 : 0), 0, 100);
+    if (!def.release) P.heat = clamp(P.heat + HEAT_CARD, 0, 100);
+    D.stats.used[c.id] = (D.stats.used[c.id] || 0) + 1; D.stats.cards++; D.stats.sequence.push(c.id);
+    P.hist.push(c.id); P.turnCards.push(c.id); if (P.hist.length > 18) P.hist.shift();
+    if (def.item) { D.inv[c.id]--; D.usedItems.push(c.id); }
+    const formula = damageFormula(D, c.id);
+    let surge = null;
+    if (formula && formula.tech) {
+      surge = surgeRoll(D, c);
+      if (surge && surge.kind === 'boost') { formula.amount *= BOOST; note(ev, 'p', 'boost', 'Фиолетовая вспышка: карта усилена', { fx: 'release' }); }
+      P.focus = 0; E.status.mark = 0;
     }
 
-    // Приём героя
-    let techMiss = false, techUtility = null;
-    if (kind === 'tech' || kind === 'release') {
-      const cost = kind === 'release' ? RELEASE_COST : G.TECHS[techId].ch;
-      if (kind === 'release' && P.heat < RELEASE_HEAT) { note('p', 'info', 'Накал мал: выброс не получился'); }
-      else if (P.ch < cost) { note('p', 'info', 'Не хватило чакры'); }
-      else {
-        P.ch -= cost; P.heat = Math.max(0, P.heat - (kind === 'release' ? RELEASE_HEAT : 0));
-        const stab = stability(D), chance = clamp((1 - stab / 100) * cost / 40, 0, 0.4);   // та же формула, что у G.purple.chance, но с усталостью боя
-        surge = D.opts.surge === false ? null : rng() < chance ? { kind: rng() < 0.35 + stab * 0.004 ? 'boost' : 'backfire' } : null;
-        pTechMul = surge ? (surge.kind === 'boost' ? BOOST : 1) : 1;
-        if (kind === 'release') {
-          const dmg = (14 + (P.st('nin') + P.st('chakra')) * 1.5) * Q(q) * pTechMul * fatMul(D);
-          techUtility = { dmg, through: 0.8, label: 'Фиолетовый выброс' };
-        } else if (SPECIAL.includes(techId)) techUtility = { special: techId, label: G.TECHS[techId].name };
-        else techUtility = { dmg: techPower(D, techId) * Q(q) * pTechMul, through: 0.7, el: G.TECHS[techId].el, label: G.TECHS[techId].name, id: techId };
-      }
-    }
-    P.fat = clamp(P.fat + FAT_ROUND * (1 - P.st('end') * 0.03) + (techUtility ? 2 : 0), 0, 100);
+    if (c.id === 'guard') gainBlock(D, 8 + P.st('end') * 1.1, ev);
+    else if (c.id === 'evade') { P.dodge = Math.max(P.dodge, 0.65); note(ev, 'p', 'status', 'Уклон 65% до конца хода', { to: 'p' }); }
+    else if (c.id === 'focus') { const n = Math.round(8 + P.st('ctrl')); P.ch = Math.min(P.chMax, P.ch + n); P.focus = 1; note(ev, 'p', 'chakra', `Фокус: +${n} чакры, техника усилена`, { to: 'p' }); }
+    else if (c.id === 'analyze') { P.focus = 1; draw(D, 2); note(ev, 'p', 'status', 'Анализ: +2 карты, техника усилена', { to: 'p' }); }
+    else if (c.id === 'stance') { gainBlock(D, 5 + P.st('end') * 0.7, ev); P.riposte += 5 + P.st('tai') * 0.6; }
+    else if (c.id === 'breath') { heal(D, 3 + P.st('end') * 0.3, ev, 'Дыхание восстанавливает силы'); P.fat = Math.max(0, P.fat - 4); }
+    else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += 8 + P.st('tai') * 0.8; note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
+    else if (c.id === 'henge' || c.id === 'flash_bomb') { E.status.stun = 1; note(ev, 'p', 'status', `${def.name}: действие врага отменено`, { fx: c.id }); }
+    else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', 'Ложный страх: урон врага −35% на два действия', { fx: c.id }); }
+    else if (c.id === 'bunshin') { P.clones = Math.max(P.clones, 2); draw(D, 1); note(ev, 'p', 'status', 'Буншин: два клона и дополнительная карта', { fx: c.id, to: 'p' }); }
+    else if (c.id === 'sexy') { if (E.male) E.status.stun = 1; else E.status.weak = 1; note(ev, 'p', 'status', E.male ? 'Секси-дзюцу: враг оглушён' : 'Не сработало: враг ослаблен', { fx: c.id }); }
+    else if (c.id === 'shunshin') P.dodge = 1;
+    else if (c.id === 'smoke_bomb') { P.dodge = 1; note(ev, 'p', 'status', 'Дымовая завеса', { fx: c.id, to: 'p' }); }
+    else if (c.id === 'bandage') heal(D, P.hpMax * 0.25, ev, 'Бинт восстанавливает здоровье');
+    else if (c.id === 'chakra_pill') { const n = Math.round(P.chMax * 0.5); P.ch = Math.min(P.chMax, P.ch + n); note(ev, 'p', 'chakra', `Пилюля: +${n} чакры`, { to: 'p' }); }
 
-    // — разбор пар
-    const heroKind = kind === 'item' ? 'item' : (kind === 'release' || kind === 'tech') && techUtility ? 'tech' : kind === 'tech' || kind === 'release' ? 'fail' : kind;
-    const dmgStrikeP = heroStrike(D) * Q(q) * (1 + Math.min(P.chain, 4) * (0.08 + comboBonus()));
-    const dmgStrikeE = enemyStrike(D) * (eFear ? 0.6 : 1) * (E.status.slow > 0 ? 0.75 : 1);
-    const eTechDmg = E.tech && E.tech.kind === 'dmg' ? enemyStrike(D) * E.tech.power : 0;   // приём бьёт сильнее обычного удара
-
-    // Итоги героя
-    // 1) удары по врагу
-    if (heroKind === 'strike') {
-      if (eStun || eAct === 'idle') { pDmgToE += dmgStrikeP; note('p', 'hit', 'Удар достигает цели', { dmg: dmgStrikeP }); P.chain++; }
-      else if (eAct === 'block') { const d = dmgStrikeP * (q > 0.8 ? 0.35 : 0.2); pDmgToE += d; note('p', 'blocked', 'Враг блокирует удар', { dmg: d }); P.chain = 0; P.fat = clamp(P.fat + 3, 0, 100); }
-      else if (eAct === 'evade') { const d = dmgStrikeP * 1.0; pDmgToE += d; note('p', 'hit', 'Удар догоняет уклон', { dmg: d }); P.chain++; }
-      else if (eAct === 'strike') { const d = dmgStrikeP * 0.7; pDmgToE += d; note('p', 'trade', 'Удары сталкиваются', { dmg: d }); P.chain++; }
-      else if (eAct === 'tech') { const d = dmgStrikeP * 0.6; pDmgToE += d; note('p', 'trade', 'Удар сбивает приём врага', { dmg: d }); P.chain = Math.max(0, P.chain); }
-    } else if (heroKind !== 'block' && heroKind !== 'evade') P.chain = heroKind === 'tech' ? P.chain : 0;
-
-    // 2) удары по герою
-    const pBlocking = kind === 'block', pEvading = kind === 'evade' && !bound;
-    const smoke = P.status.smoke > 0 || (P.status.henge > 0 && eAttacking && rng() < 0.5 && (note('p', 'info', 'Хенге: враг потерял тебя из виду'), true));
-    if (eStun) { note('e', 'info', 'Враг не может действовать'); }
-    else if (eAct === 'strike') {
-      if (smoke) { note('p', 'info', 'Враг промахнулся'); }
-      else if (heroKind === 'strike') { const d = dmgStrikeE * 0.7; eDmgToP += d; note('e', 'trade', 'Враг бьёт в ответ', { dmg: d, to: 'p' }); }
-      else if (pBlocking) { const perfect = q > 0.8; const d = dmgStrikeE * (perfect ? 0 : 0.2); eDmgToP += d; note('e', perfect ? 'parry' : 'block', perfect ? 'Идеальный блок! Контрудар' : 'Блок смягчает удар', { dmg: d, to: 'p' }); if (perfect) { pDmgToE += heroStrike(D) * 0.5; P.chain++; } else P.chain = 0; P.ch = Math.min(P.chMax, P.ch + 2); }
-      else if (pEvading) { const slip = q > 0.8; const d = dmgStrikeE * (slip ? 0.5 : 1); eDmgToP += d; note('e', slip ? 'graze' : 'hit', slip ? 'Уклон почти удался' : 'Уклон не спас', { dmg: d, to: 'p' }); }
-      else if (heroKind === 'tech') { const d = dmgStrikeE * 0.6; eDmgToP += d; note('e', 'hit', 'Враг бьёт сквозь приём', { dmg: d, to: 'p' }); }
-      else { eDmgToP += dmgStrikeE; note('e', 'hit', heroKind === 'item' ? 'Враг бьёт, пока ты занят' : 'Удар врага достигает цели', { dmg: dmgStrikeE, to: 'p' }); }
-    } else if (eAct === 'block' && pEvading) {
-      const d = heroStrike(D) * 0.6 * Q(q); pDmgToE += d; note('p', 'counter', 'Ты обошёл блок и ударил сзади', { dmg: d }); P.chain++;
-    } else if (eAct === 'evade' && pBlocking) {
-      const d = enemyStrike(D) * 0.6; eDmgToP += d; note('e', 'counter', 'Враг обошёл твой блок', { dmg: d, to: 'p' }); P.chain = 0;
-    } else if (eAct === 'block' && pBlocking) { P.ch = Math.min(P.chMax, P.ch + 4); E.ch = Math.min(E.chMax, E.ch + 4); note('p', 'info', 'Оба в защите: чакра восстанавливается'); }
-    else if (eAct === 'evade' && pEvading) { P.fat = clamp(P.fat + 2, 0, 100); note('p', 'info', 'Оба кружат на месте'); }
-
-    // 3) приём героя
-    if (techUtility) {
-      fxId = techUtility.special || techUtility.id || 'release';
-      if (techUtility.special) {
-        const s = techUtility.special;
-        if (s === 'kawarimi') { if (eAttacking && !smoke) { const d = 0; eDmgToP = 0; const c = heroStrike(D) * 0.5 * Q(q); pDmgToE += c; note('p', 'counter', 'Каварими: вместо тебя полено!', { dmg: c }); } else note('p', 'info', 'Каварими впустую'); }
-        else if (s === 'henge') { P.status.henge = 2; D.hintTrue = true; D.hint = D.intent; note('p', 'status', 'Хенге: враг теряет тебя, намёк теперь точный'); }
-        else if (s === 'fear') { const resist = clamp(E.gen * 0.04, 0, 0.5), land = clamp(0.5 + D.P.st('gen') * 0.05 - resist, 0.15, 0.95) * Q(q); if (rng() < land) { E.status.fear = 3; note('p', 'status', 'Ложный страх: враг дрожит'); } else note('p', 'info', 'Враг стряхнул иллюзию'); }
-        else if (s === 'bunshin') { P.clones = 2; note('p', 'status', 'Буншин: два клона принимают удары'); }
-        else if (s === 'sexy') { if (E.male) { E.status.stun = 3; note('p', 'status', 'Секси-дзюцу: враг в нокдауне'); } else note('p', 'info', 'Не подействовало'); }
-        else if (s === 'shunshin') { if (eAttacking) { eDmgToP = 0; const c = heroStrike(D) * 1.0; pDmgToE += c; note('p', 'counter', 'Шуншин: ты уже за спиной врага', { dmg: c }); } else { pDmgToE += heroStrike(D) * 0.6; note('p', 'hit', 'Шуншин: быстрый удар', { dmg: heroStrike(D) * 0.6 }); } }
-      } else {
-        let d = techUtility.dmg;
-        if (eEvading) { d = 0; note('p', 'miss', `${techUtility.label}: враг уклонился`); }
-        else if (eBlocking) { d *= techUtility.through; note('p', 'tech', `${techUtility.label} пробивает блок`, { dmg: d }); }
-        else note('p', 'tech', techUtility.label, { dmg: d });
-        if (techUtility.el === 'water' && d > 0) E.status.wet = 3;
-        if (techUtility.el === 'bolt' && d > 0 && E.status.wet > 0) d *= 1.6;
-        if (techUtility.el === 'bolt' && d > 0 && rng() < 0.3) E.status.stun = 2;
-        if (techUtility.el === 'fire' && E.status.wet > 0) d *= 0.6;
-        if (techUtility.el === 'wind' && d > 0) { E.status.slow = 2; E.ch = Math.max(0, E.ch - 6); }
-        pDmgToE += d;
-        if (surge && surge.kind === 'backfire') { const rec = Math.round(Math.max(3, d * 0.25)); eDmgToP += rec; note('p', 'backfire', `Срыв чакры: отдача ${rec}`, { dmg: rec, to: 'p' }); }
-        if (surge && surge.kind === 'boost') note('p', 'boost', 'Фиолетовая вспышка: приём усилен');
-      }
-      P.chain = 0;
-    } else if (surge === null && (kind === 'tech' || kind === 'release')) { /* не хватило чакры */ }
-    // враг, ответивший приёмом
-    fxId = null;
-    if (!eStun && eAct === 'tech' && E.tech) {
-      fxId = 'e:' + E.tech.kind;
-      E.ch = Math.max(0, E.ch - E.tech.cost); E.cd = 2;
-      const k = E.tech.kind, name = E.tech.name;
-      if (smoke) note('e', 'info', `${name}: дым сбил прицел`);
-      else if (k === 'dmg') {
-        let d = eTechDmg * (eFear ? 0.6 : 1) * (E.status.slow > 0 ? 0.75 : 1);
-        if (pEvading) { const slip = q > 0.7; d = slip ? 0 : d * 0.5; note('e', slip ? 'miss' : 'graze', slip ? `${name}: ты уклонился` : `${name} задевает`, { dmg: d }); }
-        else if (pBlocking) { d *= 0.5; note('e', 'tech', `${name} пробивает блок`, { dmg: d }); }
-        else note('e', 'tech', name, { dmg: d });
-        if (techUtility && techUtility.special === 'kawarimi') { d = 0; }
-        eDmgToP += d;
-      } else if (k === 'drain') { const dr = Math.round(8 + E.nin); const lost = Math.min(P.ch, dr); P.ch -= lost; E.ch = Math.min(E.chMax, E.ch + lost); const d = enemyStrike(D) * 0.4; eDmgToP += pBlocking ? d * 0.3 : d; note('e', 'drain', `${name}: ты теряешь ${lost} чакры`, { dmg: d }); }
-      else if (k === 'bind') { P.status.bind = 1; const d = enemyStrike(D) * 0.3; eDmgToP += d; note('e', 'status', `${name}: уклон невозможен в следующем раунде`, { dmg: d }); }
-      else if (k === 'fear') { P.status.fear = 2; note('e', 'status', `${name}: мысли путаются, тайминг шире не будет`); }
-    }
-    // отражение клонов
-    if (eDmgToP > 0 && P.clones > 0) { P.clones--; eDmgToP = 0; note('p', 'info', 'Клон принял удар'); }
-    // статусы
-    P.shield = 0;
-    for (const s of ['stun', 'fear', 'slow', 'wet']) if (E.status[s] > 0) E.status[s]--;
-    if (E.cd > 0) E.cd--;
-    if (P.status.smoke > 0) P.status.smoke--;
-    for (const s of ['bind', 'fear', 'henge']) if (P.status[s] > 0) P.status[s]--;
-
-    // — применить урон
-    pDmgToE = Math.round(pDmgToE); eDmgToP = Math.round(eDmgToP);
-    E.hp = clamp(E.hp - pDmgToE, 0, E.hpMax); P.hp = clamp(P.hp - eDmgToP, 0, P.hpMax);
-    P.heat = clamp(P.heat + HEAT_ROUND + (eDmgToP > 0 ? HEAT_HIT : 0), 0, HEAT_MAX);
-    E.ch = Math.min(E.chMax, E.ch + 1);
-    D.last = { pAct, eAct, q, pDmgToE, eDmgToP, surge, hintTrue: D.hintTrue };
-    // — конец боя
-    if (E.hp <= 0 || (D.mode === 'spar' && E.hp <= E.hpMax * SPAR_END)) D.over = { win: true };
-    else if (P.hp <= 0 || (D.mode === 'spar' && P.hp <= P.hpMax * SPAR_END)) D.over = { win: false };
-    else if (D.mode === 'survive' && D.round >= D.rounds) D.over = { win: true };
-    else if (D.round >= 40) D.over = { win: E.hp / E.hpMax < P.hp / P.hpMax };   // страховка от затяжки
+    if (c.id === 'feint' || c.id === 'fuuton') { E.block = 0; E.dodge = 0; }
+    let dealt = 0;
+    if (formula) dealt = playerDamage(D, c, formula, ev);
+    if (c.id === 'kunai') { E.status.mark = 1; note(ev, 'p', 'status', 'Метка: следующая атакующая техника ×1,5', { to: 'e' }); }
+    if (c.id === 'feint') E.status.vuln = 1;
+    if (c.id === 'fuuton') { E.status.weak = 1; draw(D, 1); }
+    if (c.id === 'katon' && dealt > 0) E.status.burn = 2;
+    if (c.id === 'suiton' && dealt > 0) E.status.wet = 2;
+    if (c.id === 'raiton' && dealt > 0 && E.status.wet > 0) { E.status.stun = 1; note(ev, 'p', 'status', 'Райтон по мокрой цели: оглушение', { fx: c.id }); }
+    if (def.kind === 'tai') P.chain += formula ? formula.hits : 1;
+    if (def.kind === 'tai' && D.intent.kind === 'charge' && P.chain >= 3 && !E.chargeBroken) { E.chargeBroken = 1; E.status.stun = 1; note(ev, 'p', 'counter', 'Серия тайдзюцу срывает замах!', { fx: c.id }); }
+    if (surge && surge.kind === 'backfire') { const rec = Math.max(3, Math.round(dealt * 0.25)); P.hp = clamp(P.hp - rec, 0, P.hpMax); D.stats.taken += rec; note(ev, 'p', 'backfire', `Срыв чакры: отдача ${rec}`, { dmg: rec, to: 'p', fx: 'release' }); }
+    if (def.release) P.heat = 0;
+    (def.exhaust || def.item ? D.exhaust : D.discard).push(c);
+    D.last = { pAct: c.id, q: 1, surge, damage: dealt };
+    checkEnd(D);
     D.events = ev;
-    if (!D.over) nextIntent(D); else D.hint = null;
     return ev;
   }
-  function comboBonus() { if (!G.combat || !G.state || !G.state.flags) return 0; let b = 0; for (const [id, c] of Object.entries(G.COMBOS || {})) if (G.combat.knowsCombo(id) && id !== 'academy') b += c.bonus || 0; return b; }
 
-  // ── бот для симулятора: skill 0..1 — как часто бот пользуется намёком и умными выборами ──
-  function bot(D, skill, rng = D.rng) {
+  // ── ход противника ──
+  function enemyHit(D, raw, ev, name) {
     const P = D.P, E = D.E;
-    let want;
-    const useHint = rng() < skill * (D.hintTrue ? 1 : 0.55 + (1 - skill) * 0.2);   // верит намёку чаще, чем он прав — и ошибается
-    const hint = D.hint;
-    if (useHint && hint && hint !== 'idle') want = hint === 'tech' ? 'block' : best(hint);   // ответ на намёк
-    else want = ACTS[Math.floor(rng() * 3)];
-    const eStunned = E.status.stun > 0 || D.intent === 'idle';
-    const techs = P.techs.filter((t) => P.ch >= G.TECHS[t].ch && ['chakra_shot', 'katon', 'suiton', 'raiton', 'fuuton'].includes(t));
-    if (P.knows('fear') && !E.status.fear && P.ch >= G.TECHS.fear.ch && rng() < 0.1 + 0.05 * P.st('gen') * skill) return { act: 'tech:fear', q: clamp(0.4 + skill * 0.4 + (rng() - 0.5) * 0.3, 0, 1) };
-    if (eStunned || E.style === 'dummy') return { act: 'strike', q: clamp(0.5 + skill * 0.3 + (rng() - 0.5) * 0.3, 0, 1) };
-    if (P.heat >= RELEASE_HEAT && P.ch >= RELEASE_COST && rng() < 0.3 + skill * 0.4) return { act: 'release', q: clamp(0.4 + skill * 0.4 + (rng() - 0.5) * 0.3, 0, 1) };
-    if (techs.length && want !== 'evade' && rng() < 0.25 + skill * 0.3) return { act: 'tech:' + techs[Math.floor(rng() * techs.length)], q: clamp(0.4 + skill * 0.4 + (rng() - 0.5) * 0.3, 0, 1) };
-    if (P.knows('bunshin') && !P.clones && P.ch >= G.TECHS.bunshin.ch && rng() < 0.12 * skill) return { act: 'tech:bunshin', q: 0.6 };
-    if (P.hp < P.hpMax * 0.35 && (D.inv.bandage || 0) > 0 && rng() < 0.5) return { act: 'item:bandage', q: 0.5 };
-    const q = clamp(0.35 + skill * 0.45 + (rng() - 0.5) * 0.4 + (window(D) - 0.4) * 0.3, 0, 1);
-    return { act: want, q };
+    let total = 0;
+    const mul = (E.status.fear > 0 ? 0.65 : 1) * (E.status.slow > 0 ? 0.75 : 1) * (E.status.weak > 0 ? 0.75 : 1);
+    for (let n = 0; n < (D.intent.hits || 1); n++) {
+      const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
+      let d = raw * mul * (1 - dodge);
+      if (P.clones > 0 && d > 0) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
+      const blocked = Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
+      P.hp = clamp(P.hp - d, 0, P.hpMax); total += d; D.stats.taken += d;
+      note(ev, 'e', d > 0 ? 'hit' : 'block', d > 0 ? name : `${name}: задержано`, { dmg: d, to: 'p', fx: D.intent.kind === 'tech' ? 'e:dmg' : null });
+      if (d > 0) P.heat = clamp(P.heat + HEAT_HIT, 0, 100);
+    }
+    return total;
   }
-  // полный бой ботом; возвращает итог
-  function simulate(opts, skill = 0.65) {
-    const D = create(opts); let guard = 0;
-    while (!D.over && guard++ < 80) { const b = bot(D, skill); play(D, b.act, b.q); }
-    return { win: !!(D.over && D.over.win), rounds: D.round, hp: D.P.hp / D.P.hpMax, fat: D.P.fat };
+  function endTurn(D) {
+    if (D.over || D.phase !== 'player') return [];
+    const P = D.P, E = D.E, ev = [], intent = D.intent;
+    D.phase = 'enemy';
+    D.discard.push(...D.hand.splice(0));
+    D.prevCards = P.turnCards.slice();
+    E.block = 0; E.dodge = 0;
+    if (E.status.stun > 0) note(ev, 'e', 'info', `${E.name}: действие пропущено`, { to: 'p' });
+    else if (intent.kind === 'charge') { E.charged = 1; E.chargeBroken = 0; note(ev, 'e', 'status', `${E.name} готовит тяжёлый приём`, { to: 'p' }); }
+    else if (intent.kind === 'block' || intent.kind === 'evade') { E.ch = Math.min(E.chMax, E.ch + 4); note(ev, 'e', 'info', intent.kind === 'block' ? 'Враг удерживает защиту' : 'Враг меняет позицию', { to: 'p' }); }
+    else if (intent.kind === 'idle') note(ev, 'e', 'info', 'Враг ждёт', { to: 'p' });
+    else if (isAttack(D)) {
+      if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      const dealt = enemyHit(D, intent.dmg || 0, ev, intent.name);
+      if (intent.kind === 'drain' && dealt > 0) { const n = Math.min(P.ch, Math.round(8 + E.nin)); P.ch -= n; E.ch = Math.min(E.chMax, E.ch + n); note(ev, 'e', 'drain', `Чакра украдена: ${n}`, { to: 'p', fx: 'e:drain' }); }
+      if (intent.kind === 'bind' && dealt > 0) { P.status.bind = 2; note(ev, 'e', 'status', 'Теневая связка: уклон недоступен на ход', { to: 'p', fx: 'e:bind' }); }
+      if (P.riposte > 0 && P.hp > 0) {
+        const n = Math.round(P.riposte); E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n;
+        note(ev, 'p', 'counter', `Контрудар: ${n}`, { dmg: n, to: 'e', fx: 'kawarimi' });
+      }
+    } else if (intent.kind === 'fear') {
+      P.status.fear = 2; if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      note(ev, 'e', 'status', 'Иллюзия: на следующий ход меньше рука и действия', { to: 'p', fx: 'e:fear' });
+    }
+    if (E.status.burn > 0 && E.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
+    P.fat = clamp(P.fat + FAT_ROUND * (1 - P.st('end') * 0.025), 0, 100);
+    P.heat = clamp(P.heat + 2, 0, 100); E.ch = Math.min(E.chMax, E.ch + 2);
+    for (const s of ['stun', 'fear', 'weak', 'wet', 'vuln', 'burn', 'slow']) if (E.status[s] > 0) E.status[s]--;
+    for (const s of ['bind', 'fear']) if (P.status[s] > 0) P.status[s]--;
+    if (E.cd > 0) E.cd--;
+    D.turns++;
+    checkEnd(D);
+    if (!D.over && D.mode === 'survive' && D.round >= D.rounds) { D.over = { win: true }; D.phase = 'over'; }
+    if (!D.over && D.round >= 40) { D.over = { win: E.hp / E.hpMax < P.hp / P.hpMax }; D.phase = 'over'; }
+    D.events = ev;
+    if (!D.over) startTurn(D);
+    return ev;
+  }
+  function checkEnd(D) {
+    if (D.E.hp <= 0 || (D.mode === 'spar' && D.E.hp <= D.E.hpMax * SPAR_END)) { D.over = { win: true }; D.phase = 'over'; }
+    else if (D.P.hp <= 0 || (D.mode === 'spar' && D.P.hp <= D.P.hpMax * SPAR_END)) { D.over = { win: false }; D.phase = 'over'; }
   }
 
-  return { TUNE, create, play, options, bot, simulate, stability, window, hintAccuracy, mulberry, ACTS, BEATS, KIND_ICON, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
+  // ── бот: оценивает карты заново после каждого розыгрыша ──
+  function score(D, id, plan) {
+    const f = damageFormula(D, id), incoming = expectedIncoming(D), P = D.P, E = D.E, intent = D.intent;
+    const hand = D.hand.map((c) => c.id), has = (x) => hand.includes(x);
+    let s = f ? f.amount * f.hits : 0;
+    if (f) {
+      let block = E.block, total = 0;
+      for (let n = 0; n < f.hits; n++) {
+        let d = f.amount * (E.status.vuln > 0 ? 1.25 : 1) * (f.ignoreDodge ? 1 : 1 - E.dodge);
+        const absorbed = f.pierce ? 0 : Math.min(block, d); block -= absorbed; total += Math.max(0, d - absorbed);
+      }
+      const threshold = D.mode === 'spar' ? E.hpMax * SPAR_END : 0;
+      if (E.hp - total <= threshold + 0.5) s += 1000; // опытный бот не упускает добивание
+    }
+    if (id === 'guard') s = Math.min(incoming, 8 + P.st('end') * 1.1) * 1.1 - (incoming ? 0 : 24);
+    else if (id === 'evade') s = incoming * 0.6 - (incoming ? 0 : 24);
+    else if (id === 'stance') s = Math.min(incoming, 5 + P.st('end') * 0.7) + (isAttack(D) ? 5 + P.st('tai') * 0.6 : -20);
+    else if (id === 'focus') s = (P.ch < P.chMax * 0.55 ? 15 : 2) + (hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) ? 8 : 0);
+    else if (id === 'analyze') s = 10 + (P.ap > 1 ? 4 : 0);
+    else if (id === 'breath') s = (P.hpMax - P.hp) * 0.7 + (P.fat > 65 ? 8 : 0) - (P.hp >= P.hpMax ? 25 : 0);
+    else if (id === 'kunai') s += hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) && !E.status.mark ? 13 : 0;
+    else if (id === 'feint') s += E.block + E.dodge * 20 + 4;
+    else if (id === 'kawarimi') s = incoming + 10 + P.st('tai') * 0.8;
+    else if (id === 'henge' || id === 'flash_bomb') s = incoming + (intent.kind === 'charge' ? 24 : 10);
+    else if (id === 'fear') s = incoming * 0.7 + E.block;
+    else if (id === 'bunshin') s = incoming * 0.85 + (intent.hits || 1) * 5;
+    else if (id === 'sexy') s = E.male ? incoming + 14 : incoming * 0.25;
+    else if (id === 'shunshin') s += incoming;
+    else if (id === 'katon') s += 8;
+    else if (id === 'suiton') s += has('raiton') ? 18 : 3;
+    else if (id === 'raiton') s += E.status.wet > 0 ? incoming + 16 : 0;
+    else if (id === 'fuuton') s += incoming * 0.25 + 6;
+    else if (id === 'release') s += 12;
+    else if (id === 'smoke_bomb') s = incoming + 5;
+    else if (id === 'bandage') s = (P.hpMax - P.hp) * 0.8 - (P.hp / P.hpMax > 0.65 ? 30 : 0);
+    else if (id === 'chakra_pill') s = P.ch < P.chMax * 0.4 ? 24 : -20;
+    const pref = plan && (plan.prefer || plan);
+    if (Array.isArray(pref)) { const i = pref.indexOf(id); if (i >= 0) s += 50 - Math.min(i, 8) * 2; }
+    return s;
+  }
+  function bot(D, skill = 0.65, rng = D.rng, plan = null) {
+    const playable = D.hand.filter((c) => canPlay(D, c).ok);
+    if (!playable.length || D.P.ap <= 0) return { act: 'end', q: 1 };
+    if (rng() > skill) return { act: 'uid:' + playable[Math.floor(rng() * playable.length)].uid, q: 1 };
+    let best = playable[0], bestScore = -Infinity;
+    for (const c of playable) {
+      const s = score(D, c.id, plan) * (0.92 + rng() * 0.16 * (1 - skill));
+      if (s > bestScore) { bestScore = s; best = c; }
+    }
+    return { act: 'uid:' + best.uid, q: 1 };
+  }
+  function simulate(opts, skill = 0.65, plan = null) {
+    const D = create(opts); let guard = 0;
+    while (!D.over && guard++ < 1000) {
+      let plays = 0;
+      while (!D.over && D.P.ap > 0 && plays++ < 12) {
+        const b = bot(D, skill, D.rng, plan);
+        if (b.act === 'end') break;
+        if (!play(D, b.act).length) break;
+      }
+      if (!D.over) endTurn(D);
+    }
+    return { win: !!(D.over && D.over.win), rounds: D.round, hp: D.P.hp / D.P.hpMax, fat: D.P.fat, used: D.stats.used, sequence: D.stats.sequence.slice(), cards: D.stats.cards, damage: D.stats.damage };
+  }
+
+  function options(D) { return D.hand.map((c) => ({ id: c.id, uid: c.uid, label: cardDef(c.id).name, cost: cardDef(c.id).cost, off: canPlay(D, c).ok ? null : canPlay(D, c).why })); }
+  function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
+  return { TUNE, create, play, endTurn, canPlay, options, bot, simulate, draw, preview, intentDamage, expectedIncoming,
+    stability, mulberry, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
 })();
 
 
@@ -7254,7 +7429,6 @@ G.choices = (() => {
   const is = (id, name) => get(id) === name;
   // как деревня относится к герою: afraid / neutral / kind
   function attitude() {
-    const f = G.state.flags;
     let s = (G.state.vars.rep || 0) * 0.5;
     if (is('taunt', 'fight')) s -= 2; if (is('taunt', 'talk')) s += 2;
     if (G.purple && G.state.started) s += (G.purple.stability() - 40) / 30;
@@ -7574,6 +7748,7 @@ const _dlg = (id, then) => { const w = G.scenes.stack.find((s) => s.name === 'wo
 const _say = (lines, then) => { const w = G.scenes.stack.find((s) => s.name === 'world'); G.dialog.say(lines.map((l) => typeof l === 'string' ? { text: l } : l), { bottom: 22, onEnd: () => { w && w.refreshNpcs(); then && then(); } }); };
 const _world = () => G.scenes.stack.find((s) => s.name === 'world');
 const _fmt = (t) => G.util.fmt(t, { name: G.state.hero.name });
+const _practiceName = (p) => ({ tech_tree: 'хождение по дереву', tech_water: 'хождение по воде' }[p.learnFlag] || 'упражнение');
 
 // ───────────────────────── Календарь ─────────────────────────
 G.calendar = {
@@ -7643,7 +7818,7 @@ G.academy = {
         if (pts >= 80) G.friends.add('iruka', 1);
         G.game.advanceTo('13:00'); G.game.tire(10);
         G.game.note(`Урок «${this.SUBJ[p.s]}»: ${this.mark(pts)}`); G.events.emit('lesson', p, pts);
-        const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ' Теперь можно тренировать хождение по дереву!' : '';
+        const learned = p.learn ? ` Ты выучил технику «${G.TECHS[p.learn].name}»!` : p.learnFlag ? ` Теперь можно тренировать ${_practiceName(p)}!` : '';
         _say([{ who: 'iruka', text: `${pts >= 85 ? 'Превосходно' : pts >= 65 ? 'Хорошо' : pts >= 45 ? 'Неплохо, но можешь лучше' : 'Нужно больше стараться'}, {name}! Оценка: ${this.mark(pts)} (${pts}).${learned}` }, { text: 'Уроки окончены. Время — 13:00.' }]
           .map((l) => Object.assign(l, { text: _fmt(l.text) })), () => world.softRefresh && world.softRefresh());
       };
@@ -7682,7 +7857,7 @@ G.story = {
   // Событие помечается «было» (st_<id>) в момент начала. Если вкладку Safari выгрузили посреди боя или экзамена,
   // в сохранении остаётся флаг без результата, и без этой починки игру нельзя пройти. Вызывается из G.game.fix().
   recover(st) {
-    const f = st.flags || {}, v = st.vars || {}, d = st.daily || {};
+    const f = st.flags || {}, d = st.daily || {};
     const fixes = [];
     // сохранение ушло в первый сон, а утреннее вступление (day2_intro) не сыграло — без него не запускаются уроки и сюжет
     if (st.quests && st.quests.day1 && st.quests.day1.st === 'done' && !f.day2_intro) { f.day2_intro = 1; (st.frQueue = st.frQueue || []).push('day2_morning'); fixes.push('утро дня 2'); }
@@ -7718,7 +7893,7 @@ G.story = {
     if (st.makeupQ && st.makeupQ.length && v.min >= 13 * _H && v.min < 18 * _H && m && m.outdoor === false && G.academy.inClass()) {
       const d = st.makeupQ.shift(), p = G.academy.plan(d);
       if (p.learn && !f['tech_' + p.learn]) { f['tech_' + p.learn] = 1; G.game.note('Изучена техника: ' + G.TECHS[p.learn].name); _say([{ who: 'iruka', text: _fmt(`{name}, ты пропустил урок. Ладно, объясню после уроков: техника «${G.TECHS[p.learn].name}».`) }, { text: 'Ты выучил технику, но Ирука вздыхает.' }]); return true; }
-      if (p.learnFlag && !f[p.learnFlag]) { f[p.learnFlag] = 1; _say([{ who: 'iruka', text: _fmt('{name}, ты пропустил урок. Ладно, объясню после уроков хождение по дереву.') }, { text: 'Теперь можно тренировать хождение по дереву, но Ирука вздыхает.' }]); return true; }
+      if (p.learnFlag && !f[p.learnFlag]) { f[p.learnFlag] = 1; const practice = _practiceName(p); _say([{ who: 'iruka', text: _fmt(`{name}, ты пропустил урок. Ладно, объясню после уроков: ${practice}.`) }, { text: `Теперь можно тренировать ${practice}, но Ирука вздыхает.` }]); return true; }
     }
     // события находят героя сами
     for (const e of G.STORY) {
@@ -7971,12 +8146,10 @@ G.lessons = (() => {
     out.push(': Ты занимаешь своё место за партой. Класс стихает.', `iruka: Тема сегодня: «${topic.title}».`);
     for (const l of topic.lec) out.push('iruka: ' + l);
     out.push(': По классу шелестят страницы тетрадей. Кто-то зевает, кто-то записывает.');
-    let k = 0;
     for (const [who, q, a, funny] of topic.qa) {
       out.push('iruka: ' + q, `${who}${funny ? '(sad)' : ''}: ${a}`);
       out.push(funny ? 'iruka: Н-да... Садись. Кто-нибудь поможет?' : 'iruka: Верно. Садись.');
       if (funny) out.push('sakura: Это же очевидно! Шаннаро...' , 'naruto: Эй, я не виноват, что вопрос хитрый!');
-      k++;
     }
     out.push('iruka: ' + '{name}, теперь вопрос тебе.');
     ask(out, topic.hero[0], topic.hero[1][topic.hero[2]], topic.hero[1].filter((_, i) => i !== topic.hero[2]), 'h' + id);
@@ -9231,23 +9404,23 @@ iruka: Доброе утро, класс! Сегодня у нас новень�
 naruto: Эй, {name}! Садись рядом! Ирука-сенсей, а можно без уроков?
 iruka: Нельзя, Наруто! Итак. Первый урок — основы тайдзюцу. Шиноби без крепкого тела — не шиноби.
 iruka: {name}, покажи, чему ты научился. Вот тренировочный манекен.
-iruka: Подойди вплотную и бей. Удар, пинок, подсечка — складывай их в цепочки. Жми A в жёлтой зоне — будет крит!
-iruka: Сверху — шкала ходов. Тяжёлые действия отодвигают твой следующий ход. Слева внизу — дыхание: каждый приём тратит его.
+iruka: В бою ты разыгрываешь до трёх карт за ход. Намерение противника видно заранее: прочти его и реши, нужны ли атака, защита или хитрость.
+iruka: Порядок карт важен. Финт снимает защиту, кунай ставит метку для техники, а серия тайдзюцу становится сильнее с каждым звеном. Закончи ход, когда будешь готов к ответу врага.
 end
 
 === les_kawarimi
 iruka: Сегодня — техника, которая спасла жизнь многим шиноби. Каварими но дзюцу — замена.
 iruka: В последний миг перед ударом ты меняешься местами с поленом. Враг бьёт по дереву, а ты — у него за спиной.
-iruka: Печати: Овца, Кабан, Бык, Собака, Змея. В бою хватит одной — быстрой, как мысль.
-iruka: Когда враг атакует, появится окно «РЕАКЦИЯ!». Выбери Каварими и успей нажать нужную печать.
-iruka: Тратится Фокус и немного чакры. Попробуем на моём манекене — он умеет кусаться!
+iruka: Печати: Овца, Кабан, Бык, Собака, Змея. Повтори последовательность на тренировке, чтобы техника слушалась тебя.
+iruka: В бою разыграй карту Каварими, когда видишь атакующее намерение: полено примет удар, а ты контратакуешь.
+iruka: Карта тратит чакру и уходит из колоды до конца боя. Выбери правильный момент. Попробуем на моём манекене!
 end
 
 === les_henge
 iruka: Хенге но дзюцу — превращение. Собака, Кабан, Овца.
 naruto: О! Это я умею! Смотрите! — Пуф! — Наруто превращается в... Третьего Хокаге с косичками.
 iruka: НАРУТО!!! ...Кхм. {name}, твоя очередь. Сложи печати как можно быстрее.
-iruka: В бою Хенге прячет тебя: враг теряет цель, а твой удар из засады — вдвое сильнее.
+iruka: В бою Хенге сбивает противника с толку: он пропускает действие в конце хода. Используй это окно для своей связки.
 end
 
 === les_genjutsu
@@ -9459,15 +9632,12 @@ call rep 1
 end
 === ev_tile
 : С крыши срывается черепица — прямо над тобой!
-if var.spd_check -> x
 if skill.eagle_eye -> dodge
 : Ты отпрыгиваешь в последний миг! Черепица разлетается у ног.
 call xp spd 3
 end
 # dodge
 : Ты замечаешь её заранее и спокойно отходишь. Меткий глаз!
-end
-# x
 end
 === ev_granny
 villager_f[Бабушка]: Внучек, помоги донести сумки до дома... Старая я стала.
@@ -9719,7 +9889,7 @@ call emit checkup
 end
 === mq_hokage_talk
 hokage: А, {name}. Проходи. Присядь.
-hokage: Три недели назад ты не помнил даже своего имени. Теперь ходишь по деревне, дружишь с одноклассниками. Это дорогого стоит.
+hokage: Три недели назад ты не помнил своего прошлого. Теперь ходишь по деревне, дружишь с одноклассниками. Это дорогого стоит.
 hokage: Но я должен спросить. Ты замечал что-нибудь необычное? Чужих, наблюдателей?
 ? Расскажешь о человеке в плаще?
 * Рассказать всё Хокаге -> told
@@ -10070,6 +10240,7 @@ end
 === arc_iruka_give
 iruka: Отличная тетрадь. Спасибо, {name}.
 iruka: Знаешь, мне кажется, я должен кое-что показать тебе. Сходи к мемориалу в деревне. Это важное место для меня.
+call step arc_iruka give
 end
 === arc_iruka_memorial
 : На камне высечены имена. Ирука подходит и останавливается у одного из них.
@@ -10106,6 +10277,7 @@ end
 === arc_hinata_give
 hinata: Т-та самая трава! Спасибо...
 hinata: Давай как-нибудь помедитируем вместе. Я покажу, как дышат в клане Хьюга.
+call step arc_hinata give
 end
 === arc_hinata_med
 hinata: Вдох... выдох... Не думай о чакре. Думай о воде в озере.
@@ -10183,6 +10355,7 @@ end
 === arc_sakura_give
 sakura: «История Конохи»! Откуда ты знал, что я хотела её?
 sakura: Спасибо, {name}. Хочешь, дам тебе список, с чего начать?
+call step arc_sakura give
 end
 === arc_sakura_read
 : Ты читаешь, подчёркиваешь, записываешь на полях. В голове странно проясняется.
@@ -10213,6 +10386,7 @@ kiba: Как знаешь.
 end
 === arc_kiba_give
 kiba: Акамару, смотри, что нам принесли! — Гав! — Всё, ты теперь друг семьи.
+call step arc_kiba give
 end
 === arc_kiba_run
 kiba: Не отставай! Акамару любит, когда бегут быстро!
@@ -10261,6 +10435,7 @@ end
 === arc_choji_give
 choji: Свежая рыба! Хрум. Ого, правильная! Ты нашёл лучшее место для рыбалки.
 choji: Давай теперь я тебя угощу рамэном. Только ты платишь. Шучу! Ну почти.
+call step arc_choji give
 end
 === arc_choji_ramen
 choji: Ммм... Видишь, как усталость уходит? Тепло внутри, и силы возвращаются.
@@ -10297,6 +10472,7 @@ ino: Мирно?! Вот это новости! Спасибо.
 ino: Тогда слушай. Моя мама говорит, что в деревне ходит человек в плаще. Расспрашивает торговцев: нет ли в Конохе новичка с необычной чакрой.
 ino: Вряд ли он добрый. Мы в клане Яманака чувствуем такие вещи. Будь осторожнее.
 : Холодок снова пробегает по спине. Но ты уже не один: Ино предупреждает, значит, ты не чужой.
+call step arc_ino talk
 end
 === arc_ino_med
 ino: В нашем клане учат слушать собственные мысли. Закрой глаза. Почувствуй, где чакра, а где ты.
@@ -10323,6 +10499,7 @@ lee: Хорошо, но я не сдамся!
 end
 === arc_lee_give
 lee: Ах, как приятно! Вот что значит дружба! Давай тренироваться!
+call step arc_lee give
 end
 === arc_lee_train
 lee: Раз, два! Отжимания! А теперь приседания! Не останавливайся!
@@ -10366,6 +10543,7 @@ end
 === arc_sasuke_give
 sasuke: ...Откуда ты знал, что я люблю помидоры?
 sasuke: Это не... Просто хорошие помидоры. Спасибо.
+call step arc_sasuke give
 end
 === arc_sasuke_end
 sasuke: Слушай... Я не говорю этого никому. У меня... никого нет. Только брат. И тот...
@@ -10402,6 +10580,7 @@ end
 === arc_tenten_give
 tenten[Тентен]: Хм. Баланс неплохой. Вот это уже оружие, а не палки.
 tenten[Тентен]: Теперь иди на полигон и бросай. Сто бросков, не меньше. Сто!
+call step arc_tenten give
 end
 === arc_tenten_throw
 : Мишень на полигоне исчерпана. Руки гудят, зато последние броски ложатся кучно.
@@ -10473,6 +10652,7 @@ end
 kakashi[Какаши]: Спасибо. Знаешь, чем опасна сильная чакра? Она заставляет верить, что ты справишься один.
 kakashi[Какаши]: Я тоже так верил. Потом пришлось выучить имена на этом камне.
 kakashi[Какаши]: Покажу тебе дыхание, которому меня учил один человек. Помедитируй у водопада, потом расскажешь, что почувствовал.
+call step arc_kakashi give
 end
 === arc_kakashi_med
 : Ты повторяешь дыхание Какаши. Вдох, пауза, выдох. Чакра будто выравнивается вместе с ним.
@@ -10504,6 +10684,7 @@ end
 anko[Анко]: Хрум! Вот это да! Ты не обманул. Мало кто в деревне держит слово.
 anko[Анко]: Знаешь, мне тоже когда-то никто не верил. Слишком много слухов вокруг моего имени.
 anko[Анко]: Ладно, не будем о грустном. Дальше — рыба. Данго без рыбного гриля я не ем!
+call step arc_anko give
 end
 === arc_anko_fish
 : Рыба бьётся в руках, брызги летят в лицо. Ты смеёшься: уж больно похоже на настоящий бой.
@@ -10580,7 +10761,7 @@ end
       ],
       reward,
     };
-    src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Поможешь?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\nend\n`;
+    src += `=== ${id}_offer\n${ask.replace(/^[^:]+: /, npc + ': ')}\n? Поможешь?\n* Да -> yes\n* Потом -> no\n# yes\ncall quest start ${id}\nend\n# no\nend\n=== ${id}_done\n${npc}: ${thanks}\ncall step ${id} give\nend\n`;
   }
   for (const [id, npc, inB, title, ask, ev, flt, pay, friend, thanks, day] of D) {
     const reward = { money: pay, text: pay + ' рё' };
@@ -10709,7 +10890,8 @@ call friend sakura 1
 -> end3
 # duel
 : Девочки переглядываются и... синхронно отворачиваются.
-ino[Ино]: Забирай! Сакура: Не нужно!
+ino[Ино]: Забирай!
+sakura[Сакура]: Не нужно!
 # leave
 : Вскоре после тебя спор затихает. Букет достаётся прохожему старичку.
 # end3
@@ -11683,7 +11865,7 @@ G.buildgfx = (() => {
     },
 
     clan(c, o) {
-      const { W, HF, OV, seed, tpl, id } = o;
+      const { W, HF, OV, tpl, id } = o;
       const wh = wallH(tpl, id), wy = OV + HF - wh;
       const uchiha = id.startsWith('uchiha') || id === 'sasuke_home';
       wall(c, 0, wy, W, wh, uchiha ? '#d8d0c8' : '#e8e0d0', '#3a2a20');
@@ -11751,7 +11933,7 @@ G.buildgfx = (() => {
 
     // Академия: широкое оранжевое здание, большая вывеска с листом
     academy(c, o) {
-      const { W, HF, OV, seed, tpl } = o;
+      const { W, HF, OV, tpl } = o;
       const wh = 48, wy = OV + HF - wh;
       wall(c, 0, wy, W, wh, '#f0d8b0', '#a84a2a');
       const dx = tpl.door[0] * T + 2;
@@ -12018,7 +12200,7 @@ G.WorldMap = class {
   // V9: плавные пятна света и тени на земле — гладкий шум в мировых координатах (швов между тайлами и чанками нет),
   // трава заметнее, дороги и камень — едва; ступени между оттенками размыты дизерингом.
   groundLight(c, gx, gy, tw, th) {
-    const T = G.CONFIG.TILE, ID = G.tiles.ID, S = G.shade, Hh = G.util.hash2;
+    const T = G.CONFIG.TILE, S = G.shade, Hh = G.util.hash2;
     const GR = G.tiles.GRASSY, RD = G.tiles.ROADY;
     const lat = (ix, iy, sd) => Hh(ix, iy, 900 + sd);
     const vn = (x, y, wl, sd) => {            // билинейный шум с плавным сглаживанием
@@ -13785,7 +13967,6 @@ G.life2 = (() => {
     if (Math.random() < 0.3) lines.push({ who: n.id, name: n.name, text: pick(['Если что — заходи ещё.', 'Ладно, не буду тебя задерживать.', 'Береги себя, ниндзя.', 'Передавай привет Ируке-сенсею.']) });
     return lines;
   }
-  const NAMES = {};
   // ── расстановка жителей ──
   const basePop = G.world.populateKonoha.bind(G.world);
   G.world.populateKonoha = function (m) {
@@ -14057,7 +14238,7 @@ end
 // Шикаку, Иноичи, Тёдза, Фугаку, Микото, Итачи, Джирайя, Орочимару, Хомура, Кохару, Данзо.
 // Внешность — G.chars.DEFS/STY, расписание — G.SCHED (data/schedule.js), здесь — реплики и расстановка по улицам.
 G.cast = (() => {
-  const T = 16, P = G.PAL;
+  const T = 16;
   const D = G.chars.DEFS;
   // внешность — data/characters.js
 
@@ -14772,7 +14953,7 @@ G.roofs = {
     if(j&&j.wall){ctx.fillStyle='#80cfee';for(let i=0;i<4;i++)ctx.fillRect(p.x+(i%2?3:-3),p.y+i*4,2,2);}
     G.shade.shadow(ctx,p.x+lift*0.1,p.y-1,5,1.5,0.3);
     if(j){
-      const k=Math.min(1,j.t/j.dur),dx=j.x1-j.x0,dy=j.y1-j.y0;
+      const dx=j.x1-j.x0,dy=j.y1-j.y0;
       ctx.fillStyle='rgba(222,232,205,0.35)';
       for(let i=1;i<=3;i++)ctx.fillRect(Math.round(p.x-dx*0.025*i-3),Math.round(p.y-lift-dy*0.025*i-7),3,0.5);
     }
@@ -15005,7 +15186,7 @@ G.fx = (() => {
     const daylight = sun(min).sun * (G.life.raining() ? 0.28 : 1);
     if (daylight <= 0) return;
     if (!map._sunlight) {
-      const c = G.gfx.canvas(map.w * T, map.h * T), cc = c.getContext('2d'), ID = G.tiles.ID;
+      const c = G.gfx.canvas(map.w * T, map.h * T), cc = c.getContext('2d');
       cc.save(); cc.beginPath();
       for (let y = 2; y < map.h - 1; y++) for (let x = 1; x < map.w - 1; x++) {
         const id = map.get(x, y);
@@ -16201,7 +16382,7 @@ G.scenes.register('title', () => {
       x.fillStyle = '#8a7268'; x.fillRect(Math.round(cx0), Math.round(cy0) - 1, 1 + Math.floor(Hh(i, 5, 33) * 6), 1);
     }
     // четыре высеченных лица: формы с объёмом, свет луны слева сверху
-    const { E, R, RR, PO, LN, OR, AND, SUB } = G.icons.shapes, I = G.icons;
+    const { E, R, RR, PO, OR, AND } = G.icons.shapes, I = G.icons;
     const FW = Math.min(96, Math.floor(W * 0.3)), FH = Math.round(FW * 100 / 72);
     const st = '#86685c', hairC = '#6e564e';
     const HAIR = [
@@ -16352,9 +16533,7 @@ G.scenes.register('nameinput', (onDone) => {
   const el = () => document.getElementById('text-entry');
   const inp = () => document.getElementById('te-input');
   const hint = () => document.getElementById('te-hint');
-  let stage = 'typing';
   let onOk = null, onKey = null;
-  let t = 0;
 
   // Разрешены буквы, которые есть в пиксельном шрифте, пробел и дефис
   const ALLOWED = /^[A-Za-zА-Яа-яЁё\- ]+$/;
@@ -16373,7 +16552,6 @@ G.scenes.register('nameinput', (onDone) => {
     resume() {},
 
     openEntry() {
-      stage = 'typing';
       const box = el();
       box.classList.remove('hidden');
       const i = inp();
@@ -16388,7 +16566,6 @@ G.scenes.register('nameinput', (onDone) => {
         box.classList.add('hidden');
         G.state.hero.name = r.ok;
         G.audio.sfx.confirm();
-        stage = 'done';
         G.scenes.pop();
         onDone && onDone();
       };
@@ -16400,7 +16577,8 @@ G.scenes.register('nameinput', (onDone) => {
 
     exit() { el().classList.add('hidden'); },
 
-    update(dt) { t += dt; },
+    // Менеджер сцен вызывает update у верхней сцены напрямую, даже если ей не нужна анимация.
+    update() {},
 
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, U = G.ui;
@@ -17366,7 +17544,7 @@ G.scenes.register('world', (pos) => {
     },
 
     drawStrip(ctx) {
-      const W = G.screen.W, U = G.ui, F = G.font.small, C = U.C;
+      const W = G.screen.W, U = G.ui, F = G.font.small;
       const y = G.screen.H - STRIP_H;
       U.panel(ctx, 0, y, W, STRIP_H, 'plank');
       const mk = G.state.marker;
@@ -17630,7 +17808,6 @@ G.scenes.register('mapview', (world) => {
       this.t += dt;
       const I = G.input;
       if (this.toastT > 0) { this.toastT -= dt; if (this.toastT <= 0) this.toast = null; }
-      const W = G.screen.W, H = G.screen.H;
 
       if(this.legend){if(I.tapNow||I.pressed('a')||I.pressed('b')||I.pressed('menu')||I.pressed('map'))this.legend=false;return;}
 
@@ -17828,11 +18005,11 @@ G.scenes.register('shop', (shopId, opts = {}) => {
   const title = opts.title || keeperName;
   const bought = [];
   let idx = 0, qty = 1, msg = null, msgT = 0, msgErr = false, qmode = false;
-  const P = () => G.PAL;
 
   const locked = (it) => it.week && G.game.week() < it.week;
+  const onSite = (it) => it.cat === 'service' || !!it.instant;
   const maxQty = (it) => {
-    if (it.cat === 'food' || it.cat === 'service') return 1;
+    if (onSite(it)) return 1;
     let n = Math.floor(G.state.vars.money / it.price);
     if (it.pouch) n = Math.min(n, G.game.pouchMax() - G.game.pouchUsed());
     return G.util.clamp(n, 1, 20);
@@ -17848,10 +18025,10 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     const total = it.price * qty;
     if (!g.canPay(total)) { G.audio.sfx.error(); say('Не хватает рё!', true); return; }
     if (it.pouch && g.pouchUsed() + qty > g.pouchMax()) { G.audio.sfx.error(); say('Подсумок полон!', true); return; }
-    if (it.cat === 'food' && it.effect.rest && G.state.vars.fatigue <= 5) { G.audio.sfx.error(); say('Ты бодр и не голоден. Больше не влезет.', true); return; }
+    if (it.cat === 'food' && onSite(it) && it.effect.rest && G.state.vars.fatigue <= 5) { G.audio.sfx.error(); say('Ты бодр и не голоден. Больше не влезет.', true); return; }
     g.pay(total);
     G.audio.sfx.coin();
-    if (it.cat === 'food' || it.cat === 'service') {
+    if (onSite(it)) {
       const e = it.effect || {};
       if (e.rest) g.rest(e.rest);
       if (e.minutes) g.advance(e.minutes);
@@ -17859,10 +18036,10 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       say(it.cat === 'food' ? `Ты съел: ${it.name}. Вкуснотища!` : `${it.name} — готово. Силы вернулись!`);
     } else {
       g.give(it.id, qty);
-      G.events.emit('bought', it.id, qty);
       G.audio.sfx.confirm();
       say(`Куплено: ${it.name}${qty > 1 ? ' ×' + qty : ''}`);
     }
+    G.events.emit('bought', it.id, qty);
     bought.push({ id: it.id, qty });
     qty = 1;
   }
@@ -17924,7 +18101,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
           if (i >= 0 && i < n && (i !== idx || qmode)) { idx = i; qty = 1; qmode = false; G.audio.sfx.select(); }
           return;
         }
-        if (items[idx].cat !== 'food' && items[idx].cat !== 'service') {
+        if (!onSite(items[idx])) {
           if (inR(t, L.minus) && qty > 1) { qty--; G.audio.sfx.blip(); return; }
           if (inR(t, L.plus) && qty < mq) { qty++; G.audio.sfx.blip(); return; }
         }
@@ -17937,7 +18114,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H, F = G.font, U = G.ui, C = U.C;
+      const F = G.font, U = G.ui, C = U.C;
       const L = this.layout();
       U.backdrop(ctx);
 
@@ -17990,7 +18167,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       const textLines = F.small.wrap(msg || it.desc || '', inf.w - 24).slice(0, inf.h < 70 ? 1 : 2);
       textLines.forEach((ln, i) => F.small.draw(ctx, ln, inf.x + 12, inf.y + 20 + i * 11, { color: msg ? (msgErr ? C.err : C.ok) : C.ink }));
       const qy = inf.y + inf.h - 24;
-      if (it.cat === 'food' || it.cat === 'service') {
+      if (onSite(it)) {
         const v = G.state.vars;
         F.small.draw(ctx, `Усталость: ${Math.round(v.fatigue)}/100`, inf.x + 12, qy + 4, { color: C.inkDim });
         F.draw(ctx, it.price + ' рё', inf.x + inf.w - 12, qy + 3, { align: 'right', color: '#8a5a10' });
@@ -18004,7 +18181,7 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       }
 
       // кнопки внизу + деньги
-      U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, it.cat === 'food' || it.cat === 'service' ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
+      U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, onSite(it) ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
       U.button(ctx, L.exitB.x, L.exitB.y, L.exitB.w, L.exitB.h, 'Выйти', 'normal');
       F.small.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + h.h - 12, { align: 'right', color: '#8a5a10' });
     },
@@ -18290,7 +18467,7 @@ G.scenes.register('journal', () => {
     },
 
     draw(ctx) {
-      const W = G.screen.W, H = G.screen.H-offset(), F = G.font, U = G.ui, C = U.C;
+      const W = G.screen.W, F = G.font, U = G.ui, C = U.C;
       U.backdrop(ctx);
       const g=G.touch.header();U.title(ctx, 'ЗАДАНИЯ', g.titleX, g.titleY, 90);
       ctx.save();ctx.translate(0,offset());
@@ -18367,11 +18544,11 @@ G.scenes.register('journal', () => {
 // ===== scenes/calendar.js =====
 // Календарь (месяц = 4 недели, 2 страницы за игру) и расписания персонажей.
 G.scenes.register('calendar', () => {
-  const F = G.font, P = G.PAL;
+  const F = G.font;
   const STORY_NAMES = { tora: 'Пропал кот Тора', konohamaru: 'Мелкий Коноханамару', iruka_story: 'Вечер с Ирукой', hinata_rain: 'Дождь и Хината', ino_sakura: 'Ино и Сакура',
     sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', roofs: 'Крыши с Наруто' };
   const WEATHER = { sun: 'ясно', cloud: 'облачно', rain: 'дождь' };
-  let tab = 0, sel = G.state.vars.day, ci = 0, wk = true, scroll = 0;
+  let tab = 0, sel = G.state.vars.day, ci = 0, wk = true;
   const ids = G.schedule.who();
   const page = () => Math.floor((sel - 1) / 28);
   const limit = () => Math.min(9999,Math.max(112,Math.ceil((G.state.vars.day+28)/28)*28));
@@ -18416,8 +18593,8 @@ G.scenes.register('calendar', () => {
           if (col >= 0 && col < 7 && row >= 0 && row < 4) { sel = page() * 28 + row * 7 + col + 1; G.audio.sfx.select(); }
           else if (t.y >= 42 && t.y < GY) { sel = t.x < W / 2 ? Math.max(1, sel - 28) : Math.min(limit(), sel + 28); G.audio.sfx.select(); }
         } else {
-          if (t.y < 68) { ci = (ci + (t.x < W / 2 ? ids.length - 1 : 1)) % ids.length; scroll = 0; G.audio.sfx.select(); }
-          else if (t.y < 90) { wk = !wk; scroll = 0; G.audio.sfx.select(); }
+          if (t.y < 68) { ci = (ci + (t.x < W / 2 ? ids.length - 1 : 1)) % ids.length; G.audio.sfx.select(); }
+          else if (t.y < 90) { wk = !wk; G.audio.sfx.select(); }
         }
         return;
       }
@@ -18428,9 +18605,9 @@ G.scenes.register('calendar', () => {
         if (I.repeat('up', dt)) { sel = Math.max(1, sel - 7); G.audio.sfx.select(); }
         if (I.repeat('down', dt)) { sel = Math.min(limit(), sel + 7); G.audio.sfx.select(); }
       } else {
-        if (I.repeat('left', dt)) { ci = (ci + ids.length - 1) % ids.length; scroll = 0; G.audio.sfx.select(); }
-        if (I.repeat('right', dt)) { ci = (ci + 1) % ids.length; scroll = 0; G.audio.sfx.select(); }
-        if (I.pressed('up') || I.pressed('down')) { wk = !wk; scroll = 0; G.audio.sfx.select(); }
+        if (I.repeat('left', dt)) { ci = (ci + ids.length - 1) % ids.length; G.audio.sfx.select(); }
+        if (I.repeat('right', dt)) { ci = (ci + 1) % ids.length; G.audio.sfx.select(); }
+        if (I.pressed('up') || I.pressed('down')) { wk = !wk; G.audio.sfx.select(); }
       }
     },
     draw(ctx) {
@@ -19170,160 +19347,147 @@ G.battleBg = (() => {
 
 
 // ===== scenes/battle.js =====
-// Экран боя «Дуэль» (правила — systems/duel.js, docs/COMBAT.md).
-// opts: { enemy, mode: ko|spar|survive, terrain, turns, ... }. onEnd(result) — result: { win, mode, enemy, turns, surrender }.
-// Фазы: intro → choose (меню) → mini (кольцо тайминга или печати) → play (анимация исходов) → choose … → end.
+// Карточный бой «Дуэль». Правила — systems/duel.js, описание — docs/COMBAT.md.
+// Игрок разыгрывает до трёх карт, видит намерение врага и сам решает, когда закончить ход.
 G.scenes.register('battle', (opts, onEnd) => {
   const F = G.font, AU = G.audio, U = G.ui, C = U.C, FS = F.small, PAL = G.PAL, I = G.input;
   const V = G.state.vars, mode = opts.mode || 'ko';
   const ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
-  const techs = Object.keys(G.TECHS).filter((t) => G.combat.knows(t));
+  const techs = Object.keys(G.TECHS).filter((id) => G.combat.knows(id));
   const stock = () => ({ bandage: G.game.count('bandage'), chakra_pill: G.game.count('chakra_pill'), smoke_bomb: G.game.count('smoke_bomb'), flash_bomb: G.game.count('flash_bomb') });
   const D = G.duel.create({ enemy: opts.enemy, mode, rounds: opts.turns, techs, hp: V.hp, chakra: V.chakra, fatigue: V.fatigue, inv: stock(), day: V.day });
-  const ITEMS = [['bandage', 'Бинт', '+25% здоровья'], ['chakra_pill', 'Пилюля чакры', '+50% чакры'], ['smoke_bomb', 'Дымовая бомба', 'враг промахнётся'], ['flash_bomb', 'Вспышка', 'враг ослеплён']];
-  const ACT_NAME = { strike: 'Удар', block: 'Блок', evade: 'Уклон', tech: 'Приём', idle: 'Ждёт' };
-  const TERRAIN = opts.terrain || (mode === 'spar' ? 'field' : 'field');
-  let phase = 'intro', t = 0, menu = 'main', focus = 0, mini = null, ev = [], evI = 0, evT = 0, result = null, endT = 0, said = null;
+  const TERRAIN = opts.terrain || 'field';
+  let phase = 'intro', t = 0, focus = 0, handPage = 0, selected = D.hand[0] ? D.hand[0].uid : 0;
+  let ev = [], evI = 0, evT = 0, afterEvents = 'card', lastIntent = D.intent, result = null, endT = 0, said = null;
   const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
-  let tip = !G.state.flags.duel_tip;   // обучающая подсказка первого боя: не блокирует ввод, гаснет после первого действия
-  let stats = { hits: 0, evades: 0, techs: 0 };
+  let tip = !G.state.flags.card_duel_tip;
+  const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const slow = () => (G.storage.settings.reactSlow ? 1.45 : 1);
   const hit = (b, p) => p && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
   const sfx = {
     hit() { AU.noise(0.08, 0.25); AU.tone(140, 0.08, 'square', 0.12, 60); },
     big() { AU.noise(0.2, 0.3); AU.tone(110, 0.2, 'sawtooth', 0.15, 40); },
     block() { AU.tone(1400, 0.06, 'square', 0.1); AU.tone(1900, 0.1, 'triangle', 0.08, null, 0.04); },
     whoosh() { AU.noise(0.12, 0.08); AU.tone(900, 0.1, 'triangle', 0.05, 300); },
-    seal() { AU.tone(520 + Math.random() * 200, 0.04, 'square', 0.08); },
     purple() { AU.tone(300, 0.3, 'sawtooth', 0.12, 900); AU.noise(0.2, 0.15); },
     win() { [523, 659, 784, 1046].forEach((f, i) => AU.tone(f, 0.15, 'square', 0.1, null, i * 0.12)); },
     lose() { [392, 330, 262].forEach((f, i) => AU.tone(f, 0.25, 'triangle', 0.12, null, i * 0.2)); },
   };
 
-  // ── геометрия ──
-  // Кнопки не меньше 44 CSS px: минимальная высота в логических px зависит от масштаба экрана
+  // Геометрия рассчитана на внутренний экран от 192×256: карты и кнопки остаются крупными при CSS-масштабе телефона.
   const uiScale = () => { try { const r = G.screen.canvas.getBoundingClientRect(); return r.width > 0 ? r.width / G.screen.W : 1.34; } catch (_) { return 1.34; } };
-  const dims = () => { const mh = Math.ceil(44 / uiScale()); return { mh, bh: Math.max(34, mh), sh: Math.max(26, mh), th: Math.max(30, mh) }; };
+  const dims = () => ({ bh: Math.max(28, Math.ceil(44 / uiScale())) });
   const geo = () => {
-    const W = G.screen.W, H = G.screen.H, d = dims();
-    const main = 46 + 2 * (d.bh + 4) + d.sh + 10, list = 40 + 4 * (d.th + 4) + 6, PH = Math.min(Math.round(H * 0.5), Math.max(main, list));
-    const AH = H - PH;
-    return { W, H, AH, PH, d, yb: AH - 38, hx: Math.round(W * 0.27), ex: Math.round(W * 0.73), py: H - PH };
+    const W = G.screen.W, H = G.screen.H, d = dims(), handH = Math.max(44, d.bh);
+    const PH = Math.min(H - 82, 90 + handH + d.bh), AH = H - PH;
+    return { W, H, AH, PH, d, yb: AH - 8, hx: Math.round(W * 0.27), ex: Math.round(W * 0.73), py: AH, handY: AH + 82, handH };
   };
+  const cardColor = (kind) => ({ tai: '#d87838', def: '#4a90b8', skill: '#c09840', nin: '#8068c8', gen: '#b068b0', item: '#5a9a58' }[kind] || '#888');
+  const selectedCard = () => D.hand.find((c) => c.uid === selected) || null;
+  const pageCount = () => Math.max(1, Math.ceil(D.hand.length / 5));
+  const selectCard = (c) => { if (!c) return; selected = c.uid; const i = D.hand.indexOf(c); if (i >= 0) handPage = Math.floor(i / 5); };
 
-  // ── кнопки текущего меню ──
+  // Кнопки руки и нижней панели. Карта доступна для выбора даже без чакры — так видно причину блокировки.
   function buttons() {
-    const g = geo(), W = g.W, out = [], pad = 8, bw = Math.floor((W - pad * 3) / 2), y0 = g.py + 46, d = g.d;
-    if (menu === 'main') {
-      const opt = G.duel.options(D), tech = opt.find((o) => o.id === 'tech'), rel = opt.find((o) => o.id === 'release');
-      const mk = (i, id, label, sub, off) => ({ id, label, sub, off, x: pad + (i % 2) * (bw + pad), y: y0 + Math.floor(i / 2) * (d.bh + 4), w: bw, h: d.bh });
-      out.push(mk(0, 'strike', 'Удар', 'тайминг', null), mk(1, 'block', 'Блок', 'тайминг', null), mk(2, 'evade', 'Уклон', 'тайминг', null),
-        mk(3, 'tech', 'Приём', techs.length ? 'печати' : 'нет техник', techs.length ? null : 'Пока нет изученных техник'));
-      const sw = Math.floor((W - pad * 4) / 3), sy = y0 + 2 * (d.bh + 4);
-      out.push({ id: 'release', label: 'Выброс', sub: rel.off ? '' : 'накал!', off: rel.off, x: pad, y: sy, w: sw, h: d.sh },
-        { id: 'item', label: 'Предмет', off: null, x: pad * 2 + sw, y: sy, w: sw, h: d.sh },
-        { id: 'quit', label: 'Сдаться', off: null, x: pad * 3 + sw * 2, y: sy, w: sw, h: d.sh });
-    } else if (menu === 'tech') {
-      techs.slice(0, 6).forEach((id, i) => {
-        const T = G.TECHS[id], off = D.P.ch < T.ch ? 'Мало чакры' : null;
-        out.push({ id: 'tech:' + id, label: T.name, sub: T.ch + ' ч', off, x: pad + (i % 2) * (bw + pad), y: g.py + 40 + Math.floor(i / 2) * (d.th + 4), w: bw, h: d.th, tech: id });
-      });
-      out.push({ id: 'back', label: 'Назад', x: pad, y: g.py + 40 + Math.ceil(Math.min(6, techs.length) / 2) * (d.th + 4), w: W - pad * 2, h: d.th });
-    } else if (menu === 'item') {
-      const st = D.inv;
-      ITEMS.forEach(([id, name, sub], i) => out.push({ id: 'item:' + id, label: name, sub: 'x' + (st[id] || 0), off: (st[id] || 0) < 1 ? 'Нет в сумке' : null, x: pad + (i % 2) * (bw + pad), y: g.py + 40 + Math.floor(i / 2) * (d.th + 4), w: bw, h: d.th, desc: sub }));
-      out.push({ id: 'back', label: 'Назад', x: pad, y: g.py + 40 + Math.ceil(ITEMS.length / 2) * (d.th + 4), w: W - pad * 2, h: d.th });
-    }
+    const g = geo(), out = [], pad = 4, gap = 2;
+    handPage = clamp(handPage, 0, pageCount() - 1);
+    const visible = D.hand.slice(handPage * 5, handPage * 5 + 5);
+    const cw = Math.floor((g.W - pad * 2 - gap * 4) / 5);
+    visible.forEach((c, i) => out.push({ id: 'card:' + c.uid, ref: 'uid:' + c.uid, card: c.id, zone: 'hand', uid: c.uid,
+      x: pad + i * (cw + gap), y: g.handY, w: cw, h: g.handH }));
+    const actions = [];
+    if (pageCount() > 1) actions.push({ id: 'prev', label: '‹', zone: 'action' });
+    const check = selectedCard() ? G.duel.canPlay(D, selectedCard()) : { ok: false, why: 'Нет карты' };
+    actions.push({ id: 'play', label: 'Играть', zone: 'action', off: check.ok ? null : check.why });
+    if (pageCount() > 1) actions.push({ id: 'next', label: '›', zone: 'action' });
+    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: 'Сдаться', zone: 'action' });
+    const aw = Math.floor((g.W - pad * 2 - gap * (actions.length - 1)) / actions.length);
+    actions.forEach((b, i) => { b.x = pad + i * (aw + gap); b.y = g.py + g.PH - g.d.bh - 3; b.w = aw; b.h = g.d.bh; out.push(b); });
     return out;
   }
 
-  // ── выбор действия ──
-  function pick(b) {
-    if (b.off) { AU.sfx.error(); say(b.off); return; }
+  function say(text) { said = { text, t: 2.4 }; }
+  function playCard(ref) {
+    if (phase !== 'choose') return false;
+    const check = G.duel.canPlay(D, ref);
+    if (!check.ok) { AU.sfx.error(); say(check.why); return false; }
+    const c = check.card, def = check.def;
     AU.sfx.select();
-    if (b.id === 'tech') { menu = 'tech'; focus = 0; return; }
-    if (b.id === 'item') { menu = 'item'; focus = 0; return; }
-    if (b.id === 'back') { menu = 'main'; focus = 0; return; }
-    if (b.id === 'quit') { finish(false, true); return; }
-    if (b.id.startsWith('item:')) { begin(b.id, null); return; }
-    begin(b.id, null);
+    if (tip) { tip = false; G.state.flags.card_duel_tip = 1; }
+    if (def.tech) stats.techs++;
+    if (c.id === 'evade' || c.id === 'shunshin' || c.id === 'kawarimi') stats.evades++;
+    if (def.release) { fx.aura = 1.2; sfx.purple(); }
+    runEvents(G.duel.play(D, c), 'card');
+    return true;
   }
-  // запускает мини-игру для действия или сразу раунд (предмет)
-  function begin(act, q) {
-    menu = 'main';
-    if (tip) { tip = false; G.state.flags.duel_tip = 1; }
-    if (act.startsWith('item:') || q != null) { runRound(act, q != null ? q : 0.5); return; }
-    if (act.startsWith('tech:')) {
-      const T = G.TECHS[act.slice(5)], seq = T.seals.slice(), pal = seq.slice();
-      while (pal.length < Math.min(6, seq.length + 3)) { const s = Math.floor(Math.random() * 12); if (!pal.includes(s)) pal.push(s); }
-      pal.sort(() => Math.random() - 0.5);
-      const limit = (1.6 + 0.9 * seq.length + (D.has('fast_hands') ? 1.5 : 0) + D.P.st('ctrl') * 0.1) * slow();
-      mini = { kind: 'seals', act, seq, pal, i: 0, errs: 0, t: 0, limit, shake: 0 };
-    } else {
-      const w = G.duel.window(D) * (act === 'release' ? 0.7 : 1), T = 1.0 * slow();
-      mini = { kind: 'ring', act, t: 0, T, tp: 0.8 * T, half: (0.1 + 0.5 * w) * T };
+  function endPlayerTurn() {
+    if (phase !== 'choose') return false;
+    lastIntent = D.intent;
+    AU.sfx.confirm();
+    runEvents(G.duel.endTurn(D), 'enemy');
+    return true;
+  }
+  function pick(b) {
+    if (phase !== 'choose' || !b) return;
+    if (b.zone === 'hand') {
+      const c = D.hand.find((x) => x.uid === b.uid);
+      if (selected === b.uid) playCard(b.ref);
+      else { selectCard(c); AU.sfx.blip(); }
+      return;
     }
-    phase = 'mini';
+    if (b.id === 'play') { const c = selectedCard(); if (c) playCard(c); else say('Выбери карту'); return; }
+    if (b.id === 'end') { endPlayerTurn(); return; }
+    if (b.id === 'quit') { finish(false, true); return; }
+    if (b.id === 'prev' || b.id === 'next') {
+      handPage = (handPage + (b.id === 'next' ? 1 : -1) + pageCount()) % pageCount();
+      const c = D.hand[handPage * 5]; if (c) selected = c.uid;
+      focus = 0; AU.sfx.blip();
+    }
   }
-  function say(text) { said = { text, t: 2.2 }; }
 
-  function runRound(act, q) {
-    mini = null;
-    ev = G.duel.play(D, act, q); evI = 0; evT = 0; phase = 'play';
-    if (act.startsWith('item:')) G.audio.sfx.confirm();
-    if (act.startsWith('tech:')) stats.techs++;
-    if (act === 'release') { stats.techs++; fx.aura = 1.2; sfx.purple(); }
-    if (act === 'evade') stats.evades++;
+  function runEvents(events, after) {
+    ev = events || []; evI = 0; evT = 0; afterEvents = after; phase = 'play';
     nextEvent();
   }
   function nextEvent() {
-    if (evI >= ev.length) { endRound(); return; }
-    const e = ev[evI++]; evT = 0.75;
-    const g = geo(), tx = e.to === 'p' ? g.hx : g.ex, ty = g.yb - 28;
+    if (evI >= ev.length) { completeEvents(); return; }
+    const e = ev[evI++]; evT = 0.62;
+    const g = geo(), tx = e.to === 'p' ? g.hx : g.ex, ty = g.yb - 24;
     if (e.who === 'p') fx.lungeP = 1; else fx.lungeE = 1;
     if (e.dmg > 0) {
       fx.pops.push({ x: tx, y: ty, t: 1.1, txt: '-' + Math.round(e.dmg), col: e.to === 'p' ? '#ff6a4a' : '#ffe28a' });
       if (e.to === 'p') { fx.hurtP = 0.4; fx.shake = 5; } else { fx.hurtE = 0.4; fx.shake = 3; stats.hits++; }
       (e.dmg > 10 ? sfx.big : sfx.hit)();
-    } else if (e.type === 'block' || e.type === 'parry') sfx.block();
+    } else if (e.type === 'block' || e.type === 'parry' || e.type === 'blocked') sfx.block();
     else if (e.type === 'miss') sfx.whoosh();
     if (e.type === 'boost' || e.type === 'backfire') { fx.flash = 0.4; fx.flashCol = '#c080ff'; sfx.purple(); }
     if (e.type === 'tech' && e.who === 'p') { fx.flash = 0.18; fx.flashCol = '#a8d8ff'; }
-    if (e.type === 'parry') { fx.flash = 0.2; fx.flashCol = '#ffffff'; }
-    if (e.type === 'heal') fx.pops.push({ x: g.hx, y: g.yb - 36, t: 1.1, txt: '+', col: '#8aff9a' });
+    if (e.type === 'counter') { fx.flash = 0.2; fx.flashCol = '#ffffff'; }
+    if (e.type === 'heal') fx.pops.push({ x: g.hx, y: g.yb - 32, t: 1.1, txt: '+' + Math.round(e.heal || 0), col: '#8aff9a' });
     if (e.fx) spawnFx(e.fx, e.who, g);
     else if (e.dmg > 0) fx.fxs.push({ kind: 'slash', x0: tx, y0: ty, x1: tx, y1: ty, t: 0.35, T: 0.35, who: e.who });
     said = { text: e.text, t: 2 };
   }
-  // визуальные эффекты техник: снаряды, вспышки, дым (рисует drawFx)
-  function spawnFx(id, who, g) {
-    const hx = g.hx, ex = g.ex, y = g.yb - 28, from = who === 'p' ? hx : ex, to = who === 'p' ? ex : hx;
-    const T = { katon: 0.7, suiton: 0.6, raiton: 0.5, fuuton: 0.6, chakra_shot: 0.5, release: 0.9, kawarimi: 0.6, henge: 0.7, bunshin: 0.7, shunshin: 0.45, fear: 0.7, sexy: 0.8, 'e:dmg': 0.5, 'e:drain': 0.7, 'e:bind': 0.7, 'e:fear': 0.7 }[id] || 0.5;
-    fx.fxs.push({ kind: id, x0: from, y0: y, x1: to, y1: y, t: T, T, who });
-    if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
-  }
-  function endRound() {
+  function completeEvents() {
     if (D.over) { finish(D.over.win, false); return; }
-    phase = 'choose'; menu = 'main'; focus = 0;
+    phase = 'choose'; focus = 0; handPage = 0;
+    if (!selectedCard()) selected = D.hand[0] ? D.hand[0].uid : 0;
   }
 
-  // ── конец боя ──
   function finish(win, surrender) {
     if (phase === 'end') return;
     const real = mode === 'ko' || mode === 'survive';
-    if (surrender) { D.over = { win: false }; D.P.hp = real ? D.P.hp : D.P.hp; }
+    if (surrender) D.over = { win: false };
     result = { win, mode, enemy: opts.enemy, turns: D.round, surrender: !!surrender, hp: D.P.hp / D.P.hpMax };
-    // итоги в состоянии игры
     if (real) V.hp = clamp(Math.round(D.P.hp / D.P.hpMax * 100), win ? 1 : 5, 100);
     V.chakra = clamp(Math.round(D.P.ch / D.P.chMax * 100), 0, 100);
     V.fatigue = clamp(Math.round(D.P.fat), 0, 100);
     if (!D.trainingFight) for (const id of D.usedItems || []) G.game.take(id);
     V.battles = (V.battles || 0) + 1; if (win) V.wins = (V.wins || 0) + 1;
     G.train.addXp('tai', 0.6 * stats.hits + 1); G.train.addXp('spd', 0.7 * stats.evades);
-    if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); G.state.vars.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
-    for (const [act, n] of Object.entries(D.stats.used)) if (act.startsWith('tech:')) V['use_' + act.slice(5)] = (V['use_' + act.slice(5)] || 0) + n;
+    if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); V.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
+    for (const [id, n] of Object.entries(D.stats.used)) if (G.TECHS[id]) V['use_' + id] = (V['use_' + id] || 0) + n;
     G.game.advance(5 + 3 * D.round);
     const line = ed.lines && (win ? ed.lines.lose : ed.lines.win);
     say(line ? G.util.fmt(line, { name: G.state.hero.name }) : win ? 'Победа!' : 'Поражение...');
@@ -19331,112 +19495,100 @@ G.scenes.register('battle', (opts, onEnd) => {
     phase = 'end'; endT = 0;
   }
 
-  // ── сцена ──
+  function spawnFx(id, who, g) {
+    const hx = g.hx, ex = g.ex, y = g.yb - 24, from = who === 'p' ? hx : ex, to = who === 'p' ? ex : hx;
+    const T = { katon: 0.7, suiton: 0.6, raiton: 0.5, fuuton: 0.6, chakra_shot: 0.5, release: 0.9, kawarimi: 0.6, henge: 0.7, bunshin: 0.7, shunshin: 0.45, fear: 0.7, sexy: 0.8, 'e:dmg': 0.5, 'e:drain': 0.7, 'e:bind': 0.7, 'e:fear': 0.7 }[id] || 0.5;
+    fx.fxs.push({ kind: id, x0: from, y0: y, x1: to, y1: y, t: T, T, who });
+    if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
+  }
+
+  function intentLines(intent) {
+    if (!intent) return ['Бой завершён', ''];
+    if (afterEvents === 'enemy' && phase === 'play') return ['Ответ противника', intent.name];
+    const attack = ['strike', 'multi', 'tech', 'drain', 'bind'].includes(intent.kind);
+    if (D.E.status.stun > 0) return [intent.name, 'Оглушён: действие будет пропущено'];
+    if (attack) {
+      let extra = intent.kind === 'drain' ? ' · кража чакры' : intent.kind === 'bind' ? ' · теневая связка' : '';
+      return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}`];
+    }
+    if (intent.kind === 'charge') return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+    if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
+    if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
+    if (intent.kind === 'fear') return [intent.name, 'Иллюзия: −1 карта и −1 действие на следующий ход'];
+    return [intent.name, intent.kind === 'idle' ? 'Можно спокойно развить атаку' : 'Враг не атакует в этом ходу'];
+  }
+
   const S = {
-    name: 'battle',
-    D,   // для тестов и отладки
+    name: 'battle', D,
     touch() { return {}; },
     enter() {
       if (G.state.started && !G.state.battleCheckpoint) G.state.battleCheckpoint = JSON.stringify(Object.assign({}, G.state, { battleCheckpoint: null }));
-      say(`${ed.name}! Бой начинается!`);
-      if (ed.lines && ed.lines.start) say(G.util.fmt(ed.lines.start, { name: G.state.hero.name }));
+      say(ed.lines && ed.lines.start ? G.util.fmt(ed.lines.start, { name: G.state.hero.name }) : `${ed.name}! Бой начинается!`);
     },
-    // для автотестов: сыграть раунд сразу с качеством q
-    play(act, q = 0.5) { if (phase !== 'choose') return false; runRound(act, q); return true; },
-    // для автотестов: выбрать пункт меню по id (как нажатием), с открытием нужного подменю
-    choose(id) { if (phase !== 'choose') return false; menu = id.startsWith('tech:') ? 'tech' : id.startsWith('item:') ? 'item' : 'main'; const b = buttons().find((x) => x.id === id); if (!b) return false; pick(b); return true; },
-    // для автотестов: показать меню (main|tech|item) и вернуть его кнопки
-    openMenu(m) { if (phase !== 'choose') return null; menu = m; focus = 0; return buttons(); },
-    get mini() { return mini; },
-    sealPalette() { return mini && mini.kind === 'seals' ? mini.pal.slice() : null; },
+    // Программный API используется проверками: карта по id/uid или команда end.
+    play(ref) { return ref === 'end' ? endPlayerTurn() : playCard(ref); },
+    endTurn: endPlayerTurn,
+    choose(id) {
+      if (phase !== 'choose') return false;
+      if (id === 'end' || id === 'quit') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
+      const c = D.hand.find((x) => x.id === id || x.id === String(id).replace(/^(tech|item):/, '') || 'uid:' + x.uid === id);
+      return c ? playCard(c) : false;
+    },
+    openMenu() { return phase === 'choose' ? buttons() : null; },
     debugWin() { D.E.hp = 0; D.over = { win: true }; finish(true, false); },
     debugLose() { D.P.hp = 0; D.over = { win: false }; finish(false, false); },
     get phase() { return phase; },
     get state() { return phase === 'choose' ? 'menu' : phase === 'end' ? 'end' : phase; },
+    get mini() { return null; },
     buttons,
     update(dt) {
-      t += dt; endT += dt;
+      t += dt; if (phase === 'end') endT += dt;
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
       for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
-      if (phase === 'intro') { if (t > 1.4 || I.tapNow || I.pressed('a')) { phase = 'choose'; } return; }
-      if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.45)) nextEvent(); return; }
+      if (phase === 'intro') { if (t > 1.1 || I.tapNow || I.pressed('a')) phase = 'choose'; return; }
+      if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.42)) nextEvent(); return; }
       if (phase === 'end') {
-        if (endT > 1.0 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
+        if (endT > 0.8 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
           AU.sfx.confirm(); G.scenes.pop(); G.state.battleCheckpoint = null;
           onEnd && onEnd(result);
           if (G.state.started) G.storage.save(G.state);
         }
         return;
       }
-      if (phase === 'mini') return this.updateMini(dt);
-      // choose: клавиши и касания
-      const bs = buttons();
+      const bs = buttons(); if (!bs.length) return;
+      focus = clamp(focus, 0, bs.length - 1);
       if (I.tapNow) { const b = bs.find((x) => hit(x, I.tapNow)); if (b) { focus = bs.indexOf(b); pick(b); } return; }
-      if (I.pressed('b') && menu !== 'main') { menu = 'main'; focus = 0; AU.sfx.cancel(); return; }
-      const move = (d) => { focus = (focus + d + bs.length) % bs.length; AU.sfx.blip(); };
+      const move = (d) => { focus = (focus + d + bs.length) % bs.length; if (bs[focus].zone === 'hand') selectCard(D.hand.find((c) => c.uid === bs[focus].uid)); AU.sfx.blip(); };
       if (I.repeat('left', dt)) move(-1); if (I.repeat('right', dt)) move(1);
-      if (I.repeat('up', dt)) { menu === 'main' ? (focus = focus >= 2 ? focus - 2 : focus) : move(-1); } if (I.repeat('down', dt)) { menu === 'main' ? (focus = focus < 4 ? Math.min(bs.length - 1, focus + 2) : focus) : move(1); }
+      if (I.repeat('up', dt) || I.repeat('down', dt)) {
+        const hand = bs.map((b, i) => ({ b, i })).filter((x) => x.b.zone === 'hand');
+        const actions = bs.map((b, i) => ({ b, i })).filter((x) => x.b.zone === 'action');
+        if (bs[focus].zone === 'hand' && actions.length) focus = actions[0].i;
+        else if (hand.length) { const i = hand.findIndex((x) => x.b.uid === selected); focus = hand[Math.max(0, i)].i; }
+        AU.sfx.blip();
+      }
       if (I.pressed('a') && bs[focus]) pick(bs[focus]);
     },
-    updateMini(dt) {
-      const m = mini, tap = I.tapNow, a = I.pressed('a');
-      m.t += dt; m.shake = Math.max(0, (m.shake || 0) - dt * 10);
-      if (m.kind === 'ring') {
-        if (a || tap) { const q = clamp(1 - Math.abs(m.t - m.tp) / m.half, 0, 1); if (q > 0.8) { sfx.seal(); } runRound(m.act, m.t < m.T * 0.1 ? 0.3 : q); return; }
-        if (m.t > m.T * 1.3) runRound(m.act, 0.15);
-        return;
-      }
-      // печати
-      const g = geo(), btns = sealButtons(g);
-      let choice = -1;
-      if (tap) { const b = btns.find((x) => hit(x, tap)); if (b) choice = b.seal; }
-      else { const n = btns.length; if (I.repeat('left', dt)) m.f = ((m.f || 0) + n - 1) % n; if (I.repeat('right', dt)) m.f = ((m.f || 0) + 1) % n; if (a) choice = btns[m.f || 0].seal; }
-      if (choice >= 0) {
-        if (choice === m.seq[m.i]) { m.i++; sfx.seal(); } else { m.errs++; m.shake = 1; AU.sfx.error(); }
-        if (m.i >= m.seq.length) { const q = clamp(0.55 + 0.45 * (1 - m.t / m.limit) - 0.12 * m.errs, 0.2, 1); runRound(m.act, q); return; }
-      }
-      if (m.t > m.limit) runRound(m.act, 0.1);
-    },
 
-    // ── отрисовка ──
     draw(ctx) {
-      const g = geo(), W = g.W, H = g.H, AH = g.AH;
+      const g = geo(), W = g.W, AH = g.AH;
       const sx = fx.shake > 0 ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
       ctx.save(); ctx.translate(sx, 0);
-      // арена
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
-      this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g);
-      this.drawFx(ctx);
-      if (phase === 'choose' && D.hint) this.drawHint(ctx, g);
-      if (tip && phase === 'choose') {
-        U.panel(ctx, 8, 56, W - 16, 74, 'inner');
-        ['Блок бьёт Удар, Удар бьёт Уклон,', 'Уклон бьёт Блок. Приём пробивает Блок.', 'Следи за пузырём «?» над врагом:', 'это намёк, но он не всегда верен.'].forEach((ln, i) => FS.draw(ctx, ln, W / 2, 62 + i * 15, { align: 'center', color: '#2e1e14' }));
-      }
-      // всплывающие числа
+      this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g); this.drawFx(ctx);
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
       if (fx.flash > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
-      this.drawHud(ctx, g);
-      this.drawPanel(ctx, g);
-      if (phase === 'mini') this.drawMini(ctx, g);
+      this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 26, W, 52);
-        F.draw(ctx, ed.name, W / 2, AH / 2 - 16, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
+        F.draw(ctx, ed.name, W / 2, AH / 2 - 15, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
         FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
       }
-    },
-    // пузырь над врагом: что он, похоже, сделает (точность — в строке панели)
-    drawHint(ctx, g) {
-      const x = g.ex, y = g.yb - 84, col = { strike: '#ff8a6a', block: '#8ab8ff', evade: '#8aff9a', tech: '#d8a0ff', idle: '#d8c8a0' }[D.hint] || '#fff';
-      const bob = Math.round(Math.sin(t * 4) * 1.5);
-      ctx.fillStyle = PAL.ink; ctx.fillRect(x - 21, y - 8 + bob, 42, 15); ctx.fillRect(x - 3, y + 7 + bob, 6, 4);
-      ctx.fillStyle = '#fff6dc'; ctx.fillRect(x - 20, y - 7 + bob, 40, 13); ctx.fillRect(x - 2, y + 6 + bob, 4, 3);
-      FS.draw(ctx, '? ' + (ACT_NAME[D.hint] || '?'), x, y - 4 + bob, { align: 'center', color: '#2e1e14' });
-      ctx.fillStyle = col; ctx.fillRect(x - 20, y + 5 + bob, 40, 1);
     },
     drawFx(ctx) {
       for (const f of fx.fxs) {
@@ -19464,11 +19616,9 @@ G.scenes.register('battle', (opts, onEnd) => {
     },
     drawFighter(ctx, side, g) {
       const isP = side === 'p', x0 = isP ? g.hx : g.ex, y = g.yb;
-      const lunge = (isP ? fx.lungeP : fx.lungeE) * (isP ? 16 : -16), hurt = isP ? fx.hurtP : fx.hurtE;
+      const lunge = (isP ? fx.lungeP : fx.lungeE) * (isP ? 12 : -12), hurt = isP ? fx.hurtP : fx.hurtE;
       const x = x0 + Math.round(lunge);
-      ctx.save();
-      // тень
-      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 20, 5, 0, 0, 7); ctx.fill();
+      ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 20, 5, 0, 0, 7); ctx.fill();
       if (hurt > 0 && Math.floor(hurt * 24) % 2 === 0) ctx.globalAlpha = 0.55;
       const id = isP ? 'hero' : ed.spr;
       if (id === 'dummy') {
@@ -19480,103 +19630,92 @@ G.scenes.register('battle', (opts, onEnd) => {
         ctx.fillStyle = PAL.ink; ctx.fillRect(x - 14, y - 18, 2, 2);
       } else {
         const sheet = G.chars.sheet(id), FW = G.chars.FW, FH = G.chars.FH, row = isP ? 2 : 1, fr = (isP ? fx.lungeP : fx.lungeE) > 0.3 ? 1 : 0;
-        ctx.drawImage(sheet, fr * FW, row * FH, FW, FH, Math.round(x - FW * 1.5), Math.round(y - FH * 3 + 3), FW * 3, FH * 3);   // персонаж ×3
+        ctx.drawImage(sheet, fr * FW, row * FH, FW, FH, Math.round(x - FW * 1.5), Math.round(y - FH * 3 + 3), FW * 3, FH * 3);
       }
       ctx.restore();
-      // фиолетовая аура героя: накал и выбросы
       if (isP) {
         const k = Math.max(D.P.heat / 100, fx.aura);
         if (k > 0.05) {
           ctx.save();
           for (let i = 0; i < 5 + Math.round(k * 10); i++) {
             const a = t * 2 + i * 1.9, r = 12 + (i % 3) * 3 + Math.sin(t * 3 + i) * 2, up = (t * 14 + i * 7) % 28;
-            ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 4 + i)) * Math.min(1, k + 0.3);
-            ctx.fillStyle = i % 3 === 0 ? '#e0b8ff' : G.purple.COLOR;
+            ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 4 + i)) * Math.min(1, k + 0.3); ctx.fillStyle = i % 3 === 0 ? '#e0b8ff' : G.purple.COLOR;
             ctx.fillRect(Math.round(x + Math.cos(a) * r), Math.round(y - 4 - up + Math.sin(a) * 4), 2, 2);
           }
           ctx.restore();
         }
       }
-      // ярлык статусов
-      const f = isP ? D.P : D.E, tags = [];
-      if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.status.smoke) tags.push('дым'); }
-      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); }
-      tags.forEach((s, i) => FS.draw(ctx, s, x, y - 78 - i * 9, { align: 'center', color: '#fff2cf', outline: PAL.ink }));
+      const tags = [];
+      if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.block) tags.push('блок ' + Math.round(D.P.block)); }
+      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
+      tags.slice(0, 2).forEach((s, i) => FS.draw(ctx, s, x, Math.max(53, y - 62 + i * 9), { align: 'center', color: '#fff2cf', outline: PAL.ink }));
     },
     drawHud(ctx, g) {
-      const W = g.W, bw = Math.floor(W / 2) - 14;
+      const W = g.W, bw = Math.floor(W / 2) - 12;
       const bar = (x, y, w, v, max, col) => U.gauge(ctx, x, y, w, 5, clamp(v / Math.max(1, max), 0, 1), col);
-      // герой слева
-      FS.draw(ctx, G.state.hero.name || 'Герой', 8, 6, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
-      bar(8, 18, bw, D.P.hp, D.P.hpMax, C.hp); bar(8, 26, bw, D.P.ch, D.P.chMax, C.chakra); bar(8, 34, bw, D.P.fat, 100, C.fatigue); bar(8, 42, bw, D.P.heat, 100, '#e0a8ff');
-      FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 10 + bw, 15, { align: 'right', color: '#f8eed0', outline: PAL.ink });
-      FS.draw(ctx, 'усталость · накал', 8, 49, { color: '#d8c8a0', outline: PAL.ink });
-      // противник справа
-      FS.draw(ctx, ed.name, W - 8, 6, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
-      bar(W - 8 - bw, 18, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 8 - bw, 26, bw, D.E.ch, D.E.chMax, C.chakra);
-      if (mode === 'survive') FS.draw(ctx, `Раунд ${D.round}/${D.rounds}`, W - 8, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 8, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      FS.draw(ctx, G.state.hero.name || 'Герой', 6, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      bar(6, 16, bw, D.P.hp, D.P.hpMax, C.hp); bar(6, 24, bw, D.P.ch, D.P.chMax, C.chakra); bar(6, 32, bw, D.P.fat, 100, C.fatigue); bar(6, 40, bw, D.P.heat, 100, '#e0a8ff');
+      FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 8 + bw, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
+      FS.draw(ctx, 'уст. · накал', 6, 47, { color: '#d8c8a0', outline: PAL.ink });
+      FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
+      if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
+      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
       U.panel(ctx, 0, py, W, g.PH, 'plank');
-      // строка подсказки: намёк противника или реплика
-      let line = '', col = '#f8eed0';
-      if (phase === 'choose' && D.hint) {
-        const acc = Math.round(G.duel.hintAccuracy(D) * 100);
-        line = `Намёк: ${ACT_NAME[D.hint] || '?'}  (верен ≈${acc}%)`; col = '#ffe28a';
-      } else if (said) line = said.text;
-      for (const [i, ln] of FS.wrap(line, W - 20).slice(0, 2).entries()) FS.draw(ctx, ln, 10, py + 8 + i * 11, { color: col, shadow: PAL.ink });
-      if (phase === 'choose') {
-        const bs = buttons();
-        bs.forEach((b, i) => {
-          U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');
-          F.small.draw(ctx, b.label, b.x + (menu !== 'main' && b.sub ? b.w * 0.36 : b.w / 2), b.y + (b.sub && menu === 'main' && b.h > 30 ? 8 : Math.round(b.h / 2) - 4), { align: 'center', color: b.off ? '#8a7a66' : '#f8eed0', shadow: PAL.ink });
-          if (b.sub && b.h > 26) FS.draw(ctx, b.sub, b.x + b.w / 2, b.y + 21, { align: 'center', color: b.off ? '#6a5a4a' : '#e8c890' });
-          else if (b.sub && menu !== 'main') FS.draw(ctx, b.sub, b.x + b.w - 6, b.y + Math.round(b.h / 2) - 4, { align: 'right', color: b.off ? '#6a5a4a' : '#e8c890' });
-        });
-      } else if (phase === 'end') {
-        F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 62, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
-        FS.draw(ctx, `Раундов ${result.turns} · ударов ${stats.hits} · уклонов ${stats.evades} · приёмов ${stats.techs}`, W / 2, py + 80, { align: 'center', color: '#e8c890' });
-        if (endT > 1) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 98, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+      const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
+      FS.draw(ctx, lines[0], 7, py + 5, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
+      FS.draw(ctx, lines[1], 7, py + 16, { color: '#f8eed0', shadow: PAL.ink, maxW: W - 14 });
+      FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
+      FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
+      if (phase === 'end') {
+        F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
+        FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
+        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 99, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        return;
       }
-    },
-    drawMini(ctx, g) {
-      const m = mini, W = g.W, cx = Math.round(W / 2), cy = g.AH - 76;
-      if (m.kind === 'ring') {
-        const T = m.T, k = clamp(m.t / T, 0, 1.3), r0 = 16, r = 16 + (1 - Math.min(1, m.t / m.tp)) * 38;
-        const q = clamp(1 - Math.abs(m.t - m.tp) / m.half, 0, 1);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, r0, 0, 7); ctx.stroke();
-        ctx.strokeStyle = q > 0.8 ? '#8aff9a' : q > 0.35 ? '#ffe28a' : '#ff8a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, Math.max(r0 - 4, r), 0, 7); ctx.stroke();
-        ctx.restore();
-        FS.draw(ctx, m.act === 'release' ? 'Фиолетовый выброс: коснись!' : { strike: 'Бей, когда кольцо сойдётся', block: 'Блокируй в момент удара', evade: 'Уклонись в нужный миг' }[m.act] || 'Коснись!', cx, cy - 62, { align: 'center', color: '#fff2cf', outline: PAL.ink });
+      if (phase === 'play' && said) {
+        FS.wrap(said.text, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 45 + i * 11, { color: '#f8eed0', shadow: PAL.ink }));
+        return;
+      }
+      if (tip) {
+        ['Три действия — до трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0' }));
       } else {
-        const btns = sealButtons(g), left = Math.max(0, 1 - m.t / m.limit);
-        U.panel(ctx, 6, cy - 64, W - 12, 72, 'inner');
-        FS.draw(ctx, G.TECHS[m.act.slice(5)].name, cx, cy - 58, { align: 'center', color: '#2e1e14' });
-        m.seq.forEach((s, i) => { const bx = Math.round(cx - m.seq.length * 12 + i * 24 + 3); ctx.fillStyle = G.SEAL_COL[s]; ctx.globalAlpha = i < m.i ? 0.35 : 1; ctx.fillRect(bx, cy - 44, 18, 14); ctx.globalAlpha = 1; FS.draw(ctx, G.SEALS[s].slice(0, 3), bx + 9, cy - 42, { align: 'center', color: '#2e1e14' }); if (i === m.i) { ctx.fillStyle = '#b8321c'; ctx.fillRect(bx, cy - 29, 18, 2); } });
-        U.gauge(ctx, 14, cy - 22, W - 28, 5, left, left > 0.3 ? '#4a8a3a' : '#c8281c');
-        btns.forEach((b, i) => {
-          const sh = m.shake ? Math.round(rnd(-1, 1) * m.shake * 2) : 0;
-          U.button(ctx, b.x + sh, b.y, b.w, b.h, '', i === (m.f || 0) ? 'sel' : 'normal');
-          ctx.fillStyle = G.SEAL_COL[b.seal]; ctx.fillRect(b.x + 3 + sh, b.y + 3, 6, b.h - 6);
-          FS.draw(ctx, G.SEALS[b.seal], b.x + b.w / 2 + 3 + sh, b.y + b.h / 2 - 4, { align: 'center', color: '#f8eed0', shadow: PAL.ink });
-        });
+        const c = selectedCard();
+        if (c) {
+          const def = G.CARDS[c.id], check = G.duel.canPlay(D, c);
+          FS.draw(ctx, `${def.name} · ${def.cost} чакры`, 8, py + 42, { color: check.ok ? '#ffe28a' : '#ff9a80', maxW: W - 16 });
+          const preview = G.duel.preview(D, c.id).join(' · ');
+          const description = preview + '. ' + def.text;
+          FS.wrap(description, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 53 + i * 9, { color: '#f8eed0' }));
+          if (!check.ok) FS.draw(ctx, check.why, W - 8, py + 42, { align: 'right', color: '#ff9a80', maxW: Math.floor(W * 0.48) });
+        }
       }
+      const bs = buttons();
+      for (const b of bs) {
+        if (b.zone === 'hand') {
+          const c = D.hand.find((x) => x.uid === b.uid), def = G.CARDS[c.id], check = G.duel.canPlay(D, c), sel = c.uid === selected;
+          U.button(ctx, b.x, b.y, b.w, b.h, '', sel ? 'sel' : check.ok ? 'normal' : 'dis');
+          ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
+          FS.draw(ctx, def.cost ? String(def.cost) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
+          const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
+          if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
+        } else {
+          const i = bs.indexOf(b);
+          U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');
+          FS.draw(ctx, b.label, b.x + b.w / 2, b.y + Math.round(b.h / 2) - 4, { align: 'center', color: b.off ? '#8a7a66' : '#f8eed0', shadow: PAL.ink, maxW: b.w - 4 });
+        }
+      }
+      if (pageCount() > 1) FS.draw(ctx, `${handPage + 1}/${pageCount()}`, W / 2, g.handY - 9, { align: 'center', color: '#ffe28a', shadow: PAL.ink });
     },
   };
-  // кнопки печатей в панели управления
-  function sealButtons(g) {
-    const m = mini, W = g.W, n = m.pal.length, cols = 3, bw = Math.floor((W - 16 - (cols - 1) * 6) / cols), out = [];
-    m.pal.forEach((s, i) => out.push({ seal: s, x: 8 + (i % cols) * (bw + 6), y: g.py + 50 + Math.floor(i / cols) * (g.d.th + 4), w: bw, h: g.d.th }));
-    return out;
-  }
   return S;
 });
 
-// Мастерство техники в меню и тренировках использует G.combat (data/duel_data.js)
-
+// Мастерство техники в меню и тренировках использует G.combat (data/duel_data.js).
 // Запуск боя из скрипта: call battle <enemy> <mode> <terrain> [после_победы] [после_поражения] [turns]
 G.script.actions.battle = (a) => {
   G.game.pending = { type: 'battle', enemy: a[0], mode: a[1] || 'ko', terrain: a[2] || 'field', win: a[3] && a[3] !== '-' ? a[3] : null, lose: a[4] && a[4] !== '-' ? a[4] : null, turns: a[5] ? Number(a[5]) : 0 };
@@ -20027,7 +20166,7 @@ G.scenes.register('pick', (o, cb) => {
 G.scenes.register('fishing', (opts, onCatch, onClose) => {
   const W = G.screen.W, F = G.font, P = G.PAL, AU = G.audio, In = G.input;
   const NAMES = { fish: 'Рыба', eel: 'Угорь', carp: 'Золотой карп', boot: 'Старый сапог', herb_blue: 'Голубой лотос' };
-  let phase = 'ready', t = 0, wait = 0, bite = null, fishId = null, str = 1;
+  let phase = 'ready', t = 0, wait = 0, fishId = null, str = 1;
   let tension = 0.3, prog = 0, slack = 0, pull = 0, pullT = 0, msg = '', result = null;
   const hookWin = () => 0.75 + (G.hero.has('eagle_eye') ? 0.25 : 0) + G.hero.stat('spd') * 0.02;
   const S = {
@@ -20123,7 +20262,7 @@ G.scenes.register('fishing', (opts, onCatch, onClose) => {
 // Сундук-хранилище дома: слева сумка, справа сундук. ←/→ — колонка, ↑/↓ — предмет, A — переложить 1, B — закрыть.
 G.scenes.register('storage', () => {
   let W = G.screen.W;
-  const F = G.font, P = G.PAL, AU = G.audio, In = G.input;
+  const F = G.font, AU = G.audio, In = G.input;
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
   const chest = () => G.outdoor.chest();
   const lists = () => [

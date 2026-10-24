@@ -86,7 +86,6 @@ G.icons = (() => {
   }
 
   // ---------- общие заготовки ----------
-  const W = '#f4f0e8';
   function bowl(B, broth, o = {}) {
     const big = o.big ? 2 : 0;
     fill(B, E(24, 26, 19 + big, 7), broth, { lit: 0.25, dark: 0.3 });                       // бульон

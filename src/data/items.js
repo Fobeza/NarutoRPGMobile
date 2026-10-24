@@ -1,13 +1,14 @@
 // Предметы и лавки (план §5.4).
-// cat: food — съедается сразу; tool/med — в подсумок (pouch); gift, book, misc — в сумку; service — услуга на месте.
-// effect: { rest (усталость −n), hp, minutes } — применяется при покупке еды и услуг.
+// cat: food — еда в сумку; instant — блюдо съедается сразу после покупки; tool/med — в подсумок (pouch).
+// gift, book, misc — в сумку; service — услуга на месте.
+// effect: { rest (усталость −n), hp, minutes } — применяется при использовании, а у instant/service — при покупке.
 G.ITEMS = {
   // ── Ичираку ──
-  ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
-  ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
-  ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
+  ramen_miso:   { name: 'Мисо-рамен',        price: 40,  cat: 'food', instant: true, ramen: true, effect: { rest: 21, minutes: 20 }, desc: 'Фирменный рамен Теучи. Сытно и тепло.' },
+  ramen_pork:   { name: 'Свиной рамен',      price: 50,  cat: 'food', instant: true, ramen: true, effect: { rest: 27, minutes: 20 }, desc: 'Густой бульон и много чашу.' },
+  ramen_big:    { name: 'Большая порция',    price: 80,  cat: 'food', instant: true, ramen: true, effect: { rest: 52, minutes: 30 }, desc: 'Огромная миска. Наруто съедает три.' },
   // ── Якинику Q ──
-  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', effect: { rest: 48, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
+  yakiniku_one: { name: 'Сет на одного',     price: 150, cat: 'food', instant: true, effect: { rest: 48, minutes: 45 }, desc: 'Жаришь мясо сам. Дорого, но вкусно.' },
   // ── Данго и чайная ──
   dango:        { name: 'Данго',             price: 20,  cat: 'food', effect: { rest: 6, minutes: 10 }, desc: 'Три шарика на палочке. Любимое лакомство Анко.' },
   sweet_tea:    { name: 'Сладкий чай',       price: 15,  cat: 'food', effect: { rest: 5, minutes: 10 }, desc: 'Тёплый и сладкий.' },

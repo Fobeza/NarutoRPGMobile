@@ -1,7 +1,7 @@
 // Сундук-хранилище дома: слева сумка, справа сундук. ←/→ — колонка, ↑/↓ — предмет, A — переложить 1, B — закрыть.
 G.scenes.register('storage', () => {
   let W = G.screen.W;
-  const F = G.font, P = G.PAL, AU = G.audio, In = G.input;
+  const F = G.font, AU = G.audio, In = G.input;
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
   const chest = () => G.outdoor.chest();
   const lists = () => [

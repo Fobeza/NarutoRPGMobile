@@ -1,157 +1,144 @@
-// Экран боя «Дуэль» (правила — systems/duel.js, docs/COMBAT.md).
-// opts: { enemy, mode: ko|spar|survive, terrain, turns, ... }. onEnd(result) — result: { win, mode, enemy, turns, surrender }.
-// Фазы: intro → choose (меню) → mini (кольцо тайминга или печати) → play (анимация исходов) → choose … → end.
+// Карточный бой «Дуэль». Правила — systems/duel.js, описание — docs/COMBAT.md.
+// Игрок разыгрывает до трёх карт, видит намерение врага и сам решает, когда закончить ход.
 G.scenes.register('battle', (opts, onEnd) => {
   const F = G.font, AU = G.audio, U = G.ui, C = U.C, FS = F.small, PAL = G.PAL, I = G.input;
   const V = G.state.vars, mode = opts.mode || 'ko';
   const ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
-  const techs = Object.keys(G.TECHS).filter((t) => G.combat.knows(t));
+  const techs = Object.keys(G.TECHS).filter((id) => G.combat.knows(id));
   const stock = () => ({ bandage: G.game.count('bandage'), chakra_pill: G.game.count('chakra_pill'), smoke_bomb: G.game.count('smoke_bomb'), flash_bomb: G.game.count('flash_bomb') });
   const D = G.duel.create({ enemy: opts.enemy, mode, rounds: opts.turns, techs, hp: V.hp, chakra: V.chakra, fatigue: V.fatigue, inv: stock(), day: V.day });
-  const ITEMS = [['bandage', 'Бинт', '+25% здоровья'], ['chakra_pill', 'Пилюля чакры', '+50% чакры'], ['smoke_bomb', 'Дымовая бомба', 'враг промахнётся'], ['flash_bomb', 'Вспышка', 'враг ослеплён']];
-  const ACT_NAME = { strike: 'Удар', block: 'Блок', evade: 'Уклон', tech: 'Приём', idle: 'Ждёт' };
-  const TERRAIN = opts.terrain || (mode === 'spar' ? 'field' : 'field');
-  let phase = 'intro', t = 0, menu = 'main', focus = 0, mini = null, ev = [], evI = 0, evT = 0, result = null, endT = 0, said = null;
+  const TERRAIN = opts.terrain || 'field';
+  let phase = 'intro', t = 0, focus = 0, handPage = 0, selected = D.hand[0] ? D.hand[0].uid : 0;
+  let ev = [], evI = 0, evT = 0, afterEvents = 'card', lastIntent = D.intent, result = null, endT = 0, said = null;
   const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
-  let tip = !G.state.flags.duel_tip;   // обучающая подсказка первого боя: не блокирует ввод, гаснет после первого действия
-  let stats = { hits: 0, evades: 0, techs: 0 };
+  let tip = !G.state.flags.card_duel_tip;
+  const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const slow = () => (G.storage.settings.reactSlow ? 1.45 : 1);
   const hit = (b, p) => p && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
   const sfx = {
     hit() { AU.noise(0.08, 0.25); AU.tone(140, 0.08, 'square', 0.12, 60); },
     big() { AU.noise(0.2, 0.3); AU.tone(110, 0.2, 'sawtooth', 0.15, 40); },
     block() { AU.tone(1400, 0.06, 'square', 0.1); AU.tone(1900, 0.1, 'triangle', 0.08, null, 0.04); },
     whoosh() { AU.noise(0.12, 0.08); AU.tone(900, 0.1, 'triangle', 0.05, 300); },
-    seal() { AU.tone(520 + Math.random() * 200, 0.04, 'square', 0.08); },
     purple() { AU.tone(300, 0.3, 'sawtooth', 0.12, 900); AU.noise(0.2, 0.15); },
     win() { [523, 659, 784, 1046].forEach((f, i) => AU.tone(f, 0.15, 'square', 0.1, null, i * 0.12)); },
     lose() { [392, 330, 262].forEach((f, i) => AU.tone(f, 0.25, 'triangle', 0.12, null, i * 0.2)); },
   };
 
-  // ── геометрия ──
-  // Кнопки не меньше 44 CSS px: минимальная высота в логических px зависит от масштаба экрана
+  // Геометрия рассчитана на внутренний экран от 192×256: карты и кнопки остаются крупными при CSS-масштабе телефона.
   const uiScale = () => { try { const r = G.screen.canvas.getBoundingClientRect(); return r.width > 0 ? r.width / G.screen.W : 1.34; } catch (_) { return 1.34; } };
-  const dims = () => { const mh = Math.ceil(44 / uiScale()); return { mh, bh: Math.max(34, mh), sh: Math.max(26, mh), th: Math.max(30, mh) }; };
+  const dims = () => ({ bh: Math.max(28, Math.ceil(44 / uiScale())) });
   const geo = () => {
-    const W = G.screen.W, H = G.screen.H, d = dims();
-    const main = 46 + 2 * (d.bh + 4) + d.sh + 10, list = 40 + 4 * (d.th + 4) + 6, PH = Math.min(Math.round(H * 0.5), Math.max(main, list));
-    const AH = H - PH;
-    return { W, H, AH, PH, d, yb: AH - 38, hx: Math.round(W * 0.27), ex: Math.round(W * 0.73), py: H - PH };
+    const W = G.screen.W, H = G.screen.H, d = dims(), handH = Math.max(44, d.bh);
+    const PH = Math.min(H - 82, 90 + handH + d.bh), AH = H - PH;
+    return { W, H, AH, PH, d, yb: AH - 8, hx: Math.round(W * 0.27), ex: Math.round(W * 0.73), py: AH, handY: AH + 82, handH };
   };
+  const cardColor = (kind) => ({ tai: '#d87838', def: '#4a90b8', skill: '#c09840', nin: '#8068c8', gen: '#b068b0', item: '#5a9a58' }[kind] || '#888');
+  const selectedCard = () => D.hand.find((c) => c.uid === selected) || null;
+  const pageCount = () => Math.max(1, Math.ceil(D.hand.length / 5));
+  const selectCard = (c) => { if (!c) return; selected = c.uid; const i = D.hand.indexOf(c); if (i >= 0) handPage = Math.floor(i / 5); };
 
-  // ── кнопки текущего меню ──
+  // Кнопки руки и нижней панели. Карта доступна для выбора даже без чакры — так видно причину блокировки.
   function buttons() {
-    const g = geo(), W = g.W, out = [], pad = 8, bw = Math.floor((W - pad * 3) / 2), y0 = g.py + 46, d = g.d;
-    if (menu === 'main') {
-      const opt = G.duel.options(D), tech = opt.find((o) => o.id === 'tech'), rel = opt.find((o) => o.id === 'release');
-      const mk = (i, id, label, sub, off) => ({ id, label, sub, off, x: pad + (i % 2) * (bw + pad), y: y0 + Math.floor(i / 2) * (d.bh + 4), w: bw, h: d.bh });
-      out.push(mk(0, 'strike', 'Удар', 'тайминг', null), mk(1, 'block', 'Блок', 'тайминг', null), mk(2, 'evade', 'Уклон', 'тайминг', null),
-        mk(3, 'tech', 'Приём', techs.length ? 'печати' : 'нет техник', techs.length ? null : 'Пока нет изученных техник'));
-      const sw = Math.floor((W - pad * 4) / 3), sy = y0 + 2 * (d.bh + 4);
-      out.push({ id: 'release', label: 'Выброс', sub: rel.off ? '' : 'накал!', off: rel.off, x: pad, y: sy, w: sw, h: d.sh },
-        { id: 'item', label: 'Предмет', off: null, x: pad * 2 + sw, y: sy, w: sw, h: d.sh },
-        { id: 'quit', label: 'Сдаться', off: null, x: pad * 3 + sw * 2, y: sy, w: sw, h: d.sh });
-    } else if (menu === 'tech') {
-      techs.slice(0, 6).forEach((id, i) => {
-        const T = G.TECHS[id], off = D.P.ch < T.ch ? 'Мало чакры' : null;
-        out.push({ id: 'tech:' + id, label: T.name, sub: T.ch + ' ч', off, x: pad + (i % 2) * (bw + pad), y: g.py + 40 + Math.floor(i / 2) * (d.th + 4), w: bw, h: d.th, tech: id });
-      });
-      out.push({ id: 'back', label: 'Назад', x: pad, y: g.py + 40 + Math.ceil(Math.min(6, techs.length) / 2) * (d.th + 4), w: W - pad * 2, h: d.th });
-    } else if (menu === 'item') {
-      const st = D.inv;
-      ITEMS.forEach(([id, name, sub], i) => out.push({ id: 'item:' + id, label: name, sub: 'x' + (st[id] || 0), off: (st[id] || 0) < 1 ? 'Нет в сумке' : null, x: pad + (i % 2) * (bw + pad), y: g.py + 40 + Math.floor(i / 2) * (d.th + 4), w: bw, h: d.th, desc: sub }));
-      out.push({ id: 'back', label: 'Назад', x: pad, y: g.py + 40 + Math.ceil(ITEMS.length / 2) * (d.th + 4), w: W - pad * 2, h: d.th });
-    }
+    const g = geo(), out = [], pad = 4, gap = 2;
+    handPage = clamp(handPage, 0, pageCount() - 1);
+    const visible = D.hand.slice(handPage * 5, handPage * 5 + 5);
+    const cw = Math.floor((g.W - pad * 2 - gap * 4) / 5);
+    visible.forEach((c, i) => out.push({ id: 'card:' + c.uid, ref: 'uid:' + c.uid, card: c.id, zone: 'hand', uid: c.uid,
+      x: pad + i * (cw + gap), y: g.handY, w: cw, h: g.handH }));
+    const actions = [];
+    if (pageCount() > 1) actions.push({ id: 'prev', label: '‹', zone: 'action' });
+    const check = selectedCard() ? G.duel.canPlay(D, selectedCard()) : { ok: false, why: 'Нет карты' };
+    actions.push({ id: 'play', label: 'Играть', zone: 'action', off: check.ok ? null : check.why });
+    if (pageCount() > 1) actions.push({ id: 'next', label: '›', zone: 'action' });
+    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: 'Сдаться', zone: 'action' });
+    const aw = Math.floor((g.W - pad * 2 - gap * (actions.length - 1)) / actions.length);
+    actions.forEach((b, i) => { b.x = pad + i * (aw + gap); b.y = g.py + g.PH - g.d.bh - 3; b.w = aw; b.h = g.d.bh; out.push(b); });
     return out;
   }
 
-  // ── выбор действия ──
-  function pick(b) {
-    if (b.off) { AU.sfx.error(); say(b.off); return; }
+  function say(text) { said = { text, t: 2.4 }; }
+  function playCard(ref) {
+    if (phase !== 'choose') return false;
+    const check = G.duel.canPlay(D, ref);
+    if (!check.ok) { AU.sfx.error(); say(check.why); return false; }
+    const c = check.card, def = check.def;
     AU.sfx.select();
-    if (b.id === 'tech') { menu = 'tech'; focus = 0; return; }
-    if (b.id === 'item') { menu = 'item'; focus = 0; return; }
-    if (b.id === 'back') { menu = 'main'; focus = 0; return; }
-    if (b.id === 'quit') { finish(false, true); return; }
-    if (b.id.startsWith('item:')) { begin(b.id, null); return; }
-    begin(b.id, null);
+    if (tip) { tip = false; G.state.flags.card_duel_tip = 1; }
+    if (def.tech) stats.techs++;
+    if (c.id === 'evade' || c.id === 'shunshin' || c.id === 'kawarimi') stats.evades++;
+    if (def.release) { fx.aura = 1.2; sfx.purple(); }
+    runEvents(G.duel.play(D, c), 'card');
+    return true;
   }
-  // запускает мини-игру для действия или сразу раунд (предмет)
-  function begin(act, q) {
-    menu = 'main';
-    if (tip) { tip = false; G.state.flags.duel_tip = 1; }
-    if (act.startsWith('item:') || q != null) { runRound(act, q != null ? q : 0.5); return; }
-    if (act.startsWith('tech:')) {
-      const T = G.TECHS[act.slice(5)], seq = T.seals.slice(), pal = seq.slice();
-      while (pal.length < Math.min(6, seq.length + 3)) { const s = Math.floor(Math.random() * 12); if (!pal.includes(s)) pal.push(s); }
-      pal.sort(() => Math.random() - 0.5);
-      const limit = (1.6 + 0.9 * seq.length + (D.has('fast_hands') ? 1.5 : 0) + D.P.st('ctrl') * 0.1) * slow();
-      mini = { kind: 'seals', act, seq, pal, i: 0, errs: 0, t: 0, limit, shake: 0 };
-    } else {
-      const w = G.duel.window(D) * (act === 'release' ? 0.7 : 1), T = 1.0 * slow();
-      mini = { kind: 'ring', act, t: 0, T, tp: 0.8 * T, half: (0.1 + 0.5 * w) * T };
+  function endPlayerTurn() {
+    if (phase !== 'choose') return false;
+    lastIntent = D.intent;
+    AU.sfx.confirm();
+    runEvents(G.duel.endTurn(D), 'enemy');
+    return true;
+  }
+  function pick(b) {
+    if (phase !== 'choose' || !b) return;
+    if (b.zone === 'hand') {
+      const c = D.hand.find((x) => x.uid === b.uid);
+      if (selected === b.uid) playCard(b.ref);
+      else { selectCard(c); AU.sfx.blip(); }
+      return;
     }
-    phase = 'mini';
+    if (b.id === 'play') { const c = selectedCard(); if (c) playCard(c); else say('Выбери карту'); return; }
+    if (b.id === 'end') { endPlayerTurn(); return; }
+    if (b.id === 'quit') { finish(false, true); return; }
+    if (b.id === 'prev' || b.id === 'next') {
+      handPage = (handPage + (b.id === 'next' ? 1 : -1) + pageCount()) % pageCount();
+      const c = D.hand[handPage * 5]; if (c) selected = c.uid;
+      focus = 0; AU.sfx.blip();
+    }
   }
-  function say(text) { said = { text, t: 2.2 }; }
 
-  function runRound(act, q) {
-    mini = null;
-    ev = G.duel.play(D, act, q); evI = 0; evT = 0; phase = 'play';
-    if (act.startsWith('item:')) G.audio.sfx.confirm();
-    if (act.startsWith('tech:')) stats.techs++;
-    if (act === 'release') { stats.techs++; fx.aura = 1.2; sfx.purple(); }
-    if (act === 'evade') stats.evades++;
+  function runEvents(events, after) {
+    ev = events || []; evI = 0; evT = 0; afterEvents = after; phase = 'play';
     nextEvent();
   }
   function nextEvent() {
-    if (evI >= ev.length) { endRound(); return; }
-    const e = ev[evI++]; evT = 0.75;
-    const g = geo(), tx = e.to === 'p' ? g.hx : g.ex, ty = g.yb - 28;
+    if (evI >= ev.length) { completeEvents(); return; }
+    const e = ev[evI++]; evT = 0.62;
+    const g = geo(), tx = e.to === 'p' ? g.hx : g.ex, ty = g.yb - 24;
     if (e.who === 'p') fx.lungeP = 1; else fx.lungeE = 1;
     if (e.dmg > 0) {
       fx.pops.push({ x: tx, y: ty, t: 1.1, txt: '-' + Math.round(e.dmg), col: e.to === 'p' ? '#ff6a4a' : '#ffe28a' });
       if (e.to === 'p') { fx.hurtP = 0.4; fx.shake = 5; } else { fx.hurtE = 0.4; fx.shake = 3; stats.hits++; }
       (e.dmg > 10 ? sfx.big : sfx.hit)();
-    } else if (e.type === 'block' || e.type === 'parry') sfx.block();
+    } else if (e.type === 'block' || e.type === 'parry' || e.type === 'blocked') sfx.block();
     else if (e.type === 'miss') sfx.whoosh();
     if (e.type === 'boost' || e.type === 'backfire') { fx.flash = 0.4; fx.flashCol = '#c080ff'; sfx.purple(); }
     if (e.type === 'tech' && e.who === 'p') { fx.flash = 0.18; fx.flashCol = '#a8d8ff'; }
-    if (e.type === 'parry') { fx.flash = 0.2; fx.flashCol = '#ffffff'; }
-    if (e.type === 'heal') fx.pops.push({ x: g.hx, y: g.yb - 36, t: 1.1, txt: '+', col: '#8aff9a' });
+    if (e.type === 'counter') { fx.flash = 0.2; fx.flashCol = '#ffffff'; }
+    if (e.type === 'heal') fx.pops.push({ x: g.hx, y: g.yb - 32, t: 1.1, txt: '+' + Math.round(e.heal || 0), col: '#8aff9a' });
     if (e.fx) spawnFx(e.fx, e.who, g);
     else if (e.dmg > 0) fx.fxs.push({ kind: 'slash', x0: tx, y0: ty, x1: tx, y1: ty, t: 0.35, T: 0.35, who: e.who });
     said = { text: e.text, t: 2 };
   }
-  // визуальные эффекты техник: снаряды, вспышки, дым (рисует drawFx)
-  function spawnFx(id, who, g) {
-    const hx = g.hx, ex = g.ex, y = g.yb - 28, from = who === 'p' ? hx : ex, to = who === 'p' ? ex : hx;
-    const T = { katon: 0.7, suiton: 0.6, raiton: 0.5, fuuton: 0.6, chakra_shot: 0.5, release: 0.9, kawarimi: 0.6, henge: 0.7, bunshin: 0.7, shunshin: 0.45, fear: 0.7, sexy: 0.8, 'e:dmg': 0.5, 'e:drain': 0.7, 'e:bind': 0.7, 'e:fear': 0.7 }[id] || 0.5;
-    fx.fxs.push({ kind: id, x0: from, y0: y, x1: to, y1: y, t: T, T, who });
-    if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
-  }
-  function endRound() {
+  function completeEvents() {
     if (D.over) { finish(D.over.win, false); return; }
-    phase = 'choose'; menu = 'main'; focus = 0;
+    phase = 'choose'; focus = 0; handPage = 0;
+    if (!selectedCard()) selected = D.hand[0] ? D.hand[0].uid : 0;
   }
 
-  // ── конец боя ──
   function finish(win, surrender) {
     if (phase === 'end') return;
     const real = mode === 'ko' || mode === 'survive';
-    if (surrender) { D.over = { win: false }; D.P.hp = real ? D.P.hp : D.P.hp; }
+    if (surrender) D.over = { win: false };
     result = { win, mode, enemy: opts.enemy, turns: D.round, surrender: !!surrender, hp: D.P.hp / D.P.hpMax };
-    // итоги в состоянии игры
     if (real) V.hp = clamp(Math.round(D.P.hp / D.P.hpMax * 100), win ? 1 : 5, 100);
     V.chakra = clamp(Math.round(D.P.ch / D.P.chMax * 100), 0, 100);
     V.fatigue = clamp(Math.round(D.P.fat), 0, 100);
     if (!D.trainingFight) for (const id of D.usedItems || []) G.game.take(id);
     V.battles = (V.battles || 0) + 1; if (win) V.wins = (V.wins || 0) + 1;
     G.train.addXp('tai', 0.6 * stats.hits + 1); G.train.addXp('spd', 0.7 * stats.evades);
-    if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); G.state.vars.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
-    for (const [act, n] of Object.entries(D.stats.used)) if (act.startsWith('tech:')) V['use_' + act.slice(5)] = (V['use_' + act.slice(5)] || 0) + n;
+    if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); V.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
+    for (const [id, n] of Object.entries(D.stats.used)) if (G.TECHS[id]) V['use_' + id] = (V['use_' + id] || 0) + n;
     G.game.advance(5 + 3 * D.round);
     const line = ed.lines && (win ? ed.lines.lose : ed.lines.win);
     say(line ? G.util.fmt(line, { name: G.state.hero.name }) : win ? 'Победа!' : 'Поражение...');
@@ -159,112 +146,100 @@ G.scenes.register('battle', (opts, onEnd) => {
     phase = 'end'; endT = 0;
   }
 
-  // ── сцена ──
+  function spawnFx(id, who, g) {
+    const hx = g.hx, ex = g.ex, y = g.yb - 24, from = who === 'p' ? hx : ex, to = who === 'p' ? ex : hx;
+    const T = { katon: 0.7, suiton: 0.6, raiton: 0.5, fuuton: 0.6, chakra_shot: 0.5, release: 0.9, kawarimi: 0.6, henge: 0.7, bunshin: 0.7, shunshin: 0.45, fear: 0.7, sexy: 0.8, 'e:dmg': 0.5, 'e:drain': 0.7, 'e:bind': 0.7, 'e:fear': 0.7 }[id] || 0.5;
+    fx.fxs.push({ kind: id, x0: from, y0: y, x1: to, y1: y, t: T, T, who });
+    if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
+  }
+
+  function intentLines(intent) {
+    if (!intent) return ['Бой завершён', ''];
+    if (afterEvents === 'enemy' && phase === 'play') return ['Ответ противника', intent.name];
+    const attack = ['strike', 'multi', 'tech', 'drain', 'bind'].includes(intent.kind);
+    if (D.E.status.stun > 0) return [intent.name, 'Оглушён: действие будет пропущено'];
+    if (attack) {
+      let extra = intent.kind === 'drain' ? ' · кража чакры' : intent.kind === 'bind' ? ' · теневая связка' : '';
+      return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}`];
+    }
+    if (intent.kind === 'charge') return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+    if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
+    if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
+    if (intent.kind === 'fear') return [intent.name, 'Иллюзия: −1 карта и −1 действие на следующий ход'];
+    return [intent.name, intent.kind === 'idle' ? 'Можно спокойно развить атаку' : 'Враг не атакует в этом ходу'];
+  }
+
   const S = {
-    name: 'battle',
-    D,   // для тестов и отладки
+    name: 'battle', D,
     touch() { return {}; },
     enter() {
       if (G.state.started && !G.state.battleCheckpoint) G.state.battleCheckpoint = JSON.stringify(Object.assign({}, G.state, { battleCheckpoint: null }));
-      say(`${ed.name}! Бой начинается!`);
-      if (ed.lines && ed.lines.start) say(G.util.fmt(ed.lines.start, { name: G.state.hero.name }));
+      say(ed.lines && ed.lines.start ? G.util.fmt(ed.lines.start, { name: G.state.hero.name }) : `${ed.name}! Бой начинается!`);
     },
-    // для автотестов: сыграть раунд сразу с качеством q
-    play(act, q = 0.5) { if (phase !== 'choose') return false; runRound(act, q); return true; },
-    // для автотестов: выбрать пункт меню по id (как нажатием), с открытием нужного подменю
-    choose(id) { if (phase !== 'choose') return false; menu = id.startsWith('tech:') ? 'tech' : id.startsWith('item:') ? 'item' : 'main'; const b = buttons().find((x) => x.id === id); if (!b) return false; pick(b); return true; },
-    // для автотестов: показать меню (main|tech|item) и вернуть его кнопки
-    openMenu(m) { if (phase !== 'choose') return null; menu = m; focus = 0; return buttons(); },
-    get mini() { return mini; },
-    sealPalette() { return mini && mini.kind === 'seals' ? mini.pal.slice() : null; },
+    // Программный API используется проверками: карта по id/uid или команда end.
+    play(ref) { return ref === 'end' ? endPlayerTurn() : playCard(ref); },
+    endTurn: endPlayerTurn,
+    choose(id) {
+      if (phase !== 'choose') return false;
+      if (id === 'end' || id === 'quit') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
+      const c = D.hand.find((x) => x.id === id || x.id === String(id).replace(/^(tech|item):/, '') || 'uid:' + x.uid === id);
+      return c ? playCard(c) : false;
+    },
+    openMenu() { return phase === 'choose' ? buttons() : null; },
     debugWin() { D.E.hp = 0; D.over = { win: true }; finish(true, false); },
     debugLose() { D.P.hp = 0; D.over = { win: false }; finish(false, false); },
     get phase() { return phase; },
     get state() { return phase === 'choose' ? 'menu' : phase === 'end' ? 'end' : phase; },
+    get mini() { return null; },
     buttons,
     update(dt) {
-      t += dt; endT += dt;
+      t += dt; if (phase === 'end') endT += dt;
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
       for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
-      if (phase === 'intro') { if (t > 1.4 || I.tapNow || I.pressed('a')) { phase = 'choose'; } return; }
-      if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.45)) nextEvent(); return; }
+      if (phase === 'intro') { if (t > 1.1 || I.tapNow || I.pressed('a')) phase = 'choose'; return; }
+      if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.42)) nextEvent(); return; }
       if (phase === 'end') {
-        if (endT > 1.0 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
+        if (endT > 0.8 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
           AU.sfx.confirm(); G.scenes.pop(); G.state.battleCheckpoint = null;
           onEnd && onEnd(result);
           if (G.state.started) G.storage.save(G.state);
         }
         return;
       }
-      if (phase === 'mini') return this.updateMini(dt);
-      // choose: клавиши и касания
-      const bs = buttons();
+      const bs = buttons(); if (!bs.length) return;
+      focus = clamp(focus, 0, bs.length - 1);
       if (I.tapNow) { const b = bs.find((x) => hit(x, I.tapNow)); if (b) { focus = bs.indexOf(b); pick(b); } return; }
-      if (I.pressed('b') && menu !== 'main') { menu = 'main'; focus = 0; AU.sfx.cancel(); return; }
-      const move = (d) => { focus = (focus + d + bs.length) % bs.length; AU.sfx.blip(); };
+      const move = (d) => { focus = (focus + d + bs.length) % bs.length; if (bs[focus].zone === 'hand') selectCard(D.hand.find((c) => c.uid === bs[focus].uid)); AU.sfx.blip(); };
       if (I.repeat('left', dt)) move(-1); if (I.repeat('right', dt)) move(1);
-      if (I.repeat('up', dt)) { menu === 'main' ? (focus = focus >= 2 ? focus - 2 : focus) : move(-1); } if (I.repeat('down', dt)) { menu === 'main' ? (focus = focus < 4 ? Math.min(bs.length - 1, focus + 2) : focus) : move(1); }
+      if (I.repeat('up', dt) || I.repeat('down', dt)) {
+        const hand = bs.map((b, i) => ({ b, i })).filter((x) => x.b.zone === 'hand');
+        const actions = bs.map((b, i) => ({ b, i })).filter((x) => x.b.zone === 'action');
+        if (bs[focus].zone === 'hand' && actions.length) focus = actions[0].i;
+        else if (hand.length) { const i = hand.findIndex((x) => x.b.uid === selected); focus = hand[Math.max(0, i)].i; }
+        AU.sfx.blip();
+      }
       if (I.pressed('a') && bs[focus]) pick(bs[focus]);
     },
-    updateMini(dt) {
-      const m = mini, tap = I.tapNow, a = I.pressed('a');
-      m.t += dt; m.shake = Math.max(0, (m.shake || 0) - dt * 10);
-      if (m.kind === 'ring') {
-        if (a || tap) { const q = clamp(1 - Math.abs(m.t - m.tp) / m.half, 0, 1); if (q > 0.8) { sfx.seal(); } runRound(m.act, m.t < m.T * 0.1 ? 0.3 : q); return; }
-        if (m.t > m.T * 1.3) runRound(m.act, 0.15);
-        return;
-      }
-      // печати
-      const g = geo(), btns = sealButtons(g);
-      let choice = -1;
-      if (tap) { const b = btns.find((x) => hit(x, tap)); if (b) choice = b.seal; }
-      else { const n = btns.length; if (I.repeat('left', dt)) m.f = ((m.f || 0) + n - 1) % n; if (I.repeat('right', dt)) m.f = ((m.f || 0) + 1) % n; if (a) choice = btns[m.f || 0].seal; }
-      if (choice >= 0) {
-        if (choice === m.seq[m.i]) { m.i++; sfx.seal(); } else { m.errs++; m.shake = 1; AU.sfx.error(); }
-        if (m.i >= m.seq.length) { const q = clamp(0.55 + 0.45 * (1 - m.t / m.limit) - 0.12 * m.errs, 0.2, 1); runRound(m.act, q); return; }
-      }
-      if (m.t > m.limit) runRound(m.act, 0.1);
-    },
 
-    // ── отрисовка ──
     draw(ctx) {
-      const g = geo(), W = g.W, H = g.H, AH = g.AH;
+      const g = geo(), W = g.W, AH = g.AH;
       const sx = fx.shake > 0 ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
       ctx.save(); ctx.translate(sx, 0);
-      // арена
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
-      this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g);
-      this.drawFx(ctx);
-      if (phase === 'choose' && D.hint) this.drawHint(ctx, g);
-      if (tip && phase === 'choose') {
-        U.panel(ctx, 8, 56, W - 16, 74, 'inner');
-        ['Блок бьёт Удар, Удар бьёт Уклон,', 'Уклон бьёт Блок. Приём пробивает Блок.', 'Следи за пузырём «?» над врагом:', 'это намёк, но он не всегда верен.'].forEach((ln, i) => FS.draw(ctx, ln, W / 2, 62 + i * 15, { align: 'center', color: '#2e1e14' }));
-      }
-      // всплывающие числа
+      this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g); this.drawFx(ctx);
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
       if (fx.flash > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
-      this.drawHud(ctx, g);
-      this.drawPanel(ctx, g);
-      if (phase === 'mini') this.drawMini(ctx, g);
+      this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 26, W, 52);
-        F.draw(ctx, ed.name, W / 2, AH / 2 - 16, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
+        F.draw(ctx, ed.name, W / 2, AH / 2 - 15, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
         FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
       }
-    },
-    // пузырь над врагом: что он, похоже, сделает (точность — в строке панели)
-    drawHint(ctx, g) {
-      const x = g.ex, y = g.yb - 84, col = { strike: '#ff8a6a', block: '#8ab8ff', evade: '#8aff9a', tech: '#d8a0ff', idle: '#d8c8a0' }[D.hint] || '#fff';
-      const bob = Math.round(Math.sin(t * 4) * 1.5);
-      ctx.fillStyle = PAL.ink; ctx.fillRect(x - 21, y - 8 + bob, 42, 15); ctx.fillRect(x - 3, y + 7 + bob, 6, 4);
-      ctx.fillStyle = '#fff6dc'; ctx.fillRect(x - 20, y - 7 + bob, 40, 13); ctx.fillRect(x - 2, y + 6 + bob, 4, 3);
-      FS.draw(ctx, '? ' + (ACT_NAME[D.hint] || '?'), x, y - 4 + bob, { align: 'center', color: '#2e1e14' });
-      ctx.fillStyle = col; ctx.fillRect(x - 20, y + 5 + bob, 40, 1);
     },
     drawFx(ctx) {
       for (const f of fx.fxs) {
@@ -292,11 +267,9 @@ G.scenes.register('battle', (opts, onEnd) => {
     },
     drawFighter(ctx, side, g) {
       const isP = side === 'p', x0 = isP ? g.hx : g.ex, y = g.yb;
-      const lunge = (isP ? fx.lungeP : fx.lungeE) * (isP ? 16 : -16), hurt = isP ? fx.hurtP : fx.hurtE;
+      const lunge = (isP ? fx.lungeP : fx.lungeE) * (isP ? 12 : -12), hurt = isP ? fx.hurtP : fx.hurtE;
       const x = x0 + Math.round(lunge);
-      ctx.save();
-      // тень
-      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 20, 5, 0, 0, 7); ctx.fill();
+      ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.beginPath(); ctx.ellipse(x, y + 1, 20, 5, 0, 0, 7); ctx.fill();
       if (hurt > 0 && Math.floor(hurt * 24) % 2 === 0) ctx.globalAlpha = 0.55;
       const id = isP ? 'hero' : ed.spr;
       if (id === 'dummy') {
@@ -308,103 +281,92 @@ G.scenes.register('battle', (opts, onEnd) => {
         ctx.fillStyle = PAL.ink; ctx.fillRect(x - 14, y - 18, 2, 2);
       } else {
         const sheet = G.chars.sheet(id), FW = G.chars.FW, FH = G.chars.FH, row = isP ? 2 : 1, fr = (isP ? fx.lungeP : fx.lungeE) > 0.3 ? 1 : 0;
-        ctx.drawImage(sheet, fr * FW, row * FH, FW, FH, Math.round(x - FW * 1.5), Math.round(y - FH * 3 + 3), FW * 3, FH * 3);   // персонаж ×3
+        ctx.drawImage(sheet, fr * FW, row * FH, FW, FH, Math.round(x - FW * 1.5), Math.round(y - FH * 3 + 3), FW * 3, FH * 3);
       }
       ctx.restore();
-      // фиолетовая аура героя: накал и выбросы
       if (isP) {
         const k = Math.max(D.P.heat / 100, fx.aura);
         if (k > 0.05) {
           ctx.save();
           for (let i = 0; i < 5 + Math.round(k * 10); i++) {
             const a = t * 2 + i * 1.9, r = 12 + (i % 3) * 3 + Math.sin(t * 3 + i) * 2, up = (t * 14 + i * 7) % 28;
-            ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 4 + i)) * Math.min(1, k + 0.3);
-            ctx.fillStyle = i % 3 === 0 ? '#e0b8ff' : G.purple.COLOR;
+            ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 4 + i)) * Math.min(1, k + 0.3); ctx.fillStyle = i % 3 === 0 ? '#e0b8ff' : G.purple.COLOR;
             ctx.fillRect(Math.round(x + Math.cos(a) * r), Math.round(y - 4 - up + Math.sin(a) * 4), 2, 2);
           }
           ctx.restore();
         }
       }
-      // ярлык статусов
-      const f = isP ? D.P : D.E, tags = [];
-      if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.status.smoke) tags.push('дым'); }
-      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); }
-      tags.forEach((s, i) => FS.draw(ctx, s, x, y - 78 - i * 9, { align: 'center', color: '#fff2cf', outline: PAL.ink }));
+      const tags = [];
+      if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.block) tags.push('блок ' + Math.round(D.P.block)); }
+      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
+      tags.slice(0, 2).forEach((s, i) => FS.draw(ctx, s, x, Math.max(53, y - 62 + i * 9), { align: 'center', color: '#fff2cf', outline: PAL.ink }));
     },
     drawHud(ctx, g) {
-      const W = g.W, bw = Math.floor(W / 2) - 14;
+      const W = g.W, bw = Math.floor(W / 2) - 12;
       const bar = (x, y, w, v, max, col) => U.gauge(ctx, x, y, w, 5, clamp(v / Math.max(1, max), 0, 1), col);
-      // герой слева
-      FS.draw(ctx, G.state.hero.name || 'Герой', 8, 6, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
-      bar(8, 18, bw, D.P.hp, D.P.hpMax, C.hp); bar(8, 26, bw, D.P.ch, D.P.chMax, C.chakra); bar(8, 34, bw, D.P.fat, 100, C.fatigue); bar(8, 42, bw, D.P.heat, 100, '#e0a8ff');
-      FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 10 + bw, 15, { align: 'right', color: '#f8eed0', outline: PAL.ink });
-      FS.draw(ctx, 'усталость · накал', 8, 49, { color: '#d8c8a0', outline: PAL.ink });
-      // противник справа
-      FS.draw(ctx, ed.name, W - 8, 6, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
-      bar(W - 8 - bw, 18, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 8 - bw, 26, bw, D.E.ch, D.E.chMax, C.chakra);
-      if (mode === 'survive') FS.draw(ctx, `Раунд ${D.round}/${D.rounds}`, W - 8, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 8, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      FS.draw(ctx, G.state.hero.name || 'Герой', 6, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      bar(6, 16, bw, D.P.hp, D.P.hpMax, C.hp); bar(6, 24, bw, D.P.ch, D.P.chMax, C.chakra); bar(6, 32, bw, D.P.fat, 100, C.fatigue); bar(6, 40, bw, D.P.heat, 100, '#e0a8ff');
+      FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 8 + bw, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
+      FS.draw(ctx, 'уст. · накал', 6, 47, { color: '#d8c8a0', outline: PAL.ink });
+      FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
+      if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
+      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
       U.panel(ctx, 0, py, W, g.PH, 'plank');
-      // строка подсказки: намёк противника или реплика
-      let line = '', col = '#f8eed0';
-      if (phase === 'choose' && D.hint) {
-        const acc = Math.round(G.duel.hintAccuracy(D) * 100);
-        line = `Намёк: ${ACT_NAME[D.hint] || '?'}  (верен ≈${acc}%)`; col = '#ffe28a';
-      } else if (said) line = said.text;
-      for (const [i, ln] of FS.wrap(line, W - 20).slice(0, 2).entries()) FS.draw(ctx, ln, 10, py + 8 + i * 11, { color: col, shadow: PAL.ink });
-      if (phase === 'choose') {
-        const bs = buttons();
-        bs.forEach((b, i) => {
-          U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');
-          F.small.draw(ctx, b.label, b.x + (menu !== 'main' && b.sub ? b.w * 0.36 : b.w / 2), b.y + (b.sub && menu === 'main' && b.h > 30 ? 8 : Math.round(b.h / 2) - 4), { align: 'center', color: b.off ? '#8a7a66' : '#f8eed0', shadow: PAL.ink });
-          if (b.sub && b.h > 26) FS.draw(ctx, b.sub, b.x + b.w / 2, b.y + 21, { align: 'center', color: b.off ? '#6a5a4a' : '#e8c890' });
-          else if (b.sub && menu !== 'main') FS.draw(ctx, b.sub, b.x + b.w - 6, b.y + Math.round(b.h / 2) - 4, { align: 'right', color: b.off ? '#6a5a4a' : '#e8c890' });
-        });
-      } else if (phase === 'end') {
-        F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 62, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
-        FS.draw(ctx, `Раундов ${result.turns} · ударов ${stats.hits} · уклонов ${stats.evades} · приёмов ${stats.techs}`, W / 2, py + 80, { align: 'center', color: '#e8c890' });
-        if (endT > 1) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 98, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+      const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
+      FS.draw(ctx, lines[0], 7, py + 5, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
+      FS.draw(ctx, lines[1], 7, py + 16, { color: '#f8eed0', shadow: PAL.ink, maxW: W - 14 });
+      FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
+      FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
+      if (phase === 'end') {
+        F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
+        FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
+        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 99, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        return;
       }
-    },
-    drawMini(ctx, g) {
-      const m = mini, W = g.W, cx = Math.round(W / 2), cy = g.AH - 76;
-      if (m.kind === 'ring') {
-        const T = m.T, k = clamp(m.t / T, 0, 1.3), r0 = 16, r = 16 + (1 - Math.min(1, m.t / m.tp)) * 38;
-        const q = clamp(1 - Math.abs(m.t - m.tp) / m.half, 0, 1);
-        ctx.save();
-        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, r0, 0, 7); ctx.stroke();
-        ctx.strokeStyle = q > 0.8 ? '#8aff9a' : q > 0.35 ? '#ffe28a' : '#ff8a6a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(cx, cy, Math.max(r0 - 4, r), 0, 7); ctx.stroke();
-        ctx.restore();
-        FS.draw(ctx, m.act === 'release' ? 'Фиолетовый выброс: коснись!' : { strike: 'Бей, когда кольцо сойдётся', block: 'Блокируй в момент удара', evade: 'Уклонись в нужный миг' }[m.act] || 'Коснись!', cx, cy - 62, { align: 'center', color: '#fff2cf', outline: PAL.ink });
+      if (phase === 'play' && said) {
+        FS.wrap(said.text, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 45 + i * 11, { color: '#f8eed0', shadow: PAL.ink }));
+        return;
+      }
+      if (tip) {
+        ['Три действия — до трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0' }));
       } else {
-        const btns = sealButtons(g), left = Math.max(0, 1 - m.t / m.limit);
-        U.panel(ctx, 6, cy - 64, W - 12, 72, 'inner');
-        FS.draw(ctx, G.TECHS[m.act.slice(5)].name, cx, cy - 58, { align: 'center', color: '#2e1e14' });
-        m.seq.forEach((s, i) => { const bx = Math.round(cx - m.seq.length * 12 + i * 24 + 3); ctx.fillStyle = G.SEAL_COL[s]; ctx.globalAlpha = i < m.i ? 0.35 : 1; ctx.fillRect(bx, cy - 44, 18, 14); ctx.globalAlpha = 1; FS.draw(ctx, G.SEALS[s].slice(0, 3), bx + 9, cy - 42, { align: 'center', color: '#2e1e14' }); if (i === m.i) { ctx.fillStyle = '#b8321c'; ctx.fillRect(bx, cy - 29, 18, 2); } });
-        U.gauge(ctx, 14, cy - 22, W - 28, 5, left, left > 0.3 ? '#4a8a3a' : '#c8281c');
-        btns.forEach((b, i) => {
-          const sh = m.shake ? Math.round(rnd(-1, 1) * m.shake * 2) : 0;
-          U.button(ctx, b.x + sh, b.y, b.w, b.h, '', i === (m.f || 0) ? 'sel' : 'normal');
-          ctx.fillStyle = G.SEAL_COL[b.seal]; ctx.fillRect(b.x + 3 + sh, b.y + 3, 6, b.h - 6);
-          FS.draw(ctx, G.SEALS[b.seal], b.x + b.w / 2 + 3 + sh, b.y + b.h / 2 - 4, { align: 'center', color: '#f8eed0', shadow: PAL.ink });
-        });
+        const c = selectedCard();
+        if (c) {
+          const def = G.CARDS[c.id], check = G.duel.canPlay(D, c);
+          FS.draw(ctx, `${def.name} · ${def.cost} чакры`, 8, py + 42, { color: check.ok ? '#ffe28a' : '#ff9a80', maxW: W - 16 });
+          const preview = G.duel.preview(D, c.id).join(' · ');
+          const description = preview + '. ' + def.text;
+          FS.wrap(description, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 53 + i * 9, { color: '#f8eed0' }));
+          if (!check.ok) FS.draw(ctx, check.why, W - 8, py + 42, { align: 'right', color: '#ff9a80', maxW: Math.floor(W * 0.48) });
+        }
       }
+      const bs = buttons();
+      for (const b of bs) {
+        if (b.zone === 'hand') {
+          const c = D.hand.find((x) => x.uid === b.uid), def = G.CARDS[c.id], check = G.duel.canPlay(D, c), sel = c.uid === selected;
+          U.button(ctx, b.x, b.y, b.w, b.h, '', sel ? 'sel' : check.ok ? 'normal' : 'dis');
+          ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
+          FS.draw(ctx, def.cost ? String(def.cost) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
+          const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
+          if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
+        } else {
+          const i = bs.indexOf(b);
+          U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');
+          FS.draw(ctx, b.label, b.x + b.w / 2, b.y + Math.round(b.h / 2) - 4, { align: 'center', color: b.off ? '#8a7a66' : '#f8eed0', shadow: PAL.ink, maxW: b.w - 4 });
+        }
+      }
+      if (pageCount() > 1) FS.draw(ctx, `${handPage + 1}/${pageCount()}`, W / 2, g.handY - 9, { align: 'center', color: '#ffe28a', shadow: PAL.ink });
     },
   };
-  // кнопки печатей в панели управления
-  function sealButtons(g) {
-    const m = mini, W = g.W, n = m.pal.length, cols = 3, bw = Math.floor((W - 16 - (cols - 1) * 6) / cols), out = [];
-    m.pal.forEach((s, i) => out.push({ seal: s, x: 8 + (i % cols) * (bw + 6), y: g.py + 50 + Math.floor(i / cols) * (g.d.th + 4), w: bw, h: g.d.th }));
-    return out;
-  }
   return S;
 });
 
-// Мастерство техники в меню и тренировках использует G.combat (data/duel_data.js)
-
+// Мастерство техники в меню и тренировках использует G.combat (data/duel_data.js).
 // Запуск боя из скрипта: call battle <enemy> <mode> <terrain> [после_победы] [после_поражения] [turns]
 G.script.actions.battle = (a) => {
   G.game.pending = { type: 'battle', enemy: a[0], mode: a[1] || 'ko', terrain: a[2] || 'field', win: a[3] && a[3] !== '-' ? a[3] : null, lose: a[4] && a[4] !== '-' ? a[4] : null, turns: a[5] ? Number(a[5]) : 0 };

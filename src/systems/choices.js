@@ -32,7 +32,6 @@ G.choices = (() => {
   const is = (id, name) => get(id) === name;
   // как деревня относится к герою: afraid / neutral / kind
   function attitude() {
-    const f = G.state.flags;
     let s = (G.state.vars.rep || 0) * 0.5;
     if (is('taunt', 'fight')) s -= 2; if (is('taunt', 'talk')) s += 2;
     if (G.purple && G.state.started) s += (G.purple.stability() - 40) / 30;
