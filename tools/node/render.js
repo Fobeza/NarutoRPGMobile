@@ -56,14 +56,14 @@ function decodePng(buf) {
 // ─────────── софтверный контекст ───────────
 class Raster {
   constructor(canvas) {
-    this.canvas = canvas; this.buf = null; this.w = this.hh = 0;
-    this.fillStyle = '#000'; this.globalAlpha = 1;
+    this.canvas = canvas; this.buf = null; this.w = this.hh = 0; this.mask = null;
+    this.fillStyle = '#000'; this.globalAlpha = 1; this.globalCompositeOperation = 'source-over';
     this.m = [1, 0, 0, 1, 0, 0]; this.stack = []; this.clips = [];
     this.path = []; this.cur = null;
   }
   ensure() {
     const w = this.canvas.width | 0, hh = this.canvas.height | 0;
-    if (!this.buf || this.w !== w || this.hh !== hh) { this.w = w; this.hh = hh; this.buf = Buffer.alloc(w * hh * 3); }
+    if (!this.buf || this.w !== w || this.hh !== hh) { this.w = w; this.hh = hh; this.buf = Buffer.alloc(w * hh * 3); this.mask = Buffer.alloc(w * hh); }
   }
   parse(c) {
     if (typeof c !== 'string') return [0, 0, 0, 1];
@@ -81,10 +81,30 @@ class Raster {
     if (x < 0 || y < 0 || x >= this.w || y >= this.hh) return;
     const cr = this.clipRect();
     if (x < cr[0] || y < cr[1] || x >= cr[2] || y >= cr[3]) return;
-    const o = (y * this.w + x) * 3;
+    const o = (y * this.w + x) * 3, p = y * this.w + x;
+    const mode = this.globalCompositeOperation;
+    if (mode === 'source-in') {                 // цвет ложится только на уже нарисованное (силуэты, тонировка шрифта)
+      if (!this.mask[p]) return;
+      this.buf[o] = r; this.buf[o + 1] = g; this.buf[o + 2] = b;
+      return;
+    }
+    if (mode === 'destination-out') {           // стирание: чем плотнее цвет, тем прозрачнее
+      const k = 1 - a;
+      this.buf[o] *= k; this.buf[o + 1] *= k; this.buf[o + 2] *= k;
+      this.mask[p] = Math.round(this.mask[p] * k);
+      return;
+    }
+    if (mode === 'lighter') {                   // свет: сложение
+      this.buf[o] = Math.min(255, this.buf[o] + r * a);
+      this.buf[o + 1] = Math.min(255, this.buf[o + 1] + g * a);
+      this.buf[o + 2] = Math.min(255, this.buf[o + 2] + b * a);
+      this.mask[p] = Math.max(this.mask[p], Math.round(255 * a));
+      return;
+    }
     this.buf[o] = this.buf[o] + (r - this.buf[o]) * a;
     this.buf[o + 1] = this.buf[o + 1] + (g - this.buf[o + 1]) * a;
     this.buf[o + 2] = this.buf[o + 2] + (b - this.buf[o + 2]) * a;
+    this.mask[p] = Math.max(this.mask[p], Math.round(255 * a));
   }
   fillRect(x, y, w, hh) {
     this.ensure();
@@ -116,8 +136,8 @@ class Raster {
         for (let x = Math.max(0, Math.round(xs[i])); x < Math.min(this.w, Math.round(xs[i + 1])); x++) this.blend(x, y, r, g, b, a);
     }
   }
-  save() { this.stack.push({ m: this.m.slice(), clips: this.clips.slice(), alpha: this.globalAlpha }); }
-  restore() { const s = this.stack.pop(); if (s) { this.m = s.m; this.clips = s.clips; this.globalAlpha = s.alpha; } }
+  save() { this.stack.push({ m: this.m.slice(), clips: this.clips.slice(), alpha: this.globalAlpha, mode: this.globalCompositeOperation }); }
+  restore() { const s = this.stack.pop(); if (s) { this.m = s.m; this.clips = s.clips; this.globalAlpha = s.alpha; this.globalCompositeOperation = s.mode; } }
   translate(x, y) { const m = this.m; m[4] += m[0] * x + m[2] * y; m[5] += m[1] * x + m[3] * y; }
   scale(x, y) { const m = this.m; m[0] *= x; m[1] *= x; m[2] *= y; m[3] *= y; }
   rotate(a) { const m = this.m, c = Math.cos(a), s = Math.sin(a);
@@ -128,6 +148,25 @@ class Raster {
   lineTo(x, y) { if (!this.cur) return this.moveTo(x, y); this.cur.push(this.tp(x, y)); }
   closePath() { this.cur = null; }
   rect(x, y, w, hh) { this.path.push([this.tp(x, y), this.tp(x + w, y), this.tp(x + w, y + hh), this.tp(x, y + hh)]); }
+  // эллипс как путь (для мебели: сиденья, подушки, кроны) — приближение ломаной
+  ellipse(cx, cy, rx, ry, rot = 0) {
+    const pts = [];
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2, x = Math.cos(a) * rx, y = Math.sin(a) * ry;
+      pts.push(this.tp(cx + x * Math.cos(rot) - y * Math.sin(rot), cy + x * Math.sin(rot) + y * Math.cos(rot)));
+    }
+    this.path.push(pts); this.cur = null;
+  }
+  arc(cx, cy, r, a0, a1) {
+    const pts = [];
+    for (let i = 0; i <= 16; i++) {
+      const a = a0 + (a1 - a0) * (i / 16);
+      pts.push(this.tp(cx + Math.cos(a) * r, cy + Math.sin(a) * r));
+    }
+    this.path.push(pts); this.cur = null;
+  }
+  quadraticCurveTo(cx, cy, x, y) { this.lineTo(cx, cy); this.lineTo(x, y); }
+  bezierCurveTo(c1x, c1y, c2x, c2y, x, y) { this.lineTo(c1x, c1y); this.lineTo(c2x, c2y); this.lineTo(x, y); }
   fill() {
     this.ensure();
     const [r, g, b, al] = this.parse(this.fillStyle); const a = al * this.globalAlpha;
@@ -147,7 +186,12 @@ class Raster {
     else if (a.length === 4) { [dx, dy, dw, dh] = a; sw = img.width; sh = img.height; sx = sy = 0; }
     else { [sx, sy, sw, sh, dx, dy, dw, dh] = a; }
     let src = null;
-    if (img.__raster) { img.__raster.ensure(); src = { w: img.__raster.w, h: img.__raster.hh, px: img.__raster.buf, ch: 3 }; }
+    if (img.__raster) {
+      img.__raster.ensure();
+      src = { w: img.__raster.w, h: img.__raster.hh, px: img.__raster.buf, mask: img.__raster.mask, ch: 3 };
+      // «подробные» холсты игры (G.gfx.canvas, HI=2) задают источник в логических пикселях — как патч drawImage в gfx/sprites.js
+      if (img.hi && img.lw) { const k = img.__raster.w / img.lw; sx *= k; sy *= k; sw *= k; sh *= k; }
+    }
     else if (String(img._src || img.src || '').startsWith('data:image/png')) src = Object.assign({ ch: 4 }, this.imgBuf(img));
     if (!src) return;
     const m = this.m;
@@ -158,7 +202,7 @@ class Raster {
       const ux = Math.floor(sx + (x / (dw * sX)) * sw), uy = Math.floor(sy + (y / (dh * sY)) * sh);
       if (ux < 0 || uy < 0 || ux >= src.w || uy >= src.h) continue;
       const o = (uy * src.w + ux) * src.ch;
-      const al = (src.ch === 4 ? src.px[o + 3] / 255 : 1) * this.globalAlpha;
+      const al = (src.ch === 4 ? src.px[o + 3] / 255 : (src.mask ? src.mask[uy * src.w + ux] / 255 : 1)) * this.globalAlpha;
       if (al <= 0) continue;
       this.blend(Math.round(ox + x), Math.round(oy + y), src.px[o], src.px[o + 1], src.px[o + 2], al);
     }
@@ -171,8 +215,30 @@ class Raster {
   measureText(t) { return { width: String(t).length * 6 }; }
   createLinearGradient() { return { addColorStop() {} }; }
   createRadialGradient() { return { addColorStop() {} }; }
-  getImageData(x, y, w, hh) { return { data: new Uint8ClampedArray(w * hh * 4), width: w, height: hh }; }
-  putImageData() {}
+  createPattern() { return null; }
+  // Пиксельные операции: нужны разбору арта (decodeArt), перекраске одежды и тонировке земли.
+  createImageData(w, hh) { return { data: new Uint8ClampedArray(Math.max(4, (w | 0) * (hh | 0) * 4)), width: w | 0, height: hh | 0 }; }
+  getImageData(x, y, w, hh) {
+    this.ensure();
+    const out = this.createImageData(w, hh);
+    for (let j = 0; j < hh; j++) for (let i = 0; i < w; i++) {
+      const sx2 = (x | 0) + i, sy2 = (y | 0) + j;
+      const o = (j * w + i) * 4;
+      if (sx2 < 0 || sy2 < 0 || sx2 >= this.w || sy2 >= this.hh) { out.data[o + 3] = 0; continue; }
+      const s = (sy2 * this.w + sx2) * 3;
+      out.data[o] = this.buf[s]; out.data[o + 1] = this.buf[s + 1]; out.data[o + 2] = this.buf[s + 2]; out.data[o + 3] = this.mask[sy2 * this.w + sx2];
+    }
+    return out;
+  }
+  putImageData(img, x, y) {
+    this.ensure();
+    const d = img.data || img, w = img.width | 0, hh = img.height | 0;
+    for (let j = 0; j < hh; j++) for (let i = 0; i < w; i++) {
+      const o = (j * w + i) * 4, a = (d[o + 3] == null ? 255 : d[o + 3]) / 255;
+      if (a <= 0) continue;
+      this.blend((x | 0) + i, (y | 0) + j, d[o], d[o + 1], d[o + 2], a);
+    }
+  }
 }
 
 // offscreen-холсты игры → тоже растер
@@ -208,6 +274,7 @@ function crc(buf) {
 
 // ─────────── кадры ───────────
 const OUT = process.argv[2] || '/tmp';
+fs.mkdirSync(OUT, { recursive: true });
 const W = 240, H = 300;
 G.screen.W = W; G.screen.H = H;
 h.seed();
@@ -270,7 +337,56 @@ const TEX = ['tex_floor','tex_planks','tex_tatami','tex_mat','tex_tilefloor','te
     } });
   }, null, [CW, CH]);
 }
-frame('ui_room', () => {
+// Комната и улица: рисуем карту целиком (земля + объекты + персонаж), а не только тайлы —
+// так видно мебель, пропы и масштаб. Карта собирается тем же кодом, что в игре.
+function worldFrame(name, setup) {
+  frame(name, () => {
+    const m = G.world.get('konoha');
+    G.scenes.push({ name, draw(c) {
+      c.fillStyle = '#101018'; c.fillRect(0, 0, W, H);
+      const cam = setup(m);
+      const T = G.CONFIG.TILE;
+      for (let y = 0; y < Math.ceil(H / T) + 1; y++) for (let x = 0; x < Math.ceil(W / T) + 1; x++) {
+        const tx = cam.tx + x, ty = cam.ty + y;
+        G.tiles.drawTile(c, m.get(tx, ty), x * T, y * T, tx, ty);
+      }
+      const objs = m.objects.filter((o) => o.img).sort((a, b) => a.sortY - b.sortY);
+      c.save(); c.translate(-cam.tx * T, -cam.ty * T);
+      for (const o of objs) if (o.layer === 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      if (cam.npc) G.chars.draw(c, cam.npc, 'down', 0, cam.npcX, cam.npcY);
+      c.restore();
+    } });
+  });
+}
+// дом героя: интерьер собирается тем же кодом, что в игре (G.interiors.build)
+function roomFrame(name, id) {
+  frame(name, () => {
+    const b = G.world.konoha().landmarks[id] || G.world.konoha().buildings[0];
+    const m = G.interiors.build(b.interior);
+    G.scenes.push({ name, draw(c) {
+      c.fillStyle = '#101018'; c.fillRect(0, 0, W, H);
+      const T = G.CONFIG.TILE;
+      const tx0 = Math.max(0, Math.floor((m.w - W / T) / 2)), ty0 = Math.max(0, Math.floor((m.h - H / T) / 2));
+      // маленькая комната — по центру кадра, чтобы было видно всю
+      c.save();
+      c.translate(Math.round(Math.max(0, (W - (Math.min(m.w, W / T)) * T) / 2)), Math.round(Math.max(0, (H - (Math.min(m.h, H / T)) * T) / 2)));
+      for (let y = 0; y < Math.ceil(H / T) + 1; y++) for (let x = 0; x < Math.ceil(W / T) + 1; x++) {
+        const tx = tx0 + x, ty = ty0 + y;
+        G.tiles.drawTile(c, m.get(tx, ty), x * T, y * T, tx, ty);
+      }
+      c.translate(-tx0 * T, -ty0 * T);
+      const objs = m.objects.filter((o) => o.img).sort((a, b) => a.sortY - b.sortY);
+      for (const o of objs) if (o.layer === 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      c.restore();
+    } });
+  });
+}
+roomFrame('ui_room', 'hero_home');
+roomFrame('ui_room_academy', 'academy');
+roomFrame('ui_room_shop', 'ichiraku');
+frame('ui_room_tiles', () => {
   const ID = G.tiles.ID;
   G.scenes.stack.length = 0;
   G.scenes.push({ name: 'room', draw(c) {

@@ -708,5 +708,17 @@ test('Тяжёлые данные графики разбираются при �
   assert.ok(G.houseArt.has(Object.keys(house.art)[0]), 'здания видны houseArt');
 });
 
+test('У каждого персонажа есть нарисованный лист (или перекраска)', () => {
+  clean();
+  const art = G.art.data('chars') || {};
+  const bare = Object.keys(G.chars.DEFS).filter((id) => !art[id] && !G.chars.ALIAS[id]);
+  assert.deepEqual(bare, [], 'рисуются кодом, без своего листа: ' + bare.join(', '));
+  // Незнакомец из финала — перекраска «вора»: лист и портрет берутся из общей таблицы, но с другим оттенком
+  assert.deepEqual(G.chars.ALIAS.stranger, ['thief', 5], 'плащ незнакомца перекрашен');
+  assert.notEqual(G.chars.sheet('stranger'), G.chars.sheet('thief'), 'листы не один и тот же объект');
+  assert.ok(G.chars.portrait('stranger'), 'портрет собирается');
+  assert.equal(G.ENEMIES.stranger.spr, 'stranger', 'в бою свой спрайт, а не вор');
+});
+
 console.log(`ИТОГ регрессий: ✔ ${passed}  ✘ ${failed}`);
 process.exitCode = failed ? 1 : 0;

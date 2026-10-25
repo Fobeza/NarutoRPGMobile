@@ -342,6 +342,24 @@ for (const t of texts) {
 check(missing.size === 0, `глифов ${glyphs.size}, строк контента ${texts.length}, непокрытых символов: ${missing.size}`);
 for (const [ch, n] of [...missing].slice(0, 10)) say(`     - «${ch}» U+${ch.codePointAt(0).toString(16).toUpperCase()} × ${n} (нарисуется «?») `);
 
+// 6б. Символы в строках интерфейса: любой знак из '...' в src должен быть в шрифте,
+// иначе игрок видит «?» — так уже пропадали ↑ ↓ ‹ › ⇅. Телефонный редактор (src/editor) рисует
+// системным шрифтом браузера, его не проверяем.
+const uiMissing = new Map();
+(function scan(dir) {
+  for (const f of fs.readdirSync(dir)) {
+    const p = path.join(dir, f);
+    if (fs.statSync(p).isDirectory()) { if (f !== 'editor') scan(p); continue; }
+    if (!f.endsWith('.js') || /font_data|_art_data/.test(f)) continue;
+    const src = fs.readFileSync(p, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');
+    for (const m of src.matchAll(/'([^'\\\n]*)'|"([^"\\\n]*)"/g)) for (const ch of (m[1] || m[2] || '')) {
+      if (ch.codePointAt(0) > 0x7e && !glyphs.has(ch) && !glyphs.has(ch.toUpperCase())) uiMissing.set(ch, (uiMissing.get(ch) || 0) + 1);
+    }
+  }
+})(path.join(h.ROOT, 'src'));
+check(uiMissing.size === 0, `символы интерфейса в шрифте: непокрытых ${uiMissing.size}`);
+for (const [ch, n] of uiMissing) say(`     - «${ch}» U+${ch.codePointAt(0).toString(16).toUpperCase()} × ${n} (нарисуется «?») `);
+
 // ─────────── 7. сцены: update + draw ───────────
 section('СЦЕНЫ (update + draw без исключений)');
 h.seed();
