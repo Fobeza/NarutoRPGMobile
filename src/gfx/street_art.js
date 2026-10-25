@@ -16,10 +16,12 @@ G.streetArt=(()=>{
     }
     return pixels.get(name);
   }
-  function axis(v){
+  // Кромка: переход шире и с дизерингом по мировому шуму, поэтому мостовая не «приклеена» к траве линейкой.
+  function axis(v,dith=0){
     const cell=Math.floor(v/16),f=mod(v,16);
-    if(f<3){const t=smooth((f+3)/6);return [[cell-1,1-t],[cell,t]];}
-    if(f>13){const t=smooth((f-13)/6);return [[cell,1-t],[cell+1,t]];}
+    const t=(x)=>Math.max(0,Math.min(1,x+dith));
+    if(f<5){return [[cell-1,1-t(smooth((f+5)/10))],[cell,t(smooth((f+5)/10))]];}
+    if(f>11){return [[cell,1-t(smooth((f-11)/10))],[cell+1,t(smooth((f-11)/10))]];}
     return [[cell,1]];
   }
   function draw(ctx,map,tx,ty,x,y,ID){
@@ -37,9 +39,10 @@ G.streetArt=(()=>{
       for(let py=0;py<32;py++)for(let px=0;px<32;px++){
         const wx=tx*16+(px+.5)/2,wy=ty*16+(py+.5)/2;
         const nx=mod(wx,PERIOD),ny=mod(wy,PERIOD);
-        const jx=.65*Math.sin(TAU*(nx+2*ny)/PERIOD)+.25*Math.sin(TAU*(3*nx-ny)/PERIOD);
-        const jy=.65*Math.sin(TAU*(ny-2*nx)/PERIOD)+.25*Math.sin(TAU*(nx+3*ny)/PERIOD);
-        const xs=axis(wx+jx),ys=axis(wy+jy),rgb=[0,0,0];
+        const jx=1.7*Math.sin(TAU*(nx+2*ny)/PERIOD)+.8*Math.sin(TAU*(3*nx-ny)/PERIOD);
+        const jy=1.7*Math.sin(TAU*(ny-2*nx)/PERIOD)+.8*Math.sin(TAU*(nx+3*ny)/PERIOD);
+        const dith=(G.util.hash2(Math.floor(nx*2),Math.floor(ny*2),771)-.5)*.5;
+        const xs=axis(wx+jx,dith),ys=axis(wy+jy,dith),rgb=[0,0,0];
         for(const [cx,xw] of xs)for(const [cy,yw] of ys){
           let id=neighbors[(cy-ty+1)*3+cx-tx+1],type=category(id,ID);
           // У воды, стен и внутри зданий оставляем прежнюю обработку границы.
