@@ -5,6 +5,7 @@ python3 tools/package_art.py; обычный build.py их не требует.
 from pathlib import Path
 import hashlib
 import json
+import re
 from PIL import Image
 from prepare_environment_art import prepare
 
@@ -38,7 +39,8 @@ def main():
     entries.append(entry(dest, original, 512, 'terrain'))
     if len(entries) != 36:
         raise ValueError(f'Ожидалось 36 согласованных изображений, найдено {len(entries)}')
-    data = {'release': '2.2.2', 'status': 'integrated',
+    game_release = re.search(r'RELEASE\s*=\s*"([\d.]+)"', (ROOT / 'build.py').read_text(encoding='utf-8')).group(1)
+    data = {'release': '2.2.2', 'gameRelease': game_release, 'status': 'integrated',
             'note': 'Мастеры встроены через tools/import_environment.py. Игровой тайл 16 точек, HI=2; размеры холстов и коллизии сохранены.',
             'assets': entries}
     (ROOT / 'art/manifest.json').write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n')

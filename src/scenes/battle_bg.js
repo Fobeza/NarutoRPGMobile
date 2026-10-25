@@ -223,11 +223,31 @@ G.battleBg = (() => {
     },
   };
 
+  // Предметы арены из данных (G.ARENAS[t].obj): пять мест по ширине, деревья и кусты — по краям,
+  // брёвна и вода — ближе к земле. Рисуются в запечённый фон, поэтому всегда за бойцами.
+  function props(c, t, W, H, gy) {
+    const a = G.ARENAS && G.ARENAS[t];
+    if (!a || !a.obj) return;
+    const ctx = c.getContext('2d');
+    for (const [slot, kind] of Object.entries(a.obj)) {
+      const o = obj(kind, !!a.dark);
+      if (!o) continue;
+      const i = Math.max(0, Math.min(4, +slot));
+      const k = o.img.width > 32 ? 0.8 : 1;                       // крупные (дерево) — чуть меньше, чтобы не заслонять бойцов
+      const x = Math.round(W * (0.08 + i * 0.21) + (Hh(i, W, 7) - 0.5) * 6);
+      const y = Math.round(gy + (kind === 'water' ? 2 : 1));
+      ctx.globalAlpha = a.dark ? 0.92 : 1;
+      ctx.drawImage(o.img, x + Math.round(o.ox * k), y + Math.round(o.oy * k), Math.round(o.img.width * k), Math.round(o.img.height * k));
+      S.shadow(ctx, x, y, Math.round(o.img.width * 0.32 * k), Math.round(2 * k), 0.26);
+      ctx.globalAlpha = 1;
+    }
+  }
   function get(terrain, W, H, fd = 0) {
     const t = DRAW[terrain] ? terrain : 'field', key = t + ':' + W + 'x' + H + ':' + fd;
     if (cache[key]) return cache[key];
-    const c = G.gfx.canvas(W, H);
-    DRAW[t](c, W, H, H - 14 - fd, clamp((H - fd) / 190, 1, 2));   // s — растяжка высоты пейзажа под высокую арену
+    const c = G.gfx.canvas(W, H), gy = H - 14 - fd;
+    DRAW[t](c, W, H, gy, clamp((H - fd) / 190, 1, 2));   // s — растяжка высоты пейзажа под высокую арену
+    props(c, t, W, H, gy);
     for (const k of Object.keys(cache)) if (k.startsWith(t + ':')) delete cache[k];   // держим один размер на арену
     return (cache[key] = c);
   }

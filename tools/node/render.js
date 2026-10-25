@@ -317,6 +317,21 @@ frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
 frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+// ---------- бой: настоящая сцена, чтобы видеть фоны арен с бойцами и интерфейсом ----------
+function battleFrame(name, enemy, terrain) {
+  frame(name, () => {
+    const sc = G.scenes.make('battle', { enemy, mode: 'spar', terrain }, () => {});
+    G.scenes.stack.length = 0;
+    G.scenes.push(sc);
+    sc.enter && sc.enter();
+    for (let i = 0; i < 40; i++) sc.update(.05);
+  }, null, [240, 320]);
+}
+battleFrame('battle_yard', 'sasuke', 'yard');
+battleFrame('battle_field', 'sasuke', 'field');
+battleFrame('battle_ring', 'sasuke', 'ring');
+battleFrame('battle_night', 'sasuke', 'night');
+
 // ---------- кадры окружения: контакты текстур, комната, улица ----------
 const TEX = ['tex_floor','tex_planks','tex_tatami','tex_mat','tex_tilefloor','tex_dustfloor','tex_grass','tex_grass2',
   'tex_flowers','tex_path','tex_sand','tex_stone','tex_darkgrass','tex_dirt','tex_mainroad','tex_darkstone',
