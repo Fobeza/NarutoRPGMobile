@@ -351,22 +351,36 @@ G.tiles = (() => {
     const wN = map.get(tx, ty - 1) === W, wS = map.get(tx, ty + 1) === W;
     const wW = map.get(tx - 1, ty) === W, wE = map.get(tx + 1, ty) === W;
     if (!(wN || wS || wW || wE)) return;
-    const ns = wW || wE;                       // вода по бокам → мост идёт север-юг, доски поперёк (горизонтально)
-    // Настил: свои доски, а не плитка «деревянного пола» — иначе мост читается как деревянная площадка.
-    px(ctx, x, y, '#a8683a', T, T);
-    for (let i = 2; i < 16; i += 4) {
-      if (ns) { px(ctx, x, y + i, '#8a5230', 16, 1); px(ctx, x + (i % 8 ? 5 : 11), y + i - 3, '#8a5230', 1, 3); }
-      else { px(ctx, x + i, y, '#8a5230', 1, 16); px(ctx, x + i - 3, y + (i % 8 ? 5 : 11), '#8a5230', 3, 1); }
+    // Вода по бокам → мост идёт север-юг, доски поперёк (горизонтальные швы).
+    // Вода сверху/снизу → мост идёт запад-восток, швы вертикальные.
+    const ns = wW || wE;
+    // Настил: перерисовываем клетку целиком, чтобы швы досок шли поперёк движения
+    // и не спорили с текстурой «деревянного пола» из атласа.
+    const tones = ['#9f6238', '#965c34', '#a86a3e'];
+    px(ctx, x, y, tones[0], T, T);
+    for (let r = 0; r < 4; r++) {                     // четыре доски на клетку, шов в 1 px
+      const i = r * 4;
+      const tone = tones[Math.floor(H(tx * 4 + r, ty * 4 + (ns ? 0 : 1), 510) * 3) % 3];
+      if (ns) { px(ctx, x, y + i, tone, T, 3); px(ctx, x, y + i + 3, '#7d4a28', T, 1); }
+      else { px(ctx, x + i, y, tone, 3, T); px(ctx, x + i + 3, y, '#7d4a28', 1, T); }
+      // Торец доски: короткий стык вразбежку, иначе настил похож на лист фанеры.
+      const at = 3 + Math.floor(H(tx * 4 + r, ty, 511) * 10);
+      if (ns) px(ctx, x + at, y + i, '#8a5230', 1, 3);
+      else px(ctx, x + i, y + at, 3, 1);
     }
-    for (let i = 0; i < 5; i++) px(ctx, x + Math.floor(H(tx + i, ty, 512) * 15), y + Math.floor(H(ty, tx + i, 513) * 15), '#c08a54');
-    // Край у воды: тень, балка, светлый поручень. Стойки — через клетку, как у настоящих мостков.
+    for (let i = 0; i < 4; i++) px(ctx, x + Math.floor(H(tx + i, ty, 512) * 15), y + Math.floor(H(ty, tx + i, 513) * 15), '#bf8a56');
+    // Край у воды: балка, поручень, стойки. Поручень светлый и на 2 px, чтобы мост
+    // читался как мост, а не как деревянная площадка у воды.
     const post = (ns ? ty : tx) % 2 === 0;
     const edge = (side) => {
       for (let i = 0; i < 16; i++) {
         const put = (n, col, w2 = 1) => ns ? px(ctx, x + (side === 'W' ? n : 15 - n), y + i, col, w2, 1)
                                            : px(ctx, x + i, y + (side === 'N' ? n : 15 - n), col, 1, w2);
-        put(0, '#33200f', 2); put(2, '#8a5a30'); put(3, '#c8925a');
-        if (post && i > 1 && i < 6) put(1, '#2b1a0c', 1);   // стойка перил
+        put(0, '#2b1a0c', 2);              // тень под настилом
+        put(2, '#7a4a26');                 // балка
+        put(3, '#c8925a');                 // светлая кромка поручня
+        if (post && i > 1 && i < 7) put(1, '#2b1a0c', 1);   // стойка перил
+        if (post && i === 7) put(0, '#5a3a20', 2);
       }
     };
     if (wW) edge('W');
@@ -404,6 +418,51 @@ G.tiles = (() => {
           else px(ctx, x + 13 - d, y + i, '#4e8a3a', 2, 1);
         }
       }
+    }
+  }
+
+  // Медленное поле шума по мировым координатам: пятна больше клетки, поэтому проплешины
+  // переходят через границы тайлов и не складываются в решётку.
+  function vnoise(wx, wy, seed, S = 26) {
+    const gx = Math.floor(wx / S), gy = Math.floor(wy / S);
+    const fx = wx / S - gx, fy = wy / S - gy;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = H(gx, gy, seed), b = H(gx + 1, gy, seed), c = H(gx, gy + 1, seed), d = H(gx + 1, gy + 1, seed);
+    return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
+  }
+
+  // Проплешины травы: сухие пятна, тёмный мох и редкие кустики на стыках «трава/трава».
+  // Раньше газон был ровным, если не считать одиночных цветочков и камешков.
+  function patches(ctx, tx, ty, x, y) {
+    const DRY = ['#93a552', '#a8b25c', '#7e9247'], DARK = ['#5c8a48', '#527f42', '#679350'];
+    for (let j = 0; j < 16; j += 4) for (let i = 0; i < 16; i += 4) {
+      const wx = tx * 16 + i, wy = ty * 16 + j;
+      const n = vnoise(wx, wy, 941);
+      const dry = n > 0.60, dark = n < 0.29;
+      if (!dry && !dark) continue;
+      const cols = dry ? DRY : DARK;
+      const k = (dry ? n - 0.60 : 0.34 - n) * 6;         // плотность к центру пятна
+      for (let sy = 0; sy < 4; sy += 2) for (let sx = 0; sx < 4; sx += 2) {
+        if (H(wx + sx, wy + sy, 943) > 0.35 + k) continue;   // рваная кромка пятна
+        px(ctx, x + i + sx, y + j + sy, cols[Math.floor(H(i + sx, j + sy, 944) * 3) % 3], 2, 2);
+      }
+      // сухие травинки и мелкий бурьян по краю пятна
+      if (k > 0.5 && H(wx, wy, 945) > 0.72) {
+        const gx2 = i + 1 + Math.floor(H(wx, wy, 946) * 2), gy2 = j + 1;
+        px(ctx, x + gx2, y + gy2, dry ? '#c8bb6a' : '#8fb060', 1, 2);
+        px(ctx, x + gx2 + 1, y + gy2 + 1, dry ? '#b0a45c' : '#7a9c50', 1, 1);
+      }
+    }
+    // Кустик: держится за центр пятна, поэтому не появляется на каждом тайле.
+    const n0 = vnoise(tx * 16 + 8, ty * 16 + 8, 941);
+    if (n0 > 0.80 && H(tx, ty, 947) > 0.35) {
+      const bx = 3 + Math.floor(H(tx, ty, 948) * 9), by = 3 + Math.floor(H(ty, tx, 949) * 8);
+      px(ctx, x + bx - 1, y + by + 3, '#2e4d2c', 6, 1);
+      px(ctx, x + bx, y + by, '#3b6a3a', 4, 4);
+      px(ctx, x + bx + 1, y + by + 1, '#557f42', 2, 2);
+      px(ctx, x + bx, y + by, '#7a9c58', 1, 1);
+      px(ctx, x + bx + 3, y + by + 2, '#6d9250', 1, 1);
+      px(ctx, x + bx + 1, y + by - 1, '#4e7a40', 1, 1);
     }
   }
 
@@ -448,6 +507,51 @@ G.tiles = (() => {
         px(ctx, x + mx, y + my, 2, 1); px(ctx, x + mx + 1, y + my + 1, '#4e7040');
       }
       ctx.globalAlpha = 1;
+    }
+    // Проплешины травы: сухие и тёмные пятна с кустиками (стык «трава/трава» больше не пустой).
+    if (map.outdoor && GRASSY.has(id)) patches(ctx, tx, ty, x, y);
+    // Настил мостков: своя затёртость и шляпки гвоздей у каждой клетки — плоскость доски
+    // перестаёт быть ровной, а по деке видно, что по ней ходят.
+    if (id === ID.PLANKS) {
+      const w1 = hh(1, 581), w2 = hh(2, 582);
+      ctx.globalAlpha = 0.06 + w1 * 0.09;
+      px(ctx, x, y, w1 > 0.55 ? '#000000' : '#ffffff', 16, 16);
+      ctx.globalAlpha = 1;
+      const nx = 2 + Math.floor(w2 * 12), ny = 2 + Math.floor(hh(3, 583) * 12);
+      px(ctx, x + nx, y + ny, '#5a3a20'); px(ctx, x + nx + 1, y + ny, '#c89a62');
+      if (w1 > 0.68) px(ctx, x + 3 + Math.floor(w1 * 9), y + 6 + Math.floor(hh(4, 584) * 8), '#7a4e2c', 3, 1);
+      if (w2 < 0.18) px(ctx, x + 6 + Math.floor(w2 * 30) % 8, y + 10, '#8a5a32', 2, 1);
+    }
+    // Бордюр и водосток: мостовая, которая упирается в газон, получает бортовой камень с joints
+    // и щелями (местами выбит, местами во мху) и тёмную канавку-водосток за ним.
+    // К тропинкам бордюр не ставим: там кромку держит наползающая земля и трава.
+    if (map.outdoor && G.mapgen && [ID.MAINROAD, ID.STONE, ID.PLAZA, ID.COBBLE, ID.BRICK].includes(id)) {
+      const kerb = (side, along, line) => {
+        const light = '#ded7c1', body = '#c6bfa8', shade = '#9b9582', joint = '#7d7869';
+        const at = (i, d) => side === 'N' ? [x + i, y + d]
+          : side === 'S' ? [x + i, y + 15 - d]
+          : side === 'W' ? [x + d, y + i]
+          : [x + 15 - d, y + i];
+        for (let i = 0; i < 16; i++) {
+          const g = along + i;
+          if (H(g, line, 972) > 0.93) continue;                    // щель: бордюр местами выбит
+          const p0 = at(i, 0), p1 = at(i, 1), p2 = at(i, 2), p3 = at(i, 3);
+          px(ctx, p0[0], p0[1], light); px(ctx, p1[0], p1[1], body); px(ctx, p2[0], p2[1], shade);
+          if (g % 5 === 0) {                                       // стык бортовых камней
+            if (side === 'N' || side === 'S') px(ctx, p1[0], p1[1], joint, 1, 2);
+            else px(ctx, p1[0], p1[1], joint, 2, 1);
+          }
+          if (H(g, line, 974) > 0.87) px(ctx, p0[0], p0[1], '#6f8a4c');   // мох в стыке
+          ctx.globalAlpha = 0.22; ctx.fillStyle = '#2f2b24';
+          if (side === 'N' || side === 'S') ctx.fillRect(p3[0], p3[1], 1, 1);
+          else ctx.fillRect(p3[0], p3[1], 1, 1);
+          ctx.globalAlpha = 1;
+        }
+      };
+      if (GRASSY.has(up)) kerb('N', tx * 16, ty);
+      if (GRASSY.has(dn)) kerb('S', tx * 16, ty + 1);
+      if (GRASSY.has(lf)) kerb('W', ty * 16, tx);
+      if (GRASSY.has(rt)) kerb('E', ty * 16, tx + 1);
     }
     // крупные пятна света и тени теперь — один плавный проход по всему чанку (map.groundLight), а не квадраты 4×4
     if (map.outdoor && G.mapgen && (GRASSY.has(id) || ROADY.has(id))) {
@@ -915,10 +1019,10 @@ G.tiles = (() => {
       blob(c, 7, 8, 3, '#e8a860'); px(c, 4, 9, '#e8a860', 7, 3); blob(c, 7, 4, 3, '#e8a860'); px(c, 4, 1, '#e8a860', 2, 2); px(c, 9, 1, '#e8a860', 2, 2);
       px(c, 5, 4, '#2a1e18'); px(c, 9, 4, '#2a1e18'); px(c, 7, 5, '#f08a8a'); px(c, 3, 9, '#c8803a', 1, 3); px(c, 11, 9, '#e8a860', 3, 1); px(c, 6, 7, '#c8803a', 2, 1);
     }, -7, -11, null);
-    obj('bookpile', 12, 10, (c) => { px(c, 1, 6, P.ink, 10, 4); px(c, 2, 7, '#c84a3a', 8, 2); px(c, 2, 3, P.ink, 8, 4); px(c, 3, 4, '#4a7ac8', 6, 2); px(c, 3, 1, P.ink, 6, 3); px(c, 4, 2, '#e8c040', 4, 1); }, -6, -9, { x: -5, y: -3, w: 10, h: 3 });
+    obj('bookpile', 12, 10, G.environment.props.bookpile, -6, -9, { x: -5, y: -3, w: 10, h: 3 });
     obj('basket', 12, 12, (c) => { outline(c, 1, 5, 10, 7, '#c8a050'); for (let i = 0; i < 4; i++) px(c, 2, 6 + i * 2, '#a07830', 8, 1); px(c, 2, 2, '#c8a050', 1, 4); px(c, 9, 2, '#c8a050', 1, 4); px(c, 2, 2, '#c8a050', 8, 1); px(c, 4, 4, '#d84a3a', 3, 2); px(c, 7, 4, '#7ac04a', 2, 2); }, -6, -11, { x: -5, y: -3, w: 10, h: 3 });
     obj('shoes', 12, 6, (c) => { px(c, 1, 2, '#5a3a24', 4, 3); px(c, 2, 1, '#8a5a34', 2, 1); px(c, 7, 3, '#3a3a4a', 4, 2); px(c, 7, 2, '#5a5a6a', 2, 1); }, -6, -5, null, 'floor');
-    obj('hibachi', 16, 14, (c) => { outline(c, 1, 4, 14, 10, '#6a4a30'); px(c, 3, 5, '#3a2a20', 10, 3); px(c, 5, 5, '#f08a2a', 2, 1); px(c, 9, 6, '#e84a2a', 2, 1); px(c, 2, 12, '#4a3220', 12, 2); }, -8, -13, { x: -7, y: -4, w: 14, h: 4 });
+    obj('hibachi', 16, 14, G.environment.props.hibachi, -8, -13, { x: -7, y: -4, w: 14, h: 4 });
     obj('wardrobe', 20, 32, G.environment.props.wardrobe, -10, -31, { x: -10, y: -6, w: 20, h: 6 });
     obj('rug_red', 32, 20, G.environment.props.rug_red, -16, -19, null, 'floor');
     obj('rug_blue', 32, 20, G.environment.props.rug_blue, -16, -19, null, 'floor');

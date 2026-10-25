@@ -631,7 +631,10 @@ G.scenes.register('world', (pos) => {
       this.drawLight(ctx, vis, cx, cy, W, VH);
       if (G.guards) G.guards.glow(ctx, this);
       G.fx.particles(ctx, cx, cy, W, VH, m, G.state.vars.min, this.time);
-      if (this.map.outdoor && G.life.raining()) this.drawRain(ctx, cx, cy, W, VH);
+      if (this.map.outdoor && G.life.raining()) {
+        G.fx.puddles(ctx, cx, cy, W, VH, this.map, this.time);
+        this.drawRain(ctx, cx, cy, W, VH);
+      }
 
       if (G.debug.on) {
         ctx.strokeStyle = 'rgba(255,0,0,.7)'; ctx.lineWidth = 1;
