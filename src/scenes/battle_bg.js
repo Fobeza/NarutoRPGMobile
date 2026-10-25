@@ -81,6 +81,25 @@ G.battleBg = (() => {
       if (o.tufts && r > 0.5) { ctx.fillStyle = o.tufts[0]; ctx.fillRect(x, y - 2, 1, 2); ctx.fillRect(x + 2, y - 1, 1, 1); ctx.fillStyle = o.tufts[1]; ctx.fillRect(x + 1, y - 3, 1, 3); }
       else { ctx.fillStyle = S.toneHex(pal[1], r > 0.25 ? 0.22 : -0.3); ctx.fillRect(x, y, r > 0.15 ? 2 : 1, 1); }
     }
+    // Зерно земли: у нижней кромки кадра крупнее и контрастнее — плоская заливка перестаёт быть плоской.
+    const light = S.toneHex(pal[0], 0.22), dark = S.toneHex(pal[2], -0.22);
+    for (let y = y0 + 2; y < H; y++) {
+      const depth = (y - y0) / Math.max(1, H - y0);
+      for (let x = 0; x < W; x++) {
+        const n = Hh(x >> 1, y, 77);
+        if (n < 0.79 + depth * 0.06) continue;
+        ctx.fillStyle = n > 0.93 ? light : dark;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    // Крупные комья и камешки — только на переднем плане, чтобы не рябило у горизонта.
+    for (let i = 0; i < W / 12; i++) {
+      const x = Math.floor(Hh(i, 8, 74) * W), y = y0 + Math.floor((H - y0) * (0.45 + Hh(8, i, 75) * 0.5));
+      ctx.fillStyle = dark; ctx.fillRect(x, y, 2, 1);
+      ctx.fillStyle = light; ctx.fillRect(x, y - 1, 1, 1);
+      if (o.tufts && Hh(i, i, 76) > 0.6) { ctx.fillStyle = o.tufts[1]; ctx.fillRect(x + 3, y - 2, 1, 3); }
+    }
+    S.tint(c, 0, H - 9, W, 9, (u, v) => -0.2 * v * v);   // тень у самой нижней кромки — передний план
   }
 
   // ---------- арены ----------
@@ -201,26 +220,68 @@ G.battleBg = (() => {
       S.grad(c, 0, 0, W, gy + 2, ['#5a9ae0', '#8ac4ee', '#cce6f6', '#eef6f8'], { dir: 'v', steps: 3 });
       glow(c, W * 0.15, H * 0.1, 70, '#fff6d8', 0.5);
       const ctx = c.getContext('2d');
-      // трибуны: ярусы каменных стен со зрителями-точками, флаги
+      // трибуны: ярусы каменных стен
       const tiers = [[gy - 10 - 68 * s, 22 * s, '#9a9aa8'], [gy - 10 - 46 * s, 23 * s, '#8a8a98'], [gy - 10 - 22 * s, 22 * s, '#7a7a8a']].map(([y, h, col]) => [Math.round(y), Math.ceil(h), col]);
       for (const [y, h, col] of tiers) {
         ctx.fillStyle = col; ctx.fillRect(0, y, W, h);
         S.tint(c, 0, y, W, h, (u, v) => 0.2 - v * 0.45 - u * 0.12);
         ctx.fillStyle = S.toneHex(col, 0.35); ctx.fillRect(0, y, W, 1);
-        for (let x = 1; x < W; x += 3) if (Hh(x, y, 5) > 0.35) {
-          ctx.fillStyle = ['#e8621a', '#2a4a9a', '#f0c040', '#c8401c', '#f4ecd8', '#3a7a4a'][Math.floor(Hh(y, x, 6) * 6)];
-          ctx.fillRect(x, y + 3 + Math.floor(Hh(x, 2, y) * 3), 2, 2);
-        }
+        ctx.fillStyle = S.toneHex(col, -0.35); ctx.fillRect(0, y + h - 1, W, 1);   // кромка яруса
+        for (let x = 2; x < W; x += 11) { ctx.fillStyle = S.toneHex(col, -0.2); ctx.fillRect(x, y + 1, 1, h - 2); }   // швы кладки
       }
+      // зрители: два ряда в каждом ярусе — плечи, голова, иногда шляпа или флажок в руке
+      const skin = ['#e8b48c', '#d89a70', '#c88a60', '#f0c8a0', '#b87a52'];
+      const cloth = ['#e8621a', '#2a4a9a', '#f0c040', '#c8401c', '#f4ecd8', '#3a7a4a', '#7a4a8a', '#4a7a9a'];
+      tiers.forEach(([y, h, col], ti) => {
+        for (let r = 0; r < 2; r++) {
+          const by = y + 5 + r * 6;
+          for (let x = 1; x < W; x += 4) {
+            if (Hh(x, by + ti, 41) < 0.18) continue;                       // прорехи в толпе
+            const sk = skin[Math.floor(Hh(x, by, 42) * skin.length)];
+            const cl = cloth[Math.floor(Hh(by, x, 43) * cloth.length)];
+            const dim = ti * 0.12 + r * 0.05;                              // дальние ярусы в воздушной дымке
+            ctx.fillStyle = S.toneHex(cl, -dim - 0.08); ctx.fillRect(x, by + 2, 3, 2);
+            ctx.fillStyle = S.toneHex(sk, -dim); ctx.fillRect(x + 1, by, 2, 2);
+            ctx.fillStyle = S.toneHex(sk, -dim - 0.45); ctx.fillRect(x + 1, by, 2, 1);   // волосы
+            if (Hh(x, r + ti, 44) > 0.86) { ctx.fillStyle = S.toneHex(cl, 0.25); ctx.fillRect(x + 3, by - 2, 1, 4); }   // флажок
+          }
+        }
+      });
+      // знамёна на верхнем ярусе
       for (let i = 0; i < 6; i++) {
-        const fx = Math.round(W * (0.08 + i * 0.17)); const fy = Math.round(gy - 10 - 68 * s - 22); ctx.fillStyle = '#4a3a2a'; ctx.fillRect(fx, fy, 1, 24);
-        ctx.fillStyle = i % 2 ? '#c8401c' : '#e8621a'; ctx.fillRect(fx + 1, fy, 9, 6); ctx.fillStyle = '#f4ecd8'; ctx.fillRect(fx + 4, fy + 2, 3, 2);
+        const fx = Math.round(W * (0.08 + i * 0.17)), fy = Math.round(gy - 10 - 68 * s - 26);
+        ctx.fillStyle = '#4a3a2a'; ctx.fillRect(fx, fy, 1, 28);
+        ctx.fillStyle = i % 2 ? '#c8401c' : '#e8621a'; ctx.fillRect(fx + 1, fy, 9, 8);
+        ctx.fillStyle = '#f4ecd8'; ctx.fillRect(fx + 3, fy + 2, 5, 1); ctx.fillRect(fx + 3, fy + 5, 5, 1);
+        ctx.fillStyle = '#8a2a1a'; ctx.fillRect(fx + 1, fy + 7, 9, 1);
       }
       haze(c, gy - 10 - 100 * s, gy - 10, '#dceaf2', 0.25, 0.05);
+      // борт арены: каменный парапет с верёвкой на столбиках
       ctx.fillStyle = '#6a6a7a'; ctx.fillRect(0, gy - 10, W, 10); ctx.fillStyle = '#9a9aa8'; ctx.fillRect(0, gy - 10, W, 1);
-      for (let x = 0; x < W; x += 12) { ctx.fillStyle = '#5a5a6a'; ctx.fillRect(x, gy - 9, 1, 9); }
+      for (let x = 0; x < W; x += 12) { ctx.fillStyle = '#5a5a6a'; ctx.fillRect(x, gy - 9, 1, 9); ctx.fillStyle = '#3a3a46'; ctx.fillRect(x + 1, gy - 9, 1, 9); }
+      for (let x = 3; x < W; x += 24) {   // столбики с верёвкой перед трибунами
+        ctx.fillStyle = '#4a3a2a'; ctx.fillRect(x, gy - 16, 2, 7); ctx.fillStyle = '#8a6a44'; ctx.fillRect(x, gy - 16, 1, 7);
+        ctx.fillStyle = '#c8b478'; ctx.fillRect(x, gy - 13, 2, 1);
+      }
+      for (let x = 0; x < W; x++) { ctx.fillStyle = (x & 3) ? '#d8c48c' : '#c0a870'; ctx.fillRect(x, gy - 13, 1, 1); }
+      // парапет арены: полотнища с листом и гирлянда фонариков — площадь на празднике
+      for (let x = 8; x < W - 12; x += 52) {
+        ctx.fillStyle = '#b83a24'; ctx.fillRect(x, gy - 8, 18, 8);
+        ctx.fillStyle = '#e8d8b0'; ctx.fillRect(x + 2, gy - 7, 14, 6);
+        ctx.fillStyle = '#3e7a44'; ctx.fillRect(x + 7, gy - 6, 4, 2); ctx.fillRect(x + 6, gy - 4, 6, 1);
+        ctx.fillStyle = '#b83a24'; ctx.fillRect(x, gy - 1, 18, 1);
+      }
+      for (let x = 26; x < W; x += 26) {
+        ctx.fillStyle = '#c8925a'; ctx.fillRect(x, gy - 13, 1, 2);
+        ctx.fillStyle = '#f0c860'; ctx.fillRect(x - 1, gy - 11, 3, 3);
+        ctx.fillStyle = '#e08a30'; ctx.fillRect(x - 1, gy - 10, 3, 1);
+      }
       ground(c, gy, W, H, ['#e0c48a', '#d8b67a', '#b8945a'], { edge: '#f0dca8' });
+      // утоптанный круг: светлее к середине площадки, по краю — тёмная кромка
+      S.tint(c, 0, gy + 2, W, H - gy - 2, (u, v) => 0.08 - Math.abs(u - 0.5) * 0.16 - v * 0.1);
+      ctx.globalAlpha = 0.3; ctx.fillStyle = '#f6e6bc'; ctx.fillRect(0, gy + 12, W, 1); ctx.globalAlpha = 1;
     },
+
   };
 
   // Предметы арены из данных (G.ARENAS[t].obj): пять мест по ширине, деревья и кусты — по краям,
