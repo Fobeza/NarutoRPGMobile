@@ -344,6 +344,69 @@ G.tiles = (() => {
     }
   }
 
+  // Мост через воду: доски настила идут поперёк движения, по краям — балка, поручень и стойки.
+  // Мост — это PLANKS над рекой; вода сбоку подсказывает ось настила (север-юг или запад-восток).
+  function bridge(ctx, map, tx, ty, x, y, ID) {
+    const W = ID.WATER;
+    const wN = map.get(tx, ty - 1) === W, wS = map.get(tx, ty + 1) === W;
+    const wW = map.get(tx - 1, ty) === W, wE = map.get(tx + 1, ty) === W;
+    if (!(wN || wS || wW || wE)) return;
+    const ns = wW || wE;                       // вода по бокам → мост идёт север-юг, доски поперёк (горизонтально)
+    // Настил: свои доски, а не плитка «деревянного пола» — иначе мост читается как деревянная площадка.
+    px(ctx, x, y, '#a8683a', T, T);
+    for (let i = 2; i < 16; i += 4) {
+      if (ns) { px(ctx, x, y + i, '#8a5230', 16, 1); px(ctx, x + (i % 8 ? 5 : 11), y + i - 3, '#8a5230', 1, 3); }
+      else { px(ctx, x + i, y, '#8a5230', 1, 16); px(ctx, x + i - 3, y + (i % 8 ? 5 : 11), '#8a5230', 3, 1); }
+    }
+    for (let i = 0; i < 5; i++) px(ctx, x + Math.floor(H(tx + i, ty, 512) * 15), y + Math.floor(H(ty, tx + i, 513) * 15), '#c08a54');
+    // Край у воды: тень, балка, светлый поручень. Стойки — через клетку, как у настоящих мостков.
+    const post = (ns ? ty : tx) % 2 === 0;
+    const edge = (side) => {
+      for (let i = 0; i < 16; i++) {
+        const put = (n, col, w2 = 1) => ns ? px(ctx, x + (side === 'W' ? n : 15 - n), y + i, col, w2, 1)
+                                           : px(ctx, x + i, y + (side === 'N' ? n : 15 - n), col, 1, w2);
+        put(0, '#33200f', 2); put(2, '#8a5a30'); put(3, '#c8925a');
+        if (post && i > 1 && i < 6) put(1, '#2b1a0c', 1);   // стойка перил
+      }
+    };
+    if (wW) edge('W');
+    if (wE) edge('E');
+    if (wN) edge('N');
+    if (wS) edge('S');
+    // Концы настила: тёмный порог там, где мост сходит на берег.
+    if (!wW && map.get(tx - 1, ty) !== ID.PLANKS) px(ctx, x, y, '#5a3a20', 1, T);
+    if (!wE && map.get(tx + 1, ty) !== ID.PLANKS) px(ctx, x + 15, y, '#5a3a20', 1, T);
+    if (!wN && map.get(tx, ty - 1) !== ID.PLANKS) px(ctx, x, y, '#5a3a20', T, 1);
+    if (!wS && map.get(tx, ty + 1) !== ID.PLANKS) px(ctx, x, y + 15, '#5a3a20', T, 1);
+  }
+
+  // Трава наползает на мостовую рваной каймой: у живой кромки нет прямой линии, а дизеринг
+  // и пучки травы читаются как «дорога вросла в газон». Позиция шума — мировая, повторов нет.
+  function spill(ctx, map, tx, ty, x, y, ID, GRASSY) {
+    const greens = ['#6a9a4a', '#55923c', '#82ab58'];
+    for (const [dx, dy, side] of [[0, -1, 0], [0, 1, 1], [-1, 0, 2], [1, 0, 3]]) {
+      const nb = map.get(tx + dx, ty + dy);
+      if (!GRASSY.has(nb)) continue;
+      for (let i = 0; i < 16; i++) {
+        const g = (side < 2 ? tx : ty) * 16 + i, line = side < 2 ? ty + dy : tx + dx;
+        const v = edgeNoise(g, line, 700 + side);
+        if (v < 0.46) continue;
+        const d = Math.floor((v - 0.46) * 9);                 // 0..4 px вглубь мостовой
+        const col = greens[Math.floor(edgeNoise(g, line, 740 + side) * 3) % 3];
+        if (side === 0) px(ctx, x + i, y + d, col);
+        else if (side === 1) px(ctx, x + i, y + 15 - d, col);
+        else if (side === 2) px(ctx, x + d, y + i, col);
+        else px(ctx, x + 15 - d, y + i, col);
+        if (v > 0.82 && d < 3) {   // редкий пучок травы прямо на камне
+          if (side === 0) px(ctx, x + i, y + d + 1, '#4e8a3a', 1, 2);
+          else if (side === 1) px(ctx, x + i, y + 13 - d, '#4e8a3a', 1, 2);
+          else if (side === 2) px(ctx, x + d + 1, y + i, '#4e8a3a', 2, 1);
+          else px(ctx, x + 13 - d, y + i, '#4e8a3a', 2, 1);
+        }
+      }
+    }
+  }
+
   // Тайл с переходами по соседям (используется при запекании чанков карты)
   function renderTile(ctx, map, tx, ty, x, y) {
     if (!atlas) build();
@@ -369,6 +432,23 @@ G.tiles = (() => {
       if (rt !== id) { px(ctx, x + 15, y, '#59483d', 1, 16); px(ctx, x + 13, y, '#c0a579', 1, 16); }
     }
 
+    // Мостовая: потёртости, трещины и мох в швах по мировым координатам — сетка плит перестаёт повторяться.
+    if (map.outdoor && (id === ID.STONE || id === ID.MAINROAD || id === ID.PLAZA || id === ID.COBBLE || id === ID.BRICK || id === ID.DARKSTONE || id === ID.GRAVEL)) {
+      const w1 = hh(1, 571), w2 = hh(2, 572);
+      ctx.globalAlpha = 0.07 + w1 * 0.05; px(ctx, x + Math.floor(hh(3, 573) * 9), y + Math.floor(hh(4, 574) * 9), '#ffffff', 3 + Math.floor(w1 * 5), 2 + Math.floor(w2 * 4));
+      if (w2 > 0.62) { ctx.globalAlpha = 0.06 + w2 * 0.05; px(ctx, x, y + Math.floor(hh(5, 575) * 13), '#000000', 16, 2 + Math.floor(hh(6, 576) * 3)); }
+      if (w1 < 0.2) { // трещина: короткая ломаная от шва
+        ctx.globalAlpha = 0.3; ctx.fillStyle = '#6f6a5e';
+        const cx0 = 2 + Math.floor(hh(7, 577) * 12), cy0 = 2 + Math.floor(hh(8, 578) * 12);
+        for (let i = 0; i < 5; i++) px(ctx, x + cx0 + (i > 2 ? 1 : 0), y + cy0 + i, i % 2 ? '#7d776a' : '#5f5a50');
+      }
+      if (w2 > 0.86) { // мох в шве
+        ctx.globalAlpha = 0.5; ctx.fillStyle = '#6a8a4a';
+        const mx = Math.floor(hh(9, 579) * 13), my = Math.floor(hh(10, 580) * 13);
+        px(ctx, x + mx, y + my, 2, 1); px(ctx, x + mx + 1, y + my + 1, '#4e7040');
+      }
+      ctx.globalAlpha = 1;
+    }
     // крупные пятна света и тени теперь — один плавный проход по всему чанку (map.groundLight), а не квадраты 4×4
     if (map.outdoor && G.mapgen && (GRASSY.has(id) || ROADY.has(id))) {
       const grass = GRASSY.has(id);
@@ -379,7 +459,11 @@ G.tiles = (() => {
       }
     }
     // плавные переходы: более «живая» поверхность соседа заходит рваным краем с дизерингом
-    if(!drawnWater&&!drawnPath&&!drawnStreet)blendEdges(ctx, map, tx, ty, x, y, id);
+    // Тропинки получают ту же рваную кромку, что и дороги: без неё широкие места и перекрёстки
+    // оставались прямоугольными, потому что фигурных тайлов для них нет.
+    if(!drawnWater&&!drawnStreet)blendEdges(ctx, map, tx, ty, x, y, id);
+    if (drawnStreet) spill(ctx, map, tx, ty, x, y, ID, GRASSY);
+    if (id === ID.PLANKS) bridge(ctx, map, tx, ty, x, y, ID);
     // берег
     if (id === ID.WATER && !drawnWater) {
       if (LAND(up) || up === ID.CLIFF) { px(ctx, x, y, P.waterDark, 16, 2); px(ctx, x, y + 2, P.waterLight, 16, 1); }
@@ -750,10 +834,27 @@ G.tiles = (() => {
     obj('redlantern', 10, 26, (c) => { px(c, 4, 9, '#3a2a20', 2, 17); px(c, 2, 24, '#3a2a20', 6, 2); px(c, 1, 1, P.ink, 8, 9); px(c, 2, 2, '#d83a2a', 6, 7); px(c, 2, 4, '#f0c040', 6, 1); px(c, 3, 0, '#3a2a20', 4, 1); }, -5, -25, { x: -3, y: -3, w: 6, h: 3 });
     obj('banner', 10, 32, (c) => { px(c, 1, 0, '#5a3a24', 2, 32); px(c, 3, 2, P.ink, 7, 22); px(c, 4, 3, '#e8621a', 5, 20); px(c, 5, 6, '#f4ecd8', 3, 3); px(c, 5, 12, '#f4ecd8', 3, 1); px(c, 5, 15, '#f4ecd8', 3, 1); px(c, 3, 1, '#5a3a24', 7, 1); }, -2, -31, { x: -1, y: -3, w: 4, h: 3 });
     obj('bicycle', 22, 14, (c) => { for (const x of [4, 17]) { px(c, x - 3, 7, P.ink, 7, 1); px(c, x - 3, 13, P.ink, 7, 1); px(c, x - 4, 8, P.ink, 1, 5); px(c, x + 3, 8, P.ink, 1, 5); } px(c, 5, 6, '#c8402a', 11, 1); px(c, 8, 4, '#c8402a', 1, 6); px(c, 15, 3, '#c8402a', 1, 5); px(c, 6, 3, P.ink, 4, 1); px(c, 14, 2, P.ink, 3, 1); }, -11, -13, { x: -9, y: -3, w: 18, h: 3 });
-    obj('watertower', 22, 40, (c) => { // бак на опорах — фирменный силуэт Конохи
-      for (const x of [3, 17]) px(c, x, 16, '#5a5a6a', 2, 24); px(c, 5, 26, '#5a5a6a', 12, 1); px(c, 5, 34, '#5a5a6a', 12, 1);
-      px(c, 1, 3, P.ink, 20, 15); px(c, 2, 4, '#b8c0c8', 18, 13); px(c, 2, 4, '#d8e0e8', 18, 3); px(c, 2, 12, '#98a0a8', 18, 1);
-      px(c, 4, 0, P.ink, 14, 4); px(c, 5, 1, '#e8eef2', 12, 2);
+    obj('watertower', 22, 40, (c) => { // деревянный бак на опорах — фирменный силуэт Конохи
+      // опоры и раскосы: тёплое дерево, как у домов, а не серые стойки
+      for (const x of [3, 17]) { px(c, x, 15, '#5a3a24', 2, 25); px(c, x, 15, '#8a6440', 1, 25); }
+      px(c, 5, 23, '#5a3a24', 12, 1); px(c, 5, 32, '#5a3a24', 12, 1);
+      for (let i = 0; i < 7; i++) { px(c, 5 + i, 24 + i, '#6b4a2e'); px(c, 17 - i, 30 - i, '#6b4a2e'); }   // раскосы крест-накрест
+      // клёпки бака
+      px(c, 1, 5, P.ink, 20, 13);
+      px(c, 2, 6, '#8a5a34', 18, 11); px(c, 2, 6, '#a8703f', 18, 2);
+      for (let x = 4; x < 20; x += 3) px(c, x, 6, '#754a29', 1, 11);
+      // железные обручи и заклёпки
+      for (const y of [8, 13]) { px(c, 2, y, '#4a4a54', 18, 1); px(c, 2, y, '#6a6a76', 18, 0.5); }
+      for (let x = 4; x < 20; x += 3) { px(c, x, 8, '#8a8a96'); px(c, x, 13, '#8a8a96'); }
+      // шатровая крыша с коньком — узнаваемый силуэт башни
+      px(c, 1, 4, P.ink, 20, 2);
+      for (let i = 0; i < 4; i++) px(c, 2 + i, 4 - i, '#4a5a78', 18 - i * 2, 1);
+      px(c, 8, 0, P.ink, 6, 1); px(c, 9, 1, '#5a6a8a', 4, 1); px(c, 10, 0, '#c8a050', 2, 1);
+      // сливной лоток и потёк на боку
+      px(c, 19, 11, '#5a3a24', 3, 2); px(c, 22, 13, '#7fb0c8', 1, 2); px(c, 18, 15, '#6a8a9a', 1, 3);
+      // лестница сбоку
+      for (let y = 10; y < 20; y += 2) px(c, 16, y, '#c8b08a', 3, 1);
+      px(c, 16, 10, '#a8906c', 1, 10); px(c, 18, 10, '#a8906c', 1, 10);
     }, -11, -39, { x: -9, y: -4, w: 18, h: 4 });
     obj('pond', 32, 20, (c) => {
       px(c, 3, 2, '#7a7a88', 26, 17); px(c, 1, 5, '#7a7a88', 30, 11);

@@ -195,16 +195,23 @@ class Raster {
     else if (String(img._src || img.src || '').startsWith('data:image/png')) src = Object.assign({ ch: 4 }, this.imgBuf(img));
     if (!src) return;
     const m = this.m;
-    if (m[1] !== 0 || m[2] !== 0) return;   // только осевые преобразования
-    const [ox, oy] = this.tp(dx, dy);
-    const sX = m[0] * dw / dw, sY = m[3];
-    for (let y = 0; y < Math.round(dh * sY); y++) for (let x = 0; x < Math.round(dw * sX); x++) {
-      const ux = Math.floor(sx + (x / (dw * sX)) * sw), uy = Math.floor(sy + (y / (dh * sY)) * sh);
+    const det = m[0] * m[3] - m[1] * m[2];
+    if (!det) return;
+    // Идём по пикселям холста и обратным преобразованием ищем точку источника:
+    // так работают и повороты на 90° (материалы тайлов крутятся), и масштаб.
+    const cs = [[dx, dy], [dx + dw, dy], [dx, dy + dh], [dx + dw, dy + dh]].map(([x, y]) => this.tp(x, y));
+    const bx0 = Math.max(0, Math.floor(Math.min(...cs.map((p) => p[0])))), bx1 = Math.min(this.w, Math.ceil(Math.max(...cs.map((p) => p[0]))));
+    const by0 = Math.max(0, Math.floor(Math.min(...cs.map((p) => p[1])))), by1 = Math.min(this.hh, Math.ceil(Math.max(...cs.map((p) => p[1]))));
+    for (let py = by0; py < by1; py++) for (let pxx = bx0; pxx < bx1; pxx++) {
+      const rx = pxx + 0.5 - m[4], ry = py + 0.5 - m[5];
+      const u = (m[3] * rx - m[2] * ry) / det, v = (-m[1] * rx + m[0] * ry) / det;
+      if (u < dx || v < dy || u >= dx + dw || v >= dy + dh) continue;
+      const ux = Math.floor(sx + ((u - dx) / dw) * sw), uy = Math.floor(sy + ((v - dy) / dh) * sh);
       if (ux < 0 || uy < 0 || ux >= src.w || uy >= src.h) continue;
       const o = (uy * src.w + ux) * src.ch;
       const al = (src.ch === 4 ? src.px[o + 3] / 255 : (src.mask ? src.mask[uy * src.w + ux] / 255 : 1)) * this.globalAlpha;
       if (al <= 0) continue;
-      this.blend(Math.round(ox + x), Math.round(oy + y), src.px[o], src.px[o + 1], src.px[o + 2], al);
+      this.blend(pxx, py, src.px[o], src.px[o + 1], src.px[o + 2], al);
     }
   }
   imgBuf(img) {
@@ -309,15 +316,7 @@ function backdrop() {
   ctx.fillStyle = '#221c2c'; ctx.fillRect(0, 180, W, 120);
   ctx.fillStyle = '#2e6a32'; ctx.fillRect(0, 176, W, 6);
 }
-frame('ui_world_menu', () => { G.scenes.push(G.scenes.make('menu')); }, backdrop);
-frame('ui_bag', () => {
-  G.state.inv = { kunai: 3, ramen_miso: 2, bandage: 1, book_history: 1, flowers_s: 2, shuriken: 5 };
-  G.scenes.push(G.scenes.make('bag')); }, backdrop);
-frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
-frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
-frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
-frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
-// ---------- бой: настоящая сцена, чтобы видеть фоны арен с бойцами и интерфейсом ----------
+
 function battleFrame(name, enemy, terrain) {
   frame(name, () => {
     const sc = G.scenes.make('battle', { enemy, mode: 'spar', terrain }, () => {});
@@ -327,6 +326,66 @@ function battleFrame(name, enemy, terrain) {
     for (let i = 0; i < 40; i++) sc.update(.05);
   }, null, [240, 320]);
 }
+
+// ---------- набор кадров: всё в main(), чтобы файл можно было подключать из других скриптов ----------
+// Комната и улица: рисуем карту целиком (земля + объекты + персонаж), а не только тайлы —
+// так видно мебель, пропы и масштаб. Карта собирается тем же кодом, что в игре.
+function worldFrame(name, setup) {
+  frame(name, () => {
+    const m = G.world.get('konoha');
+    G.scenes.push({ name, draw(c) {
+      c.fillStyle = '#101018'; c.fillRect(0, 0, W, H);
+      const cam = setup(m);
+      const T = G.CONFIG.TILE;
+      // renderTile, а не drawTile: видны вода, тропинки, мост и переходы — как в игре
+      for (let y = 0; y < Math.ceil(H / T) + 1; y++) for (let x = 0; x < Math.ceil(W / T) + 1; x++) {
+        const tx = cam.tx + x, ty = cam.ty + y;
+        G.tiles.renderTile(c, m, tx, ty, x * T, y * T);
+      }
+      const objs = m.objects.filter((o) => o.img).sort((a, b) => a.sortY - b.sortY);
+      c.save(); c.translate(-cam.tx * T, -cam.ty * T);
+      for (const o of objs) if (o.layer === 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      if (cam.npc) G.chars.draw(c, cam.npc, 'down', 0, cam.npcX, cam.npcY);
+      c.restore();
+    } });
+  });
+}
+
+function roomFrame(name, id) {
+  frame(name, () => {
+    const b = G.world.konoha().landmarks[id] || G.world.konoha().buildings[0];
+    const m = G.interiors.build(b.interior);
+    G.scenes.push({ name, draw(c) {
+      c.fillStyle = '#101018'; c.fillRect(0, 0, W, H);
+      const T = G.CONFIG.TILE;
+      const tx0 = Math.max(0, Math.floor((m.w - W / T) / 2)), ty0 = Math.max(0, Math.floor((m.h - H / T) / 2));
+      // маленькая комната — по центру кадра, чтобы было видно всю
+      c.save();
+      c.translate(Math.round(Math.max(0, (W - (Math.min(m.w, W / T)) * T) / 2)), Math.round(Math.max(0, (H - (Math.min(m.h, H / T)) * T) / 2)));
+      for (let y = 0; y < Math.ceil(H / T) + 1; y++) for (let x = 0; x < Math.ceil(W / T) + 1; x++) {
+        const tx = tx0 + x, ty = ty0 + y;
+        G.tiles.renderTile(c, m, tx, ty, x * T, y * T);
+      }
+      c.translate(-tx0 * T, -ty0 * T);
+      const objs = m.objects.filter((o) => o.img).sort((a, b) => a.sortY - b.sortY);
+      for (const o of objs) if (o.layer === 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
+      c.restore();
+    } });
+  });
+}
+
+function main() {
+frame('ui_world_menu', () => { G.scenes.push(G.scenes.make('menu')); }, backdrop);
+frame('ui_bag', () => {
+  G.state.inv = { kunai: 3, ramen_miso: 2, bandage: 1, book_history: 1, flowers_s: 2, shuriken: 5 };
+  G.scenes.push(G.scenes.make('bag')); }, backdrop);
+frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
+frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
+frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
+frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+// ---------- бой: настоящая сцена, чтобы видеть фоны арен с бойцами и интерфейсом ----------
 battleFrame('battle_yard', 'sasuke', 'yard');
 battleFrame('battle_field', 'sasuke', 'field');
 battleFrame('battle_ring', 'sasuke', 'ring');
@@ -352,52 +411,11 @@ const TEX = ['tex_floor','tex_planks','tex_tatami','tex_mat','tex_tilefloor','te
     } });
   }, null, [CW, CH]);
 }
-// Комната и улица: рисуем карту целиком (земля + объекты + персонаж), а не только тайлы —
-// так видно мебель, пропы и масштаб. Карта собирается тем же кодом, что в игре.
-function worldFrame(name, setup) {
-  frame(name, () => {
-    const m = G.world.get('konoha');
-    G.scenes.push({ name, draw(c) {
-      c.fillStyle = '#101018'; c.fillRect(0, 0, W, H);
-      const cam = setup(m);
-      const T = G.CONFIG.TILE;
-      for (let y = 0; y < Math.ceil(H / T) + 1; y++) for (let x = 0; x < Math.ceil(W / T) + 1; x++) {
-        const tx = cam.tx + x, ty = cam.ty + y;
-        G.tiles.drawTile(c, m.get(tx, ty), x * T, y * T, tx, ty);
-      }
-      const objs = m.objects.filter((o) => o.img).sort((a, b) => a.sortY - b.sortY);
-      c.save(); c.translate(-cam.tx * T, -cam.ty * T);
-      for (const o of objs) if (o.layer === 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
-      for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
-      if (cam.npc) G.chars.draw(c, cam.npc, 'down', 0, cam.npcX, cam.npcY);
-      c.restore();
-    } });
-  });
-}
 // дом героя: интерьер собирается тем же кодом, что в игре (G.interiors.build)
-function roomFrame(name, id) {
-  frame(name, () => {
-    const b = G.world.konoha().landmarks[id] || G.world.konoha().buildings[0];
-    const m = G.interiors.build(b.interior);
-    G.scenes.push({ name, draw(c) {
-      c.fillStyle = '#101018'; c.fillRect(0, 0, W, H);
-      const T = G.CONFIG.TILE;
-      const tx0 = Math.max(0, Math.floor((m.w - W / T) / 2)), ty0 = Math.max(0, Math.floor((m.h - H / T) / 2));
-      // маленькая комната — по центру кадра, чтобы было видно всю
-      c.save();
-      c.translate(Math.round(Math.max(0, (W - (Math.min(m.w, W / T)) * T) / 2)), Math.round(Math.max(0, (H - (Math.min(m.h, H / T)) * T) / 2)));
-      for (let y = 0; y < Math.ceil(H / T) + 1; y++) for (let x = 0; x < Math.ceil(W / T) + 1; x++) {
-        const tx = tx0 + x, ty = ty0 + y;
-        G.tiles.drawTile(c, m.get(tx, ty), x * T, y * T, tx, ty);
-      }
-      c.translate(-tx0 * T, -ty0 * T);
-      const objs = m.objects.filter((o) => o.img).sort((a, b) => a.sortY - b.sortY);
-      for (const o of objs) if (o.layer === 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
-      for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
-      c.restore();
-    } });
-  });
-}
+// Настоящая карта деревни: река и мостки, тропинки, площадь. Видно землю так, как её видит игрок.
+worldFrame('map_river', (m) => ({ tx: 118, ty: 34 }));
+worldFrame('map_bridge', (m) => ({ tx: 124, ty: 48 }));
+worldFrame('map_paths', (m) => ({ tx: 52, ty: 47 }));
 roomFrame('ui_room', 'hero_home');
 roomFrame('ui_room_academy', 'academy');
 roomFrame('ui_room_shop', 'ichiraku');
@@ -430,3 +448,7 @@ frame('ui_street', () => {
   } });
 });
 console.log('кадры в', OUT);
+
+}
+if (require.main === module) main();
+module.exports = { main, frame, worldFrame, roomFrame, battleFrame, Raster, encodePng, G, OUT, W, H };

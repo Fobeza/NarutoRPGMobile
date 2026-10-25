@@ -23,7 +23,7 @@ G.villageDetails = (() => {
     if(r.x<16||r.y<16||r.x+r.w>(m.w-1)*16||r.y+r.h>(m.h-1)*16)return false;
     // Проверяем весь рисунок, а не только точку опоры предмета.
     for(let y=Math.floor(r.y/16);y<=Math.floor((r.y+r.h-1)/16);y++)for(let x=Math.floor(r.x/16);x<=Math.floor((r.x+r.w-1)/16);x++){
-      if(m.solidTile(x,y)||[G.tiles.ID.MAINROAD,G.tiles.ID.PATH,G.tiles.ID.BRIDGE].includes(m.get(x,y)))return false;
+      if(m.solidTile(x,y)||[G.tiles.ID.MAINROAD,G.tiles.ID.PATH,G.tiles.ID.PLANKS].includes(m.get(x,y)))return false;   // PLANKS — это и мостки над водой
     }
     if(m.warps.some(w=>G.util.rectsOverlap(r,{x:w.rect.x-24,y:w.rect.y-16,w:w.rect.w+48,h:w.rect.h+40})))return false;
     if(m.npcs.some(n=>G.util.rectsOverlap(r,{x:n.x-14,y:n.y-20,w:28,h:28})))return false;

@@ -9,6 +9,19 @@ G.terrainArt=(()=>{
   }
   function paintAtlas(ctx,ID,VAR){
     const grass=tile('grass'),earth=tile('earth');
+    // Свободные столбцы второй строки атласа отдаём повёрнутому материалу: сетка повторов травы слабее.
+    let next=0;
+    for(const k in VAR)for(const c of VAR[k])next=Math.max(next,c+1);
+    const spare=Object.keys(ID).length;
+    for(const id of [ID.GRASS,ID.GRASS2,ID.CLOVER,ID.MOSS,ID.DARKGRASS]){
+      if(next>=spare)break;
+      const turn=1+((next-1)%3);
+      const material=tile('grass',turn);
+      const col=next++;
+      const draw=(x,y)=>{ctx.drawImage(material,x,y);if(id===ID.DARKGRASS||id===ID.MOSS){ctx.fillStyle=id===ID.DARKGRASS?'rgba(20,55,32,.3)':'rgba(20,55,32,.12)';ctx.fillRect(x,y,16,16);}};
+      draw(col*16,16);
+      (VAR[id]||(VAR[id]=[])).push(col);
+    }
     for(const id of [ID.GRASS,ID.GRASS2,ID.FLOWERS,ID.CLOVER,ID.MOSS,ID.DARKGRASS,ID.PATH,ID.DIRT]){
       const material=id===ID.PATH||id===ID.DIRT?earth:grass;
       const draw=(x,y)=>{ctx.drawImage(material,x,y);if(id===ID.DARKGRASS||id===ID.MOSS){ctx.fillStyle=id===ID.DARKGRASS?'rgba(20,55,32,.3)':'rgba(20,55,32,.12)';ctx.fillRect(x,y,16,16);}};
