@@ -1,6 +1,6 @@
 # Карточный бой «Дуэль»
 
-Версия 2.6. Ядро — `src/systems/duel.js` (чистая логика без отрисовки), экран — `src/scenes/battle.js`,
+Версия 3.0. Ядро — `src/systems/duel.js` (чистая логика без отрисовки), экран — `src/scenes/battle.js`,
 карты — `src/data/cards.js`, противники и техники — `src/data/duel_data.js`, колода героя — `src/systems/deck.js`
 и экран `src/scenes/deckview.js`, симулятор — `src/systems/sim.js`.
 Численный баланс — `docs/BALANCE.md` и `docs/balance.csv` (генерируются, руками не правятся).
