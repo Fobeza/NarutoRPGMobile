@@ -143,6 +143,8 @@
   def('mikoto', 'Микото', 'long', { h: '#1a1a24', H: '#3a3a4a', t: '#8a6a9a', T: '#664a78', a: '#e8d8b8', p: '#8a6a9a', P: '#664a78', f: '#3a2a2a', e: P.ink });
   def('itachi', 'Итачи', 'lowpony', Object.assign({ h: '#1a1a24', H: '#3a3a4a', e: P.ink }, vest, { t: '#3a3a44', T: '#26262e', a: '#c8ccd8', B: '#2a2a3a' }));
   def('jiraiya', 'Джирайя', 'sage', { h: '#e8e8f0', H: '#ffffff', t: '#3a7a4a', T: '#26543a', a: '#c83a3a', p: '#5a3a2a', P: '#3a281c', f: '#2a2a2a', e: P.ink, b: '#c8ccd8', B: '#2a2a3a' });
+  // Финал 2.6: человек в плаще у ворот. Лица не видно — капюшон и тень.
+  def('stranger', 'Незнакомец', 'short', { h: '#201a2a', H: '#3a3048', t: '#2a2438', T: '#181426', a: '#7a5aa0', p: '#242030', P: '#161420', f: '#14121c', e: '#c8a0ff' }, { ex: 'hood' });
   def('orochimaru', 'Орочимару', 'long', { h: '#14121c', H: '#2a2a3a', t: '#d8d0e0', T: '#a8a0b8', a: '#7a4a9a', p: '#d8d0e0', P: '#a8a0b8', f: '#3a3a4a', e: '#e8c840' }, { skin: ['#ece4da', '#c8bcae'] });
   def('homura', 'Хомура', 'short', { h: '#b8b8c0', H: '#e0e0e8', t: '#c8b898', T: '#a09074', a: '#8a6a4a', p: '#c8b898', P: '#a09074', f: '#3a2a1a', e: P.ink });
   def('koharu', 'Кохару', 'bun', { h: '#c8c8d0', H: '#f0f0f8', t: '#7a6a8a', T: '#584a68', a: '#e8d8b8', p: '#7a6a8a', P: '#584a68', f: '#3a2a1a', e: P.ink });

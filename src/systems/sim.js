@@ -54,6 +54,7 @@ G.sim = {
     { id: 'choji_d19', day: 19, enemy: 'choji', mode: 'spar', terrain: 'field', label: 'Чоджи (д.19)' },
     { id: 'sasuke_d19', day: 19, enemy: 'sasuke', mode: 'spar', terrain: 'yard', label: 'Саске (д.19)' },
     { id: 'iruka_d20', day: 20, enemy: 'iruka', mode: 'spar', terrain: 'yard', label: 'Ирука (д.20)' },
+    { id: 'stranger_d21', day: 21, enemy: 'stranger', mode: 'ko', terrain: 'night', label: 'Незнакомец в плаще (д.21)' },
   ],
   // один бой ботом; cfg — сценарий + { stats, skills, build, skill }
   battle(cfg) {

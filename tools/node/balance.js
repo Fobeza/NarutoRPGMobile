@@ -160,5 +160,26 @@ A('|---|---|---|---|');
 for (const t of Object.values(meta.trainings)) A(`| ${t.name} | ${Object.entries(t.stats).map(([k, v]) => k + ' ' + v).join(', ')} | ${t.fatigue} | ${t.minutes} |`);
 A('');
 fs.writeFileSync(path.join(DOCS, 'BALANCE.md'), L.join('\n'));
+
+// ─────────── target-окна ───────────
+// Замер «среднего» игрока — новый базис: окно ±15 п.п. вокруг него (глубже, чем шум 120 боёв).
+// Переснять окна: node tools/node/balance.js 120 --targets
+if (process.argv.includes('--targets')) {
+  const file = path.join(h.ROOT, 'tools', 'targets.json');
+  const old = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const targets = {};
+  for (const sc of meta.scen) {
+    targets[sc.id] = {};
+    for (const bd of BUILDS) {
+      const r = rows.find((x) => x.sc === sc.id && x.build === bd && x.skill === 0.65);
+      const w = Math.round(r.win * 100) / 100;
+      targets[sc.id][bd] = [Math.max(0, Math.min(1, Math.round((w - 0.15) * 100) / 100)), Math.max(0, Math.min(1, Math.round((w + 0.15) * 100) / 100))];
+    }
+  }
+  const out = Object.assign({}, old, { targets });
+  out._margin = 'Окна заданы ±15 процентных пунктов от детерминированного замера 120 боёв на ячейку (зерно 20260518). Переснять: node tools/node/balance.js 120 --targets.';
+  fs.writeFileSync(file, JSON.stringify(out, null, 2) + '\n');
+  console.log('tools/targets.json переснят: окон ' + Object.keys(targets).length * BUILDS.length);
+}
 console.log(`docs/BALANCE.md и docs/balance.csv записаны; ячеек «среднего» вне окна: ${out} из ${meta.scen.length * BUILDS.length}`);
 process.exitCode = out ? 1 : 0;

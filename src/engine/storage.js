@@ -4,6 +4,10 @@ G.storage = {
   KEY_SAVE: 'wof_save_v1',
   KEY_BACKUP: 'wof_save_v1_bak',
   KEY_SETTINGS: 'wof_settings',
+  // Три слота: 0 — основной (в него пишут автосейвы), 1 и 2 — ручные.
+  KEY_SLOTS: ['wof_save_v1', 'wof_save_v1_s1', 'wof_save_v1_s2'],
+  SLOTS: 3,
+  active: 0,
   SAVE_VERSION: 2,
 
   // Если браузер не даёт localStorage (файл в Safari, приватный режим, запрет cookies), держим копию в памяти
@@ -63,7 +67,11 @@ G.storage = {
     }
     for (const k of ['flags', 'daily']) if (st[k] && Object.values(st[k]).some((n) => typeof n !== 'boolean' && !finite(n))) return false;
     if (st.log != null && (!Array.isArray(st.log) || st.log.some((x) => typeof x !== 'string'))) return false;
+    if (st.dlgLog != null && (!Array.isArray(st.dlgLog) || st.dlgLog.length > 200 || st.dlgLog.some((x) => typeof x !== 'string'))) return false;
     if (st.fog != null && (typeof st.fog !== 'string' || !/^[01]*$/.test(st.fog))) return false;
+    // Колода: только известные карты (пустую или короткую колоду потом чинит G.deck.ensure)
+    if (st.deck != null && (!Array.isArray(st.deck) || st.deck.length > 40 || st.deck.some((id) => typeof id !== 'string' || !Object.hasOwn(G.CARDS, id)))) return false;
+    if (st.cardOwned != null && (!obj(st.cardOwned) || Object.entries(st.cardOwned).some(([id, n]) => !Object.hasOwn(G.CARDS, id) || !qty(n) || n > 9))) return false;
     if (st.frQueue != null && (!Array.isArray(st.frQueue) || st.frQueue.some((id) => typeof id !== 'string' || !G.script.library[id]))) return false;
     if (st.makeupQ != null && (!Array.isArray(st.makeupQ) || st.makeupQ.some((day) => !qty(day) || day < 1))) return false;
     if (st.pos != null && (!obj(st.pos) || typeof st.pos.map !== 'string' || !finite(st.pos.x) || !finite(st.pos.y) || st.pos.x < 0 || st.pos.y < 0 || !['up', 'down', 'left', 'right'].includes(st.pos.dir))) return false;
@@ -83,12 +91,17 @@ G.storage = {
   },
   _good(key) { const d = this._get(key); return d && this.valid(d) ? d : null; },
 
-  hasSave() { return !!(this._good(this.KEY_SAVE) || this._good(this.KEY_BACKUP)); },
+  hasSave() { return this.newestSlot() >= 0 || !!this._good(this.KEY_BACKUP); },
 
-  // opts.backup — ещё и резервная копия (утро нового дня)
+  // opts.backup — ещё и резервная копия (утро нового дня); opts.slot — номер слота (0..2)
   save(state, opts = {}) {
-    const data = { v: this.SAVE_VERSION, t: Date.now(), build: BUILD.version, state };
-    const ok = this._set(this.KEY_SAVE, data);
+    // t строго растёт: две записи в одну миллисекунду не спорят, какой слот новее
+    const t = Math.max(Date.now(), (this._lastT || 0) + 1); this._lastT = t;
+    const data = { v: this.SAVE_VERSION, t, build: BUILD.version, state };
+    const slot = opts.slot != null ? opts.slot : this.active;
+    const key = this.KEY_SLOTS[slot] || this.KEY_SAVE;
+    this.active = Math.max(0, this.KEY_SLOTS.indexOf(key));
+    const ok = this._set(key, data);
     if (opts.backup || !this._good(this.KEY_BACKUP)) this._set(this.KEY_BACKUP, data);
     if (!ok && !this._warned) {
       this._warned = true;
@@ -104,14 +117,31 @@ G.storage = {
   restoreBackup() {
     const d = this._good(this.KEY_BACKUP);
     if (!d) return false;
-    this._set(this.KEY_SAVE, d);   // не удалась постоянная запись — копия всё равно в памяти и загрузится
+    this._set(this.KEY_SLOTS[this.active] || this.KEY_SAVE, d);   // не удалась постоянная запись — копия всё равно в памяти и загрузится
     return true;
   },
 
-  load() {
-    let d = this._good(this.KEY_SAVE);
+  // Информация о слотах для экрана «Сохранение»: день, время, дата записи
+  slotInfo(i) {
+    const d = this._good(this.KEY_SLOTS[i] || this.KEY_SAVE);
+    if (!d) return null;
+    const dt = new Date(d.t || 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    return { day: d.state.vars.day, min: d.state.vars.min, t: d.t || 0,
+      when: `${pad(dt.getDate())}.${pad(dt.getMonth() + 1)}, ${pad(dt.getHours())}:${pad(dt.getMinutes())}` };
+  },
+  // Новейший слот: «Продолжить» на титульном экране открывает именно его
+  newestSlot() {
+    let best = -1, t = -1;
+    for (let i = 0; i < this.SLOTS; i++) { const bi = this.slotInfo(i); if (bi && bi.t > t) { t = bi.t; best = i; } }
+    return best;
+  },
+  load(slot) {
+    const i = slot != null ? slot : (this.newestSlot() >= 0 ? this.newestSlot() : 0);
+    let d = this._good(this.KEY_SLOTS[i]);
     if (!d) d = this._good(this.KEY_BACKUP); // основная копия повреждена → резервная
     if (!d) return null;
+    this.active = i;
     return this.migrate(d).state;
   },
 
@@ -122,15 +152,17 @@ G.storage = {
     return d;
   },
 
-  wipe() {
-    try { localStorage.removeItem(this.KEY_SAVE); localStorage.removeItem(this.KEY_BACKUP); } catch (_) {}
-    delete this._mem[this.KEY_SAVE]; delete this._mem[this.KEY_BACKUP]; this._fresh = {};
+  // Стереть один слот (slot == null — все)
+  wipe(slot) {
+    const keys = slot == null ? this.KEY_SLOTS.concat([this.KEY_BACKUP]) : [this.KEY_SLOTS[slot]];
+    try { for (const k of keys) localStorage.removeItem(k); } catch (_) {}
+    for (const k of keys) { delete this._mem[k]; delete this._fresh[k]; }
     try { const w = this._wn(); delete w[this.KEY_SAVE]; delete w[this.KEY_BACKUP]; window.name = JSON.stringify(w); } catch (_) {}
   },
 
   // Экспорт: строка, которую можно скопировать и вставить в другом месте
   exportCode() {
-    const s = this._raw(this.KEY_SAVE);
+    const s = this._raw(this.KEY_SLOTS[this.active]);
     if (!s) return '';
     return 'WOF1:' + btoa(unescape(encodeURIComponent(s)));
   },
@@ -142,8 +174,8 @@ G.storage = {
       const d = JSON.parse(s);
       if (!this.valid(d)) return false;
       // текущую игру — в резервную копию, чтобы импорт можно было откатить
-      const cur = this._good(this.KEY_SAVE); if (cur) this._set(this.KEY_BACKUP, cur);
-      this._set(this.KEY_SAVE, d);
+      const cur = this._good(this.KEY_SLOTS[this.active]); if (cur) this._set(this.KEY_BACKUP, cur);
+      this._set(this.KEY_SLOTS[this.active], d);
       return true;
     } catch (_) { return false; }
   },

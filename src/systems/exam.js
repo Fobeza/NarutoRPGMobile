@@ -26,7 +26,13 @@ G.exam = (() => {
       const total = Math.round(res.wr * 25 + res.thr * 20 + res.bun * 30 + grade * 10 + att * 5 + iruka * 5 + stab * 5);
       const pass = total >= PASS && res.bun > 0.3;
       v().exam = total; v().exam_pass = pass ? 1 : 0;
-      if (!pass) v().exam_fail_day = v().day;
+      if (!pass) {
+        // провал имеет цену: пересдача через неделю, репутация и доверие Ируки падают
+        v().exam_fail_day = v().day;
+        v().rep = (v().rep || 0) - 3;
+        G.friends.add('iruka', -2, 'exam');
+        G.game.note('Экзамен не сдан: репутация −3, Ирука расстроен');
+      }
       G.game.advanceTo('15:00');
       G.game.note(`Экзамен на генина: ${total} баллов — ${pass ? 'сдан' : 'не сдан'}`);
       say([
@@ -60,5 +66,23 @@ G.exam = (() => {
       throwing();
     })));
   }
-  return { DAY, RETAKE, PASS, open, due, start };
+  // Прикидка перед экзаменом: сколько баллов герой наберёт при обычной игре.
+  // Считается по той же формуле, что и итог (systems/exam.js: finish), а «мастерство» игрока берётся средним.
+  function estimate(skill = 0.75) {
+    const stat = (k) => G.hero.stat(k);
+    const wr = Math.min(1, skill * 0.8 + stat('know') * 0.02);
+    const thr = Math.min(1, skill * 0.85 + stat('tai') * 0.015);
+    const knows = G.combat.knows('bunshin');
+    const bun = knows ? Math.min(1, skill * 0.7 + G.combat.mastery('bunshin') * 0.12 + stat('nin') * 0.02) : 0;
+    const grade = G.academy.avg() / 100, att = G.academy.attendance() / 100, iruka = G.friends.level('iruka') / 5, stab = G.purple.stability() / 100;
+    const total = Math.round(wr * 25 + thr * 20 + bun * 30 + grade * 10 + att * 5 + iruka * 5 + stab * 5);
+    const tips = [];
+    if (!knows) tips.push('выучить Буншин (урок в Академии)');
+    if (grade < 0.7) tips.push('подтянуть оценки на уроках');
+    if (att < 0.85) tips.push('не пропускать уроки');
+    if (stab < 0.55) tips.push('тренировать контроль чакры');
+    if (iruka < 0.6) tips.push('пообщаться с Ирукой');
+    return { total, tips, pass: total >= PASS };
+  }
+  return { DAY, RETAKE, PASS, open, due, start, estimate };
 })();

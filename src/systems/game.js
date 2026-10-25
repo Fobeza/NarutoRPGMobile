@@ -36,8 +36,13 @@ G.game = (() => {
       goal: null,
       pos: null,
       log: [],             // события дня для экрана «Итоги дня»
+      dlgLog: [],          // история реплик (последние 60 строк), экран «История»
       quests: {},          // id → { st, step, day, due }
       tracked: null,       // отслеживаемое задание
+      cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
+      deck: null,          // колода героя: список id карт (10–20), см. systems/deck.js
+      cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
+      deck: null,          // колода героя: список id (10–20 карт)
       marker: null,        // своя метка на карте { x, y, label } (в тайлах Конохи)
       fog: '',             // исследованные участки карты (строка 0/1 по блокам 8×8 тайлов)
     };
@@ -46,10 +51,16 @@ G.game = (() => {
   const api = {
     DAYS, DAYS_FULL, MONTHS, MONTH_DAYS, GOALS, POUCH,
 
-    newState() { G.state = defaults(); return G.state; },
+    newState() {
+      G.state = defaults();
+      // новая игра всегда пишется в основной слот: иначе автосейв затрёт ручной
+      if (G.storage && G.storage.KEY_SLOTS) G.storage.active = 0;
+      return G.state;
+    },
 
     // Дополнить старое сохранение недостающими полями
     fix(st) {
+      if (G.deck) G.deck.ensure(st);   // колода: у старых сохранений её нет — собираем базовую
       if (st.battleCheckpoint) {
         const before = JSON.parse(st.battleCheckpoint);
         for (const k of Object.keys(st)) delete st[k];
@@ -110,6 +121,7 @@ G.game = (() => {
           if (extra) { st.chest[id] = (st.chest[id] || 0) + extra; if (keep) st.inv[id] = keep; else delete st.inv[id]; }
         }
       }
+      if (G.deck) G.deck.ensure(st);
       if (st.started && G.story && G.story.recover) G.story.recover(st);
       return st;
     },
@@ -203,6 +215,8 @@ G.game = (() => {
     goalText() {
       const q = G.quests && G.quests.tracked(), st = q && G.quests.curStep(q);
       if (st) return st.text;
+      // после финала первой главы задания кончились — но строка цели не должна пустовать
+      if (G.state.flags.postgame) return 'Свободная жизнь: тренируйся, дружи и бери поручения';
       const g = G.state.goal; return g ? GOALS[g] || g : null;
     },
 

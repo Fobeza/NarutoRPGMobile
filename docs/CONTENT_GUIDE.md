@@ -90,6 +90,15 @@ my_quest: {
 `call step my_quest find` (завершить шаг), `if quest.my_quest.back -> …`, `if qdone.my_quest -> …`.
 Шаг `visit: 'шаблон'` + `target: { building: 'шаблон' }` засчитывается, когда герой подходит к зданию.
 
+Дополнительно у шага бывают: `time: [от, до]` (минуты от полуночи; `26*60` — уже за полночь), `day`,
+`when: () => …`, `reach: true` (достаточно войти в здание), `intro`/`after` (сцены до и после),
+`enterScript: 'id'` (сцена при каждом входе в `target.building` — так повторяется бой финала, пока шаг открыт)
+и `on: [событие, фильтр]` — см. список событий в `systems/quests.js` (`training`, `bought`, `fished`, `cooked`,
+`roof`, `checkup`, `battle`, `gift`, `job`, `lesson`, `choice`, `scene`, `exam`, `sold`).
+
+Дела с механикой (образец — `sm_patrol`, `sm_kitchen`, `sm_delivery` в `data/small_quests.js`) делаются
+из 2–3 шагов с окнами по времени: прийти, сделать действие мира, вернуться с докладом.
+
 ## 5. Предмет и магазин
 
 `src/data/items.js`: `G.ITEMS.id = { name, price, cat, effect?, desc }`.

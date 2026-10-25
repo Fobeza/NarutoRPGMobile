@@ -7,10 +7,33 @@ G.scenes.register('savemenu', () => {
 
   const openBox = (o) => G.codeBox.open(o), hintErr = (t) => G.codeBox.hintErr(t);
 
+  // Один слот: «Сохранить сюда / Загрузить / Стереть» через окно выбора
+  const slotMenu = (i) => {
+    const info = G.storage.slotInfo(i);
+    const opts = [{ label: 'Сохранить сюда', desc: info ? `сейчас: день ${info.day}, ${G.game.clock(info.min)}` : 'слот пуст' }];
+    if (info) opts.push({ label: 'Загрузить игру', desc: `день ${info.day}, ${G.game.clock(info.min)} · ${info.when}` });
+    if (info) opts.push({ label: 'Стереть слот', desc: 'Без резервной копии слотов' });
+    opts.push({ label: 'Отмена' });
+    G.scenes.push(G.scenes.make('pick', { title: `СЛОТ ${i + 1}`, text: info ? `День ${info.day}, ${G.game.clock(info.min)}. Запись ${info.when}.` : 'Пустой слот.', options: opts }, (k) => {
+      if (k === 0) {
+        const w = world(); w && w.savePos();
+        const ok = G.storage.save(G.state, { slot: i });
+        say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
+      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(); }
+      else if (info && k === 2) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+    }));
+  };
+
+  const slotLabel = (i) => {
+    const inf = G.storage.slotInfo(i);
+    return { label: `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
+  };
+
   const items = () => {
     const bi = G.storage.backupInfo();
     return [
       { label: 'Сохранить сейчас', act: () => { const w = world(); w && w.savePos(); say(G.storage.save(G.state) ? 'Сохранено ✔' : 'Не удалось сохранить! Память браузера полна?'); } },
+      slotLabel(0), slotLabel(1), slotLabel(2),
       { label: 'Экспорт кода', act: () => {
         const w = world(); w && w.savePos(); G.storage.save(G.state);
         openBox({ title: 'Код сохранения', text: G.storage.exportCode(), readonly: true, okLabel: 'КОПИРОВАТЬ',

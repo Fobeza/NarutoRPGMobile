@@ -9,9 +9,16 @@ G.scenes.register('status', () => {
   const contentH = () => {
     const skills=(G.state.hero.skills||[]).map(id=>G.SKILLS.find(s=>s.id===id)?.name).filter(Boolean).join(', ')||'—';
     const extra=Math.max(0,G.font.small.wrap('Навыки: '+skills,G.screen.W-24).length-1)*12;
-    return Math.max(G.screen.H-footer(),330+header().height-20+(compact()?60:0)+extra+Math.ceil(FRIENDS.filter(id=>G.state.flags['met_'+id]).length/2)*16);
+    const exam=G.state.flags.genin?0:Math.max(14,G.font.small.wrap(examLine()||'',G.screen.W-24).length*12);
+    return Math.max(G.screen.H-footer(),330+header().height-20+(compact()?60:0)+extra+exam+Math.ceil(FRIENDS.filter(id=>G.state.flags['met_'+id]).length/2)*16);
   };
   const maxScroll = () => Math.max(0, contentH() - G.screen.H + footer());
+  // до экзамена в статусе видно, сколько баллов герой наберёт и что подтянуть
+  const examLine = () => {
+    if (!G.exam || !G.exam.estimate) return null;
+    const e = G.exam.estimate();
+    return `Готовность к экзамену ${e.total}/100 (нужно ${G.exam.PASS})${e.pass ? '' : e.tips.length ? ' · ' + e.tips[0] : ''}`;
+  };
   return {
     name: 'status',touch(){return {back:true,roomyBack:true};},
     layout() { return {footer:footer(),maxScroll:maxScroll(),scroll,gaugeWidth:compact()?G.screen.W-28:G.screen.W-180}; },
@@ -83,6 +90,11 @@ G.scenes.register('status', () => {
       for (const ln of S.wrap('Навыки: ' + (sk.join(', ') || '—'), W - 24)) { S.draw(ctx, ln, 12, ty, { color: C.redDark }); ty += 12; }
       const A = G.academy, vv = G.state.vars;
       S.draw(ctx, `Оценки ${A.avg() || '—'} · посещ. ${A.attendance()}% · реп. ${vv.rep || 0}`, 12, ty, { color: '#3a62a0', maxW: W - 24 }); ty += 12;
+      if (!G.state.flags.genin) {
+        const ex = examLine();
+        const est = G.exam && G.exam.estimate && G.exam.estimate();
+        for (const ln of S.wrap(ex, W - 24)) { S.draw(ctx, ln, 12, ty, { color: est && est.pass ? '#2e7a44' : '#a05010' }); ty += 12; }
+      }
       S.draw(ctx, `Свитки ${vv.scrolls || 0}`, 12, ty, { color: C.inkDim, maxW: W - 24 }); ty += 15;
       const met = FRIENDS.filter((id) => G.state.flags['met_' + id]);
       F.draw(ctx, 'Дружба', 12, ty, { color: C.redDark }); ty += 16;

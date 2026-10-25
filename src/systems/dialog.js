@@ -5,6 +5,19 @@ G.dialog = (() => {
   const LINES = 3;
   const SPEEDS = [0, 30, 55, 120]; // символов/сек по настройке textSpeed (0 — мгновенно)
 
+  // История реплик: последние HISTORY строк — их видно в меню («История»), даже если окно давно закрыто
+  const HISTORY = 60;
+  function history(op) {
+    const st = G.state; if (!st || !op.text) return;
+    const text = G.util.fmt(op.text, { name: st.hero && st.hero.name });
+    const who = op.name || (op.who && op.who !== 'hero' && G.chars.nameOf ? G.chars.nameOf(op.who) : null);
+    const line = who ? `${who}: ${text}` : text;
+    const log = st.dlgLog || (st.dlgLog = []);
+    if (log[log.length - 1] === line) return;   // повторные прочтения одной страницы не дублируются
+    log.push(line);
+    if (log.length > HISTORY) log.splice(0, log.length - HISTORY);
+  }
+
   function start(scriptId, opts = {}) {
     const run = G.script.runner(scriptId);
     const scene = makeScene(run, opts);
@@ -42,7 +55,7 @@ G.dialog = (() => {
         const op = run.next();
         this.cur = op;
         if (op.op === 'end') { G.scenes.pop(); opts.onEnd && opts.onEnd(); return; }
-        if (op.op === 'say') { this.setText(op.text, op.who); this.lastWho = op.who; this.whoName = op.name || null; this.lastName = this.whoName; }
+        if (op.op === 'say') { this.setText(op.text, op.who); this.lastWho = op.who; this.whoName = op.name || null; this.lastName = this.whoName; history(op); }
         if (op.op === 'choice') {
           this.choiceIdx = 0;
           // вопрос показывается с портретом последнего говорящего

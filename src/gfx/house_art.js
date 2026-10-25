@@ -1,4 +1,5 @@
 // Нарисованные здания (данные — gfx/house_art_data.js, его делает tools/import_art.py из art/ и tools/art_catalog.json).
+// Сами данные лежат строкой и разбираются при первом обращении (G.art.data('house')).
 // Картинки хранятся палитрой и строкой повторов («a12.b3»: знак — цвет, число — сколько подряд, точка — прозрачность)
 // и раскодируются при первом обращении — без ожидания загрузки файлов.
 //   G.houseArt.spec(name)           → размеры пятна и дверь картинки { w, h, dx, ox, wall, kind, ... } или null
@@ -7,8 +8,9 @@
 // У «уникальных» шаблонов (kind unique) размеры в G.BUILDINGS подменяются размерами картинки при загрузке.
 G.houseArt = (() => {
   const SYM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/:;<=>?@^_';
-  const data = G.HOUSE_ART || { bitmaps: [], art: {} };
+  const data = () => G.art.data('house') || { bitmaps: [], art: {} };
   const decoded = new Map(), sprites = new Map();
+  let ready = false;
 
   function decode(v) {
     if (decoded.has(v)) return decoded.get(v);
@@ -34,23 +36,29 @@ G.houseArt = (() => {
     return c;
   }
 
-  // уникальные здания: пятно и дверь — по картинке
-  for (const a of Object.values(data.art)) {
-    const tpl = a.kind === 'unique' && G.BUILDINGS[a.tpl];
-    if (tpl) { tpl.w = a.w; tpl.h = a.h; tpl.door = tpl.door ? [a.dx, a.h - 1] : tpl.door; }
+  // уникальные здания: пятно и дверь — по картинке (при первом обращении к картинкам)
+  function ensure() {
+    if (ready) return; ready = true;
+    for (const a of Object.values(data().art)) {
+      const tpl = a.kind === 'unique' && G.BUILDINGS[a.tpl];
+      if (tpl) { tpl.w = a.w; tpl.h = a.h; tpl.door = tpl.door ? [a.dx, a.h - 1] : tpl.door; }
+    }
   }
 
   return {
-    has: (name) => !!data.art[name],
-    free: (name) => (data.art[name] && data.art[name].fr) || [],   // клетки пятна, где картинка пуста: там не стена
-    spec: (name) => data.art[name] || null,
-    names: (kind, clan) => Object.keys(data.art).filter((n) => data.art[n].kind === kind && (!clan || data.art[n].clan === clan)),
+    ensure,
+    has: (name) => (ensure(), !!data().art[name]),
+    free: (name) => (ensure(), (data().art[name] && data().art[name].fr) || []),   // клетки пятна, где картинка пуста: там не стена
+    spec: (name) => (ensure(), data().art[name] || null),
+    names: (kind, clan) => (ensure(), Object.keys(data().art).filter((n) => data().art[n].kind === kind && (!clan || data().art[n].clan === clan))),
     sprite(name, tpl) {
-      const a = data.art[name];
+      ensure();
+      const art = data();
+      const a = art.art[name];
       if (!a) return null;
       const key = name + ':' + (tpl ? tpl.h : a.h);
       if (sprites.has(key)) return sprites.get(key);
-      const bm = data.bitmaps[a.b], HF = (tpl ? tpl.h : a.h) * G.CONFIG.TILE;
+      const bm = art.bitmaps[a.b], HF = (tpl ? tpl.h : a.h) * G.CONFIG.TILE;
       // низ картинки — по низу пятна здания; вверх она выступает как крыша
       const s = { img: decode(bm), ox: a.ox, oy: HF - bm.lh, w: bm.lw, h: bm.lh, wh: a.wall, art: name };
       if (a.g && a.g.length) {   // проверенные области стекла, координаты в px ×2

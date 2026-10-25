@@ -419,9 +419,10 @@ G.scenes.register('world', (pos) => {
       return { joy: true, sys: true, action: act && act.show ? { label: act.label } : null };
     },
 
-    talk(t) {
-      if (!t) return;
-      const onEnd = () => this.refreshNpcs();
+    // talk(lines | scriptId, [после]) — «после» вызывается, когда окно реплик закрыто (награда, переход, экран)
+    talk(t, after) {
+      if (!t) { after && after(); return; }
+      const onEnd = () => { this.refreshNpcs(); after && after(); };
       if (typeof t === 'string') G.dialog.start(t, { bottom: STRIP_H + 2, onEnd });
       else G.dialog.say(t, { bottom: STRIP_H + 2, onEnd });
     },

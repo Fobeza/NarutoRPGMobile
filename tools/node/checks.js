@@ -108,6 +108,8 @@ for (const [qid, q] of Object.entries(QUESTS)) {
   for (const st of q.steps || []) {
     texts.push(st.text);
     if (st.script && !L[st.script]) bad.push(`задание ${qid}/${st.id}: нет сценария «${st.script}»`);
+    if (st.enterScript && !L[st.enterScript]) bad.push(`задание ${qid}/${st.id}: нет сценария входа «${st.enterScript}»`);
+    if (st.enterScript && !st.target.building) bad.push(`задание ${qid}/${st.id}: enterScript требует target.building`);
     if (st.script && L[st.script] && !L[st.script].ops.some((op) => op.op === 'call' && op.name === 'step' && op.args[0] === qid && op.args[1] === st.id)) {
       bad.push(`задание ${qid}/${st.id}: сценарий «${st.script}» не вызывает call step ${qid} ${st.id}`);
     }

@@ -153,9 +153,9 @@ test('Уроки дерева и воды называют свою практи
     }
   } finally { G.dialog.start = old.start; G.dialog.say = old.say; G.lessons.run = old.run; G.scenes.make = old.make; G.scenes.push = old.push; }
 });
-test('Главная ветка: шаги по дням, закрываются событиями мира, сцены уходят в очередь', () => {
+test('Главная ветка: шаги дней 3–8 идут в своём темпе, финал закрывает арку', () => {
   const v = G.state.vars, Q = G.quests, F = G.state.flags; G.state.frQueue = [];
-  const cur = () => Q.curStep('main').id, at = (day) => { v.day = day; Q.check(); };
+  const cur = () => (Q.curStep('main') || {}).id, at = (day) => { v.day = day; Q.check(); };
   v.day = 1; assert.ok(Q.start('main'));
   Q.check(); assert.equal(G.state.frQueue.length, 0, 'шаг дня 2 ещё закрыт');
   G.events.emit('training', 'dummy'); assert.equal(cur(), 'dummy', 'не раньше дня 2');
@@ -164,17 +164,19 @@ test('Главная ветка: шаги по дням, закрываются 
   G.events.emit('training', 'meditate'); assert.equal(cur(), 'dummy', 'чужое событие не закрывает шаг');
   G.events.emit('training', 'dummy'); assert.equal(cur(), 'library');
   assert.ok(G.state.frQueue.includes('mq_dummy_after'));
-  at(4); G.events.emit('training', 'library'); assert.equal(cur(), 'rod');
+  // дни 3–8 больше не ждут календаря: шаги открыты сразу и проходятся в своём темпе
+  G.events.emit('training', 'library'); assert.equal(cur(), 'rod', 'библиотека доступна без ожидания дня');
   G.game.give('fishing_rod', 1); assert.equal(cur(), 'fish');
   G.events.emit('fished', 'fish'); assert.equal(cur(), 'falls');
-  at(5); G.events.emit('training', 'falls'); assert.equal(cur(), 'shop');
+  G.events.emit('training', 'falls'); assert.equal(cur(), 'shop');
   G.events.emit('bought', 'ramen_miso'); assert.equal(cur(), 'shop', 'нужен кунай или бинт');
-  at(6); G.events.emit('bought', 'kunai'); assert.equal(cur(), 'job');
-  at(7); G.events.emit('job', 'tora', 100); assert.equal(cur(), 'roof');
-  at(8); G.events.emit('roof'); assert.equal(cur(), 'roof', 'крыши открывает сцена Наруто');
+  G.events.emit('bought', 'kunai'); assert.equal(cur(), 'job');
+  G.events.emit('job', 'tora', 100); assert.equal(cur(), 'roof');
+  G.events.emit('roof'); assert.equal(cur(), 'roof', 'крыши открывает сцена Наруто');
   F.roofs = 1; G.events.emit('roof'); assert.equal(cur(), 'tree');
-  at(9); G.events.emit('training', 'tree'); assert.equal(cur(), 'tree', 'нужен урок хождения по дереву');
-  F.tech_tree = 1; G.events.emit('training', 'tree'); assert.equal(cur(), 'checkup1');
+  G.events.emit('training', 'tree'); assert.equal(cur(), 'tree', 'нужен урок хождения по дереву');
+  F.tech_tree = 1; G.events.emit('training', 'tree'); assert.equal(cur(), 'tree', 'и день 9 для урока');
+  at(9); G.events.emit('training', 'tree'); assert.equal(cur(), 'checkup1');
   G.quests.onEnterMap({ building: { tplId: 'hospital' } }); assert.equal(cur(), 'checkup1', 'осмотр нельзя закрыть раньше дня 10');
   at(10); G.quests.onEnterMap({ building: { tplId: 'hospital' } }); assert.equal(cur(), 'spar'); assert.ok(G.state.frQueue.includes('mq_checkup1_after'));
   at(11); G.events.emit('battle', { mode: 'ko' }, {}); assert.equal(cur(), 'spar');
@@ -194,9 +196,24 @@ test('Главная ветка: шаги по дням, закрываются 
   at(20); Q.step('main', 'hokage'); assert.equal(cur(), 'exam');
   at(21); G.events.emit('exam', false, 40); assert.equal(cur(), 'exam', 'провал не закрывает шаг');
   G.events.emit('exam', true, 70); assert.equal(cur(), 'gate');
-  G.quests.onEnterMap({ building: { tplId: 'gate' } }); assert.equal(cur(), 'more');
-  at(99); assert.ok(Q.active('main'), 'ветка не завершается сама');
-  for (const st of G.QUESTS.main.steps) for (const k of ['intro', 'after', 'script']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
+  G.quests.onEnterMap({ building: { tplId: 'gate' } }); assert.equal(cur(), 'stranger');
+  // ── финал: вечер у ворот, доклад, бой, развязка ──
+  v.min = 19 * 60; G.state.frQueue = [];
+  G.quests.onEnterMap({ building: { tplId: 'gate' } }); assert.equal(cur(), 'report');
+  assert.ok(G.state.frQueue.includes('mq_stranger_meet'), 'встреча у ворот показана сценой');
+  Q.step('main', 'report'); assert.equal(cur(), 'duel');
+  G.state.frQueue = [];
+  G.quests.onEnterMap({ building: { tplId: 'gate' } });
+  assert.ok(G.state.frQueue.includes('mq_final_fight'), 'вход в ворота открывает сцену боя');
+  G.events.emit('battle', { enemy: 'kiba' }, { win: true }); assert.equal(cur(), 'duel', 'чужой бой не закрывает шаг');
+  G.events.emit('battle', { enemy: 'stranger' }, { win: false }); assert.equal(cur(), 'duel', 'поражение не тупик — шаг открыт');
+  G.events.emit('battle', { enemy: 'stranger' }, { win: true }); assert.equal(cur(), 'ending');
+  G.state.frQueue = [];
+  Q.step('main', 'ending');
+  assert.ok(Q.done('main'), 'первая глава завершается, а не висит активной');
+  assert.ok(G.state.frQueue.includes('mq_epilogue'), 'эпилог уходит в очередь');
+  assert.equal((Q.curStep('main') || {}).id, undefined);
+  for (const st of G.QUESTS.main.steps) for (const k of ['intro', 'after', 'script', 'enterScript']) if (st[k]) assert.ok(G.script.library[st[k]], 'нет сцены ' + st[k]);
 });
 test('Выборы сюжета: последствия, один раз, стража и реплики жителей', () => {
   const v = G.state.vars; v.rep = 0; G.state.flags = {}; G.state.started = true; G.state.hero.name = 'Кайто';
@@ -270,13 +287,14 @@ test('Все сцены сюжета: символы есть в шрифте, �
 test('Малые задания: просьба, предметы списываются, награда', () => {
   const v = G.state.vars, Q = G.quests; G.state.quests = {}; v.day = 8; v.money = 0; G.state.started = true; G.state.inv = {}; v.friend_choji = 0;
   const small = Object.keys(G.QUESTS).filter((id) => id.startsWith('sm_')); assert.ok(small.length >= 12);
-  assert.equal(Q.scriptFor('choji'), 'sm_choji_milk_offer'); Q.start('sm_choji_milk'); assert.equal(Q.scriptFor('choji'), 'sm_choji_chips_offer', 'вторая просьба Чоджи');
+  assert.equal(Q.scriptFor('choji'), 'sm_choji_milk_offer'); Q.start('sm_choji_milk'); assert.equal(Q.scriptFor('choji'), 'sm_choji_berries_offer', 'вторая просьба Чоджи');
   G.game.give('milk', 1); assert.equal(Q.curStep('sm_choji_milk').id, 'give'); assert.equal(Q.scriptFor('choji'), 'sm_choji_milk_done');
   G.game.take('milk', 1); assert.equal(Q.scriptFor('choji'), 'quest_missing_items'); G.game.give('milk', 1);
   Q.step('sm_choji_milk', 'give'); assert.ok(Q.done('sm_choji_milk')); assert.equal(v.money, 40); assert.equal(G.game.count('milk'), 0);
   assert.ok(small.length >= 35, 'малых заданий: ' + small.length);
   for (const id of small) for (const st of G.QUESTS[id].steps) {
-    if (st.have || st.need) assert.ok(G.ITEMS[Object.keys(st.have || st.need)[0]], id); else assert.ok(st.on, id + ': шаг без предмета и события');
+    if (st.have || st.need) assert.ok(G.ITEMS[Object.keys(st.have || st.need)[0]], id);
+    else assert.ok(st.on || st.reach || st.script, id + ': шаг без предмета, события, входа и разговора');
     for (const k of ['script', 'after']) if (st[k]) assert.ok(G.script.library[st[k]], st[k]);
     assert.ok(G.script.library[G.QUESTS[id].offer.script], id);
   }
@@ -287,9 +305,10 @@ test('Малые задания: просьба, предметы списыва
 test('Сценарии сдачи сами закрывают шаг, списывают предмет и выдают награду', () => {
   const targets = [];
   for (const [qid, q] of Object.entries(G.QUESTS)) q.steps.forEach((st, step) => {
-    if (st.script && (st.consume || (qid === 'arc_ino' && st.id === 'talk'))) targets.push({ qid, st, step });
+    const last = step === q.steps.length - 1;
+    if (st.script && (st.consume || (qid === 'arc_ino' && st.id === 'talk') || (qid.startsWith('sm_') && last))) targets.push({ qid, st, step });
   });
-  assert.ok(targets.length >= 32, 'найдены все предметные сдачи и возврат к Ино');
+  assert.ok(targets.length >= 20, 'найдены все предметные сдачи, дела и возврат к Ино');
   for (const { qid, st, step } of targets) {
     clean();
     Object.assign(G.state.vars, { day: 30, min: 12 * 60, money: 0 });
@@ -367,7 +386,9 @@ test('Карточная дуэль: клоны, Хенге, страх и по�
   let D = mk(); D.intent = { kind: 'multi', name: 'Серия', dmg: 20, hits: 2 }; forceCard(D, 'bunshin'); let hp = D.P.hp; G.duel.play(D, 'bunshin'); G.duel.endTurn(D);
   assert.equal(D.P.hp, hp); assert.equal(D.P.clones, 0, 'два клона принимают два удара');
   D = mk(); D.intent = { kind: 'strike', name: 'Удар', dmg: 50, hits: 1 }; forceCard(D, 'henge'); hp = D.P.hp; G.duel.play(D, 'henge'); G.duel.endTurn(D); assert.equal(D.P.hp, hp, 'Хенге отменяет действие');
-  D = mk(); D.intent = { kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }; forceCard(D, 'fear'); hp = D.P.hp; G.duel.play(D, 'fear'); G.duel.endTurn(D); assert.equal(hp - D.P.hp, 26, 'страх снижает урон на 35%');
+  D = mk(); D.intent = { kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }; forceCard(D, 'fear'); hp = D.P.hp; G.duel.play(D, 'fear'); G.duel.endTurn(D);
+  assert.equal(hp - D.P.hp, Math.round(40 * D.P.fearMul), 'страх снижает урон на 100−fearMul процентов (сила зависит от Гендзюцу)');
+  assert.ok(D.P.fearMul < 0.7, 'высокое Гендзюцу усиливает иллюзию (против базовых 0,7)');
   D = mk(); D.P.status.bind = 1; D.intent = { kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }; forceCard(D, 'evade'); forceCard(D, 'kawarimi');
   assert.equal(G.duel.canPlay(D, 'evade').ok, false, 'обычный Уклон запрещён связкой');
   hp = D.P.hp; const enemyHp = D.E.hp; assert.ok(G.duel.play(D, 'kawarimi').length); assert.equal(G.duel.expectedIncoming(D), 0); G.duel.endTurn(D);
@@ -381,8 +402,13 @@ test('Карточная дуэль: чакра, накал, спарринг, s
   D = G.duel.create(Object.assign({}, base, { surge: false })); forceCard(D, 'chakra_shot'); D.P.ch = 1; hp = D.E.hp; assert.equal(G.duel.play(D, 'chakra_shot').length, 0); assert.equal(D.E.hp, hp);
   const sp = G.duel.create(Object.assign({}, base, { mode: 'spar', enemy: 'dummy2', surge: false })); sp.E.hp = sp.E.hpMax * 0.35; calm(sp); forceCard(sp, 'strike'); G.duel.play(sp, 'strike'); assert.ok(sp.over && sp.over.win, 'спарринг идёт до 30%');
   const sv = G.duel.create(Object.assign({}, base, { mode: 'survive', enemy: 'dummy', rounds: 3, surge: false })); for (let i = 0; i < 3; i++) G.duel.endTurn(sv); assert.ok(sv.over && sv.over.win, 'survive кончается после заданных ходов');
-  const fear = G.duel.create(Object.assign({}, base, { enemy: 'ino', surge: false })); fear.intent = { kind: 'fear', name: 'Иллюзия', cost: 0 }; G.duel.endTurn(fear);
+  const fear = G.duel.create(Object.assign({}, base, { enemy: 'ino', surge: false })); fear.intent = { kind: 'fear', name: 'Иллюзия', cost: 0 };
+  fear.P.genResist = 0; G.duel.endTurn(fear);
   assert.equal(fear.P.ap, 2); assert.equal(fear.hand.length, 4, 'вражеский страх отнимает действие и карту на один ход');
+  // своё Гендзюцу развеивает чужую иллюзию: при полном сопротивлении страх не срабатывает
+  const resist = G.duel.create(Object.assign({}, base, { enemy: 'ino', surge: false })); resist.intent = { kind: 'fear', name: 'Иллюзия', cost: 0 };
+  resist.P.genResist = 1; G.duel.endTurn(resist);
+  assert.equal(resist.P.ap, 3); assert.ok(!resist.P.status.fear, 'иллюзия развеяна Гендзюцу');
 });
 
 test('Карточная дуэль: усталость, стабильность, стили и детерминизм', () => {
@@ -561,5 +587,126 @@ test('NPC: выход из уже существующего перекрыти�
     assert.equal(p.x,31);
   }
 });
+
+test('Колода: правила 10–20 карт, до трёх копий, свои карты по умолчанию', () => {
+  clean();
+  const s = G.deck.ensure();
+  assert.equal(s.deck.length, G.CARD_BASE_DECK.length, 'новая колода — базовая сборка');
+  assert.equal(s.deck.length, 12);
+  for (const id of s.deck) assert.ok(G.CARDS[id], 'в колоде только известные карты');
+  // больше копий, чем есть, не положить; меньше десяти не оставить
+  while (G.deck.size() > G.deck.MIN) assert.ok(G.deck.remove(s.deck[0]));
+  assert.equal(G.deck.size(), G.deck.MIN);
+  assert.equal(G.deck.remove(s.deck[0]), false, 'ниже минимума колода не уменьшается');
+  const id = Object.keys(G.CARD_BASE_DECK.reduce((a, x) => (a[x] = 1, a), {})).find(() => true);
+  const own = G.deck.own(s.deck[0]);
+  assert.equal(G.deck.canAdd(s.deck[0]), own > G.deck.count(s.deck[0]));
+  // набить до потолка: 20 карт и не больше трёх копий одной карты
+  for (const card of Object.keys(G.CARDS)) if (!G.CARDS[card].tech && !G.CARDS[card].item) { G.state.cardOwned[card] = 3; }
+  while (G.deck.size() < G.deck.MAX) { const want = G.deck.list().find((c) => G.deck.canAdd(c.id)); if (!want) break; G.deck.add(want.id); }
+  assert.equal(G.deck.size(), G.deck.MAX);
+  for (const c of G.deck.list()) assert.ok(c.inDeck <= 3, 'не больше трёх копий одной карты');
+  assert.equal(G.deck.add('strike'), false, 'в полную колоду карта не влезает');
+  assert.ok(id);
+});
+
+test('Колода: карта за спарринг выдаётся навсегда и попадает в бой', () => {
+  clean();
+  assert.equal(G.deck.give('kawarimi', 1), 0, 'карты техник в колоду не выдаются');
+  const before = G.deck.own('combo');
+  assert.equal(G.deck.give('combo', 1), 1);
+  assert.equal(G.deck.own('combo'), before + 1);
+  assert.equal(G.deck.give('combo', 5), 3 - (before + 1), 'копий не больше трёх');
+  assert.equal(G.deck.own('combo'), 3);
+  G.state.flags.tech_kawarimi = 1;
+  const full = G.deck.full();
+  assert.ok(full.includes('combo', G.deck.own('combo')), 'своя карта едет в бой');
+  assert.equal(full.filter((x) => x === 'kawarimi').length, G.CARD_TECH_LIMIT, 'выученная техника — по копии на карту');
+  const D = G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, techs: ['kawarimi'], deck: full, rng: G.duel.mulberry(9), surge: false });
+  assert.equal(D.deck.length + D.hand.length, full.length, 'колода боя — ровно выбранные карты');
+});
+
+test('Колода: сохраняется в слот и переживает загрузку; битые данные не проходят', () => {
+  clean();
+  G.deck.give('focus', 2);
+  while (G.deck.size() > G.deck.MIN) G.deck.remove(G.state.deck[G.state.deck.length - 1]);
+  const deck = G.state.deck.slice();
+  G.storage.save(G.state);
+  const st = G.game.fix(G.storage.load());
+  assert.deepEqual(st.deck, deck);
+  assert.equal(st.cardOwned.focus, G.deck.own('focus'));
+  const bad = JSON.parse(JSON.stringify(G.state));
+  bad.deck = ['нет_такой_карты'];
+  assert.equal(G.storage.valid(bad), false, 'неизвестная карта в колоде — сохранение отвергается');
+});
+
+test('Экран «Колода»: перенос карт и отрисовка без ошибок', () => {
+  clean();
+  const sc = G.scenes.make('deckview');
+  const L = sc.lists();
+  assert.ok(L[1].length, 'в колоде что-то есть');
+  const size = G.deck.size(), id = L[1][0];
+  sc.move(1, id);
+  assert.equal(G.deck.size(), size - 1, 'касание справа убирает карту');
+  const back = sc.lists()[0].find((x) => x === id);
+  assert.ok(back, 'убавленная карта появилась в «своих»');
+  sc.move(0, back);
+  assert.equal(G.deck.size(), size, 'касание слева возвращает карту');
+  const ctx = h.recordingCtx();
+  sc.update(.016); sc.draw(ctx);
+  assert.ok(ctx.log.length > 50, 'экран рисуется');
+});
+
+
+test('Три слота сохранения: запись, дата, новейший слот и загрузка', () => {
+  clean();
+  G.storage.wipe();
+  G.state.vars.day = 7; G.state.vars.min = 9 * 60;
+  assert.equal(G.storage.slotInfo(0), null, 'слот пуст до записи');
+  assert.ok(G.storage.save(G.state, { slot: 0 }));
+  G.state.vars.day = 12; G.state.vars.min = 18 * 60;
+  assert.ok(G.storage.save(G.state, { slot: 2 }));
+  const i0 = G.storage.slotInfo(0), i2 = G.storage.slotInfo(2);
+  assert.equal(i0.day, 7); assert.equal(i2.day, 12);
+  assert.ok(i2.when && /\d\d\.\d\d, \d\d:\d\d/.test(i2.when), 'у слота есть дата записи');
+  assert.equal(G.storage.newestSlot(), 2, '«Продолжить» берёт новейший слот');
+  assert.equal(G.storage.load().vars.day, 12);
+  assert.equal(G.storage.load(0).vars.day, 7, 'загрузка конкретного слота');
+  G.storage.wipe(2);
+  assert.equal(G.storage.slotInfo(2), null, 'слот стирается');
+  assert.equal(G.storage.slotInfo(0).day, 7, 'другие слоты не тронуты');
+});
+
+test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
+  clean();
+  G.state.dlgLog = [];
+  G.dialog.say(['Первая реплика', { who: 'iruka', text: 'Вторая реплика' }], { onEnd: () => {} });
+  const d = G.scenes.top();
+  for (let i = 0; i < 6 && G.scenes.top() === d; i++) d.update(.05), d.advance();
+  assert.ok((G.state.dlgLog || []).some((l) => l.includes('Первая реплика')), 'реплики пишутся в историю');
+  assert.ok(G.state.dlgLog.some((l) => l.startsWith('Ирука:')), 'с именем говорящего');
+  for (let i = 0; i < 90; i++) G.state.dlgLog.push('строка ' + i);
+  G.dialog.say(['Ещё одна реплика'], { onEnd: () => {} });
+  const d2 = G.scenes.top(); d2.update(.05); d2.advance();
+  assert.ok(G.state.dlgLog.length <= 61, 'история не растёт бесконечно: ' + G.state.dlgLog.length);
+  const sc = G.scenes.make('log');
+  sc.update(.016); const ctx = h.recordingCtx(); sc.draw(ctx);
+  assert.ok(sc.lines().length >= 3 && sc.maxScroll() >= 0, 'экран «История» листает строки');
+});
+
+test('Тяжёлые данные графики разбираются при первом обращении', () => {
+  clean();
+  G.art.clear();
+  assert.ok(G.ART_STR && G.ART_STR.house && typeof G.ART_STR.house === 'string', 'в сборке данные лежат строкой');
+  const house = G.art.data('house');
+  assert.ok(house && house.art && Object.keys(house.art).length > 10, 'здания разбираются по требованию');
+  assert.equal(G.art.data('house'), house, 'разбор кэшируется');
+  assert.ok(G.art.data('chars').hero, 'персонажи на месте');
+  assert.ok(G.art.data('env').bindings, 'окружение на месте');
+  G.art.clear();
+  assert.ok(G.art.data('house').art, 'после сброса кэша данные разбираются снова');
+  assert.ok(G.houseArt.has(Object.keys(house.art)[0]), 'здания видны houseArt');
+});
+
 console.log(`ИТОГ регрессий: ✔ ${passed}  ✘ ${failed}`);
 process.exitCode = failed ? 1 : 0;

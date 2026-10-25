@@ -12,7 +12,7 @@ import base64, hashlib, os, re, struct, sys, time, zlib
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
 OUT = ROOT                                   # index.html и sw.js — в корне (GitHub Pages)
-RELEASE = "2.5"                              # карточная «Дуэль», 21 тактика и мобильный интерфейс
+RELEASE = "2.6"                              # финал первой главы, своя колода, дела и три слота сохранения
 DEV = os.path.join(ROOT, "build")           # служебное (редактор карты), не коммитится
 
 # Порядок подключения модулей. ВАЖЕН: модуль может пользоваться только тем, что подключено выше.
@@ -21,7 +21,7 @@ JS_FILES = [
     # ── движок: экран, ввод, звук, сцены, сохранения ──
     "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
-    "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
+    "gfx/art.js", "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
     "gfx/chars.js", "data/characters.js", "gfx/char_art_data.js", "gfx/chars_render.js",
     "gfx/environment.js", "gfx/environment_art_data.js", "gfx/environment_art.js", "gfx/terrain_art.js", "gfx/street_art.js", "gfx/water_art.js", "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
@@ -29,7 +29,7 @@ JS_FILES = [
     # ── данные: здания, предметы, задания, герой, бой ──
     "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/duel_data.js", "data/cards.js",
     # ── игровые системы ──
-    "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/duel.js", "systems/choices.js", "systems/exam.js", "systems/sim.js",
+    "systems/deck.js", "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/duel.js", "systems/choices.js", "systems/exam.js", "systems/sim.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
     
     # ── сюжет и диалоги ──
@@ -42,7 +42,7 @@ JS_FILES = [
     "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/street_events.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
     "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
-    "scenes/bag.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
+    "scenes/bag.js", "scenes/deckview.js", "scenes/log.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/menu.js", "scenes/settings.js",

@@ -564,7 +564,7 @@
     ctx.putImageData(img, ox, oy);
   }
   // нарисованные персонажи (gfx/char_art_data.js ← tools/import_chars.py): палитра + строки повторов → canvas
-  const ART = G.CHAR_ART || {};
+  const ART = () => G.art.data('chars') || {};
   function decodeArt(v) {
     const SYM = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&*+-/:;<=>?@^_';
     const pal = v.pal.map((h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
@@ -625,9 +625,9 @@
   function sheet(id, look) {
     if (look) return lookSheet(id, look);
     if (SHEETS[id]) return SHEETS[id];
-    if (ART[id]) {
+    if (ART()[id]) {
       const c = G.gfx.canvas(FW * 3, FH * 4), ctx = c.getContext('2d');
-      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(decodeArt(ART[id]), 0, 0); ctx.restore();
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(decodeArt(ART()[id]), 0, 0); ctx.restore();
       return (SHEETS[id] = c);
     }
     const def = G.chars.DEFS[id];
@@ -651,8 +651,8 @@
   // портрет 32×32 (голова и плечи): рендер на удвоенной сетке и обрезка
   function portrait(id) {
     if (PORTRAITS[id]) return PORTRAITS[id];
-    if (ART[id]) {
-      const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d'), por = decodeArt(ART[id].por);
+    if (ART()[id]) {
+      const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d'), por = decodeArt(ART()[id].por);
       G.shade.grad(c, 0, 0, 32, 32, ['#fbf2dc', '#eadcbc', '#cdb890', '#b09a74'], { dir: 'r', cx: 9, cy: 7, r: 36, steps: 3 });
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
       const sil = G.gfx.silhouette(por, '#3a2c3a');
