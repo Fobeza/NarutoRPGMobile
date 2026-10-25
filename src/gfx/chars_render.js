@@ -613,7 +613,9 @@
       for (let x = 0; x < W; x++) {
         const o = (y * W + x) * 4; if (!d[o + 3]) continue;
         const [h, s, l] = rgb2hsl(d[o], d[o + 1], d[o + 2]);
-        if (s < 0.1 || (h >= 8 && h <= 48 && l >= 0.58 && s >= 0.25)) continue;   // серое/тёмное и кожа не трогаем
+        // Серое и тёмное не трогаем; кожа — тёплый и светлый тон (у тёмной кожи «вора» тени темнее,
+        // но лицо от этого фиолетовым не становится).
+        if (s < 0.1 || (h >= 8 && h <= 45 && l >= 0.28)) continue;
         const c = hsl2rgb(h + dh, s, l); d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2];
       }
     }
@@ -622,8 +624,13 @@
     const res = G.gfx.canvas(FW * 3, FH * 4); const rc = res.getContext('2d'); rc.save(); rc.setTransform(1, 0, 0, 1, 0, 0); rc.drawImage(out, 0, 0); rc.restore();
     return (SHEETS[key] = res);
   }
+  // Незнакомец в плаще: своего листа нет, берём нарисованного «вора» и перекрашиваем плащ в его фиолетовый
+  // (тот же цвет, что у дуэльного двойника и в описании персонажа). Портрет собирается из этого же листа.
+  const ALIAS = { stranger: ['thief', 5] };
   function sheet(id, look) {
     if (look) return lookSheet(id, look);
+    const al = ALIAS[id];
+    if (al) return lookSheet(al[0], al[1]);
     if (SHEETS[id]) return SHEETS[id];
     if (ART()[id]) {
       const c = G.gfx.canvas(FW * 3, FH * 4), ctx = c.getContext('2d');
@@ -649,8 +656,35 @@
     ctx.drawImage(s, frame * FW, di * FH, FW, FH, Math.round(x - FW / 2), Math.round(y - FH + 1), FW, FH);
   }
   // портрет 32×32 (голова и плечи): рендер на удвоенной сетке и обрезка
+  // Сдвиг оттенка на готовой картинке (портрет перекраски): кожу и нейтральные тона не трогаем.
+  function tintWarm(img, dh) {
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+    const pic = ctx.getImageData(0, 0, c.width, c.height), d = pic.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (!d[i + 3]) continue;
+      const [h, s, l] = rgb2hsl(d[i], d[i + 1], d[i + 2]);
+      if (s < 0.1 || (h >= 8 && h <= 45 && l >= 0.28)) continue;   // серое/тёмное и кожа
+      const [r, g, b] = hsl2rgb(h + dh, s, l);
+      d[i] = r; d[i + 1] = g; d[i + 2] = b;
+    }
+    ctx.putImageData(pic, 0, 0);
+    return c;
+  }
   function portrait(id) {
     if (PORTRAITS[id]) return PORTRAITS[id];
+    const al = ALIAS[id];
+    const src = al ? tintWarm(decodeArt(ART()[al[0]].por), HUE[al[1] % LOOKS]) : null;
+    if (src) {
+      const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d');
+      G.shade.grad(c, 0, 0, 32, 32, ['#fbf2dc', '#eadcbc', '#cdb890', '#b09a74'], { dir: 'r', cx: 9, cy: 7, r: 36, steps: 3 });
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const sil = G.gfx.silhouette(src, '#3a2c3a');
+      ctx.globalAlpha = 0.22; ctx.drawImage(sil, 5, 5, c.width - 4, c.height - 4); ctx.globalAlpha = 1;
+      ctx.drawImage(src, 2, 2, c.width - 4, c.height - 4);
+      ctx.restore();
+      return (PORTRAITS[id] = c);
+    }
     if (ART()[id]) {
       const c = G.gfx.canvas(32, 32), ctx = c.getContext('2d'), por = decodeArt(ART()[id].por);
       G.shade.grad(c, 0, 0, 32, 32, ['#fbf2dc', '#eadcbc', '#cdb890', '#b09a74'], { dir: 'r', cx: 9, cy: 7, r: 36, steps: 3 });
@@ -684,5 +718,5 @@
     return c;
   }
 
-  Object.assign(G.chars, { sheet, draw, portrait, renderFrame, LOOKS, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
+  Object.assign(G.chars, { sheet, draw, portrait, renderFrame, LOOKS, ALIAS, _reset() { for (const k in SHEETS) delete SHEETS[k]; for (const k in PORTRAITS) delete PORTRAITS[k]; } });
 })();

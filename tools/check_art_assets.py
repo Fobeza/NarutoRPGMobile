@@ -4,6 +4,7 @@
 """
 import hashlib
 import json
+import re
 from pathlib import Path
 from PIL import Image
 
@@ -11,7 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     manifest = json.loads((ROOT / 'art/manifest.json').read_text())
-    assert manifest['release'] == '2.2.2'
+    assert manifest['release'] == '2.2.2'          # версия набора мастеров, не игры
+    release = re.search(r'RELEASE\s*=\s*"([\d.]+)"', (ROOT / 'build.py').read_text(encoding='utf-8')).group(1)
+    assert manifest.get('gameRelease') == release, f"манифест говорит про {manifest.get('gameRelease')}, игра уже {release}" 
     assert manifest['status'] == 'integrated'
     assets = manifest['assets']
     paths = {a['file'] for a in assets}
