@@ -89,6 +89,7 @@ G.world = {
       const m = G.mapgen.konoha(G.KONOHA_DRAFT, this.SEED);
       this.populateKonoha(m);
       if (G.villageDetails) G.villageDetails.populate(m);
+      if (G.villageDetails) G.villageDetails.decor(m);
       m.finalize();
       G.mapgen.pockets(m);
       this.maps.konoha = m;
