@@ -330,7 +330,7 @@ function battleFrame(name, enemy, terrain) {
 // ---------- набор кадров: всё в main(), чтобы файл можно было подключать из других скриптов ----------
 // Комната и улица: рисуем карту целиком (земля + объекты + персонаж), а не только тайлы —
 // так видно мебель, пропы и масштаб. Карта собирается тем же кодом, что в игре.
-function worldFrame(name, setup) {
+function worldFrame(name, setup, weather) {
   frame(name, () => {
     const m = G.world.get('konoha');
     G.scenes.push({ name, draw(c) {
@@ -348,6 +348,14 @@ function worldFrame(name, setup) {
       for (const o of objs) if (o.layer !== 'floor') c.drawImage(o.img, o.x + o.ox, o.y + o.oy);
       if (cam.npc) G.chars.draw(c, cam.npc, 'down', 0, cam.npcX, cam.npcY);
       c.restore();
+      // Дождь и лужи: тот же слой, что в игре (мир в мировых координатах, камера — сдвигом).
+      if (weather) {
+        const wx = cam.tx * T, wy = cam.ty * T;
+        c.save(); c.translate(-wx, -wy);
+        G.fx.puddles(c, wx, wy, W, H, m, 2.4);
+        G.fx.rain(c, wx, wy, W, H, m, 2.4);
+        c.restore();
+      }
     } });
   });
 }
@@ -416,6 +424,7 @@ const TEX = ['tex_floor','tex_planks','tex_tatami','tex_mat','tex_tilefloor','te
 worldFrame('map_river', (m) => ({ tx: 118, ty: 34 }));
 worldFrame('map_bridge', (m) => ({ tx: 124, ty: 48 }));
 worldFrame('map_paths', (m) => ({ tx: 52, ty: 47 }));
+worldFrame('map_rain', (m) => ({ tx: 52, ty: 47 }), true);
 roomFrame('ui_room', 'hero_home');
 roomFrame('ui_room_academy', 'academy');
 roomFrame('ui_room_shop', 'ichiraku');

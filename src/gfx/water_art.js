@@ -28,18 +28,22 @@ G.waterArt=(()=>{
     const grain=G.util.hash2(Math.floor(x),Math.floor(y),903);
     // Кромка: четыре уровня с лёгким пиксельным дизерингом вместо размытого ореола.
     // Шум в расстоянии рвёт ровную полосу мелководья на неровные языки.
-    const k=Math.floor((1-smooth((d+(grain-.5)*1.6)/5))*4+grain)/4;
+    const k=Math.floor((1-smooth((d+(grain-.5)*2.2)/5.4))*4+grain)/4;
     // Широкие ломаные гребни: фаза общая для всей карты, поэтому швов между тайлами нет.
     const gx=Math.floor(x/32),gy=Math.floor(y/14),seed=G.util.hash2(gx,gy,931);
     const lx=x-gx*32,ly=y-gy*14,start=2+Math.floor(seed*8),len=9+Math.floor(seed*12);
     const row=3+Math.floor(G.util.hash2(gx,gy,932)*6)+Math.round(Math.sin((lx-start)*.36+seed*6));
     const span=lx>=start&&lx<start+len;
     const crest=span&&Math.floor(ly)===row;
+    // Вторая семья коротких гребней со своим шагом: рябь не складывается в один ритм.
+    const gx2=Math.floor(x/23),gy2=Math.floor(y/11),seed2=G.util.hash2(gx2,gy2,936);
+    const lx2=x-gx2*23,ly2=y-gy2*11,st2=3+Math.floor(seed2*9),ln2=5+Math.floor(seed2*8);
+    const crest2=lx2>=st2&&lx2<st2+ln2&&Math.floor(ly2)===2+Math.floor(seed2*5);
     const trough=span&&Math.floor(ly)===row+2;          // тень под гребнем — волна читается объёмнее
     const ends=span?Math.min(1,(lx-start+1)/3,(start+len-lx)/3):0;
-    const band=Math.round((Math.sin(x*.035+y*.016)+Math.sin(y*.063-x*.012))*1.5)*2;
+    const band=Math.round((Math.sin(x*.031+y*.019)+Math.sin(y*.055-x*.014))*2)*2;
     const grainTone=Math.floor(grain*3)-1;
-    const light=crest?Math.round(14*ends):trough?-5:0;
+    const light=crest?Math.round(19*ends):trough?-6:crest2?5:0;
     const wetLine=d<0.9?-7:0;                            // у самой суши вода темнее — линия контакта
     return [
       Math.round(DEEP[0]+(SHALLOW[0]-DEEP[0])*k)+band+grainTone+light+wetLine,
@@ -81,6 +85,20 @@ G.waterArt=(()=>{
       if(side==='N')c.fillRect(at-1,6,4,2);else if(side==='S')c.fillRect(at-1,8,4,2);
       else if(side==='W')c.fillRect(6,at-1,2,4);else c.fillRect(8,at-1,2,4);
       c.globalAlpha=1;
+      // Сваи под настилом: две опоры у самой кромки и дрожащее отражение ниже.
+      if(G.util.hash2(tx+dx,ty+dy,934)>.35){
+        const a=3+Math.floor(G.util.hash2(tx,ty,935)*9);
+        c.globalAlpha=.92;c.fillStyle='#3f2711';
+        if(side==='N')c.fillRect(a,0,2,4);else if(side==='S')c.fillRect(a,12,2,4);
+        else if(side==='W')c.fillRect(0,a,4,2);else c.fillRect(12,a,4,2);
+        c.globalAlpha=.5;c.fillStyle='#6d4620';
+        if(side==='N')c.fillRect(a,0,1,3);else if(side==='S')c.fillRect(a+1,13,1,3);
+        else if(side==='W')c.fillRect(0,a,3,1);else c.fillRect(13,a+1,3,1);
+        c.globalAlpha=.22;c.fillStyle='#7d5730';
+        if(side==='N')c.fillRect(a-1,4,4,3);else if(side==='S')c.fillRect(a-1,10,4,3);
+        else if(side==='W')c.fillRect(4,a-1,3,4);else c.fillRect(10,a-1,3,4);
+        c.globalAlpha=1;
+      }
     }
   }
   function draw(ctx,map,tx,ty,x,y,ID){

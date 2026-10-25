@@ -1482,20 +1482,45 @@ G.environment = (() => {
     poly(c,'#743f34',[[0,3],[5,0],[13,0],[18,3],[18,4],[0,4]]);p(c,2,2,'#bb7050',14,0.5);
     p(c,8,3,'#dfc998',0.5,7);rect(c,6,9,5,4,'#aa885c');p(c,7,10,'#d1b485',3,0.5);
   };
-  props.stall = (c) => {
-    for(const x of [2,28]){p(c,x,6,dark,2,22);p(c,x,10,edge,0.5,15);}
-    rect(c,1,17,30,10,'#92704e');p(c,2,17,'#dbbc83',28,2);p(c,2,25,dark,28,1);
-    for(let x=4;x<30;x+=6){p(c,x,20,'#b58f5f',4,4);grain(c,x,20,4,4,x);}
-    for(let i=0;i<6;i++){const x=4+i*4;rect(c,x,13,4,4,['#b76045','#d9b85f','#7d9d5b'][i%3],dark);p(c,x+1,13,'#e9cf83',1,1);p(c,x+1,12,'#517248',1,1);}
-    for(let i=0;i<8;i++){
-      const x=i*4, red=i%2===0;p(c,x,2,red?'#a95443':'#d8ceb1',4,7);p(c,x,2,red?'#d88a69':'#f4e8c7',4,1);
-      p(c,x,8,red?'#813e36':'#aca58d',4,1);p(c,x+0.5,9,red?'#b96c53':'#e9dbbc',3,2);
+  props.stall = (c) => {                       // лоток: навес в полоску, прилавок, ящики с товаром
+    p(c, 0, 26, 'rgba(0,0,0,0.16)', 32, 2);
+    for (const x of [1, 29]) { p(c, x, 8, W1, 2, 19); p(c, x, 9, W2, 1, 17); }
+    // навес: полосатый тент с провисом и тёмной кромкой
+    for (let i = 0; i < 8; i++) {
+      const x = i * 4, red = i % 2 === 0, drop = (i === 0 || i === 7) ? 1 : 0;
+      p(c, x, 2 + drop, red ? '#a04a3a' : PAPER, 4, 7 - drop);
+      p(c, x, 2 + drop, red ? '#c8765c' : PAPER_L, 4, 1);
+      p(c, x, 8, red ? '#7a382c' : PAPER_D, 4, 1);
+      if (red) p(c, x + 1, 4 + drop, '#b45c46', 1, 3);
     }
-    p(c,0,1,dark,32,1);
+    p(c, 0, 1, W0, 32, 1);
+    // прилавок
+    rect(c, 1, 15, 30, 12, W2, W0);
+    p(c, 2, 16, W3, 28, 2); p(c, 2, 16, W4, 28, 1);
+    p(c, 2, 18, W1, 28, 1);
+    for (let x = 3; x < 29; x += 7) { p(c, x, 20, W1, 5, 5); p(c, x + 1, 21, W3, 3, 3); p(c, x + 0.5, 20.5, W4, 4, 0.5); }
+    // корзины и ящики на прилавке
+    for (let i = 0; i < 3; i++) {
+      const x = 3 + i * 9;
+      rect(c, x, 10, 7, 5, i === 1 ? '#8a5a34' : '#9a6a3c', W0);
+      p(c, x + 1, 11, i === 1 ? '#b07a4a' : '#bf8c56', 5, 1);
+      p(c, x + 1, 11.5, '#4a3a24', 5, 1);
+      for (let k = 0; k < 3; k++) p(c, x + 1 + k * 2, 9, ['#c8803a', '#a83a2a', '#7a9a4a'][(i + k) % 3], 2, 2);
+    }
   };
-  props.flowerbox = (c) => {
-    rect(c,0,5,16,5,'#a77b53');p(c,1,5,edge,14,1);p(c,2,7,dark,12,0.5);
-    for(let i=0;i<5;i++){const x=2+i*3,y=2+i%2;p(c,x,y+1,'#537346',1,3);p(c,x-1,y+1,'#789451',3,1);p(c,x-1,y,['#c27883','#e2c477','#e7dfc7'][i%3],2,2);p(c,x,y,'#f8dfb2',0.5,0.5);}
+  props.flowerbox = (c) => {                   // ящик с цветами: доски с филёнкой, земля, цветы на стеблях
+    p(c, 0, 9, 'rgba(0,0,0,0.16)', 16, 1);
+    rect(c, 0, 4, 16, 5, W3, W0);
+    p(c, 1, 5, W4, 14, 1);
+    p(c, 1, 7, W1, 14, 1);
+    for (const x of [1, 8, 14]) p(c, x, 4, W1, 1, 4);
+    p(c, 1, 4, '#4a3a2a', 14, 1);
+    for (const [x, y] of [[2, 2], [6, 1], [10, 2], [13, 1]]) {
+      p(c, x + 0.5, y + 1, '#5a7a44', 0.5, 3);
+      p(c, x - 0.5, y + 2, '#6f9450', 2, 1);
+      p(c, x, y, ['#c8787a', '#e2c477', '#e6dfc4'][x % 3], 3, 3);
+      p(c, x + 1, y + 1, '#fdf3d4', 1, 1);
+    }
   };
 
   props.futon = (c) => {                       // футон на полу: матрас, стёганое одеяло, подушка
@@ -1517,17 +1542,49 @@ G.environment = (() => {
     rect(c,x,y,w,h,'#98704d');p(c,x+1,y+1,'#c8a570',w-2,h-3);p(c,x+1,y+1,'#e2c28a',w-2,0.5);
     p(c,x+1,y+h-2,'#684c3b',w-2,1);grain(c,x+2,y+2,w-4,h-5,12);
   };
-  props.table = (c) => {
-    for(const x of [2,22]){rect(c,x,0,8,5,'#a65c4e','#704b43');p(c,x+1,1,'#cf9274',6,0.5);p(c,x+3,2,'#dfb282',2,0.5);}
-    tabletop(c,2,5,28,12);for(const x of [4,26]){p(c,x,17,dark,2,3);p(c,x,17,'#af8659',0.5,2);}
-    p(c,11,9,'#655f47',13,5);p(c,12,9,'#9f784f',11,3);
-    cup(c,13,9);cup(c,19,9,'#adc5c0');p(c,15,7,'#c2d0bc',4,2);p(c,16,6,'#e1e2c7',2,1);
+  props.table = (c) => {                       // обеденный стол: столешница, чайник и чашки на ней
+    p(c, 1, 19, 'rgba(0,0,0,0.16)', 30, 2);
+    rect(c, 0, 6, 32, 12, W3, W0);
+    p(c, 1, 7, W4, 30, 1);
+    p(c, 1, 15, W2, 30, 1); p(c, 1, 16, W1, 30, 1);
+    grain(c, 2, 8, 28, 7, 12);
+    for (const x of [3, 26]) { p(c, x, 18, W1, 3, 3); p(c, x, 18, W2, 1, 3); }
+    // чайник по центру: тень под ним, чугунное тело, крышка, носик, ручка
+    p(c, 13, 12, 'rgba(0,0,0,0.22)', 7, 1);
+    rect(c, 13, 7, 6, 5, IRON, '#2a2a32');
+    p(c, 14, 8, IRON_L, 4, 1); p(c, 14, 10, '#3a3a46', 4, 1);
+    p(c, 14, 6, '#2a2a32', 4, 1); p(c, 15, 6, IRON_L, 2, 1);
+    p(c, 12, 8, '#2a2a32', 1, 2); p(c, 19, 8, '#2a2a32', 2, 1);
+    p(c, 12, 7, IRON, 2, 1);
+    // чашки и блюдо
+    for (const x of [6, 23]) {
+      p(c, x, 10, 'rgba(0,0,0,0.2)', 4, 1);
+      p(c, x, 8, PAPER, 3, 2); p(c, x, 8, PAPER_L, 3, 1); p(c, x, 10, PAPER_D, 3, 1);
+      p(c, x + 3, 8.5, W0, 0.5, 1.5);
+    }
+    p(c, 8, 13, 'rgba(0,0,0,0.18)', 6, 1);
+    p(c, 8, 12, '#8a4e30', 6, 1); p(c, 9, 12, '#c07a4e', 4, 0.5);
   };
-  props.desk = (c) => {
-    tabletop(c,0,2,26,10);for(const x of [2,22]){p(c,x,12,dark,2,6);p(c,x,12,'#b38c5d',0.5,5);}
-    p(c,4,4,'#eae0c2',8,5);p(c,5,5,'#a3987b',5,0.5);p(c,5,6.5,'#b1a486',4,0.5);
-    p(c,9,4,'#f7edcf',3,4);p(c,9,4,'#c9bb99',0.5,4);rect(c,16,4,4,5,'#647e74');p(c,17,4,'#b5bd97',1,1);
-    p(c,21,3,'#655d48',1,4);p(c,21,3,'#e2d4b1',0.5,3);
+  props.desk = (c) => {                        // письменный стол: учебник, чернильница, кисть
+    p(c, 1, 16, 'rgba(0,0,0,0.16)', 24, 2);
+    rect(c, 0, 3, 26, 11, W3, W0);
+    p(c, 1, 4, W4, 24, 1);
+    p(c, 1, 12, W2, 24, 1); p(c, 1, 13, W1, 24, 1);
+    grain(c, 2, 5, 22, 8, 21);
+    for (const x of [2, 21]) { p(c, x, 14, W1, 3, 4); p(c, x, 14, W2, 1, 4); }
+    // раскрытая книга с закладкой
+    p(c, 3, 10, 'rgba(0,0,0,0.2)', 10, 1);
+    p(c, 3, 5, W0, 10, 5); p(c, 4, 6, PAPER_L, 8, 3);
+    p(c, 7.5, 6, '#b9ad92', 0.5, 3); p(c, 4.5, 7, '#c6b79a', 2.5, 0.5); p(c, 8.5, 7, '#c6b79a', 3, 0.5);
+    p(c, 5, 4, '#a83a30', 1, 2);
+    // чернильница с кистью
+    p(c, 15, 10, 'rgba(0,0,0,0.2)', 5, 1);
+    rect(c, 15, 5, 4, 5, IRON, '#2a2a32');
+    p(c, 16, 6, IRON_L, 2, 1); p(c, 16, 4, '#2a2a32', 2, 1);
+    p(c, 20, 4, W1, 1, 6); p(c, 19, 4, '#2a2a32', 1, 5);
+    p(c, 21, 8, PAPER, 1, 2);
+    // стопка листов
+    p(c, 10, 11, '#e8dcc0', 6, 1); p(c, 11, 10, '#f4ecd8', 6, 1);
   };
   props.shelf = (c) => {                       // стеллаж: тёмная задняя стенка, книги разной высоты
     p(c, 0, 26, 'rgba(0,0,0,0.18)', 16, 2);
@@ -1581,10 +1638,16 @@ G.environment = (() => {
     for (const x of [3, 11]) for (const y of [3, 7]) p(c, x + 0.5, y, '#b0b0bc', 1, 1);
     rect(c, 6, 6, 4, 4, '#c8a566', W0); p(c, 7.5, 7, W0, 1, 2);
   };
-  props.counter = (c) => {
-    p(c,0,5,dark,16,15);p(c,0,5,'#c4a576',16,3);p(c,0,4,'#e0c28d',16,1);p(c,0,8,'#5e4c3c',16,1);
-    p(c,0,10,'#a27d53',16,8);p(c,1,11,'#bf9761',14,0.5);p(c,1,12,'#8d6d4a',0.5,5);p(c,15,11,'#70563f',0.5,7);
-    grain(c,2,12,12,5,4);p(c,0,18,'#6b5440',16,2);
+  props.counter = (c) => {                     // стойка: светлая столешница с наплывом и филёнки; стыкуется по горизонтали
+    p(c, 0, 3, W0, 16, 15);
+    p(c, 0, 3, W4, 16, 2);
+    p(c, 0, 5, W3, 16, 1);
+    p(c, 0, 6, '#2f241d', 16, 1);
+    p(c, 0, 7, W2, 16, 10);
+    for (let x = 1; x < 16; x += 5) {
+      p(c, x, 9, W1, 4, 7); p(c, x + 0.5, 9.5, W3, 3, 6); p(c, x + 0.5, 9.5, W4, 3, 0.5);
+    }
+    p(c, 0, 16, W1, 16, 1); p(c, 0, 17, W0, 16, 1);
   };
   props.window = (c) => {                      // окно: деревянная рама, переплёт, подоконник
     rect(c, 0, 0, 16, 10, W2, W0);
@@ -1607,10 +1670,20 @@ G.environment = (() => {
     leaf(c, 6, 2); leaf(c, 6, 5, true); leaf(c, 6, 7); leaf(c, 6, 9, true);
     p(c, 7, 3, '#5c8a4c', 1, 2); p(c, 6, 11, '#5c8a4c', 1, 2);
   };
-  props.flowerpot = (c) => {
-    rect(c,2,10,8,6,'#ad7e60','#795b48');p(c,3,11,'#d8ac80',1,3);p(c,2,9,'#d7b78c',8,2);p(c,3,9,'#676a4a',6,0.5);
-    p(c,6,3,'#54774d',0.5,7);leaf(c,6,4,true);leaf(c,6,5);
-    for(const [x,y] of [[4,1],[6,0],[7,2],[5,3]])p(c,x,y,'#e9c980',2,2);p(c,5.5,2,'#bb7851',1.5,1.5);
+  props.flowerpot = (c) => {                   // горшок: керамика с ободком, кустик с цветами
+    p(c, 2, 14, 'rgba(0,0,0,0.16)', 8, 2);
+    poly(c, W0, [[2, 10], [10, 10], [9, 15], [3, 15]]);
+    poly(c, '#b07a52', [[2.5, 10.5], [9.5, 10.5], [8.5, 14.5], [3.5, 14.5]]);
+    p(c, 3, 11, '#d8a476', 1, 3); p(c, 8, 11, '#8a5a38', 1, 2);
+    rect(c, 1, 8, 10, 3, '#c08a5e', W0);
+    p(c, 2, 8, '#dfae82', 8, 1);
+    p(c, 2, 9, '#4a3a2a', 8, 1);
+    for (const [x, y] of [[5, 3], [3, 5], [7, 5]]) {
+      p(c, 5, 5, '#4a6a3c', 1, 5);
+      p(c, x, y, ['#e2c477', '#e6dfc4', '#c8787a'][x % 3], 2, 2);
+      p(c, x + 0.5, y + 0.5, '#fdf3d4', 1, 1);
+      p(c, x - 0.5, y + 1.5, '#6f9450', 1, 1);
+    }
   };
   props.tansu = (c) => {                       // комод: четыре ящика с железными накладками
     p(c, 0, 28, 'rgba(0,0,0,0.18)', 20, 2);
@@ -1655,14 +1728,20 @@ G.environment = (() => {
     p(c, 5.5, 3, '#dcbf88', 1, 14);
     p(c, 3, 10, '#e8cd96', 6, 1);
   };
-  props.screen = (c) => {
-    for(let i=0;i<3;i++){
-      const x=i*8;rect(c,x,0,8,26,i%2?'#e4d8b8':'#e9dfc1',dark);p(c,x+1,1,'#c1a477',6,0.5);
-      for(const y of [7,15])p(c,x+1,y,'#d2c29e',6,0.5);p(c,x+6.5,2,'#c9b58e',0.5,22);
+  props.screen = (c) => {                      // ширма: четыре створки на ножках, бамбук по бумаге
+    p(c, 0, 22, 'rgba(0,0,0,0.16)', 24, 3);
+    for (let i = 0; i < 4; i++) {
+      const x = i * 6;
+      rect(c, x, 1, 6, 22, i % 2 ? PAPER : PAPER_L, W0);
+      p(c, x + 1, 2, PAPER_L, 4, 1);
+      p(c, x + 0.5, 3, PAPER_D, 0.5, 18);
+      p(c, x, 1, W2, 6, 1); p(c, x, 2, W3, 6, 0.5);
+      p(c, x, 21, W1, 6, 1);
     }
-    // Веточка бамбука на бумажных створках.
-    for(let i=0;i<16;i++){const x=5+Math.floor(i*0.75);p(c,x,22-i,'#6d8267',0.5,1.5);}
-    for(const [x,y] of [[8,17],[11,13],[14,9],[16,6]]){leaf(c,x,y);leaf(c,x,y-2,true);}
+    p(c, 0, 21, W0, 24, 1);
+    for (const x of [1, 21]) { p(c, x, 22, W1, 2, 2); p(c, x, 22, W2, 2, 0.5); }
+    for (let i = 0; i < 15; i++) p(c, 4 + i * 0.75, 19 - i, i % 3 ? '#4a6a4a' : '#6d8267', 0.5, 1.5);
+    for (const [x, y] of [[6, 15], [9, 12], [12, 8], [15, 5]]) { leaf(c, x, y); leaf(c, x, y - 2, true); }
   };
   props.rack = (c) => {
     for(const x of [1,23]){p(c,x,2,dark,2,24);p(c,x,3,'#c2a273',0.5,21);}
@@ -1681,9 +1760,14 @@ G.environment = (() => {
     p(c,1,10,'#b9d0c5',16,18);p(c,2,11,'#e2e8d6',12,15);p(c,14,11,'#9fbcb3',3,17);
     p(c,1,10,'#f6f0d9',16,2);p(c,4,13,'#cbdcd0',0.5,11);p(c,0,28,'#79958b',18,2);p(c,1,28,'#c9dac9',16,0.5);
   };
-  props.stool = (c) => {
-    p(c,3,5,'#525c50',1,5);p(c,7,5,'#525c50',1,5);p(c,3,8,'#89927a',5,0.5);
-    poly(c,'#674b40',[[2,0],[8,0],[10,2],[9,5],[1,5],[0,2]]);p(c,2,1,'#ba7960',6,3);p(c,3,1,'#e2ac80',4,0.5);p(c,4,4,'#874e44',4,0.5);
+  props.stool = (c) => {                       // табурет: круглое сиденье с ободком, три ножки
+    p(c, 1, 8, 'rgba(0,0,0,0.16)', 8, 2);
+    poly(c, W0, [[2, 1], [7, 1], [9, 3], [7, 5], [2, 5], [0, 3]]);
+    poly(c, W3, [[2, 1.5], [7, 1.5], [8, 3], [7, 4.5], [2, 4.5], [1, 3]]);
+    p(c, 2, 2, W4, 5, 1); p(c, 3, 4, W2, 3, 1);
+    p(c, 2, 5, W1, 1, 4); p(c, 7, 5, W1, 1, 4); p(c, 4, 5, W2, 1, 2);
+    p(c, 2, 7, W1, 6, 1); p(c, 2, 7, W3, 6, 0.5);
+    p(c, 1, 9, W1, 1, 1); p(c, 8, 9, W1, 1, 1);
   };
   props.sign = (c) => {
     p(c,7,8,dark,2,10);p(c,7,10,'#b19465',0.5,7);rect(c,1,1,14,9,'#be9e6b',dark);p(c,2,2,'#e0c697',12,0.5);
@@ -1720,10 +1804,40 @@ G.environment = (() => {
       p(c, x + 1, 0, '#b0c4b8', 1, 1);
     }
   };
-  props.vase = (c) => {
-    poly(c,'#527a7b',[[3,9],[7,9],[8,13],[7,17],[3,17],[2,13]]);p(c,3,10,'#b7d0bc',1,5);p(c,4,16,'#405f64',3,1);
-    p(c,5,3,'#7a694c',0.5,7);p(c,4,5,'#7a694c',1.5,0.5);
-    for(const [x,y] of [[4,1],[1,4],[7,5]]){p(c,x,y,'#c9888d',2,2);p(c,x+0.5,y,'#f2c8ba',1,0.5);}
+  props.vase = (c) => {                        // ваза: керамика с горлом и икебана с цветами
+    p(c, 2, 16, 'rgba(0,0,0,0.16)', 6, 2);
+    poly(c, W0, [[2, 8], [8, 8], [9, 12], [7, 16], [3, 16], [1, 12]]);
+    poly(c, '#4a7a74', [[2.5, 8.5], [7.5, 8.5], [8.5, 12], [6.5, 15.5], [3.5, 15.5], [1.5, 12]]);
+    p(c, 3, 9, '#8fc0ac', 1, 5); p(c, 7, 10, '#35605e', 1, 4);
+    rect(c, 3, 6, 4, 3, '#4a7a74', W0);
+    p(c, 4, 6, '#8fc0ac', 2, 1);
+    p(c, 5, 2, '#6a5a3c', 0.5, 5);
+    p(c, 4, 4, '#6a5a3c', 1.5, 0.5); p(c, 5.5, 3, '#6a5a3c', 1, 0.5);
+    for (const [x, y] of [[5, 1], [2, 4], [7, 3]]) { p(c, x, y, '#c8787a', 2, 2); p(c, x + 0.5, y + 0.5, '#f2c8ba', 1, 1); }
+  };
+  props.hibachi = (c) => {                     // жаровня: деревянный ящик, железный обод, угли с искрами
+    p(c, 1, 12, 'rgba(0,0,0,0.16)', 14, 2);
+    rect(c, 1, 4, 14, 9, W2, W0);
+    p(c, 2, 6, W3, 12, 1); p(c, 2, 11, W1, 12, 1);
+    p(c, 2, 5, '#2b2018', 12, 3);
+    p(c, 1, 4, IRON, 14, 1); p(c, 2, 3, IRON_L, 12, 1);
+    p(c, 1, 5, IRON, 1, 8); p(c, 14, 5, IRON, 1, 8);
+    p(c, 4, 6, '#e8823a', 2, 1); p(c, 8, 6, '#e84a2a', 2, 1); p(c, 6, 7, '#f0a24a', 1, 1);
+    p(c, 10, 7, '#b8b0a4', 2, 1); p(c, 3, 7, '#f6c86a', 1, 1);
+    p(c, 5, 8, '#c8722a', 3, 1);
+    p(c, 3, 9, W1, 10, 1); p(c, 4, 10, W3, 8, 0.5);
+    p(c, 0, 12, W1, 2, 1); p(c, 14, 12, W1, 2, 1);
+  };
+  props.bookpile = (c) => {                    // стопка книг: корешки, срез страниц, закладка
+    p(c, 1, 8, 'rgba(0,0,0,0.16)', 10, 2);
+    for (const [y, col, dx, w] of [[5, '#8a3a30', 1, 10], [2, '#3a5a7a', 2, 8], [0, '#7a6a3a', 3, 6]]) {
+      p(c, dx, y, col, w, 3);
+      p(c, dx, y, W0, w, 0.5); p(c, dx, y + 2.5, W0, w, 0.5);
+      p(c, dx, y + 1, '#efe6cf', w, 1);
+      p(c, dx + w - 0.5, y, W0, 0.5, 3);
+      p(c, dx + 1, y + 0.5, '#f4dfa4', 1, 1);
+    }
+    p(c, 6, -1, '#c8a04a', 1, 2);
   };
   props.bonsai = (c) => {
     rect(c,3,13,8,5,'#8c9b86','#576b5c');p(c,4,13,'#d5d0aa',6,1);p(c,4,14,'#6b6c4e',6,0.5);
@@ -1996,18 +2110,22 @@ G.waterArt=(()=>{
     const grain=G.util.hash2(Math.floor(x),Math.floor(y),903);
     // Кромка: четыре уровня с лёгким пиксельным дизерингом вместо размытого ореола.
     // Шум в расстоянии рвёт ровную полосу мелководья на неровные языки.
-    const k=Math.floor((1-smooth((d+(grain-.5)*1.6)/5))*4+grain)/4;
+    const k=Math.floor((1-smooth((d+(grain-.5)*2.2)/5.4))*4+grain)/4;
     // Широкие ломаные гребни: фаза общая для всей карты, поэтому швов между тайлами нет.
     const gx=Math.floor(x/32),gy=Math.floor(y/14),seed=G.util.hash2(gx,gy,931);
     const lx=x-gx*32,ly=y-gy*14,start=2+Math.floor(seed*8),len=9+Math.floor(seed*12);
     const row=3+Math.floor(G.util.hash2(gx,gy,932)*6)+Math.round(Math.sin((lx-start)*.36+seed*6));
     const span=lx>=start&&lx<start+len;
     const crest=span&&Math.floor(ly)===row;
+    // Вторая семья коротких гребней со своим шагом: рябь не складывается в один ритм.
+    const gx2=Math.floor(x/23),gy2=Math.floor(y/11),seed2=G.util.hash2(gx2,gy2,936);
+    const lx2=x-gx2*23,ly2=y-gy2*11,st2=3+Math.floor(seed2*9),ln2=5+Math.floor(seed2*8);
+    const crest2=lx2>=st2&&lx2<st2+ln2&&Math.floor(ly2)===2+Math.floor(seed2*5);
     const trough=span&&Math.floor(ly)===row+2;          // тень под гребнем — волна читается объёмнее
     const ends=span?Math.min(1,(lx-start+1)/3,(start+len-lx)/3):0;
-    const band=Math.round((Math.sin(x*.035+y*.016)+Math.sin(y*.063-x*.012))*1.5)*2;
+    const band=Math.round((Math.sin(x*.031+y*.019)+Math.sin(y*.055-x*.014))*2)*2;
     const grainTone=Math.floor(grain*3)-1;
-    const light=crest?Math.round(14*ends):trough?-5:0;
+    const light=crest?Math.round(19*ends):trough?-6:crest2?5:0;
     const wetLine=d<0.9?-7:0;                            // у самой суши вода темнее — линия контакта
     return [
       Math.round(DEEP[0]+(SHALLOW[0]-DEEP[0])*k)+band+grainTone+light+wetLine,
@@ -2049,6 +2167,20 @@ G.waterArt=(()=>{
       if(side==='N')c.fillRect(at-1,6,4,2);else if(side==='S')c.fillRect(at-1,8,4,2);
       else if(side==='W')c.fillRect(6,at-1,2,4);else c.fillRect(8,at-1,2,4);
       c.globalAlpha=1;
+      // Сваи под настилом: две опоры у самой кромки и дрожащее отражение ниже.
+      if(G.util.hash2(tx+dx,ty+dy,934)>.35){
+        const a=3+Math.floor(G.util.hash2(tx,ty,935)*9);
+        c.globalAlpha=.92;c.fillStyle='#3f2711';
+        if(side==='N')c.fillRect(a,0,2,4);else if(side==='S')c.fillRect(a,12,2,4);
+        else if(side==='W')c.fillRect(0,a,4,2);else c.fillRect(12,a,4,2);
+        c.globalAlpha=.5;c.fillStyle='#6d4620';
+        if(side==='N')c.fillRect(a,0,1,3);else if(side==='S')c.fillRect(a+1,13,1,3);
+        else if(side==='W')c.fillRect(0,a,3,1);else c.fillRect(13,a+1,3,1);
+        c.globalAlpha=.22;c.fillStyle='#7d5730';
+        if(side==='N')c.fillRect(a-1,4,4,3);else if(side==='S')c.fillRect(a-1,10,4,3);
+        else if(side==='W')c.fillRect(4,a-1,3,4);else c.fillRect(10,a-1,3,4);
+        c.globalAlpha=1;
+      }
     }
   }
   function draw(ctx,map,tx,ty,x,y,ID){
@@ -2470,22 +2602,36 @@ G.tiles = (() => {
     const wN = map.get(tx, ty - 1) === W, wS = map.get(tx, ty + 1) === W;
     const wW = map.get(tx - 1, ty) === W, wE = map.get(tx + 1, ty) === W;
     if (!(wN || wS || wW || wE)) return;
-    const ns = wW || wE;                       // вода по бокам → мост идёт север-юг, доски поперёк (горизонтально)
-    // Настил: свои доски, а не плитка «деревянного пола» — иначе мост читается как деревянная площадка.
-    px(ctx, x, y, '#a8683a', T, T);
-    for (let i = 2; i < 16; i += 4) {
-      if (ns) { px(ctx, x, y + i, '#8a5230', 16, 1); px(ctx, x + (i % 8 ? 5 : 11), y + i - 3, '#8a5230', 1, 3); }
-      else { px(ctx, x + i, y, '#8a5230', 1, 16); px(ctx, x + i - 3, y + (i % 8 ? 5 : 11), '#8a5230', 3, 1); }
+    // Вода по бокам → мост идёт север-юг, доски поперёк (горизонтальные швы).
+    // Вода сверху/снизу → мост идёт запад-восток, швы вертикальные.
+    const ns = wW || wE;
+    // Настил: перерисовываем клетку целиком, чтобы швы досок шли поперёк движения
+    // и не спорили с текстурой «деревянного пола» из атласа.
+    const tones = ['#9f6238', '#965c34', '#a86a3e'];
+    px(ctx, x, y, tones[0], T, T);
+    for (let r = 0; r < 4; r++) {                     // четыре доски на клетку, шов в 1 px
+      const i = r * 4;
+      const tone = tones[Math.floor(H(tx * 4 + r, ty * 4 + (ns ? 0 : 1), 510) * 3) % 3];
+      if (ns) { px(ctx, x, y + i, tone, T, 3); px(ctx, x, y + i + 3, '#7d4a28', T, 1); }
+      else { px(ctx, x + i, y, tone, 3, T); px(ctx, x + i + 3, y, '#7d4a28', 1, T); }
+      // Торец доски: короткий стык вразбежку, иначе настил похож на лист фанеры.
+      const at = 3 + Math.floor(H(tx * 4 + r, ty, 511) * 10);
+      if (ns) px(ctx, x + at, y + i, '#8a5230', 1, 3);
+      else px(ctx, x + i, y + at, 3, 1);
     }
-    for (let i = 0; i < 5; i++) px(ctx, x + Math.floor(H(tx + i, ty, 512) * 15), y + Math.floor(H(ty, tx + i, 513) * 15), '#c08a54');
-    // Край у воды: тень, балка, светлый поручень. Стойки — через клетку, как у настоящих мостков.
+    for (let i = 0; i < 4; i++) px(ctx, x + Math.floor(H(tx + i, ty, 512) * 15), y + Math.floor(H(ty, tx + i, 513) * 15), '#bf8a56');
+    // Край у воды: балка, поручень, стойки. Поручень светлый и на 2 px, чтобы мост
+    // читался как мост, а не как деревянная площадка у воды.
     const post = (ns ? ty : tx) % 2 === 0;
     const edge = (side) => {
       for (let i = 0; i < 16; i++) {
         const put = (n, col, w2 = 1) => ns ? px(ctx, x + (side === 'W' ? n : 15 - n), y + i, col, w2, 1)
                                            : px(ctx, x + i, y + (side === 'N' ? n : 15 - n), col, 1, w2);
-        put(0, '#33200f', 2); put(2, '#8a5a30'); put(3, '#c8925a');
-        if (post && i > 1 && i < 6) put(1, '#2b1a0c', 1);   // стойка перил
+        put(0, '#2b1a0c', 2);              // тень под настилом
+        put(2, '#7a4a26');                 // балка
+        put(3, '#c8925a');                 // светлая кромка поручня
+        if (post && i > 1 && i < 7) put(1, '#2b1a0c', 1);   // стойка перил
+        if (post && i === 7) put(0, '#5a3a20', 2);
       }
     };
     if (wW) edge('W');
@@ -2523,6 +2669,51 @@ G.tiles = (() => {
           else px(ctx, x + 13 - d, y + i, '#4e8a3a', 2, 1);
         }
       }
+    }
+  }
+
+  // Медленное поле шума по мировым координатам: пятна больше клетки, поэтому проплешины
+  // переходят через границы тайлов и не складываются в решётку.
+  function vnoise(wx, wy, seed, S = 26) {
+    const gx = Math.floor(wx / S), gy = Math.floor(wy / S);
+    const fx = wx / S - gx, fy = wy / S - gy;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = H(gx, gy, seed), b = H(gx + 1, gy, seed), c = H(gx, gy + 1, seed), d = H(gx + 1, gy + 1, seed);
+    return (a + (b - a) * sx) * (1 - sy) + (c + (d - c) * sx) * sy;
+  }
+
+  // Проплешины травы: сухие пятна, тёмный мох и редкие кустики на стыках «трава/трава».
+  // Раньше газон был ровным, если не считать одиночных цветочков и камешков.
+  function patches(ctx, tx, ty, x, y) {
+    const DRY = ['#93a552', '#a8b25c', '#7e9247'], DARK = ['#5c8a48', '#527f42', '#679350'];
+    for (let j = 0; j < 16; j += 4) for (let i = 0; i < 16; i += 4) {
+      const wx = tx * 16 + i, wy = ty * 16 + j;
+      const n = vnoise(wx, wy, 941);
+      const dry = n > 0.60, dark = n < 0.29;
+      if (!dry && !dark) continue;
+      const cols = dry ? DRY : DARK;
+      const k = (dry ? n - 0.60 : 0.34 - n) * 6;         // плотность к центру пятна
+      for (let sy = 0; sy < 4; sy += 2) for (let sx = 0; sx < 4; sx += 2) {
+        if (H(wx + sx, wy + sy, 943) > 0.35 + k) continue;   // рваная кромка пятна
+        px(ctx, x + i + sx, y + j + sy, cols[Math.floor(H(i + sx, j + sy, 944) * 3) % 3], 2, 2);
+      }
+      // сухие травинки и мелкий бурьян по краю пятна
+      if (k > 0.5 && H(wx, wy, 945) > 0.72) {
+        const gx2 = i + 1 + Math.floor(H(wx, wy, 946) * 2), gy2 = j + 1;
+        px(ctx, x + gx2, y + gy2, dry ? '#c8bb6a' : '#8fb060', 1, 2);
+        px(ctx, x + gx2 + 1, y + gy2 + 1, dry ? '#b0a45c' : '#7a9c50', 1, 1);
+      }
+    }
+    // Кустик: держится за центр пятна, поэтому не появляется на каждом тайле.
+    const n0 = vnoise(tx * 16 + 8, ty * 16 + 8, 941);
+    if (n0 > 0.80 && H(tx, ty, 947) > 0.35) {
+      const bx = 3 + Math.floor(H(tx, ty, 948) * 9), by = 3 + Math.floor(H(ty, tx, 949) * 8);
+      px(ctx, x + bx - 1, y + by + 3, '#2e4d2c', 6, 1);
+      px(ctx, x + bx, y + by, '#3b6a3a', 4, 4);
+      px(ctx, x + bx + 1, y + by + 1, '#557f42', 2, 2);
+      px(ctx, x + bx, y + by, '#7a9c58', 1, 1);
+      px(ctx, x + bx + 3, y + by + 2, '#6d9250', 1, 1);
+      px(ctx, x + bx + 1, y + by - 1, '#4e7a40', 1, 1);
     }
   }
 
@@ -2567,6 +2758,51 @@ G.tiles = (() => {
         px(ctx, x + mx, y + my, 2, 1); px(ctx, x + mx + 1, y + my + 1, '#4e7040');
       }
       ctx.globalAlpha = 1;
+    }
+    // Проплешины травы: сухие и тёмные пятна с кустиками (стык «трава/трава» больше не пустой).
+    if (map.outdoor && GRASSY.has(id)) patches(ctx, tx, ty, x, y);
+    // Настил мостков: своя затёртость и шляпки гвоздей у каждой клетки — плоскость доски
+    // перестаёт быть ровной, а по деке видно, что по ней ходят.
+    if (id === ID.PLANKS) {
+      const w1 = hh(1, 581), w2 = hh(2, 582);
+      ctx.globalAlpha = 0.06 + w1 * 0.09;
+      px(ctx, x, y, w1 > 0.55 ? '#000000' : '#ffffff', 16, 16);
+      ctx.globalAlpha = 1;
+      const nx = 2 + Math.floor(w2 * 12), ny = 2 + Math.floor(hh(3, 583) * 12);
+      px(ctx, x + nx, y + ny, '#5a3a20'); px(ctx, x + nx + 1, y + ny, '#c89a62');
+      if (w1 > 0.68) px(ctx, x + 3 + Math.floor(w1 * 9), y + 6 + Math.floor(hh(4, 584) * 8), '#7a4e2c', 3, 1);
+      if (w2 < 0.18) px(ctx, x + 6 + Math.floor(w2 * 30) % 8, y + 10, '#8a5a32', 2, 1);
+    }
+    // Бордюр и водосток: мостовая, которая упирается в газон, получает бортовой камень с joints
+    // и щелями (местами выбит, местами во мху) и тёмную канавку-водосток за ним.
+    // К тропинкам бордюр не ставим: там кромку держит наползающая земля и трава.
+    if (map.outdoor && G.mapgen && [ID.MAINROAD, ID.STONE, ID.PLAZA, ID.COBBLE, ID.BRICK].includes(id)) {
+      const kerb = (side, along, line) => {
+        const light = '#ded7c1', body = '#c6bfa8', shade = '#9b9582', joint = '#7d7869';
+        const at = (i, d) => side === 'N' ? [x + i, y + d]
+          : side === 'S' ? [x + i, y + 15 - d]
+          : side === 'W' ? [x + d, y + i]
+          : [x + 15 - d, y + i];
+        for (let i = 0; i < 16; i++) {
+          const g = along + i;
+          if (H(g, line, 972) > 0.93) continue;                    // щель: бордюр местами выбит
+          const p0 = at(i, 0), p1 = at(i, 1), p2 = at(i, 2), p3 = at(i, 3);
+          px(ctx, p0[0], p0[1], light); px(ctx, p1[0], p1[1], body); px(ctx, p2[0], p2[1], shade);
+          if (g % 5 === 0) {                                       // стык бортовых камней
+            if (side === 'N' || side === 'S') px(ctx, p1[0], p1[1], joint, 1, 2);
+            else px(ctx, p1[0], p1[1], joint, 2, 1);
+          }
+          if (H(g, line, 974) > 0.87) px(ctx, p0[0], p0[1], '#6f8a4c');   // мох в стыке
+          ctx.globalAlpha = 0.22; ctx.fillStyle = '#2f2b24';
+          if (side === 'N' || side === 'S') ctx.fillRect(p3[0], p3[1], 1, 1);
+          else ctx.fillRect(p3[0], p3[1], 1, 1);
+          ctx.globalAlpha = 1;
+        }
+      };
+      if (GRASSY.has(up)) kerb('N', tx * 16, ty);
+      if (GRASSY.has(dn)) kerb('S', tx * 16, ty + 1);
+      if (GRASSY.has(lf)) kerb('W', ty * 16, tx);
+      if (GRASSY.has(rt)) kerb('E', ty * 16, tx + 1);
     }
     // крупные пятна света и тени теперь — один плавный проход по всему чанку (map.groundLight), а не квадраты 4×4
     if (map.outdoor && G.mapgen && (GRASSY.has(id) || ROADY.has(id))) {
@@ -3034,10 +3270,10 @@ G.tiles = (() => {
       blob(c, 7, 8, 3, '#e8a860'); px(c, 4, 9, '#e8a860', 7, 3); blob(c, 7, 4, 3, '#e8a860'); px(c, 4, 1, '#e8a860', 2, 2); px(c, 9, 1, '#e8a860', 2, 2);
       px(c, 5, 4, '#2a1e18'); px(c, 9, 4, '#2a1e18'); px(c, 7, 5, '#f08a8a'); px(c, 3, 9, '#c8803a', 1, 3); px(c, 11, 9, '#e8a860', 3, 1); px(c, 6, 7, '#c8803a', 2, 1);
     }, -7, -11, null);
-    obj('bookpile', 12, 10, (c) => { px(c, 1, 6, P.ink, 10, 4); px(c, 2, 7, '#c84a3a', 8, 2); px(c, 2, 3, P.ink, 8, 4); px(c, 3, 4, '#4a7ac8', 6, 2); px(c, 3, 1, P.ink, 6, 3); px(c, 4, 2, '#e8c040', 4, 1); }, -6, -9, { x: -5, y: -3, w: 10, h: 3 });
+    obj('bookpile', 12, 10, G.environment.props.bookpile, -6, -9, { x: -5, y: -3, w: 10, h: 3 });
     obj('basket', 12, 12, (c) => { outline(c, 1, 5, 10, 7, '#c8a050'); for (let i = 0; i < 4; i++) px(c, 2, 6 + i * 2, '#a07830', 8, 1); px(c, 2, 2, '#c8a050', 1, 4); px(c, 9, 2, '#c8a050', 1, 4); px(c, 2, 2, '#c8a050', 8, 1); px(c, 4, 4, '#d84a3a', 3, 2); px(c, 7, 4, '#7ac04a', 2, 2); }, -6, -11, { x: -5, y: -3, w: 10, h: 3 });
     obj('shoes', 12, 6, (c) => { px(c, 1, 2, '#5a3a24', 4, 3); px(c, 2, 1, '#8a5a34', 2, 1); px(c, 7, 3, '#3a3a4a', 4, 2); px(c, 7, 2, '#5a5a6a', 2, 1); }, -6, -5, null, 'floor');
-    obj('hibachi', 16, 14, (c) => { outline(c, 1, 4, 14, 10, '#6a4a30'); px(c, 3, 5, '#3a2a20', 10, 3); px(c, 5, 5, '#f08a2a', 2, 1); px(c, 9, 6, '#e84a2a', 2, 1); px(c, 2, 12, '#4a3220', 12, 2); }, -8, -13, { x: -7, y: -4, w: 14, h: 4 });
+    obj('hibachi', 16, 14, G.environment.props.hibachi, -8, -13, { x: -7, y: -4, w: 14, h: 4 });
     obj('wardrobe', 20, 32, G.environment.props.wardrobe, -10, -31, { x: -10, y: -6, w: 20, h: 6 });
     obj('rug_red', 32, 20, G.environment.props.rug_red, -16, -19, null, 'floor');
     obj('rug_blue', 32, 20, G.environment.props.rug_blue, -16, -19, null, 'floor');

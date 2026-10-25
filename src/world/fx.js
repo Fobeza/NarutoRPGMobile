@@ -167,6 +167,46 @@ G.fx = (() => {
     });ctx.restore();
   }
 
+  // Лужи после дождя: на мостовой и утоптанных тропах остаются тёмные пятна с отражением неба
+  // и расходящимися кругами от капель. Пятна держатся за мировую сетку 32 px, поэтому не мигают.
+  function puddles(ctx, cx, cy, W, VH, map, time) {
+    if (!enabled() || !map.outdoor) return;
+    const ID = G.tiles.ID;
+    const wet = [ID.MAINROAD, ID.STONE, ID.PLAZA, ID.COBBLE, ID.BRICK, ID.DARKSTONE, ID.PATH, ID.DIRT, ID.GRAVEL];
+    const tx0 = Math.max(0, Math.floor(cx / T) - 1), ty0 = Math.max(0, Math.floor(cy / T) - 1);
+    const tx1 = Math.min(map.w - 1, Math.ceil((cx + W) / T)), ty1 = Math.min(map.h - 1, Math.ceil((cy + VH) / T));
+    ctx.save();
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+      if (!wet.includes(map.get(tx, ty))) continue;
+      // Пятно живёт в узле сетки 32 px: соседние клетки делят одно поле, поэтому лужа цельная.
+      const gx = Math.floor(tx / 2), gy = Math.floor(ty / 2);
+      const n = H(gx, gy, 961);
+      if (n < 0.61) continue;
+      const ox = tx * T + Math.floor(H(gx, gy, 962) * 8), oy = ty * T + Math.floor(H(gy, gx, 963) * 8);
+      const rx = 3 + Math.floor(n * 5), ry = Math.max(2, Math.round(rx * 0.55));
+      // влажная кайма и тёмная вода
+      ctx.globalAlpha = 0.22; ctx.fillStyle = '#2a3a48';
+      ellipse(ctx, ox, oy, rx + 1, ry + 1);
+      ctx.globalAlpha = 0.42; ctx.fillStyle = '#20323e';
+      ellipse(ctx, ox, oy, rx, ry);
+      // отражение неба — узкой полосой у дальнего края
+      ctx.globalAlpha = 0.20; ctx.fillStyle = '#9fb6c8';
+      ellipse(ctx, ox, oy - 1, Math.max(2, rx - 2), Math.max(1, ry - 2));
+      // круги от капель: две волны с разной фазой
+      for (let k = 0; k < 2; k++) {
+        const ph = (time * (0.55 + k * 0.2) + H(gx, gy, 964 + k)) % 1;
+        const rr = 1 + ph * rx * 0.9;
+        ctx.globalAlpha = (1 - ph) * 0.34;
+        ctx.fillStyle = '#cfe0ea';
+        const ryy = Math.max(1, Math.round(rr * 0.55));
+        ctx.fillRect(ox - Math.round(rr), oy - ryy, Math.round(rr * 2), 1);
+        ctx.fillRect(ox - Math.round(rr), oy + ryy, Math.round(rr * 2), 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
   // Мягкое затемнение по краям (в экранных координатах)
   let vig = null, vigKey = '';
   function vignette(ctx, W, VH, y0) {
@@ -181,5 +221,5 @@ G.fx = (() => {
     ctx.drawImage(vig, 0, y0);
   }
 
-  return { sun, shadows, roomSunlight, windows, particles, rain, vignette, enabled };
+  return { sun, shadows, roomSunlight, windows, particles, rain, puddles, vignette, enabled };
 })();
