@@ -6,7 +6,7 @@ try{for(const [width,height] of [[320,568],[393,759],[430,932]]){
  const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true,acceptDownloads:true,serviceWorkers:'block'}),p=await context.newPage();let accept=true;
  p.on('pageerror',e=>errors.push(e.message));p.on('dialog',d=>accept?d.accept():d.dismiss());
  await p.goto(new URL('map-editor.html',process.env.GAME_URL||'http://127.0.0.1:8765/').href);await p.waitForFunction(()=>window.mapEditor);
- const legacy=await p.evaluate(()=>{const m=mapEditor.export();m.version=1;m.ground=m.ground.map((_,i)=>i%32<5&&Math.floor(i/32)>20?4:i%32===18?17:0);m.objects=[{kind:'building',id:Object.keys(G.HOUSE_ART.art)[0],x:12,y:10},{kind:'prop',id:'tree',x:7,y:16}];return m;});
+ const legacy=await p.evaluate(()=>{const m=mapEditor.export();m.version=1;m.ground=m.ground.map((_,i)=>i%32<5&&Math.floor(i/32)>20?4:i%32===18?17:0);m.objects=[{kind:'building',id:Object.keys((G.art.data('house')||{art:{}}).art)[0],x:12,y:10},{kind:'prop',id:'tree',x:7,y:16}];return m;});
  await p.click('#files');await p.setInputFiles('#file',{name:'old-map.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(legacy))});await p.waitForTimeout(100);
  let m=await p.evaluate(()=>mapEditor.export());assert.equal(m.version,2);assert.ok(m.objects.every(o=>o.scale===1&&!o.flipX&&!o.flipY));
  const cdp=await context.newCDPSession(p);

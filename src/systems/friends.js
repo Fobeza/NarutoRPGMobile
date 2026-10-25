@@ -105,7 +105,10 @@ G.friends = {
           this.add(id, 2, 'spar'); G.game.advance(40); G.game.tire(12);
           if (res.win) { G.state.vars['spwin_' + id] = (G.state.vars['spwin_' + id] || 0) + 1; G.state.vars.rep = (G.state.vars.rep || 0) + 1; }
           if (id === 'sasuke' && res.win) G.state.vars.rival = (G.state.vars.rival || 0) + 1;
-          const l = G.ENEMIES[f.spar].lines; world.talk([{ who: id, text: G.util.fmt(res.win ? l.lose : l.win, { name: G.state.hero.name }) }]);
+          const l = G.ENEMIES[f.spar].lines;
+          // победа в спарринге даёт карту в колоду: бой перестаёт быть «одной и той же колодой»
+          world.talk([{ who: id, text: G.util.fmt(res.win ? l.lose : l.win, { name: G.state.hero.name }) }],
+            res.win && G.deck ? () => G.deck.reward(world) : null);
         } }, world);
       }
     }));

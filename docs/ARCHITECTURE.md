@@ -37,7 +37,9 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 | `G.friends` / `G.FRIENDS` | systems/friends.js | дружба, подарки, совместные тренировки |
 | `G.train` / `G.TRAININGS` | systems/train.js | тренировки и подработки-мини-игры |
 | `G.ENEMIES`, `G.TECHS`, `G.COMBOS`, `G.ARENAS`, `G.SEALS` | data/duel_data.js | бой |
-| `G.duel` | systems/duel.js | ядро боя «Дуэль»: `create`, `play`, `bot`, `simulate` |
+| `G.duel` | systems/duel.js | ядро боя «Дуэль»: `create`, `play`, `bot`, `simulate`, `cost` |
+| `G.deck` | systems/deck.js | колода героя: `ensure`, `own`, `count`, `add`, `remove`, `give`, `full`, `reward`; экран — `scenes/deckview.js` |
+| `G.art` | gfx/art.js | ленивый разбор тяжёлой графики: `data('house' \| 'chars' \| 'env')`, `has`, `clear` |
 | `G.purple` | systems/purple.js | фиолетовая чакра героя: стабильность, выбросы |
 | `G.ITEMS`, `G.SHOPS` | data/items.js | предметы и магазины |
 
@@ -45,8 +47,19 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 
 - Время: `G.state.vars.day` (1–56) и `vars.min` (минуты от полуночи). 1 реальная секунда ≈ 1 игровая минута (`systems/life.js`, `RATE`).
 - День недели: `(day - 1) % 7`, 0 = Пн. Будни — `G.life.weekday(day)`. Учебные дни — `G.academy.isSchoolDay(day)`.
-- Сохранение — `engine/storage.js` → `localStorage` (+ резервная копия, экспорт кода). Новые поля состояния
-  дописывай в `defaults()` в `systems/game.js`; для старых сохранений недостающее заполняет `G.game.fix()`.
+- Сохранение — `engine/storage.js` → `localStorage` (+ резервная копия, экспорт кода).
+  Слотов три (`KEY_SLOTS`): слот 0 — автосейвы, 1 и 2 — ручные; `slotInfo(i)`, `newestSlot()`, `load(slot)`,
+  `save(state, { slot })`, `wipe(slot)`. «Продолжить» на титульном экране открывает новейший слот.
+  Новые поля состояния дописывай в `defaults()` в `systems/game.js`; для старых сохранений недостающее
+  заполняет `G.game.fix()`, а структуру проверяет `G.storage.valid()`.
+
+## Графика: ленивый разбор
+
+Тяжёлые данные картинок (`gfx/house_art_data.js` ~3 МБ, `gfx/char_art_data.js`, `gfx/environment_art_data.js`)
+лежат в сборке **строкой** (`G.ART_STR.house/chars/env`) и разбираются `JSON.parse` при первом обращении через
+`G.art.data(...)`; результат кэшируется. Так браузер не разбирает литералы на 4 МБ при старте, а ненужные
+картинки не разбираются вовсе. Сами данные по-прежнему генерируют `tools/import_art.py`, `tools/import_chars.py`
+и `tools/import_environment.py` — они пишут именно строковый формат.
 
 ## Мир
 

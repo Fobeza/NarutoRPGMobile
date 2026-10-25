@@ -32,6 +32,11 @@ G.duel = (() => {
       knows: (t) => (opts.techs || []).includes(t),
     };
     P.stab0 = opts.stability != null ? opts.stability : (G.purple && G.state.started ? G.purple.stability() : 40);
+    // Гендзюцу: сила своей иллюзии и сопротивление чужой. Знания: рука и добор «Анализа».
+    P.gen = st('gen'); P.know = st('know');
+    P.hand = TUNE.hand + (P.know >= 6 ? 1 : 0) + (P.know >= 10 ? 1 : 0);   // знания: больше карт в руке
+    P.fearMul = clamp(0.70 - P.gen * 0.012, 0.5, 0.70);   // своя иллюзия сильнее с Гендзюцу
+    P.genResist = clamp(P.gen * 0.04, 0, 0.4);            // шанс развеять чужую иллюзию
     const ehp = Math.round(ed.hp * TUNE.hp);
     const E = Object.assign({}, ed, { id: opts.enemy, dmg: (ed.dmg != null ? ed.dmg : 4 + ed.tai * 1.2) * TUNE.enemyDmg, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, block: 0, dodge: 0, charged: 0 });
     const D = {
@@ -41,8 +46,9 @@ G.duel = (() => {
       prevCards: [], notice: '', last: null, _uid: 0,
     };
     D.has = has;
-    const ids = G.CARD_BASE_DECK.slice();
-    for (const t of P.techs) for (let i = 0; i < G.CARD_TECH_LIMIT; i++) ids.push(t);
+    // Колода боя: свои карты героя (G.deck.full) + по копии каждой техники из opts.techs.
+    const ids = (opts.deck && opts.deck.length ? opts.deck : (G.deck && G.state ? G.deck.full() : G.CARD_BASE_DECK)).slice();
+    for (const t of P.techs) for (let i = 0; i < G.CARD_TECH_LIMIT; i++) if (!ids.includes(t)) ids.push(t);
     if (opts.surge !== false) ids.push('release');
     for (const id of G.CARD_ITEM_ORDER) {
       const copies = Math.min(D.inv[id] || 0, id === 'bandage' ? 2 : 1);
@@ -75,7 +81,7 @@ G.duel = (() => {
     D.phase = 'player';
     if (P.status.fear > 0) P.ap = Math.max(1, P.ap - 1);
     nextIntent(D);
-    const size = Math.max(3, TUNE.hand - (P.status.fear > 0 ? 1 : 0));
+    const size = Math.max(3, (P.hand || TUNE.hand) - (P.status.fear > 0 ? 1 : 0));
     draw(D, Math.max(0, size - D.hand.length));
   }
 
@@ -127,13 +133,13 @@ G.duel = (() => {
   function intentDamage(D) {
     const i = D.intent;
     if (!i || !isAttack(D) || D.E.status.stun > 0) return 0;
-    const mul = (D.E.status.fear > 0 ? 0.65 : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
+    const mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
     return Math.round((i.dmg || 0) * (i.hits || 1) * mul);
   }
   function expectedIncoming(D) {
     let total = 0;
     if (!isAttack(D) || D.E.status.stun > 0) return 0;
-    const i = D.intent, mul = (D.E.status.fear > 0 ? 0.65 : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
+    const i = D.intent, mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
     let block = D.P.block, clones = D.P.clones;
     for (let n = 0; n < (i.hits || 1); n++) {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
@@ -189,9 +195,9 @@ G.duel = (() => {
     const block = Math.round(8 + P.st('end') * 1.1), stance = Math.round(5 + P.st('end') * 0.7);
     const table = {
       guard: [`${block} блок`], evade: ['65% уклон'], focus: [`+${Math.round(8 + P.st('ctrl'))} чакры`, 'Техника +25%'],
-      analyze: ['+2 карты', 'Техника +25%'], stance: [`${stance} блок`, `${Math.round(5 + P.st('tai') * 0.6)} ответ`],
+      analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${Math.round(5 + P.st('tai') * 0.6)} ответ`],
       breath: [`+${Math.round(3 + P.st('end') * 0.3)} зд.`, '−4 усталости'], kawarimi: ['Уклон 100%', `${Math.round(8 + P.st('tai') * 0.8)} ответ`],
-      henge: ['Отмена хода'], fear: ['Страх ×2', '−35% урона'], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
+      henge: ['Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
       bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: ['Отмена хода'],
     };
     return table[id] || [G.CARDS[id] ? G.CARDS[id].kind : ''];
@@ -206,13 +212,19 @@ G.duel = (() => {
     if (id.startsWith('tech:') || id.startsWith('item:')) id = id.slice(5);
     return D.hand.find((c) => c.id === id) || null;
   }
+  // Цена карты для героя: гендзюцу дешевле на 1 за каждые 4 очка Гендзюцу.
+  function cost(D, id) {
+    const d = cardDef(id); if (!d) return 0;
+    const base = d.cost || 0;
+    return d.kind === 'gen' ? Math.max(1, base - Math.floor((D.P.gen || 0) / 6)) : base;
+  }
   function canPlay(D, ref) {
     if (D.over || D.phase !== 'player') return { ok: false, why: 'Сейчас ход врага' };
     const c = findCard(D, ref);
     if (!c) return { ok: false, why: 'Карты нет в руке' };
-    const d = cardDef(c.id), P = D.P;
+    const d = cardDef(c.id), P = D.P, price = cost(D, c.id);
     if (P.ap < (d.ap || 1)) return { ok: false, why: 'Не хватает действий' };
-    if (P.ch < d.cost) return { ok: false, why: `Нужно ${d.cost} чакры` };
+    if (P.ch < price) return { ok: false, why: `Нужно ${price} чакры` };
     if (d.release && P.heat < RELEASE_HEAT) return { ok: false, why: `Накал ${Math.floor(P.heat)}/${RELEASE_HEAT}` };
     if (c.id === 'bandage' && P.hp >= P.hpMax) return { ok: false, why: 'Здоровье уже полное' };
     if (c.id === 'chakra_pill' && P.ch >= P.chMax) return { ok: false, why: 'Чакра уже полная' };
@@ -250,7 +262,7 @@ G.duel = (() => {
     if (!check.ok) return [];
     const c = check.card, def = check.def, P = D.P, E = D.E, ev = [];
     D.hand.splice(D.hand.indexOf(c), 1);
-    P.ap -= def.ap || 1; P.ch -= def.cost;
+    P.ap -= def.ap || 1; P.ch -= cost(D, c.id);
     P.fat = clamp(P.fat + FAT_CARD + (def.tech ? 0.5 : 0), 0, 100);
     if (!def.release) P.heat = clamp(P.heat + HEAT_CARD, 0, 100);
     D.stats.used[c.id] = (D.stats.used[c.id] || 0) + 1; D.stats.cards++; D.stats.sequence.push(c.id);
@@ -267,12 +279,12 @@ G.duel = (() => {
     if (c.id === 'guard') gainBlock(D, 8 + P.st('end') * 1.1, ev);
     else if (c.id === 'evade') { P.dodge = Math.max(P.dodge, 0.65); note(ev, 'p', 'status', 'Уклон 65% до конца хода', { to: 'p' }); }
     else if (c.id === 'focus') { const n = Math.round(8 + P.st('ctrl')); P.ch = Math.min(P.chMax, P.ch + n); P.focus = 1; note(ev, 'p', 'chakra', `Фокус: +${n} чакры, техника усилена`, { to: 'p' }); }
-    else if (c.id === 'analyze') { P.focus = 1; draw(D, 2); note(ev, 'p', 'status', 'Анализ: +2 карты, техника усилена', { to: 'p' }); }
+    else if (c.id === 'analyze') { const n = 2 + (P.know >= 5 ? 1 : 0); P.focus = 1; draw(D, n); note(ev, 'p', 'status', `Анализ: +${n} карты, техника усилена`, { to: 'p' }); }
     else if (c.id === 'stance') { gainBlock(D, 5 + P.st('end') * 0.7, ev); P.riposte += 5 + P.st('tai') * 0.6; }
     else if (c.id === 'breath') { heal(D, 3 + P.st('end') * 0.3, ev, 'Дыхание восстанавливает силы'); P.fat = Math.max(0, P.fat - 4); }
     else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += 8 + P.st('tai') * 0.8; note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
     else if (c.id === 'henge' || c.id === 'flash_bomb') { E.status.stun = 1; note(ev, 'p', 'status', `${def.name}: действие врага отменено`, { fx: c.id }); }
-    else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', 'Ложный страх: урон врага −35% на два действия', { fx: c.id }); }
+    else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', `Ложный страх: урон врага −${Math.round((1 - P.fearMul) * 100)}% на два действия`, { fx: c.id }); }
     else if (c.id === 'bunshin') { P.clones = Math.max(P.clones, 2); draw(D, 1); note(ev, 'p', 'status', 'Буншин: два клона и дополнительная карта', { fx: c.id, to: 'p' }); }
     else if (c.id === 'sexy') { if (E.male) E.status.stun = 1; else E.status.weak = 1; note(ev, 'p', 'status', E.male ? 'Секси-дзюцу: враг оглушён' : 'Не сработало: враг ослаблен', { fx: c.id }); }
     else if (c.id === 'shunshin') P.dodge = 1;
@@ -304,7 +316,7 @@ G.duel = (() => {
   function enemyHit(D, raw, ev, name) {
     const P = D.P, E = D.E;
     let total = 0;
-    const mul = (E.status.fear > 0 ? 0.65 : 1) * (E.status.slow > 0 ? 0.75 : 1) * (E.status.weak > 0 ? 0.75 : 1);
+    const mul = (E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (E.status.slow > 0 ? 0.75 : 1) * (E.status.weak > 0 ? 0.75 : 1);
     for (let n = 0; n < (D.intent.hits || 1); n++) {
       const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
       let d = raw * mul * (1 - dodge);
@@ -337,8 +349,13 @@ G.duel = (() => {
         note(ev, 'p', 'counter', `Контрудар: ${n}`, { dmg: n, to: 'e', fx: 'kawarimi' });
       }
     } else if (intent.kind === 'fear') {
-      P.status.fear = 2; if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
-      note(ev, 'e', 'status', 'Иллюзия: на следующий ход меньше рука и действия', { to: 'p', fx: 'e:fear' });
+      if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      if (D.rng() < (P.genResist || 0)) {
+        note(ev, 'p', 'status', 'Иллюзия развеяна: своё гендзюцу сильнее', { to: 'p', fx: 'e:fear' });
+      } else {
+        P.status.fear = 2;
+        note(ev, 'e', 'status', 'Иллюзия: на следующий ход меньше рука и действия', { to: 'p', fx: 'e:fear' });
+      }
     }
     if (E.status.burn > 0 && E.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
     P.fat = clamp(P.fat + FAT_ROUND * (1 - P.st('end') * 0.025), 0, 100);
@@ -426,6 +443,6 @@ G.duel = (() => {
 
   function options(D) { return D.hand.map((c) => ({ id: c.id, uid: c.uid, label: cardDef(c.id).name, cost: cardDef(c.id).cost, off: canPlay(D, c).ok ? null : canPlay(D, c).why })); }
   function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
-  return { TUNE, create, play, endTurn, canPlay, options, bot, simulate, draw, preview, intentDamage, expectedIncoming,
+  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming,
     stability, mulberry, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
 })();

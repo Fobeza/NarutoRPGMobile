@@ -6,7 +6,8 @@ G.scenes.register('battle', (opts, onEnd) => {
   const ed = G.ENEMIES[opts.enemy] || G.ENEMIES.dummy;
   const techs = Object.keys(G.TECHS).filter((id) => G.combat.knows(id));
   const stock = () => ({ bandage: G.game.count('bandage'), chakra_pill: G.game.count('chakra_pill'), smoke_bomb: G.game.count('smoke_bomb'), flash_bomb: G.game.count('flash_bomb') });
-  const D = G.duel.create({ enemy: opts.enemy, mode, rounds: opts.turns, techs, hp: V.hp, chakra: V.chakra, fatigue: V.fatigue, inv: stock(), day: V.day });
+  const D = G.duel.create({ enemy: opts.enemy, mode, rounds: opts.turns, techs, hp: V.hp, chakra: V.chakra, fatigue: V.fatigue, inv: stock(), day: V.day,
+    deck: G.deck ? G.deck.full() : null });
   const TERRAIN = opts.terrain || 'field';
   let phase = 'intro', t = 0, focus = 0, handPage = 0, selected = D.hand[0] ? D.hand[0].uid : 0;
   let ev = [], evI = 0, evT = 0, afterEvents = 'card', lastIntent = D.intent, result = null, endT = 0, said = null;
@@ -337,7 +338,7 @@ G.scenes.register('battle', (opts, onEnd) => {
         const c = selectedCard();
         if (c) {
           const def = G.CARDS[c.id], check = G.duel.canPlay(D, c);
-          FS.draw(ctx, `${def.name} · ${def.cost} чакры`, 8, py + 42, { color: check.ok ? '#ffe28a' : '#ff9a80', maxW: W - 16 });
+          FS.draw(ctx, `${def.name} · ${G.duel.cost(D, c.id)} чакры`, 8, py + 42, { color: check.ok ? '#ffe28a' : '#ff9a80', maxW: W - 16 });
           const preview = G.duel.preview(D, c.id).join(' · ');
           const description = preview + '. ' + def.text;
           FS.wrap(description, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 53 + i * 9, { color: '#f8eed0' }));
@@ -350,7 +351,8 @@ G.scenes.register('battle', (opts, onEnd) => {
           const c = D.hand.find((x) => x.uid === b.uid), def = G.CARDS[c.id], check = G.duel.canPlay(D, c), sel = c.uid === selected;
           U.button(ctx, b.x, b.y, b.w, b.h, '', sel ? 'sel' : check.ok ? 'normal' : 'dis');
           ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
-          FS.draw(ctx, def.cost ? String(def.cost) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
+          const price = G.duel.cost(D, c.id);
+          FS.draw(ctx, price ? String(price) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
           const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
           nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });

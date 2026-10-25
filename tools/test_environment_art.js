@@ -27,7 +27,7 @@ try{
   }
   // Неизменные маленькие холсты: ящик меньше героя, почтовый ящик не дом.
   if(sizes.mailbox.join()!=[8,18].join()||sizes.crate.join()!=[14,14].join())failures.push('Размеры маленьких предметов');
-  for(const [name,a]of Object.entries(G.ENVIRONMENT_ART.sprites)){
+  for(const [name,a]of Object.entries((G.art.data('env')||{sprites:{}}).sprites)){
    if(atob(a.pixels).length!==a.w*a.h)failures.push(name+': повреждены пиксели');
    const img=G.environmentArt.image(name);if(!img)failures.push(name+': не декодирован');
   }

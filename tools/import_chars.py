@@ -131,7 +131,7 @@ def main():
     out = {}
     if sys.argv[1:]:
         with open(p, encoding='utf-8') as f:
-            out = json.JSONDecoder().raw_decode(f.read().split('G.CHAR_ART = ', 1)[1])[0]
+            out = json.loads(json.JSONDecoder().raw_decode(f.read().split('chars: ', 1)[1].lstrip())[0])
     for id in ids:
         sheet, por = build(id)
         pal, rle = ia.encode(sheet)
@@ -139,7 +139,9 @@ def main():
         out[id] = {'w': FW * 3, 'h': FH * 4, 'pal': pal, 'rle': rle, 'por': {'w': 64, 'h': 64, 'pal': ppal, 'rle': prle}}
     js = ['// Нарисованные персонажи — СГЕНЕРИРОВАНО tools/import_chars.py из art/chars/, руками не править.',
           '// Лист 3 кадра × 4 направления (кадр 32×40 px, как у персонажей кодом) и портрет 64×64: палитра + строки повторов.',
-          'G.CHAR_ART = ' + json.dumps(out, ensure_ascii=False, separators=(',', ':')) + ';', '']
+          'G.ART_STR = Object.assign(G.ART_STR || {}, {',
+          'chars: ' + json.dumps(json.dumps(out, ensure_ascii=False, separators=(',', ':')), ensure_ascii=False) + ',',
+          '});', '']
     open(p, 'w', encoding='utf-8').write('\n'.join(js))
     print('персонажей: %d, файл %d КБ' % (len(out), os.path.getsize(p) // 1024))
 

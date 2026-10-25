@@ -109,13 +109,18 @@ def window_references():
         return json.load(f)
 
 
+def js_string(data):
+    """Данные графики лежат в сборке СТРОКОЙ и разбираются при первом обращении (gfx/art.js)."""
+    return json.dumps(json.dumps(data, ensure_ascii=False, separators=(',', ':')), ensure_ascii=False)
+
+
 def update_windows():
     """Обновить только маски в уже импортированных данных, сохранив пиксели, геометрию и коллизии."""
     path = os.path.join(ROOT, 'src', 'gfx', 'house_art_data.js')
     with open(path, encoding='utf-8') as f:
         source = f.read()
-    prefix, encoded = source.split('G.HOUSE_ART = ', 1)
-    data = json.JSONDecoder().raw_decode(encoded)[0]
+    prefix, encoded = source.split("house: ", 1)
+    data = json.loads(json.JSONDecoder().raw_decode(encoded.lstrip())[0])
     with open(os.path.join(ROOT, 'tools', 'art_catalog.json'), encoding='utf-8') as f:
         catalog = {e['name']: e for e in json.load(f)['art']}
     refs = window_references()
@@ -128,7 +133,7 @@ def update_windows():
         img = np.array(pixels, dtype=np.uint8).reshape(bm['lh'] * HI, bm['lw'] * HI, 4)
         a['g'] = windows(img, catalog[name].get('roof', .5), refs.get(name.removesuffix('_big')))
     with open(path, 'w', encoding='utf-8') as f:
-        f.write(prefix + 'G.HOUSE_ART = ' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + ';\n')
+        f.write(prefix + 'house: ' + js_string(data) + ',\n});\n')
     print('масок окон обновлено:', len(data['art']))
 
 
@@ -194,7 +199,9 @@ def main():
         bitmaps.append(dict(src=s['name'], lw=s['lw'], lh=s['lh'], pal=s['pal'], rle=s['rle']))
     js = ['// Нарисованные здания — СГЕНЕРИРОВАНО tools/import_art.py из art/ и tools/art_catalog.json, руками не править.',
           '// Раскодирует gfx/house_art.js: bitmaps — картинки палитрой и строками повторов, art — размеры пятна, дверь, стена.',
-          'G.HOUSE_ART = ' + json.dumps({'bitmaps': bitmaps, 'art': art}, ensure_ascii=False, separators=(',', ':')) + ';', '']
+          'G.ART_STR = Object.assign(G.ART_STR || {}, {',
+          'house: ' + js_string({'bitmaps': bitmaps, 'art': art}) + ',',
+          '});', '']
     path = os.path.join(ROOT, 'src', 'gfx', 'house_art_data.js')
     open(path, 'w', encoding='utf-8').write('\n'.join(js))
     meta = [{k: v for k, v in s.items() if k not in ('pal', 'rle', 'g', 'fr')} for s in ss]

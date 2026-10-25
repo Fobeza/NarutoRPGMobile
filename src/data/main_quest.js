@@ -9,13 +9,13 @@ G.QUESTS.main = {
   steps: [
     // ── неделя 1: «Чужой» ──
     { id: 'dummy', day: 2, text: 'Попробовать удар по манекену на полигоне', target: { building: 'training_ground' }, on: _mqTrain('dummy', 'log', 'throw'), intro: 'mq_dummy_intro', after: 'mq_dummy_after' },
-    { id: 'library', day: 3, text: 'Найти в библиотеке книгу о чакре', target: { building: 'library' }, on: _mqTrain('library'), intro: 'mq_library_intro', after: 'mq_library_after' },
-    { id: 'rod', day: 4, text: 'Купить удочку в сувенирной лавке (80 рё)', target: { building: 'souvenir' }, have: { fishing_rod: 1 }, intro: 'mq_rod_intro' },
-    { id: 'fish', day: 4, text: 'Порыбачить у реки или на пирсе', target: { building: 'pier' }, on: ['fished'], after: 'mq_fish_after' },
-    { id: 'falls', day: 5, text: 'Помедитировать у водопада', target: { building: 'waterfall' }, on: _mqTrain('falls'), intro: 'mq_falls_intro', after: 'mq_falls_after' },
-    { id: 'shop', day: 6, text: 'Купить в лавке кунаи или бинты', target: { building: 'weapons' }, on: ['bought', (id) => ['kunai', 'shuriken', 'bandage'].includes(id)], intro: 'mq_shop_intro' },
-    { id: 'job', day: 7, text: 'Взять поручение с доски', target: { building: 'hokage_tower' }, on: ['job'], after: 'mq_job_after' },
-    { id: 'roof', day: 8, text: 'Подняться на крышу (у стены дома — A)', target: { building: 'academy' }, on: ['roof'], when: () => !!G.state.flags.roofs, after: 'mq_roof_after' },
+    { id: 'library', text: 'Найти в библиотеке книгу о чакре', target: { building: 'library' }, on: _mqTrain('library'), intro: 'mq_library_intro', after: 'mq_library_after' },
+    { id: 'rod', text: 'Купить удочку в сувенирной лавке (80 рё)', target: { building: 'souvenir' }, have: { fishing_rod: 1 }, intro: 'mq_rod_intro' },
+    { id: 'fish', text: 'Порыбачить у реки или на пирсе', target: { building: 'pier' }, on: ['fished'], after: 'mq_fish_after' },
+    { id: 'falls', text: 'Помедитировать у водопада', target: { building: 'waterfall' }, on: _mqTrain('falls'), intro: 'mq_falls_intro', after: 'mq_falls_after' },
+    { id: 'shop', text: 'Купить в лавке кунаи или бинты', target: { building: 'weapons' }, on: ['bought', (id) => ['kunai', 'shuriken', 'bandage'].includes(id)], intro: 'mq_shop_intro' },
+    { id: 'job', text: 'Взять поручение с доски', target: { building: 'hokage_tower' }, on: ['job'], after: 'mq_job_after' },
+    { id: 'roof', text: 'Подняться на крышу (у стены дома — A)', target: { building: 'academy' }, on: ['roof'], when: () => !!G.state.flags.roofs, after: 'mq_roof_after' },
     // ── неделя 2: «Контроль» ──
     { id: 'tree', day: 9, text: 'Потренировать хождение по дереву на полигоне №3', target: { building: 'training_3' }, on: _mqTrain('tree'), when: () => !!G.state.flags.tech_tree, intro: 'mq_tree_intro', after: 'mq_tree_after' },
     { id: 'checkup1', day: 10, text: 'Пройти осмотр в больнице', target: { building: 'hospital' }, reach: true, intro: 'mq_checkup1_intro', after: 'mq_checkup1_after' },
@@ -32,9 +32,13 @@ G.QUESTS.main = {
     { id: 'checkup2', day: 19, text: 'Пройти вторую проверку в больнице', target: { building: 'hospital' }, reach: true, after: 'mq_checkup2_after' },
     { id: 'hokage', day: 20, text: 'Зайти к Хокаге в Резиденцию', target: { npc: 'hokage', in: 'hokage_tower' }, script: 'mq_hokage_talk' },
     { id: 'exam', day: 21, text: 'Сдать экзамен на генина в Академии (воскресенье, 21 июня)', target: { building: 'academy' }, on: ['exam', (pass) => !!pass], when: () => G.exam.open(), intro: 'mq_exam_day' },
-    // ── после экзамена ──
+    // ── после экзамена: финал первой главы ──
     { id: 'gate', day: 21, text: 'Подойти к воротам: теперь тебя выпустят', target: { building: 'gate' }, reach: true, after: 'mq_gate_after' },
-    { id: 'more', day: 22, text: 'Продолжение истории — скоро. Пока гуляй, тренируйся, дружи и выполняй поручения.', target: { building: 'academy' }, when: () => false },
+    // Вечером у ворот ждёт человек в плаще. Дальше — доклад Хокаге, бой и развязка.
+    { id: 'stranger', day: 21, text: 'Подойти к воротам вечером: следы у столба не пустые', target: { building: 'gate' }, reach: true, time: [17 * 60, 26 * 60], after: 'mq_stranger_meet' },
+    { id: 'report', day: 21, text: 'Рассказать Хокаге о человеке в плаще', target: { npc: 'hokage', in: 'hokage_tower' }, script: 'mq_hokage_final' },
+    { id: 'duel', day: 21, text: 'Встретить Незнакомца у ворот и выстоять', target: { building: 'gate' }, time: [17 * 60, 26 * 60], enterScript: 'mq_final_fight', on: ['battle', (a, res) => !!(a && a.enemy === 'stranger' && res && res.win)] },
+    { id: 'ending', day: 21, text: 'Вернуться к Хокаге с ответом', target: { npc: 'hokage', in: 'hokage_tower' }, script: 'mq_ending', after: 'mq_epilogue' },
   ],
-  reward: { text: 'Готов постоять за себя' },
+  reward: { money: 300, text: 'Первая глава пройдена: «Воля Огня»' },
 };

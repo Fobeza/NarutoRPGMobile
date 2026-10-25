@@ -63,6 +63,18 @@ with sync_playwright() as p:
     check(ex[0] is not None and ex[1] == 1 and ex[2] == 1, 'экзамен оценён и сдан: %s' % ex)
     check(ex[3] == 'gate', 'после экзамена шаг «ворота»: %s' % ex[3])
     shot(page, 'mq_exam_done')
+
+    # ── финал первой главы: вечер у ворот → доклад → бой с Незнакомцем → развязка ──
+    page.evaluate("G.state.vars.min = 19 * 60; G.quests.step('main', 'stranger'); G.quests.step('main', 'report'); 1")
+    check(page.evaluate("G.quests.curStep('main').id") == 'duel', 'после доклада текущий шаг — бой у ворот')
+    page.evaluate("G.events.emit('battle', { enemy: 'stranger', mode: 'ko' }, { win: true }); 1")
+    check(page.evaluate("G.quests.curStep('main').id") == 'ending', 'победа над Незнакомцем открывает развязку')
+    page.evaluate("G.quests.step('main', 'ending'); 1")
+    fin = page.evaluate("[G.quests.done('main'), G.state.frQueue.includes('mq_epilogue'), G.state.flags.mq_won]")
+    check(fin[0], 'главная ветка завершена, а не висит активной')
+    check(fin[1], 'после развязки в очереди эпилог')
+    check(fin[2] == 1, 'победа отмечена флагом mq_won')
+    shot(page, 'mq_final')
     b.close()
 
     # ── побочная ветка: просьба Наруто принимается в диалоге, ветка и малое задание видны в журнале ──

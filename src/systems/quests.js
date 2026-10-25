@@ -106,13 +106,16 @@ G.quests = (() => {
         this.step(id, st.id);
       }
     },
-    // Вход в здание
+    // Вход в здание: reach закрывает шаг, enterScript запускает сцену при каждом визите
+    // (так повторяется бой финала: шаг закрывается только победой, а проигрыш не тупик).
     onEnterMap(m) {
       const tpl = m.building && m.building.tplId;
       if (!tpl) return;
       for (const id of this.activeList()) {
         const st = this.curStep(id);
-        if (st && st.reach && st.target.building === tpl && this.timeOk(st)) this.step(id, st.id);
+        if (!st || !st.target || st.target.building !== tpl || !this.timeOk(st)) continue;
+        if (st.reach) this.step(id, st.id);
+        else if (st.enterScript && G.script.library[st.enterScript]) this.queue(st.enterScript);
       }
     },
     // Сон: шаг «лечь спать», провал просроченных

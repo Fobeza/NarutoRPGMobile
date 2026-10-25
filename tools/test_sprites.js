@@ -33,9 +33,9 @@ const shots=process.env.SPRITE_SHOTS||path.join(__dirname,'shots','sprites');fs.
     }
     const p=G.chars.portrait(id);if(!components(p.getContext('2d').getImageData(0,0,p.width,p.height).data,p.width,p.height).length)failures.push(id+': пустой портрет');else portraits++;
    }
-   if(!G.CHAR_ART.fugaku)failures.push('Фугаку остался на процедурном спрайте');
+   if(!(G.art.data('chars')||{}).fugaku)failures.push('Фугаку остался на процедурном спрайте');
    let lights=0;
-   for(const id of Object.keys(G.HOUSE_ART.art)){
+   for(const id of Object.keys((G.art.data('house')||{art:{}}).art)){
     const s=G.houseArt.sprite(id);if(!s.glow)continue;lights++;
     const a=s.img.getContext('2d').getImageData(0,0,s.img.width,s.img.height).data,b=s.glow.getContext('2d').getImageData(0,0,s.glow.width,s.glow.height).data;
     for(let i=3;i<b.length;i+=4)if(b[i]>a[i]){failures.push(id+': свет на прозрачном фоне');break;}

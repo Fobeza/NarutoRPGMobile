@@ -78,6 +78,8 @@ def main():
     sprites['ground-street']=encode(stone)
     data={'bindings':BINDINGS,'sprites':sprites}
     out=ROOT/'src/gfx/environment_art_data.js'
-    out.write_text('// СГЕНЕРИРОВАНО tools/import_environment.py. Не редактировать вручную.\nG.ENVIRONMENT_ART='+json.dumps(data,separators=(',',':'))+';\n')
+    out.write_text('// СГЕНЕРИРОВАНО tools/import_environment.py. Не редактировать вручную.\n'
+                   'G.ART_STR = Object.assign(G.ART_STR || {}, {\n'
+                   'env: ' + json.dumps(json.dumps(data, separators=(',', ':'))) + ',\n});\n')
     print(f'Окружение: {len(sprites)} спрайтов, {out.stat().st_size:,} байт')
 if __name__=='__main__':main()
