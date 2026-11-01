@@ -482,6 +482,8 @@ function overWorld(setup) {
 }
 frame('ui_world', () => overWorld(), null, null, true);
 frame('ui_mapview', () => overWorld((w) => G.scenes.push(G.scenes.make('mapview', w))), null, null, true);
+// «Подождать» из меню паузы: то же окно, что собирает G.scenes.world.waitSpec()
+frame('ui_wait', () => overWorld((w) => G.scenes.push(G.scenes.make('pick', w.waitSpec()))), null, null, true);
 frame('ui_pick', () => overWorld(() => G.scenes.push(G.scenes.make('pick', {
   title: 'Вопрос', text: 'Что скажешь Ируке?',
   options: [{ label: 'Сказать правду', sub: 'Ирука поймёт' }, { label: 'Соврать', sub: 'Безопаснее' }, { label: 'Промолчать', desc: 'Ирука сам догадается.' }],

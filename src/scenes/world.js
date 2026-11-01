@@ -455,6 +455,51 @@ G.scenes.register('world', (pos) => {
       }
     },
 
+    // ---------- «Подождать» (меню паузы) ----------
+    // Часы идут минута за минутой — так усталость, лавки, прогулы, урок и сюжет срабатывают
+    // ровно как в обычной игре, а не «перепрыгивают» час. Ожидание бесплатным не бывает:
+    // advance начисляет усталость. Возвращает, сколько минут действительно прошло.
+    waitWhy() {
+      if (this.cine) return 'Идёт сцена';
+      if (G.state.daily.lessonRun) return 'Идёт урок';
+      if (G.game.pending) return 'Идёт сцена';
+      if (G.scenes.busy) return 'Идёт переход';
+      return null;
+    },
+    // Что предложить в окне «Подождать»: одно и то же в игре и в кадрах проверки.
+    waitSpec() {
+      const min = G.state.vars.min, evening = 18 * 60, toEvening = evening - min;
+      return {
+        title: 'ПОДОЖДАТЬ',
+        text: 'Часы идут как обычно: усталость растёт, события могут прервать.',
+        options: [
+          { label: '15 минут', sub: G.game.clock(min + 15), min: 15 },
+          { label: '1 час', sub: G.game.clock(min + 60), min: 60 },
+          { label: 'До вечера', sub: toEvening > 0 ? G.game.clock(evening) : 'уже вечер', min: Math.max(0, toEvening), off: toEvening > 0 ? null : 'Вечер уже наступил' },
+        ],
+      };
+    },
+    skipTime(n) {
+      const v = G.state.vars, total = Math.max(0, Math.round(n));
+      if (!total || this.waitWhy()) return 0;
+      let passed = 0, cut = false;
+      for (let left = total; left > 0; left--) {
+        const before = v.min;
+        G.game.advance(1);
+        passed++;
+        this.onTime(before, v.min);
+        // сцена/обморок/событие перехватили ход — дальше время пойдёт своим чередом
+        if (G.scenes.top() !== this || G.scenes.busy || G.game.pending || this.pendingTalk) { cut = true; break; }
+        if (G.story && G.story.poll(this)) { cut = true; break; }
+      }
+      if (!cut) {
+        this.softRefresh();
+        this.showToast(`⌛ Ждали ${passed} мин · ${G.game.clock(v.min)}`);
+        G.audio.sfx.select();
+      }
+      return passed;
+    },
+
     // ---------- Время: события по часам ----------
     onTime(prev, now) {
       const v = G.state.vars, m = this.map, d = G.state.daily;

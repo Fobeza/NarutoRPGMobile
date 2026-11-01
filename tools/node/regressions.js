@@ -756,6 +756,83 @@ test('У каждого персонажа есть нарисованный л�
   assert.equal(G.ENEMIES.stranger.spr, 'stranger', 'в бою свой спрайт, а не вор');
 });
 
+// Мир для проверок ожидания: герой на улице, урок и случайные события отключены, чтобы
+// тайминги в тесте не зависели от расписания и Math.random.
+function openWorld(min) {
+  clean();
+  h.seed(st => { st.flags.hosp_done = 1; st.flags.frd_init = 1; st.daily.lesson = 1; st.daily.ev = 2; st.vars.min = min; });
+  G.scenes.stack.length = 0;
+  const w = G.scenes.make('world', G.world.outsideOf(G.world.heroHome()));
+  G.scenes.push(w);
+  return w;
+}
+test('«Подождать»: 15 и 60 минут двигают часы и копят усталость', () => {
+  const w = openWorld(12 * 60);
+  const fat = G.state.vars.fatigue;
+  assert.equal(w.skipTime(15), 15);
+  assert.equal(G.state.vars.min, 12 * 60 + 15, 'часы сдвинулись ровно на 15 минут');
+  assert.ok(G.state.vars.fatigue > fat, 'ожидание не бесплатное: усталость выросла');
+  assert.equal(w.skipTime(60), 60);
+  assert.equal(G.state.vars.min, 13 * 60 + 15);
+  assert.ok(w.toast && /Ждали 60 мин/.test(w.toast.text), 'после ожидания видно, сколько прошло: ' + (w.toast && w.toast.text));
+  // в ожидании не пролетает обед и не срабатывает прогул урока: daily.lesson выставлен
+  assert.equal(G.state.vars.miss || 0, 0, 'урок не считается прогулянным');
+  // «до вечера» останавливается на 18:00, а не проскакивает его
+  G.state.vars.min = 17 * 60 + 30;
+  assert.equal(w.skipTime(18 * 60 - G.state.vars.min), 30);
+  assert.equal(G.state.vars.min, 18 * 60);
+});
+
+test('«Подождать»: сюжетное событие прерывает ожидание, а урок и сцена его запрещают', () => {
+  const w = openWorld(13 * 60 + 30);
+  const id = 'test_wait_story';
+  assert.ok(G.script.library.st_roofs, 'сцена для события существует');
+  G.STORY.push({ id, day: G.state.vars.day, from: 14 * 60, to: 18 * 60, where: 'out', script: 'st_roofs' });
+  try {
+    const passed = w.skipTime(18 * 60 - (13 * 60 + 30));
+    assert.ok(passed < 270, 'ожидание оборвалось раньше вечера: прошло ' + passed + ' мин');
+    assert.equal(G.state.flags['st_' + id], 1, 'событие сработало по времени');
+    assert.equal(G.state.vars.min, 14 * 60, 'остановились ровно на времени события');
+    assert.notEqual(G.scenes.top().name, 'world', 'событие открыло сцену поверх мира');
+  } finally {
+    const i = G.STORY.findIndex((e) => e.id === id); if (i >= 0) G.STORY.splice(i, 1);
+    delete G.state.flags['st_' + id];
+  }
+  G.scenes.stack.length = 0; const w2 = openWorld(12 * 60);
+  G.state.daily.lessonRun = 1; assert.equal(w2.waitWhy(), 'Идёт урок');
+  assert.equal(w2.skipTime(60), 0, 'на уроке часы не прокручиваются');
+  assert.equal(G.state.vars.min, 12 * 60);
+  delete G.state.daily.lessonRun;
+  w2.cine = {}; assert.ok(w2.waitWhy(), 'во время сцены ждать нельзя'); w2.cine = null;
+  assert.equal(w2.waitWhy(), null);
+});
+
+test('Меню паузы: «Подождать» предлагает 15 минут, час и вечер, выбор прокручивает время', () => {
+  const w = openWorld(15 * 60);
+  const menu = G.scenes.push(G.scenes.make('menu'));
+  const labels = menu.labels();
+  assert.ok(labels.includes('Подождать'), 'пункт есть: ' + labels.join(' | '));
+  // встаём на строку «Подождать» и жмём «А»
+  for (let i = 0; i < labels.indexOf('Подождать'); i++) key(menu, 'down');
+  key(menu, 'a');
+  const pick = G.scenes.top();
+  assert.equal(pick.name, 'pick', 'открылось окно выбора времени');
+  assert.deepEqual(pick.labels(), ['15 минут', '1 час', 'До вечера'], 'три варианта ожидания');
+  pick.choose(1);                                   // «1 час»
+  assert.equal(G.scenes.top(), w, 'меню закрылось, вернулись в мир');
+  assert.equal(G.state.vars.min, 16 * 60, 'час прошёл');
+  // после 18:00 «До вечера» недоступно, но 15 минут и час остаются
+  G.state.vars.min = 19 * 60;
+  const m2 = G.scenes.push(G.scenes.make('menu'));
+  for (let i = 0; i < m2.labels().indexOf('Подождать'); i++) key(m2, 'down');
+  key(m2, 'a');
+  const pick2 = G.scenes.top();
+  assert.equal(pick2.name, 'pick');
+  assert.deepEqual(pick2.labels(), ['15 минут', '1 час', 'До вечера'], 'три варианта остаются на месте');
+  pick2.choose(2);
+  assert.equal(G.state.vars.min, 19 * 60, 'вечером «До вечера» ничего не сдвигает');
+});
+
 test('В окнах нет повторяющихся пунктов, и каждый ведёт на свой экран', () => {
   clean();
   // Раньше «Колода» стояла в меню паузы дважды: два одинаковых пункта между «Статусом» и «Сумкой».
