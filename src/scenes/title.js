@@ -128,13 +128,51 @@ G.scenes.register('title', () => {
     return c;
   }
 
-  // Главное меню: «Продолжить» (если есть сохранение), «Новая игра», «Загрузить игру» (по коду), «Настройки»
+  // Главное меню: «Продолжить» (если есть сохранение), «Новая игра», «Загрузить слот»,
+  // «Загрузить по коду», «Настройки»
   function buildItems() {
     items = [];
-    if (G.storage.hasSave()) items.push({ label: 'Продолжить', act: () => G.game.loadSaved() });
+    const slots = G.storage.filled();
+    if (G.storage.hasSave()) {
+      // одно сохранение — сразу в бой, несколько — сначала спросить, какое именно
+      items.push({ label: 'Продолжить', act: () => (slots.length > 1 ? pickSlot('continue') : G.game.loadSaved(slots.length === 1 ? slots[0] : undefined)) });
+    }
     items.push({ label: 'Новая игра', act: newGame });
-    items.push({ label: 'Загрузить игру', act: loadByCode });
+    if (slots.length) items.push({ label: 'Загрузить слот', act: () => pickSlot('load') });
+    items.push({ label: 'Загрузить по коду', act: loadByCode });
     items.push({ label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) });
+  }
+
+  // Строка слота: «Вт, 2 июня · Кайто · 07:00» — по сохранённым дню, имени и часам
+  function slotSub(inf) {
+    const day = inf.day;
+    return `${G.game.dayName(day)}, ${G.game.date(day)} · ${inf.name} · ${G.game.clock(inf.min)}`;
+  }
+
+  // Выбор слота: «Продолжить» ставит на новейшую запись, «Загрузить слот» — на текущий слот
+  function pickSlot(kind) {
+    const cont = kind === 'continue', opts = [], map = [];
+    for (let i = 0; i < G.storage.SLOTS; i++) {
+      const inf = G.storage.slotInfo(i);
+      map.push(inf ? i : -1);
+      opts.push(inf
+        ? { label: `Слот ${i + 1}`, sub: slotSub(inf), desc: `День ${inf.day}, ${G.game.clock(inf.min)} · запись ${inf.when}` }
+        : { label: `Слот ${i + 1}`, sub: 'пусто', off: 'Слот пуст' });
+    }
+    opts.push({ label: 'Отмена' });
+    const want = cont ? G.storage.newestSlot() : G.storage.active;
+    const focus = Math.max(0, map.indexOf(want));
+    G.scenes.push(G.scenes.make('pick', {
+      title: cont ? 'ПРОДОЛЖИТЬ' : 'ЗАГРУЗИТЬ СЛОТ',
+      text: cont ? 'Несколько сохранений — с какого продолжить?' : 'Какой слот загрузить?',
+      options: opts, focus,
+    }, (k) => {
+      const slot = map[k];
+      if (slot == null || slot < 0) return;        // «Отмена» или пустой слот
+      G.storage.active = slot;
+      G.audio.sfx.confirm();
+      G.game.loadSaved(slot);
+    }));
   }
   const BTN_H = 22, BTN_GAP = 6, BTN_W = 168;
   const menuY = (i) => G.screen.H - 26 - items.length * (BTN_H + BTN_GAP) + BTN_GAP + i * (BTN_H + BTN_GAP);
@@ -166,6 +204,7 @@ G.scenes.register('title', () => {
 
   return {
     name: 'title',
+    menu() { return items; },   // для автотеста: пункты меню с их действиями
     enter() {
       bg = buildBg();
       buildItems();

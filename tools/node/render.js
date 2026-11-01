@@ -474,6 +474,18 @@ frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
 frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+// Титул, когда сохранений несколько: «Продолжить» спрашивает, с какого слота играть
+frame('ui_title_slots', () => {
+  const day = G.state.vars.day;
+  G.storage.wipe();
+  G.state.vars.day = 6; G.storage.save(G.state, { slot: 0 });
+  G.state.vars.day = 12; G.storage.save(G.state, { slot: 1 });
+  G.state.vars.day = day;
+  const T = G.scenes.push(G.scenes.make('title'));
+  const cont = T.menu().find((x) => x.label === 'Продолжить');
+  if (cont) cont.act();
+  G.storage.wipe();
+});
 // Таблица цифр: ноль не должен читаться как восьмёрка даже в мелком шрифте.
 // Пары «0 8», «30 38», «85/85» и «6 5» — те места, где ошибка стоит дороже всего.
 frame('font_digits', () => {

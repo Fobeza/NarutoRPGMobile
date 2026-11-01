@@ -2,8 +2,9 @@
 // Окно — пергамент в деревянной раме с красной лентой-заголовком; выбранная строка — мазок кисти.
 G.scenes.register('pick', (o, cb) => {
   const W = G.screen.W, F = G.font, U = G.ui, C = U.C;
-  let focus = 0, scroll = 0;
   const opts = o.options;
+  // o.focus — строка, выбранная при открытии (титул: «Продолжить» ставит на новейший слот)
+  let focus = Math.max(0, Math.min(opts.length - 1, o.focus || 0)), scroll = 0;
   const ROW = 18;
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {

@@ -48,8 +48,10 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 - Время: `G.state.vars.day` (1–56) и `vars.min` (минуты от полуночи). 1 реальная секунда ≈ 1 игровая минута (`systems/life.js`, `RATE`).
 - День недели: `(day - 1) % 7`, 0 = Пн. Будни — `G.life.weekday(day)`. Учебные дни — `G.academy.isSchoolDay(day)`.
 - Сохранение — `engine/storage.js` → `localStorage` (+ резервная копия, экспорт кода).
-  Слотов три (`KEY_SLOTS`): слот 0 — автосейвы, 1 и 2 — ручные; `slotInfo(i)`, `newestSlot()`, `load(slot)`,
-  `save(state, { slot })`, `wipe(slot)`. «Продолжить» на титульном экране открывает новейший слот.
+  Слотов три (`KEY_SLOTS`): слот 0 — автосейвы, 1 и 2 — ручные; `slotInfo(i)`, `filled()`, `newestSlot()`,
+  `load(slot)`, `save(state, { slot })`, `wipe(slot)`. На титуле «Продолжить» при одной записи грузит сразу,
+  при нескольких — открывает выбор слота (`filled()`), а «Загрузить слот» показывает тот же список;
+  `G.game.loadSaved(slot)` грузит выбранный слот, без аргумента — новейший.
   Новые поля состояния дописывай в `defaults()` в `systems/game.js`; для старых сохранений недостающее
   заполняет `G.game.fix()`, а структуру проверяет `G.storage.valid()`.
 

@@ -19,7 +19,7 @@ G.scenes.register('savemenu', () => {
         const w = world(); w && w.savePos();
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
-      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(); }
+      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
       else if (info && k === 2) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
     }));
   };

@@ -538,6 +538,47 @@ check(G.storage.importCode('WOF1:' + Buffer.from(JSON.stringify({ v: 99, state: 
   G.storage.wipe();
 }
 
+// Титул: несколько сохранений — «Продолжить» спрашивает, с какого, и грузит именно выбранный слот.
+// До этапа 5 «Загрузить игру» в меню сохранений ставила G.storage.active, но G.game.loadSaved()
+// его игнорировал и всегда открывал новейший слот.
+{
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 4, then: null };
+  G.storage.wipe();
+  h.seed((st) => { st.vars.day = 3; st.vars.min = 8 * 60; st.hero.name = 'Первый'; });
+  G.storage.save(G.state, { slot: 0 });
+  h.seed((st) => { st.vars.day = 12; st.vars.min = 7 * 60; st.hero.name = 'Второй'; });
+  G.storage.save(G.state, { slot: 1 });
+  check(G.storage.filled().length === 2 && G.storage.newestSlot() === 1,
+    `два слота, новейший — ${G.storage.newestSlot() + 1}-й`);
+  const info = G.storage.slotInfo(0);
+  check(!!info && info.name === 'Первый' && info.day === 3, `слот 1: ${info && info.name}, день ${info && info.day}`);
+
+  const T = G.scenes.push(G.scenes.make('title'));
+  const menu = T.menu().map((x) => x.label);
+  check(menu.includes('Продолжить') && menu.includes('Загрузить слот'), 'на титуле «Продолжить» и «Загрузить слот»: ' + menu.join(' / '));
+  T.menu().find((x) => x.label === 'Продолжить').act();
+  const P = G.scenes.top();
+  check(!!P && P.name === 'pick' && P.labels().length === G.storage.SLOTS + 1,
+    '«Продолжить» открыла выбор слотов: ' + (P && P.labels ? P.labels().join(' / ') : 'нет окна'));
+  P.choose(0);                                  // слот 1 — не новейший
+  G.scenes.update(1);                           // пережить затемнение
+  check(G.state.vars.day === 3 && G.storage.active === 0,
+    `выбор слота 1 загрузил день ${G.state.vars.day}, активный слот ${G.storage.active + 1}`);
+
+  // одно сохранение — прежнее поведение: «Продолжить» грузит сразу, без вопроса
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 4, then: null };
+  G.storage.wipe(1);
+  const T2 = G.scenes.push(G.scenes.make('title'));
+  T2.menu().find((x) => x.label === 'Продолжить').act();
+  check(G.scenes.top() === T2 && G.scenes.fade.dir === 1, 'одно сохранение — загрузка без выбора слота');
+  G.scenes.update(1);
+  check(G.state.vars.day === 3, `единственный слот загрузился: день ${G.state.vars.day}`);
+
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 4, then: null };
+  G.storage.wipe();
+  h.seed();
+}
+
 // аудит B09/B10: награды дружбы за все пересечённые уровни, каждая один раз
 {
   h.seed((st) => { st.vars.friend_naruto = 14; });

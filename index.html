@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: 'c103b03d', date: '2026-11-01 18:48', debug: false };
+const BUILD = { release: '3.0', version: '93e0ab81', date: '2026-11-01 18:56', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -1113,14 +1113,20 @@ G.storage = {
     return true;
   },
 
-  // Информация о слотах для экрана «Сохранение»: день, время, дата записи
+  // Информация о слотах для экрана «Сохранение» и выбора на титуле: день, время, дата записи, имя героя
   slotInfo(i) {
     const d = this._good(this.KEY_SLOTS[i] || this.KEY_SAVE);
     if (!d) return null;
     const dt = new Date(d.t || 0);
     const pad = (n) => String(n).padStart(2, '0');
-    return { day: d.state.vars.day, min: d.state.vars.min, t: d.t || 0,
+    return { day: d.state.vars.day, min: d.state.vars.min, t: d.t || 0, name: d.state.hero.name || 'Герой',
       when: `${pad(dt.getDate())}.${pad(dt.getMonth() + 1)}, ${pad(dt.getHours())}:${pad(dt.getMinutes())}` };
+  },
+  // Заполненные слоты по возрастанию номера: титул показывает список, если записей больше одной
+  filled() {
+    const out = [];
+    for (let i = 0; i < this.SLOTS; i++) if (this._good(this.KEY_SLOTS[i])) out.push(i);
+    return out;
   },
   // Новейший слот: «Продолжить» на титульном экране открывает именно его
   newestSlot() {
@@ -6348,8 +6354,9 @@ G.game = (() => {
     get v() { return G.state.vars; },
 
     // Загрузить сохранение из слота и войти в мир («Продолжить», импорт, резервная копия)
-    loadSaved() {
-      const st = G.storage.load();
+    // slot — номер слота; без него загружается новейший (прежнее поведение «Продолжить»)
+    loadSaved(slot) {
+      const st = G.storage.load(slot);
       G.game.newState();
       if (st) Object.assign(G.state, st);
       this.fix(G.state);
@@ -17732,13 +17739,51 @@ G.scenes.register('title', () => {
     return c;
   }
 
-  // Главное меню: «Продолжить» (если есть сохранение), «Новая игра», «Загрузить игру» (по коду), «Настройки»
+  // Главное меню: «Продолжить» (если есть сохранение), «Новая игра», «Загрузить слот»,
+  // «Загрузить по коду», «Настройки»
   function buildItems() {
     items = [];
-    if (G.storage.hasSave()) items.push({ label: 'Продолжить', act: () => G.game.loadSaved() });
+    const slots = G.storage.filled();
+    if (G.storage.hasSave()) {
+      // одно сохранение — сразу в бой, несколько — сначала спросить, какое именно
+      items.push({ label: 'Продолжить', act: () => (slots.length > 1 ? pickSlot('continue') : G.game.loadSaved(slots.length === 1 ? slots[0] : undefined)) });
+    }
     items.push({ label: 'Новая игра', act: newGame });
-    items.push({ label: 'Загрузить игру', act: loadByCode });
+    if (slots.length) items.push({ label: 'Загрузить слот', act: () => pickSlot('load') });
+    items.push({ label: 'Загрузить по коду', act: loadByCode });
     items.push({ label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) });
+  }
+
+  // Строка слота: «Вт, 2 июня · Кайто · 07:00» — по сохранённым дню, имени и часам
+  function slotSub(inf) {
+    const day = inf.day;
+    return `${G.game.dayName(day)}, ${G.game.date(day)} · ${inf.name} · ${G.game.clock(inf.min)}`;
+  }
+
+  // Выбор слота: «Продолжить» ставит на новейшую запись, «Загрузить слот» — на текущий слот
+  function pickSlot(kind) {
+    const cont = kind === 'continue', opts = [], map = [];
+    for (let i = 0; i < G.storage.SLOTS; i++) {
+      const inf = G.storage.slotInfo(i);
+      map.push(inf ? i : -1);
+      opts.push(inf
+        ? { label: `Слот ${i + 1}`, sub: slotSub(inf), desc: `День ${inf.day}, ${G.game.clock(inf.min)} · запись ${inf.when}` }
+        : { label: `Слот ${i + 1}`, sub: 'пусто', off: 'Слот пуст' });
+    }
+    opts.push({ label: 'Отмена' });
+    const want = cont ? G.storage.newestSlot() : G.storage.active;
+    const focus = Math.max(0, map.indexOf(want));
+    G.scenes.push(G.scenes.make('pick', {
+      title: cont ? 'ПРОДОЛЖИТЬ' : 'ЗАГРУЗИТЬ СЛОТ',
+      text: cont ? 'Несколько сохранений — с какого продолжить?' : 'Какой слот загрузить?',
+      options: opts, focus,
+    }, (k) => {
+      const slot = map[k];
+      if (slot == null || slot < 0) return;        // «Отмена» или пустой слот
+      G.storage.active = slot;
+      G.audio.sfx.confirm();
+      G.game.loadSaved(slot);
+    }));
   }
   const BTN_H = 22, BTN_GAP = 6, BTN_W = 168;
   const menuY = (i) => G.screen.H - 26 - items.length * (BTN_H + BTN_GAP) + BTN_GAP + i * (BTN_H + BTN_GAP);
@@ -17770,6 +17815,7 @@ G.scenes.register('title', () => {
 
   return {
     name: 'title',
+    menu() { return items; },   // для автотеста: пункты меню с их действиями
     enter() {
       bg = buildBg();
       buildItems();
@@ -20491,7 +20537,7 @@ G.scenes.register('savemenu', () => {
         const w = world(); w && w.savePos();
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
-      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(); }
+      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
       else if (info && k === 2) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
     }));
   };
@@ -21743,8 +21789,9 @@ G.scenes.register('train', (kind, opts, onDone) => {
 // Окно — пергамент в деревянной раме с красной лентой-заголовком; выбранная строка — мазок кисти.
 G.scenes.register('pick', (o, cb) => {
   const W = G.screen.W, F = G.font, U = G.ui, C = U.C;
-  let focus = 0, scroll = 0;
   const opts = o.options;
+  // o.focus — строка, выбранная при открытии (титул: «Продолжить» ставит на новейший слот)
+  let focus = Math.max(0, Math.min(opts.length - 1, o.focus || 0)), scroll = 0;
   const ROW = 18;
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {
