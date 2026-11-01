@@ -22,12 +22,12 @@ JS_FILES = [
     "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/art.js", "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
-    "gfx/chars.js", "data/characters.js", "gfx/char_art_data.js", "gfx/chars_render.js",
-    "gfx/environment.js", "gfx/environment_art_data.js", "gfx/environment_art.js", "gfx/terrain_art.js", "gfx/street_art.js", "gfx/water_art.js", "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
+    "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",
+    "gfx/environment.js", "gfx/environment_art.js", "gfx/terrain_art.js", "gfx/street_art.js", "gfx/water_art.js", "gfx/tiles.js", "gfx/icons.js", "gfx/title_art.js",
     # ── язык сценариев, окно диалога, время/деньги/сумка ──
     "systems/script.js", "systems/dialog.js", "systems/game.js",
     # ── данные: здания, предметы, задания, герой, бой ──
-    "data/buildings.js", "gfx/house_art_data.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/duel_data.js", "data/cards.js",
+    "data/buildings.js", "gfx/house_art.js", "data/items.js", "data/quests.js", "data/hero.js", "data/duel_data.js", "data/cards.js",
     # ── игровые системы ──
     "systems/deck.js", "systems/quests.js", "systems/nav.js", "systems/life.js", "systems/flow.js", "systems/train.js", "systems/purple.js", "systems/duel.js", "systems/choices.js", "systems/exam.js", "systems/sim.js",
     "systems/friends.js", "systems/story.js", "systems/lessons.js", "systems/cine.js", "systems/outdoor.js",
@@ -51,6 +51,11 @@ JS_FILES = [
     # ── точка входа ──
     "main.js",
 ]
+
+# Тяжёлые данные графики. В бандл НЕ входят: собираются отдельными файлами в ART_OUT
+# и подключаются из index.html обычными <script src> до основного скрипта (см. docs/ARCHITECTURE.md).
+ART_FILES = ["gfx/house_art_data.js", "gfx/char_art_data.js", "gfx/environment_art_data.js"]
+ART_OUT = os.path.join("art", "runtime")    # рядом с index.html, отдаётся статикой (и кэшируется sw.js)
 
 # Файлы, общие с редактором карты
 EDITOR_SHARED = ["engine/core.js", "data/buildings.js", "data/konoha_layout.js"]
@@ -119,7 +124,23 @@ def build(debug=False):
         js_parts.append(f"\n// ===== {rel} =====\n{code}")
     js = "\n".join(js_parts)
 
-    version = hashlib.sha1((RELEASE + js + read("shell.html") + read("style.css")).encode("utf-8")).hexdigest()[:8]   # меняется при любой правке и смене выпуска → телефоны подхватят обновление
+    # данные графики — отдельными файлами рядом с index.html
+    os.makedirs(os.path.join(OUT, ART_OUT), exist_ok=True)
+    art_urls, art_src = [], ""
+    for rel in ART_FILES:
+        # Оборачиваем в функцию: данные ложатся в ТОТ ЖЕ G, который потом возьмёт движок, а имя G
+        # внутри файла не спорит с `const G` из engine/core.js (файл грузится раньше бандла).
+        code = ("// Собрано build.py из src/" + rel + " — руками не править.\n"
+                "(function (G) {\n'use strict';\n" + read(rel) + "})((typeof window !== 'undefined' ? window : globalThis).G"
+                " = (typeof window !== 'undefined' ? window : globalThis).G || {});\n")
+        art_src += code
+        url = "/".join(ART_OUT.split(os.sep) + [os.path.basename(rel)])
+        with open(os.path.join(OUT, ART_OUT, os.path.basename(rel)), "w", encoding="utf-8", newline="\n") as f:
+            f.write(code)
+        art_urls.append(url)
+    art_tags = "\n".join(f'<script src="{u}"></script>' for u in art_urls)
+
+    version = hashlib.sha1((RELEASE + js + art_src + read("shell.html") + read("style.css")).encode("utf-8")).hexdigest()[:8]   # меняется при любой правке и смене выпуска → телефоны подхватят обновление
     stamp = time.strftime("%Y-%m-%d %H:%M")
     try:   # код не менялся (тот же хеш) → дату не трогаем, чтобы index.html не «грязнился» пустой пересборкой
         old = open(os.path.join(OUT, "index.html"), encoding="utf-8").read()
@@ -135,13 +156,15 @@ def build(debug=False):
     css = read("style.css")
     html = (shell.replace("/*__CSS__*/", css)
                  .replace("/*__JS__*/", header + js)
+                 .replace("<!--__ART__-->", art_tags)
                  .replace("__ICON__", make_icon_datauri())
                  .replace("__VERSION__", version))
 
     with open(os.path.join(OUT, "index.html"), "w", encoding="utf-8", newline="\n") as f:
         f.write(html)
 
-    sw = read("sw.js").replace("__VERSION__", version)
+    sw = (read("sw.js").replace("__VERSION__", version)
+          .replace("/*__ART_FILES__*/", "".join(", './" + u + "'" for u in art_urls)))
     with open(os.path.join(OUT, "sw.js"), "w", encoding="utf-8", newline="\n") as f:
         f.write(sw)
 
@@ -160,7 +183,9 @@ def build(debug=False):
     phone_editor.build()
 
     size = os.path.getsize(os.path.join(OUT, "index.html"))
-    print(f"OK  версия {RELEASE} ({version})  index.html = {size/1024:.1f} КБ  ({len(JS_FILES)} модулей)")
+    art_size = sum(os.path.getsize(os.path.join(OUT, ART_OUT, os.path.basename(r))) for r in ART_FILES)
+    print(f"OK  версия {RELEASE} ({version})  index.html = {size/1024:.1f} КБ  ({len(JS_FILES)} модулей)"
+          f"  + {ART_OUT}/ = {art_size/1024:.1f} КБ ({len(ART_FILES)} файла)")
 
 
 if __name__ == "__main__":

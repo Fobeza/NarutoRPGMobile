@@ -598,6 +598,30 @@ check(G.storage.importCode('WOF1:' + Buffer.from(JSON.stringify({ v: 99, state: 
   check(G.state.vars.miss === 1, 'сон вместо урока засчитывается как прогул');
 }
 
+// ─────────── вес и офлайн: данные арта живут отдельно от бандла ───────────
+// Арт (дома, персонажи, окружение) вынесен в art/runtime/*.js: index.html качается и разбирается
+// втрое быстрее, а sw.js кэширует арт отдельными файлами. Проверяем, что вынос не «полу-вынос»:
+// данных в бандле нет, внешние файлы существуют, service worker их знает, G.ART_STR всё ещё строка.
+section('ВЕС И ОФЛАЙН');
+{
+  const root = h.ROOT;
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const htmlKb = fs.statSync(path.join(root, 'index.html')).size / 1024;
+  const externals = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  check(htmlKb < 2048, `index.html = ${htmlKb.toFixed(0)} КБ (данные арта вынесены)`);
+  check(!/G\.ART_STR\s*=\s*Object\.assign/.test(html), 'в index.html нет встроенных данных арта');
+  const lost = externals.filter((u) => !fs.existsSync(path.join(root, u)));
+  check(externals.length >= 3 && lost.length === 0,
+    `внешних файлов арта ${externals.length}, на диске не найдено: ${lost.length}${lost.length ? ' → ' + lost.join(', ') : ''}`);
+  const swSrc = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  const list = (swSrc.match(/const FILES = \[([^\]]*)\]/) || [])[1] || '';
+  const missed = externals.filter((u) => !list.includes(`'./${u}'`));
+  check(missed.length === 0, `sw.js кэширует каждый внешний файл${missed.length ? ' — нет: ' + missed.join(', ') : ''}`);
+  const kinds = ['house', 'chars', 'env'];
+  check(kinds.every((k) => typeof (G.ART_STR || {})[k] === 'string' && !!G.art.data(k)),
+    `G.ART_STR заполнен из внешних файлов и G.art.data разбирает: ${kinds.join(', ')}`);
+}
+
 // ─────────── итог ───────────
 say('');
 say(`ИТОГ: ✔ ${oks}  ✘ ${fails}`);

@@ -142,7 +142,9 @@ if (!g.performance || !g.performance.now) def('performance', { now: () => Date.n
 const warns = [];
 function load(file = 'index.html') {
   const html = fs.readFileSync(path.join(ROOT, file), 'utf8');
-  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+  // Встроенные <script>…</script> и внешние <script src="…"> (арт лежит в art/runtime/) — в порядке документа.
+  const scripts = [...html.matchAll(/<script(?:\s+src="([^"]+)")?\s*>([\s\S]*?)<\/script>/g)]
+    .map((m) => (m[1] ? fs.readFileSync(path.join(ROOT, m[1]), 'utf8') : m[2]));
   if (!scripts.length) throw new Error('в ' + file + ' нет <script> — сначала python3 build.py');
   const ow = console.warn;
   console.warn = (...a) => warns.push(a.map(String).join(' '));
