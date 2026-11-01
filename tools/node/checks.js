@@ -474,6 +474,22 @@ check(outOfWindow.length === 0, `целевые окна баланса («ср�
 for (const o of outOfWindow.slice(0, 20)) say('     - ' + o);
 const timeouts = rows.filter((r) => r.timeout > 0);
 check(timeouts.length === 0, `боёв, не уложившихся в лимит ходов: ${timeouts.length}`);
+// Урон врага задан долей здоровья героя (этап 4): ни один удар, даже заряженный приём, не снимает всё
+// здоровье разом — иначе бой снова превращается в лотерею «повезло с уклоном или нет».
+const refStats = { tai: 5, nin: 5, gen: 5, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 };
+const badHits = [];
+for (const id of Object.keys(G.ENEMIES)) {
+  const e = G.ENEMIES[id];
+  const share = e.share != null ? e.share : G.duel.TUNE.baseShare;
+  if (!(share >= 0.1 && share <= 0.8)) { badHits.push(`${e.name}: доля ${share} вне 0,1–0,8`); continue; }
+  const D = G.duel.create({ enemy: id, mode: 'ko', stats: refStats, techs: [], rng: G.duel.mulberry(1), stability: 100, fatigue: 0, surge: false });
+  const hp = D.P.hpMax;
+  const tech = e.tech && e.tech.kind === 'dmg' ? Math.min(share * (e.tech.power || 1), G.duel.TUNE.techShare) * hp * 1.25 : 0;
+  const worst = Math.max(D.E.dmg, D.E.dmg * G.duel.TUNE.series, tech);
+  if (worst >= hp) badHits.push(`${e.name}: удар ${Math.round(worst)} при здоровье ${hp}`);
+}
+check(badHits.length === 0, `урон врага — доля здоровья героя: смертельных с одного удара ${badHits.length} из ${Object.keys(G.ENEMIES).length}`);
+for (const o of badHits.slice(0, 8)) say('     - ' + o);
 // minTurns — защита от «финала в три хода»: бой обязан быть длинным, даже если сборка его выигрывает
 const minTurns = TGT.TARGETS.minTurns || {};
 const short = [];

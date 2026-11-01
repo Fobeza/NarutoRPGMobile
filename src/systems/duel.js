@@ -4,7 +4,18 @@ G.duel = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const SPAR_END = 0.3, RELEASE_HEAT = 60, RELEASE_COST = 25, BOOST = 1.5;
   const FAT_CARD = 0.45, FAT_ROUND = 1.1, HEAT_CARD = 3, HEAT_HIT = 5;
-  const TUNE = { hp: 1.35, enemyDmg: 2.8, hand: 5, ap: 3 };
+  // enemyDmg — общий множитель урона врага; baseShare — доля hpMax героя для врага без своего share.
+  // Урон врага задан долей здоровья героя (см. G.ENEMIES[*].share): с ростом HP 85 → 95 бой не «ломается».
+  // share — обычный удар; series — каждая из двух атак серии; techShare — потолок коронного приёма,
+  // чтобы даже заряженный приём (×1,25) не снимал всё здоровье разом.
+  const TUNE = { hp: 1.2, enemyDmg: 1.0, baseShare: 0.3, series: 0.7, techShare: 0.75, hand: 5, ap: 3 };
+  // Блок героя — доля его hpMax, а не абсолютное число: иначе тяжёлые враги пробивают защиту насквозь.
+  const BLOCK = { guard: [0.10, 0.015], stance: [0.06, 0.010], stanceReply: [0.05, 0.008], kawarimiReply: [0.08, 0.010] };
+  // blockOf(P, kind) = доля hpMax + доля характеристики (коэффициенты — в BLOCK).
+  const blockOf = (P, kind) => {
+    const [base, per] = BLOCK[kind], stat = kind === 'guard' || kind === 'stance' ? P.st('end') : P.st('tai');
+    return Math.round(P.hpMax * (base + per * stat));
+  };
 
   function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const fatMul = (D) => D.P.fat > 90 ? 0.7 : D.P.fat > 70 ? 0.85 : 1;
@@ -38,7 +49,8 @@ G.duel = (() => {
     P.fearMul = clamp(0.70 - P.gen * 0.012, 0.5, 0.70);   // своя иллюзия сильнее с Гендзюцу
     P.genResist = clamp(P.gen * 0.04, 0, 0.4);            // шанс развеять чужую иллюзию
     const ehp = Math.round(ed.hp * TUNE.hp);
-    const E = Object.assign({}, ed, { id: opts.enemy, dmg: (ed.dmg != null ? ed.dmg : 4 + ed.tai * 1.2) * TUNE.enemyDmg, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, block: 0, dodge: 0, charged: 0 });
+    const share = ed.share != null ? ed.share : TUNE.baseShare;
+    const E = Object.assign({}, ed, { id: opts.enemy, share, dmg: hpMax * share * TUNE.enemyDmg, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, block: 0, dodge: 0, charged: 0 });
     const D = {
       opts, rng, mode, rounds: opts.rounds || 6, P, E, round: 0, over: null, phase: 'player', intent: null,
       log: [], inv: Object.assign({}, opts.inv || {}), trainingFight: mode === 'spar',
@@ -90,8 +102,9 @@ G.duel = (() => {
   function techIntent(D, charged = false) {
     const E = D.E, t = E.tech;
     if (!t) return strikeIntent(D);
-    const power = (t.power || 1) * (charged ? 1.25 : 1);
-    return { kind: t.kind === 'dmg' ? 'tech' : t.kind, name: t.name + (charged ? ' +' : ''), dmg: (E.dmg || 8) * power, hits: 1, cost: t.cost || 0, charged };
+    const share = Math.min((E.share || TUNE.baseShare) * (t.power || 1), TUNE.techShare);
+    return { kind: t.kind === 'dmg' ? 'tech' : t.kind, name: t.name + (charged ? ' +' : ''),
+      dmg: D.P.hpMax * share * TUNE.enemyDmg * (charged ? 1.25 : 1), hits: 1, cost: t.cost || 0, charged, pierce: t.kind === 'dmg' };
   }
   function weighted(D, entries) {
     let r = D.rng() * entries.reduce((s, x) => s + x[1], 0);
@@ -109,14 +122,19 @@ G.duel = (() => {
     const adapt = clamp(0.25 + E.know * 0.04, 0.2, 0.7);
     if ((E.style === 'reader' || E.style === 'counter') && tai >= 2 && D.rng() < adapt) return { kind: 'block', name: 'Читает удары', block: 10 + E.end * 1.3 };
     if (E.style === 'reader' && tech >= 2 && D.rng() < adapt) return { kind: 'evade', name: 'Читает печати', dodge: 0.55 };
-    const choice = weighted(D, E.style === 'turtle' ? [['block', 38], ['strike', 22], ['tech', 24], ['evade', 16]]
-      : E.style === 'trickster' ? [['evade', 28], ['strike', 27], ['tech', 25], ['multi', 12], ['block', 8]]
-      : E.style === 'brute' ? [['strike', 60], ['tech', 20], ['block', 15], ['multi', 5]]
-      : E.style === 'counter' ? [['strike', 32], ['block', 28], ['evade', 20], ['tech', 20]]
-      : E.style === 'reader' ? [['strike', 28], ['block', 28], ['evade', 25], ['tech', 19]]
-      : [['strike', 43], ['multi', 22], ['tech', 17], ['evade', 10], ['block', 8]]);
+    // Доли намерений. Защитные намерения врага (стойка, манёвр) — это ход без урона, поэтому их
+    // немного: иначе бой идёт восемь ходов, а герой не теряет и десятка HP (см. docs/BALANCE.md).
+    const STYLE_MIX = {
+      turtle: [['block', 22], ['strike', 28], ['tech', 24], ['multi', 18], ['evade', 8]],
+      trickster: [['evade', 16], ['strike', 26], ['tech', 22], ['multi', 28], ['block', 8]],
+      brute: [['strike', 40], ['tech', 20], ['block', 8], ['multi', 32]],
+      counter: [['strike', 40], ['block', 12], ['evade', 8], ['tech', 26], ['multi', 14]],
+      reader: [['strike', 30], ['block', 14], ['evade', 10], ['tech', 24], ['multi', 22]],
+      rush: [['strike', 30], ['multi', 40], ['tech', 18], ['evade', 8], ['block', 4]],
+    };
+    const choice = weighted(D, STYLE_MIX[E.style] || [['strike', 50], ['multi', 22], ['tech', 18], ['evade', 6], ['block', 4]]);
     if (choice === 'tech') return techOk ? techIntent(D) : strikeIntent(D);
-    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * 0.58, hits: 2 };
+    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * TUNE.series, hits: 2 };
     if (choice === 'block') return { kind: 'block', name: 'Защита', block: 9 + E.end * 1.2 };
     if (choice === 'evade') return { kind: 'evade', name: 'Манёвр', dodge: 0.55 };
     return strikeIntent(D);
@@ -145,7 +163,7 @@ G.duel = (() => {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
       let d = (i.dmg || 0) * mul * (1 - dodge);
       if (clones > 0 && d > 0) { clones--; d = 0; }
-      const absorbed = Math.min(block, d); block -= absorbed; d -= absorbed;
+      const absorbed = i.pierce ? 0 : Math.min(block, d); block -= absorbed; d -= absorbed;
       total += Math.max(0, d);
     }
     return Math.round(total);
@@ -198,10 +216,10 @@ G.duel = (() => {
       else if (f.tech && (P.focus || D.E.status.mark)) lines.push('Усилено');
       return lines;
     }
-    const block = Math.round(8 + P.st('end') * 1.1), stance = Math.round(5 + P.st('end') * 0.7);
+    const block = blockOf(P, 'guard'), stance = blockOf(P, 'stance');
     const table = {
       guard: [`${block} блок`], evade: ['65% уклон'], focus: [`+${Math.round(8 + P.st('ctrl'))} чакры`, 'Техника +25%'],
-      analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${Math.round(5 + P.st('tai') * 0.6)} ответ`],
+      analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${blockOf(P, 'stanceReply')} ответ`],
       breath: [`+${Math.round(3 + P.st('end') * 0.3)} зд.`, '−4 усталости'], kawarimi: ['Уклон 100%', `${Math.round(8 + P.st('tai') * 0.8)} ответ`],
       henge: ['Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
       bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: ['Отмена хода'],
@@ -282,13 +300,13 @@ G.duel = (() => {
       P.focus = 0; E.status.mark = 0;
     }
 
-    if (c.id === 'guard') gainBlock(D, 8 + P.st('end') * 1.1, ev);
+    if (c.id === 'guard') gainBlock(D, blockOf(P, 'guard'), ev);
     else if (c.id === 'evade') { P.dodge = Math.max(P.dodge, 0.65); note(ev, 'p', 'status', 'Уклон 65% до конца хода', { to: 'p' }); }
     else if (c.id === 'focus') { const n = Math.round(8 + P.st('ctrl')); P.ch = Math.min(P.chMax, P.ch + n); P.focus = 1; note(ev, 'p', 'chakra', `Фокус: +${n} чакры, техника усилена`, { to: 'p' }); }
     else if (c.id === 'analyze') { const n = 2 + (P.know >= 5 ? 1 : 0); P.focus = 1; draw(D, n); note(ev, 'p', 'status', `Анализ: +${n} карты, техника усилена`, { to: 'p' }); }
-    else if (c.id === 'stance') { gainBlock(D, 5 + P.st('end') * 0.7, ev); P.riposte += 5 + P.st('tai') * 0.6; }
+    else if (c.id === 'stance') { gainBlock(D, blockOf(P, 'stance'), ev); P.riposte += blockOf(P, 'stanceReply'); }
     else if (c.id === 'breath') { heal(D, 3 + P.st('end') * 0.3, ev, 'Дыхание восстанавливает силы'); P.fat = Math.max(0, P.fat - 4); }
-    else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += 8 + P.st('tai') * 0.8; note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
+    else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += blockOf(P, 'kawarimiReply'); note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
     else if (c.id === 'henge' || c.id === 'flash_bomb') { E.status.stun = 1; note(ev, 'p', 'status', `${def.name}: действие врага отменено`, { fx: c.id }); }
     else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', `Ложный страх: урон врага −${Math.round((1 - P.fearMul) * 100)}% на два действия`, { fx: c.id }); }
     else if (c.id === 'bunshin') { P.clones = Math.max(P.clones, 2); draw(D, 1); note(ev, 'p', 'status', 'Буншин: два клона и дополнительная карта', { fx: c.id, to: 'p' }); }
@@ -328,7 +346,7 @@ G.duel = (() => {
       const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
       let d = raw * mul * (1 - dodge);
       if (P.clones > 0 && d > 0) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
-      const blocked = Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
+      const blocked = D.intent.pierce ? 0 : Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
       P.hp = clamp(P.hp - d, 0, P.hpMax); total += d; D.stats.taken += d;
       note(ev, 'e', d > 0 ? 'hit' : 'block', d > 0 ? name : `${name}: задержано`, { dmg: d, to: 'p', fx: D.intent.kind === 'tech' ? 'e:dmg' : null });
       if (d > 0) P.heat = clamp(P.heat + HEAT_HIT, 0, 100);
@@ -405,15 +423,15 @@ G.duel = (() => {
       const threshold = D.mode === 'spar' ? E.hpMax * SPAR_END : 0;
       if (E.hp - total <= threshold + 0.5) s += 1000; // опытный бот не упускает добивание
     }
-    if (id === 'guard') s = Math.min(incoming, 8 + P.st('end') * 1.1) * 1.1 - (incoming ? 0 : 24);
+    if (id === 'guard') s = Math.min(incoming, blockOf(P, 'guard')) * 1.1 - (incoming ? 0 : 24);
     else if (id === 'evade') s = incoming * 0.6 - (incoming ? 0 : 24);
-    else if (id === 'stance') s = Math.min(incoming, 5 + P.st('end') * 0.7) + (isAttack(D) ? 5 + P.st('tai') * 0.6 : -20);
+    else if (id === 'stance') s = Math.min(incoming, blockOf(P, 'stance')) + (isAttack(D) ? blockOf(P, 'stanceReply') : -20);
     else if (id === 'focus') s = (P.ch < P.chMax * 0.55 ? 15 : 2) + (hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) ? 8 : 0);
     else if (id === 'analyze') s = 10 + (P.ap > 1 ? 4 : 0);
     else if (id === 'breath') s = (P.hpMax - P.hp) * 0.7 + (P.fat > 65 ? 8 : 0) - (P.hp >= P.hpMax ? 25 : 0);
     else if (id === 'kunai') s += hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) && !E.status.mark ? 13 : 0;
     else if (id === 'feint') s += E.block + E.dodge * 20 + 4;
-    else if (id === 'kawarimi') s = incoming + 10 + P.st('tai') * 0.8;
+    else if (id === 'kawarimi') s = incoming + blockOf(P, 'kawarimiReply');
     else if (id === 'henge' || id === 'flash_bomb') s = incoming + (intent.kind === 'charge' ? 24 : 10);
     else if (id === 'fear') s = incoming * 0.7 + E.block;
     else if (id === 'bunshin') s = incoming * 0.85 + (intent.hits || 1) * 5;

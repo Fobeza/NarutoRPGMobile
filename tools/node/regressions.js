@@ -356,6 +356,25 @@ test('Карточная дуэль: пять карт, три действия,
   assert.equal(D.hand[0].uid, 999, 'сброс перемешивается в новую колоду');
 });
 
+test('Карточная дуэль: доля здоровья вместо абсолютных чисел — блок в процентах, приём пробивает блок', () => {
+  const mk = (intent) => {
+    const D = G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: [], fatigue: 0, surge: false });
+    D.intent = intent; return D;
+  };
+  const hit = (intent, cards = []) => { const D = mk(intent); const hp = D.P.hp; for (const id of cards) { forceCard(D, id); G.duel.play(D, id); } G.duel.endTurn(D); return hp - D.P.hp; };
+  const D0 = mk({ kind: 'strike', name: 'Удар', dmg: 1, hits: 1 });
+  const hpMax = D0.P.hpMax, guard = Math.round(hpMax * (0.10 + 0.015 * 5));
+  assert.ok(guard > 10 && guard < hpMax * 0.25, `блок — доля здоровья: ${guard} из ${hpMax}`);
+  const plain = hit({ kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }, ['guard']);
+  const tech = hit({ kind: 'tech', name: 'Приём', dmg: 40, hits: 1, pierce: true }, ['guard']);
+  const series = hit({ kind: 'multi', name: 'Серия', dmg: 20, hits: 2 }, ['guard']);
+  assert.equal(plain, 40 - guard, `защита поглотила блок: ${plain}`);
+  assert.equal(tech, 40, `приём пробивает блок: ${tech}`);
+  assert.equal(series, 40 - guard, `серия: блок тратится по урону: ${series}`);
+  const D = mk({ kind: 'strike', name: 'Удар', dmg: 30, hits: 1 });
+  assert.equal(G.duel.expectedIncoming(D), 30, 'намерение показывает урон без защиты');
+});
+
 test('Карточная дуэль: блок, уклон, их сочетание и контратака зависят от намерения', () => {
   const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: [], fatigue: 0, surge: false });
   const received = (ids) => { const D = mk(); D.intent = { kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }; const hp = D.P.hp; for (const id of ids) { forceCard(D, id); G.duel.play(D, id); } G.duel.endTurn(D); return hp - D.P.hp; };

@@ -184,6 +184,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (D.E.status.stun > 0) return [intent.name, 'Оглушён: действие будет пропущено'];
     if (attack) {
       let extra = intent.kind === 'drain' ? ' · кража чакры' : intent.kind === 'bind' ? ' · теневая связка' : '';
+      if (intent.pierce) extra += ' · сквозь блок';   // коронный приём обходит блок — нужен уклон или клоны
       return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}${techNote()}`];
     }
     if (intent.kind === 'charge') {

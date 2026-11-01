@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: 'e6c33f36', date: '2026-11-01 17:58', debug: false };
+const BUILD = { release: '3.0', version: 'c103b03d', date: '2026-11-01 18:48', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -6984,28 +6984,31 @@ G.COMBOS = {
 // Противники. hp — здоровье в новой шкале; tai/nin/gen/spd/end/know — характеристики (как у героя);
 // style: dummy (стоит), rush (напирает), counter (отвечает на последнее действие героя), reader (читает частоту действий),
 // turtle (защищается), trickster (ослабляет следующий ход иллюзиями), brute (готовит тяжёлый удар каждые три хода);
+// share — доля здоровья героя, которую снимает обычный удар (0,12 у манекена … 0,74 у незнакомца в плаще).
+// Урон считается от hpMax героя, а не абсолютным числом: иначе на росте (85 → 95 HP) враг либо
+// не пробивает защиту, либо убивает с одного удара. dmg оставлен запасным значением для старых данных.
 // tech — коронный приём: kind dmg (урон), drain (крадёт чакру), bind (запрещает обычный уклон), fear (−1 карта и действие); cost — чакра.
 G.ENEMIES = {
-  dummy: {name:'Манекен',spr:'dummy',male:false,grow:false,dmg:0,hp:25,ch:0,tai:1,nin:0,gen:0,spd:1,end:1,know:0,style:'dummy',lines:{start:'...',hurt:'*скрип*'}},
-  dummy2: {name:'Манекен Ируки',spr:'dummy',male:false,grow:false,dmg:4,hp:30,ch:0,tai:2,nin:0,gen:0,spd:2,end:2,know:0,style:'dummy',lines:{start:'*скрип-скрип*'}},
-  kiba: {name:'Киба',spr:'kiba',male:true,grow:false,dmg:17.5,hp:55,ch:34,tai:7,nin:3,gen:1,spd:6,end:5,know:2,style:'rush',tech:{name:'Гацуга',power:1.8,kind:'dmg',cost:16},lines:{start:'Новенький? Мы с Акамару тебя мигом уделаем!',hurt:'Акамару, это ничего!',low:'Чёрт... да ты не так прост!',win:'Ха! Сила стаи!',lose:'Ладно-ладно... в следующий раз!'}},
-  naruto: {name:'Наруто',spr:'naruto',male:true,grow:false,dmg:20.5,hp:70,ch:80,tai:6,nin:4,gen:1,spd:7,end:10,know:1,style:'rush',tech:{name:'Теневые клоны',power:1.6,kind:'dmg',cost:20},lines:{start:'Даттебайо! Покажу тебе стиль будущего Хокаге!',hurt:'Ай-ай! Это нечестно!',low:'Я никогда не сдаюсь!',win:'Ура! Видел?!',lose:'Эх... ты крутой! Ещё раз!'}},
-  sasuke: {name:'Саске',spr:'sasuke',male:true,grow:false,dmg:38.9,hp:128,ch:60,tai:8,nin:6,gen:3,spd:8,end:8,know:5,style:'counter',tech:{name:'Огненный шар',power:2.2,kind:'dmg',cost:22},lines:{start:'Хм. Посмотрим, чего ты стоишь.',hurt:'Тц.',low:'Не может быть...',win:'Ты слабак.',lose:'...Неплохо. В следующий раз я не проиграю.'}},
-  shikamaru: {name:'Шикамару',spr:'shikamaru',male:true,grow:false,dmg:58.4,hp:135,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0.65,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
-  hinata: {name:'Хината',spr:'hinata',male:false,grow:false,dmg:31,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
-  choji: {name:'Чоджи',spr:'choji',male:true,grow:false,dmg:29,hp:144,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
-  ino: {name:'Ино',spr:'ino',male:false,grow:false,dmg:50.2,hp:84,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
-  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
-  bully: {name:'Хулиган',spr:'bully',male:true,grow:true,dmg:19.1,hp:50,ch:20,tai:4,nin:1,gen:0,spd:3,end:4,know:1,style:'rush',tech:{name:'Бросок кунаев',power:1.3,kind:'dmg',cost:10},lines:{start:'Эй, мелкий! Гони деньги!',hurt:'Ах ты!',win:'Ха, слабак!',lose:'Б-бежим отсюда!'}},
-  senior: {name:'Старшеклассник',spr:'bully',male:true,grow:false,dmg:25,hp:80,ch:40,tai:7,nin:4,gen:2,spd:8,end:9,know:8,style:'counter',tech:{name:'Бросок кунаев',power:1.5,kind:'dmg',cost:12},lines:{start:'Свиток? Попробуй отними, малявка!',hurt:'Тц, шустрый!',low:'Да кто ты такой?!',win:'Свиток останется у нас.',lose:'Ладно-ладно, забирай!'}},
-  thief: {name:'Ночной вор',spr:'thief',male:true,grow:true,dmg:29,hp:50,ch:30,tai:4,nin:2,gen:2,spd:7,end:4,know:4,style:'trickster',tech:{name:'Дымовая завеса',power:0,kind:'fear',cost:12},lines:{start:'Ученичок? Не мешай работать.',hurt:'Шустрый...',win:'Сладких снов.',lose:'Сдаюсь! Отдам всё!'}},
-  dog: {name:'Бродячий пёс',spr:'dog',male:false,grow:true,dmg:21.5,hp:40,ch:0,tai:5,nin:0,gen:0,spd:7,end:3,know:0,style:'rush',tech:{name:'Рывок',power:1.3,kind:'dmg',cost:0},lines:{start:'Р-р-р-гав!',lose:'Скуль-скуль...'}},
-  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,dmg:45.9,hp:113,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
-  shino: {name:'Шино',spr:'shino',male:true,grow:false,dmg:30,hp:90,ch:70,tai:3,nin:6,gen:2,spd:4,end:5,know:8,style:'reader',tech:{name:'Жуки-разрушители',power:1,kind:'drain',cost:18},lines:{start:'Мои жуки уже в пути. Сдавайся — это логично.',hurt:'Интересно.',low:'Колония слабеет... но я не отступлю.',win:'Расчёт был верным.',lose:'Невероятно. Жуки... ошиблись.'}},
-  anko: {name:'Анко',spr:'anko',male:false,grow:false,dmg:28,hp:85,ch:80,tai:7,nin:7,gen:3,spd:8,end:6,know:6,style:'trickster',tech:{name:'Змеиная хватка',power:0.55,kind:'bind',cost:18},lines:{start:'Покажи, на что способен, малявка!',hurt:'Ха! Неплохо!',low:'Даже не думала, что придётся вспотеть!',win:'Мало данго ты ешь, парень.',lose:'Ладно-ладно... ты меня удивил.'}},
-  asuma: {name:'Асума',spr:'asuma',male:true,grow:false,dmg:30,hp:90,ch:90,tai:8,nin:7,gen:2,spd:7,end:8,know:8,style:'counter',tech:{name:'Клинки чакры',power:1.9,kind:'dmg',cost:20},lines:{start:'Шикамару твердит, что ты упрямый. Проверим.',hurt:'Хм, неплохо!',low:'Ладно, хватит играть.',win:'Вырастешь — станешь опасным.',lose:'Вот это да. Респект, малыш.'}},
-  stranger: {name:'Незнакомец в плаще',spr:'stranger',male:true,grow:false,dmg:44,hp:118,ch:80,tai:8,nin:7,gen:6,spd:8,end:7,know:9,style:'reader',tech:{name:'Печать подавления',power:1.7,kind:'dmg',cost:18},lines:{start:'Покажи, чего стоит твоя фиолетовая. Или уходи, пока цел.',hurt:'...Значит, не пустой звук.',low:'Держишься. Уже интересно.',win:'Слабо. Но не безнадёжно.',lose:'...Вот как это — когда держит кто-то, кроме страха.'}},
-  konohamaru: {name:'Конохамару',spr:'konohamaru',male:true,grow:false,dmg:12,hp:45,ch:30,tai:3,nin:2,gen:1,spd:5,end:3,know:1,style:'trickster',tech:{name:'Проделка',power:1.2,kind:'dmg',cost:10},lines:{start:'Босс сказал, нужно сначала победить тебя! Сексуальное дзюцу-у-у!',hurt:'Ай! Я же внук Хокаге!',win:'Я круче всех!',lose:'Погоди... я вырасту и вернусь!'}},
+  dummy: {name:'Манекен',spr:'dummy',male:false,grow:false,share:0.12,dmg:0,hp:25,ch:0,tai:1,nin:0,gen:0,spd:1,end:1,know:0,style:'dummy',lines:{start:'...',hurt:'*скрип*'}},
+  dummy2: {name:'Манекен Ируки',spr:'dummy',male:false,grow:false,share:0.14,dmg:4,hp:30,ch:0,tai:2,nin:0,gen:0,spd:2,end:2,know:0,style:'dummy',lines:{start:'*скрип-скрип*'}},
+  kiba: {name:'Киба',spr:'kiba',male:true,grow:false,share:0.50,dmg:17.5,hp:55,ch:34,tai:7,nin:3,gen:1,spd:6,end:5,know:2,style:'rush',tech:{name:'Гацуга',power:1.8,kind:'dmg',cost:16},lines:{start:'Новенький? Мы с Акамару тебя мигом уделаем!',hurt:'Акамару, это ничего!',low:'Чёрт... да ты не так прост!',win:'Ха! Сила стаи!',lose:'Ладно-ладно... в следующий раз!'}},
+  naruto: {name:'Наруто',spr:'naruto',male:true,grow:false,share:0.58,dmg:20.5,hp:70,ch:80,tai:6,nin:4,gen:1,spd:7,end:10,know:1,style:'rush',tech:{name:'Теневые клоны',power:1.6,kind:'dmg',cost:20},lines:{start:'Даттебайо! Покажу тебе стиль будущего Хокаге!',hurt:'Ай-ай! Это нечестно!',low:'Я никогда не сдаюсь!',win:'Ура! Видел?!',lose:'Эх... ты крутой! Ещё раз!'}},
+  sasuke: {name:'Саске',spr:'sasuke',male:true,grow:false,share:0.66,dmg:38.9,hp:128,ch:60,tai:8,nin:6,gen:3,spd:8,end:8,know:5,style:'counter',tech:{name:'Огненный шар',power:2.2,kind:'dmg',cost:22},lines:{start:'Хм. Посмотрим, чего ты стоишь.',hurt:'Тц.',low:'Не может быть...',win:'Ты слабак.',lose:'...Неплохо. В следующий раз я не проиграю.'}},
+  shikamaru: {name:'Шикамару',spr:'shikamaru',male:true,grow:false,share:0.58,dmg:58.4,hp:135,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0.65,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
+  hinata: {name:'Хината',spr:'hinata',male:false,grow:false,share:0.62,dmg:31,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
+  choji: {name:'Чоджи',spr:'choji',male:true,grow:false,share:0.60,dmg:29,hp:144,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
+  ino: {name:'Ино',spr:'ino',male:false,grow:false,share:0.60,dmg:50.2,hp:84,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
+  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,share:0.62,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
+  bully: {name:'Хулиган',spr:'bully',male:true,grow:true,share:0.34,dmg:19.1,hp:50,ch:20,tai:4,nin:1,gen:0,spd:3,end:4,know:1,style:'rush',tech:{name:'Бросок кунаев',power:1.3,kind:'dmg',cost:10},lines:{start:'Эй, мелкий! Гони деньги!',hurt:'Ах ты!',win:'Ха, слабак!',lose:'Б-бежим отсюда!'}},
+  senior: {name:'Старшеклассник',spr:'bully',male:true,grow:false,share:0.42,dmg:25,hp:80,ch:40,tai:7,nin:4,gen:2,spd:8,end:9,know:8,style:'counter',tech:{name:'Бросок кунаев',power:1.5,kind:'dmg',cost:12},lines:{start:'Свиток? Попробуй отними, малявка!',hurt:'Тц, шустрый!',low:'Да кто ты такой?!',win:'Свиток останется у нас.',lose:'Ладно-ладно, забирай!'}},
+  thief: {name:'Ночной вор',spr:'thief',male:true,grow:true,share:0.44,dmg:29,hp:50,ch:30,tai:4,nin:2,gen:2,spd:7,end:4,know:4,style:'trickster',tech:{name:'Дымовая завеса',power:0,kind:'fear',cost:12},lines:{start:'Ученичок? Не мешай работать.',hurt:'Шустрый...',win:'Сладких снов.',lose:'Сдаюсь! Отдам всё!'}},
+  dog: {name:'Бродячий пёс',spr:'dog',male:false,grow:true,share:0.32,dmg:21.5,hp:40,ch:0,tai:5,nin:0,gen:0,spd:7,end:3,know:0,style:'rush',tech:{name:'Рывок',power:1.3,kind:'dmg',cost:0},lines:{start:'Р-р-р-гав!',lose:'Скуль-скуль...'}},
+  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,share:0.66,dmg:45.9,hp:113,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
+  shino: {name:'Шино',spr:'shino',male:true,grow:false,share:0.50,dmg:30,hp:90,ch:70,tai:3,nin:6,gen:2,spd:4,end:5,know:8,style:'reader',tech:{name:'Жуки-разрушители',power:1,kind:'drain',cost:18},lines:{start:'Мои жуки уже в пути. Сдавайся — это логично.',hurt:'Интересно.',low:'Колония слабеет... но я не отступлю.',win:'Расчёт был верным.',lose:'Невероятно. Жуки... ошиблись.'}},
+  anko: {name:'Анко',spr:'anko',male:false,grow:false,share:0.52,dmg:28,hp:85,ch:80,tai:7,nin:7,gen:3,spd:8,end:6,know:6,style:'trickster',tech:{name:'Змеиная хватка',power:0.55,kind:'bind',cost:18},lines:{start:'Покажи, на что способен, малявка!',hurt:'Ха! Неплохо!',low:'Даже не думала, что придётся вспотеть!',win:'Мало данго ты ешь, парень.',lose:'Ладно-ладно... ты меня удивил.'}},
+  asuma: {name:'Асума',spr:'asuma',male:true,grow:false,share:0.54,dmg:30,hp:90,ch:90,tai:8,nin:7,gen:2,spd:7,end:8,know:8,style:'counter',tech:{name:'Клинки чакры',power:1.9,kind:'dmg',cost:20},lines:{start:'Шикамару твердит, что ты упрямый. Проверим.',hurt:'Хм, неплохо!',low:'Ладно, хватит играть.',win:'Вырастешь — станешь опасным.',lose:'Вот это да. Респект, малыш.'}},
+  stranger: {name:'Незнакомец в плаще',spr:'stranger',male:true,grow:false,share:0.74,dmg:44,hp:118,ch:80,tai:8,nin:7,gen:6,spd:8,end:7,know:9,style:'reader',tech:{name:'Печать подавления',power:1.7,kind:'dmg',cost:18},lines:{start:'Покажи, чего стоит твоя фиолетовая. Или уходи, пока цел.',hurt:'...Значит, не пустой звук.',low:'Держишься. Уже интересно.',win:'Слабо. Но не безнадёжно.',lose:'...Вот как это — когда держит кто-то, кроме страха.'}},
+  konohamaru: {name:'Конохамару',spr:'konohamaru',male:true,grow:false,share:0.22,dmg:12,hp:45,ch:30,tai:3,nin:2,gen:1,spd:5,end:3,know:1,style:'trickster',tech:{name:'Проделка',power:1.2,kind:'dmg',cost:10},lines:{start:'Босс сказал, нужно сначала победить тебя! Сексуальное дзюцу-у-у!',hurt:'Ай! Я же внук Хокаге!',win:'Я круче всех!',lose:'Погоди... я вырасту и вернусь!'}},
 
 };
 
@@ -7874,7 +7877,18 @@ G.duel = (() => {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const SPAR_END = 0.3, RELEASE_HEAT = 60, RELEASE_COST = 25, BOOST = 1.5;
   const FAT_CARD = 0.45, FAT_ROUND = 1.1, HEAT_CARD = 3, HEAT_HIT = 5;
-  const TUNE = { hp: 1.35, enemyDmg: 2.8, hand: 5, ap: 3 };
+  // enemyDmg — общий множитель урона врага; baseShare — доля hpMax героя для врага без своего share.
+  // Урон врага задан долей здоровья героя (см. G.ENEMIES[*].share): с ростом HP 85 → 95 бой не «ломается».
+  // share — обычный удар; series — каждая из двух атак серии; techShare — потолок коронного приёма,
+  // чтобы даже заряженный приём (×1,25) не снимал всё здоровье разом.
+  const TUNE = { hp: 1.2, enemyDmg: 1.0, baseShare: 0.3, series: 0.7, techShare: 0.75, hand: 5, ap: 3 };
+  // Блок героя — доля его hpMax, а не абсолютное число: иначе тяжёлые враги пробивают защиту насквозь.
+  const BLOCK = { guard: [0.10, 0.015], stance: [0.06, 0.010], stanceReply: [0.05, 0.008], kawarimiReply: [0.08, 0.010] };
+  // blockOf(P, kind) = доля hpMax + доля характеристики (коэффициенты — в BLOCK).
+  const blockOf = (P, kind) => {
+    const [base, per] = BLOCK[kind], stat = kind === 'guard' || kind === 'stance' ? P.st('end') : P.st('tai');
+    return Math.round(P.hpMax * (base + per * stat));
+  };
 
   function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const fatMul = (D) => D.P.fat > 90 ? 0.7 : D.P.fat > 70 ? 0.85 : 1;
@@ -7908,7 +7922,8 @@ G.duel = (() => {
     P.fearMul = clamp(0.70 - P.gen * 0.012, 0.5, 0.70);   // своя иллюзия сильнее с Гендзюцу
     P.genResist = clamp(P.gen * 0.04, 0, 0.4);            // шанс развеять чужую иллюзию
     const ehp = Math.round(ed.hp * TUNE.hp);
-    const E = Object.assign({}, ed, { id: opts.enemy, dmg: (ed.dmg != null ? ed.dmg : 4 + ed.tai * 1.2) * TUNE.enemyDmg, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, block: 0, dodge: 0, charged: 0 });
+    const share = ed.share != null ? ed.share : TUNE.baseShare;
+    const E = Object.assign({}, ed, { id: opts.enemy, share, dmg: hpMax * share * TUNE.enemyDmg, hpMax: ehp, hp: ehp, chMax: ed.ch, ch: ed.ch, status: {}, hist: [], cd: 0, block: 0, dodge: 0, charged: 0 });
     const D = {
       opts, rng, mode, rounds: opts.rounds || 6, P, E, round: 0, over: null, phase: 'player', intent: null,
       log: [], inv: Object.assign({}, opts.inv || {}), trainingFight: mode === 'spar',
@@ -7960,8 +7975,9 @@ G.duel = (() => {
   function techIntent(D, charged = false) {
     const E = D.E, t = E.tech;
     if (!t) return strikeIntent(D);
-    const power = (t.power || 1) * (charged ? 1.25 : 1);
-    return { kind: t.kind === 'dmg' ? 'tech' : t.kind, name: t.name + (charged ? ' +' : ''), dmg: (E.dmg || 8) * power, hits: 1, cost: t.cost || 0, charged };
+    const share = Math.min((E.share || TUNE.baseShare) * (t.power || 1), TUNE.techShare);
+    return { kind: t.kind === 'dmg' ? 'tech' : t.kind, name: t.name + (charged ? ' +' : ''),
+      dmg: D.P.hpMax * share * TUNE.enemyDmg * (charged ? 1.25 : 1), hits: 1, cost: t.cost || 0, charged, pierce: t.kind === 'dmg' };
   }
   function weighted(D, entries) {
     let r = D.rng() * entries.reduce((s, x) => s + x[1], 0);
@@ -7979,14 +7995,19 @@ G.duel = (() => {
     const adapt = clamp(0.25 + E.know * 0.04, 0.2, 0.7);
     if ((E.style === 'reader' || E.style === 'counter') && tai >= 2 && D.rng() < adapt) return { kind: 'block', name: 'Читает удары', block: 10 + E.end * 1.3 };
     if (E.style === 'reader' && tech >= 2 && D.rng() < adapt) return { kind: 'evade', name: 'Читает печати', dodge: 0.55 };
-    const choice = weighted(D, E.style === 'turtle' ? [['block', 38], ['strike', 22], ['tech', 24], ['evade', 16]]
-      : E.style === 'trickster' ? [['evade', 28], ['strike', 27], ['tech', 25], ['multi', 12], ['block', 8]]
-      : E.style === 'brute' ? [['strike', 60], ['tech', 20], ['block', 15], ['multi', 5]]
-      : E.style === 'counter' ? [['strike', 32], ['block', 28], ['evade', 20], ['tech', 20]]
-      : E.style === 'reader' ? [['strike', 28], ['block', 28], ['evade', 25], ['tech', 19]]
-      : [['strike', 43], ['multi', 22], ['tech', 17], ['evade', 10], ['block', 8]]);
+    // Доли намерений. Защитные намерения врага (стойка, манёвр) — это ход без урона, поэтому их
+    // немного: иначе бой идёт восемь ходов, а герой не теряет и десятка HP (см. docs/BALANCE.md).
+    const STYLE_MIX = {
+      turtle: [['block', 22], ['strike', 28], ['tech', 24], ['multi', 18], ['evade', 8]],
+      trickster: [['evade', 16], ['strike', 26], ['tech', 22], ['multi', 28], ['block', 8]],
+      brute: [['strike', 40], ['tech', 20], ['block', 8], ['multi', 32]],
+      counter: [['strike', 40], ['block', 12], ['evade', 8], ['tech', 26], ['multi', 14]],
+      reader: [['strike', 30], ['block', 14], ['evade', 10], ['tech', 24], ['multi', 22]],
+      rush: [['strike', 30], ['multi', 40], ['tech', 18], ['evade', 8], ['block', 4]],
+    };
+    const choice = weighted(D, STYLE_MIX[E.style] || [['strike', 50], ['multi', 22], ['tech', 18], ['evade', 6], ['block', 4]]);
     if (choice === 'tech') return techOk ? techIntent(D) : strikeIntent(D);
-    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * 0.58, hits: 2 };
+    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * TUNE.series, hits: 2 };
     if (choice === 'block') return { kind: 'block', name: 'Защита', block: 9 + E.end * 1.2 };
     if (choice === 'evade') return { kind: 'evade', name: 'Манёвр', dodge: 0.55 };
     return strikeIntent(D);
@@ -8015,7 +8036,7 @@ G.duel = (() => {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
       let d = (i.dmg || 0) * mul * (1 - dodge);
       if (clones > 0 && d > 0) { clones--; d = 0; }
-      const absorbed = Math.min(block, d); block -= absorbed; d -= absorbed;
+      const absorbed = i.pierce ? 0 : Math.min(block, d); block -= absorbed; d -= absorbed;
       total += Math.max(0, d);
     }
     return Math.round(total);
@@ -8068,10 +8089,10 @@ G.duel = (() => {
       else if (f.tech && (P.focus || D.E.status.mark)) lines.push('Усилено');
       return lines;
     }
-    const block = Math.round(8 + P.st('end') * 1.1), stance = Math.round(5 + P.st('end') * 0.7);
+    const block = blockOf(P, 'guard'), stance = blockOf(P, 'stance');
     const table = {
       guard: [`${block} блок`], evade: ['65% уклон'], focus: [`+${Math.round(8 + P.st('ctrl'))} чакры`, 'Техника +25%'],
-      analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${Math.round(5 + P.st('tai') * 0.6)} ответ`],
+      analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${blockOf(P, 'stanceReply')} ответ`],
       breath: [`+${Math.round(3 + P.st('end') * 0.3)} зд.`, '−4 усталости'], kawarimi: ['Уклон 100%', `${Math.round(8 + P.st('tai') * 0.8)} ответ`],
       henge: ['Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
       bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: ['Отмена хода'],
@@ -8152,13 +8173,13 @@ G.duel = (() => {
       P.focus = 0; E.status.mark = 0;
     }
 
-    if (c.id === 'guard') gainBlock(D, 8 + P.st('end') * 1.1, ev);
+    if (c.id === 'guard') gainBlock(D, blockOf(P, 'guard'), ev);
     else if (c.id === 'evade') { P.dodge = Math.max(P.dodge, 0.65); note(ev, 'p', 'status', 'Уклон 65% до конца хода', { to: 'p' }); }
     else if (c.id === 'focus') { const n = Math.round(8 + P.st('ctrl')); P.ch = Math.min(P.chMax, P.ch + n); P.focus = 1; note(ev, 'p', 'chakra', `Фокус: +${n} чакры, техника усилена`, { to: 'p' }); }
     else if (c.id === 'analyze') { const n = 2 + (P.know >= 5 ? 1 : 0); P.focus = 1; draw(D, n); note(ev, 'p', 'status', `Анализ: +${n} карты, техника усилена`, { to: 'p' }); }
-    else if (c.id === 'stance') { gainBlock(D, 5 + P.st('end') * 0.7, ev); P.riposte += 5 + P.st('tai') * 0.6; }
+    else if (c.id === 'stance') { gainBlock(D, blockOf(P, 'stance'), ev); P.riposte += blockOf(P, 'stanceReply'); }
     else if (c.id === 'breath') { heal(D, 3 + P.st('end') * 0.3, ev, 'Дыхание восстанавливает силы'); P.fat = Math.max(0, P.fat - 4); }
-    else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += 8 + P.st('tai') * 0.8; note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
+    else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += blockOf(P, 'kawarimiReply'); note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
     else if (c.id === 'henge' || c.id === 'flash_bomb') { E.status.stun = 1; note(ev, 'p', 'status', `${def.name}: действие врага отменено`, { fx: c.id }); }
     else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', `Ложный страх: урон врага −${Math.round((1 - P.fearMul) * 100)}% на два действия`, { fx: c.id }); }
     else if (c.id === 'bunshin') { P.clones = Math.max(P.clones, 2); draw(D, 1); note(ev, 'p', 'status', 'Буншин: два клона и дополнительная карта', { fx: c.id, to: 'p' }); }
@@ -8198,7 +8219,7 @@ G.duel = (() => {
       const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
       let d = raw * mul * (1 - dodge);
       if (P.clones > 0 && d > 0) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
-      const blocked = Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
+      const blocked = D.intent.pierce ? 0 : Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
       P.hp = clamp(P.hp - d, 0, P.hpMax); total += d; D.stats.taken += d;
       note(ev, 'e', d > 0 ? 'hit' : 'block', d > 0 ? name : `${name}: задержано`, { dmg: d, to: 'p', fx: D.intent.kind === 'tech' ? 'e:dmg' : null });
       if (d > 0) P.heat = clamp(P.heat + HEAT_HIT, 0, 100);
@@ -8275,15 +8296,15 @@ G.duel = (() => {
       const threshold = D.mode === 'spar' ? E.hpMax * SPAR_END : 0;
       if (E.hp - total <= threshold + 0.5) s += 1000; // опытный бот не упускает добивание
     }
-    if (id === 'guard') s = Math.min(incoming, 8 + P.st('end') * 1.1) * 1.1 - (incoming ? 0 : 24);
+    if (id === 'guard') s = Math.min(incoming, blockOf(P, 'guard')) * 1.1 - (incoming ? 0 : 24);
     else if (id === 'evade') s = incoming * 0.6 - (incoming ? 0 : 24);
-    else if (id === 'stance') s = Math.min(incoming, 5 + P.st('end') * 0.7) + (isAttack(D) ? 5 + P.st('tai') * 0.6 : -20);
+    else if (id === 'stance') s = Math.min(incoming, blockOf(P, 'stance')) + (isAttack(D) ? blockOf(P, 'stanceReply') : -20);
     else if (id === 'focus') s = (P.ch < P.chMax * 0.55 ? 15 : 2) + (hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) ? 8 : 0);
     else if (id === 'analyze') s = 10 + (P.ap > 1 ? 4 : 0);
     else if (id === 'breath') s = (P.hpMax - P.hp) * 0.7 + (P.fat > 65 ? 8 : 0) - (P.hp >= P.hpMax ? 25 : 0);
     else if (id === 'kunai') s += hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) && !E.status.mark ? 13 : 0;
     else if (id === 'feint') s += E.block + E.dodge * 20 + 4;
-    else if (id === 'kawarimi') s = incoming + 10 + P.st('tai') * 0.8;
+    else if (id === 'kawarimi') s = incoming + blockOf(P, 'kawarimiReply');
     else if (id === 'henge' || id === 'flash_bomb') s = incoming + (intent.kind === 'charge' ? 24 : 10);
     else if (id === 'fear') s = incoming * 0.7 + E.block;
     else if (id === 'bunshin') s = incoming * 0.85 + (intent.hits || 1) * 5;
@@ -21118,6 +21139,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (D.E.status.stun > 0) return [intent.name, 'Оглушён: действие будет пропущено'];
     if (attack) {
       let extra = intent.kind === 'drain' ? ' · кража чакры' : intent.kind === 'bind' ? ' · теневая связка' : '';
+      if (intent.pierce) extra += ' · сквозь блок';   // коронный приём обходит блок — нужен уклон или клоны
       return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}${techNote()}`];
     }
     if (intent.kind === 'charge') {
