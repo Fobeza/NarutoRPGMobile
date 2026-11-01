@@ -162,7 +162,13 @@ node tools/test_release2.js      # 9 мобильных конфигураций
 | `python3 tools/audit_rooms.py [--shots]` | Все комнаты: наложения мебели, недоступные NPC/предметы, вылезание за стены, «дыры» в полу; скриншоты в `tools/shots/rooms/` |
 | `python3 tools/render_chars.py /tmp/c.png [id,id]` | Листы спрайтов и портреты персонажей |
 | `python3 tools/balance.py [N]` | Симуляция боёв (N боёв на ячейку) → `docs/BALANCE.md` и `docs/balance.csv`; нужен Node, браузер не запускает |
+| `node tools/node/render.js /tmp/out` | Кадры интерфейса без браузера (титул, меню, сумка, магазин, бой, комнаты, улица, **главный экран (`ui_world`), карта (`ui_mapview`) и окно выбора (`ui_pick`)**). Растр поддерживает `transform`/`resetTransform`, градиенты и `strokeRect` — этим кадры и проверяются |
 | `python3 tools/check_node.py` | Все проверки без браузера (~12 с) |
+
+**Браузерные тесты** (`tools/test_*.py`) запускают Chromium через Playwright. Кроме самого
+Playwright нужны системные библиотеки Chromium (`libnspr4`, `libnss3`, `libnssutil3` и т. п.);
+в чистом контейнере без них набор падает уже на старте браузера — это ограничение окружения,
+а не игры. Без браузера проверки и кадры дают `check_node.py` и `tools/node/render.js`.
 
 ## Отладка в браузере
 

@@ -21,7 +21,6 @@ G.scenes.register('menu', () => {
     { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
     { label: 'История', act: () => G.scenes.push(G.scenes.make('log')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
-    { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
     { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },

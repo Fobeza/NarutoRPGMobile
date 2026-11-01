@@ -66,7 +66,8 @@ class Raster {
     if (!this.buf || this.w !== w || this.hh !== hh) { this.w = w; this.hh = hh; this.buf = Buffer.alloc(w * hh * 3); this.mask = Buffer.alloc(w * hh); }
   }
   parse(c) {
-    if (typeof c !== 'string') return [0, 0, 0, 1];
+    // Не строка — значит градиент или узор: их считает colorAt/gradAt, здесь краски нет.
+    if (typeof c !== 'string') return [0, 0, 0, 0];
     if (c[0] === '#') {
       if (c.length === 4) return [parseInt(c[1] + c[1], 16), parseInt(c[2] + c[2], 16), parseInt(c[3] + c[3], 16), 1];
       return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16), 1];
@@ -77,6 +78,43 @@ class Raster {
   }
   tp(x, y) { const m = this.m; return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; }
   clipRect() { return this.clips.length ? this.clips[this.clips.length - 1] : [0, 0, this.w, this.hh]; }
+  // ---------- градиенты: без них небо, виньетка и свет луны рисовались бы чёрным ----------
+  // Линейный и радиальный градиент считаются по пользовательским координатам точки, поэтому
+  // работают и на повёрнутом/масштабированном холсте.
+  gradAt(g, u, v) {
+    let t;
+    if (g.kind === 'linear') {
+      const dx = g.x1 - g.x0, dy = g.y1 - g.y0, len2 = dx * dx + dy * dy;
+      t = len2 ? ((u - g.x0) * dx + (v - g.y0) * dy) / len2 : 0;
+    } else {
+      const d = Math.hypot(u - g.x0, v - g.y0);
+      t = g.r1 > g.r0 ? (d - g.r0) / (g.r1 - g.r0) : 0;
+    }
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const st = g.stops;
+    if (!st.length) return [0, 0, 0, 0];
+    if (st.length === 1 || t <= st[0][0]) return this.parse(st[0][1]);
+    for (let i = 1; i < st.length; i++) {
+      const [o1, c1] = st[i];
+      if (t <= o1) {
+        const [o0, c0] = st[i - 1], a = this.parse(c0), b = this.parse(c1);
+        const k = o1 > o0 ? (t - o0) / (o1 - o0) : 0;
+        return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k, a[3] + (b[3] - a[3]) * k];
+      }
+    }
+    return this.parse(st[st.length - 1][1]);
+  }
+  // цвет заливки в пикселе холста (dx, dy): обычный цвет или точка градиента
+  colorAt(dx, dy) {
+    const fs = this.fillStyle;
+    if (fs && fs.__grad) {
+      const m = this.m, det = m[0] * m[3] - m[1] * m[2];
+      if (!det) return [0, 0, 0, 0];
+      const rx = dx + 0.5 - m[4], ry = dy + 0.5 - m[5];
+      return this.gradAt(fs, (m[3] * rx - m[2] * ry) / det, (-m[1] * rx + m[0] * ry) / det);
+    }
+    return this.parse(fs);
+  }
   blend(x, y, r, g, b, a) {
     if (x < 0 || y < 0 || x >= this.w || y >= this.hh) return;
     const cr = this.clipRect();
@@ -108,20 +146,26 @@ class Raster {
   }
   fillRect(x, y, w, hh) {
     this.ensure();
-    const [r, g, b, al] = this.parse(this.fillStyle); const a = al * this.globalAlpha; if (a <= 0) return;
+    const grad = this.fillStyle && this.fillStyle.__grad ? this.fillStyle : null;
+    const [r, g, b, al] = grad ? [0, 0, 0, 1] : this.parse(this.fillStyle);
+    const a = al * this.globalAlpha; if (!grad && a <= 0) return;
     const m = this.m;
     if (m[1] === 0 && m[2] === 0) {
       const [x0, y0] = this.tp(x, y);
       const x1 = x0 + m[0] * w, y1 = y0 + m[3] * hh;
       const xa = Math.round(Math.min(x0, x1)), xb = Math.round(Math.max(x0, x1));
       const ya = Math.round(Math.min(y0, y1)), yb = Math.round(Math.max(y0, y1));
-      for (let yy = ya; yy < yb; yy++) for (let xx = xa; xx < xb; xx++) this.blend(xx, yy, r, g, b, a);
+      for (let yy = ya; yy < yb; yy++) for (let xx = xa; xx < xb; xx++) {
+        if (!grad) { this.blend(xx, yy, r, g, b, a); continue; }
+        const c = this.colorAt(xx, yy), q = c[3] * this.globalAlpha;
+        if (q > 0) this.blend(xx, yy, c[0], c[1], c[2], q);
+      }
       return;
     }
-    this.poly([this.tp(x, y), this.tp(x + w, y), this.tp(x + w, y + hh), this.tp(x, y + hh)], r, g, b, a);
+    this.poly([this.tp(x, y), this.tp(x + w, y), this.tp(x + w, y + hh), this.tp(x, y + hh)], r, g, b, a, grad);
   }
   clearRect(x, y, w, hh) { const f = this.fillStyle; this.fillStyle = '#000'; this.globalAlpha = 1; this.fillRect(x, y, w, hh); this.fillStyle = f; }
-  poly(pts, r, g, b, a) {
+  poly(pts, r, g, b, a, grad) {
     let minY = 1e9, maxY = -1e9;
     for (const p of pts) { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); }
     minY = Math.max(0, Math.floor(minY)); maxY = Math.min(this.hh - 1, Math.ceil(maxY));
@@ -133,7 +177,11 @@ class Raster {
       }
       xs.sort((u, v) => u - v);
       for (let i = 0; i + 1 < xs.length; i += 2)
-        for (let x = Math.max(0, Math.round(xs[i])); x < Math.min(this.w, Math.round(xs[i + 1])); x++) this.blend(x, y, r, g, b, a);
+        for (let x = Math.max(0, Math.round(xs[i])); x < Math.min(this.w, Math.round(xs[i + 1])); x++) {
+          if (!grad) { this.blend(x, y, r, g, b, a); continue; }
+          const c = this.colorAt(x, y), q = c[3] * this.globalAlpha;
+          if (q > 0) this.blend(x, y, c[0], c[1], c[2], q);
+        }
     }
   }
   save() { this.stack.push({ m: this.m.slice(), clips: this.clips.slice(), alpha: this.globalAlpha, mode: this.globalCompositeOperation }); }
@@ -143,11 +191,29 @@ class Raster {
   rotate(a) { const m = this.m, c = Math.cos(a), s = Math.sin(a);
     this.m = [m[0] * c + m[2] * s, m[1] * c + m[3] * s, m[0] * -s + m[2] * c, m[1] * -s + m[3] * c, m[4], m[5]]; }
   setTransform(a, b, c, d, e, f) { this.m = [a || 1, b || 0, c || 0, d || 1, e || 0, f || 0]; }
+  // Домножение текущей матрицы слева — как в браузере: ctx.transform(…) применяется после уже заданных сдвигов.
+  // Нужно сценам, которые рисуют наклон (world/lighting.js) и обзорную карту (scenes/mapview.js).
+  transform(a, b, c, d, e, f) {
+    const m = this.m;
+    this.m = [m[0] * a + m[2] * b, m[1] * a + m[3] * b,
+      m[0] * c + m[2] * d, m[1] * c + m[3] * d,
+      m[0] * e + m[2] * f + m[4], m[1] * e + m[3] * f + m[5]];
+  }
+  resetTransform() { this.m = [1, 0, 0, 1, 0, 0]; }
+  // Точки в растре рисуются сплошной линией — пунктир только запоминаем, чтобы код сцен не падал.
+  setLineDash(d) { this.dash = Array.isArray(d) ? d.slice() : []; }
+  getLineDash() { return this.dash ? this.dash.slice() : []; }
   beginPath() { this.path = []; this.cur = null; }
   moveTo(x, y) { this.cur = [this.tp(x, y)]; this.path.push(this.cur); }
   lineTo(x, y) { if (!this.cur) return this.moveTo(x, y); this.cur.push(this.tp(x, y)); }
   closePath() { this.cur = null; }
   rect(x, y, w, hh) { this.path.push([this.tp(x, y), this.tp(x + w, y), this.tp(x + w, y + hh), this.tp(x, y + hh)]); }
+  // Отладочные рамки мира и разметка комнат в редакторе: рамка как путь, обводка — цветом strokeStyle.
+  strokeRect(x, y, w, hh) {
+    const p = this.path, cur = this.cur, fs = this.fillStyle;
+    this.beginPath(); this.rect(x, y, w, hh); this.fillStyle = this.strokeStyle; this.fill();
+    this.fillStyle = fs; this.path = p; this.cur = cur;
+  }
   // эллипс как путь (для мебели: сиденья, подушки, кроны) — приближение ломаной
   ellipse(cx, cy, rx, ry, rot = 0) {
     const pts = [];
@@ -169,8 +235,9 @@ class Raster {
   bezierCurveTo(c1x, c1y, c2x, c2y, x, y) { this.lineTo(c1x, c1y); this.lineTo(c2x, c2y); this.lineTo(x, y); }
   fill() {
     this.ensure();
-    const [r, g, b, al] = this.parse(this.fillStyle); const a = al * this.globalAlpha;
-    for (const sub of this.path) if (sub.length > 2) this.poly(sub, r, g, b, a);
+    const grad = this.fillStyle && this.fillStyle.__grad ? this.fillStyle : null;
+    const [r, g, b, al] = grad ? [0, 0, 0, 1] : this.parse(this.fillStyle); const a = al * this.globalAlpha;
+    for (const sub of this.path) if (sub.length > 2) this.poly(sub, r, g, b, a, grad);
   }
   stroke() { this.fill(); }
   clip() {
@@ -181,6 +248,14 @@ class Raster {
   }
   drawImage(img, ...a) {
     this.ensure();
+    // Тот же контракт, что у патча drawImage в gfx/sprites.js: у «подробных» холстов игры (HI=2)
+    // место и размер задаются в логических пикселях. Здесь это нужно повторить, потому что растр
+    // не наследует CanvasRenderingContext2D и патч на него не действует.
+    if (img && img.hi && img.lw) {
+      const k = (img.__raster ? img.__raster.w : img.width) / img.lw;
+      if (a.length === 2) a = [a[0], a[1], img.lw, img.lh];                    // весь холст в логическом размере
+      else if (a.length === 8) a = [a[0] * k, a[1] * k, a[2] * k, a[3] * k, a[4], a[5], a[6], a[7]];   // кусок: источник в физических px
+    }
     let sx = 0, sy = 0, sw, sh, dx, dy, dw, dh;
     if (a.length === 2) { [dx, dy] = a; sw = img.width; sh = img.height; dw = sw; dh = sh; }
     else if (a.length === 4) { [dx, dy, dw, dh] = a; sw = img.width; sh = img.height; sx = sy = 0; }
@@ -189,8 +264,6 @@ class Raster {
     if (img.__raster) {
       img.__raster.ensure();
       src = { w: img.__raster.w, h: img.__raster.hh, px: img.__raster.buf, mask: img.__raster.mask, ch: 3 };
-      // «подробные» холсты игры (G.gfx.canvas, HI=2) задают источник в логических пикселях — как патч drawImage в gfx/sprites.js
-      if (img.hi && img.lw) { const k = img.__raster.w / img.lw; sx *= k; sy *= k; sw *= k; sh *= k; }
     }
     else if (String(img._src || img.src || '').startsWith('data:image/png')) src = Object.assign({ ch: 4 }, this.imgBuf(img));
     if (!src) return;
@@ -220,8 +293,12 @@ class Raster {
     return pngCache.get(key);
   }
   measureText(t) { return { width: String(t).length * 6 }; }
-  createLinearGradient() { return { addColorStop() {} }; }
-  createRadialGradient() { return { addColorStop() {} }; }
+  createLinearGradient(x0, y0, x1, y1) {
+    return { __grad: true, kind: 'linear', x0, y0, x1, y1, stops: [], addColorStop(o, c) { this.stops.push([o, c]); } };
+  }
+  createRadialGradient(x0, y0, r0, x1, y1, r1) {
+    return { __grad: true, kind: 'radial', x0, y0, r0, x1, y1, r1, stops: [], addColorStop(o, c) { this.stops.push([o, c]); } };
+  }
   createPattern() { return null; }
   // Пиксельные операции: нужны разбору арта (decodeArt), перекраске одежды и тонировке земли.
   createImageData(w, hh) { return { data: new Uint8ClampedArray(Math.max(4, (w | 0) * (hh | 0) * 4)), width: w | 0, height: hh | 0 }; }
@@ -288,7 +365,7 @@ h.seed();
 const screen = { width: W, height: H };
 const ctx = new Raster(screen);
 
-function frame(name, setup, bg, sz) {
+function frame(name, setup, bg, sz, touch) {
   try {
     G.scenes.stack.length = 0;
     const FW = sz ? sz[0] : W, FH = sz ? sz[1] : H;
@@ -299,6 +376,7 @@ function frame(name, setup, bg, sz) {
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, FW, FH);
     if (bg) bg();   // подложка «мира» рисуется после очистки, под прозрачные сцены
     for (const s of G.scenes.stack.slice()) s.draw && s.draw(ctx);
+    if (touch) G.touch.draw(ctx);   // джойстик, кнопка A и нижняя полоса — их рисует отдельный слой
     // ×2 для глаз
     const big = Buffer.alloc(FW * 2 * FH * 2 * 3);
     for (let y = 0; y < FH * 2; y++) for (let x = 0; x < FW * 2; x++) {
@@ -393,6 +471,21 @@ frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
 frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+
+// ---------- главный экран и окна поверх мира ----------
+// Ставим настоящую сцену мира (HUD, карта, жители, джойстик), а сверху — окно.
+function overWorld(setup) {
+  const w = G.scenes.make('world', null);
+  G.scenes.push(w); w.enter && w.enter();
+  w.setMap({ map: 'konoha', x: 900, y: 800, dir: 'down' });
+  setup && setup(w);
+}
+frame('ui_world', () => overWorld(), null, null, true);
+frame('ui_mapview', () => overWorld((w) => G.scenes.push(G.scenes.make('mapview', w))), null, null, true);
+frame('ui_pick', () => overWorld(() => G.scenes.push(G.scenes.make('pick', {
+  title: 'Вопрос', text: 'Что скажешь Ируке?',
+  options: [{ label: 'Сказать правду', sub: 'Ирука поймёт' }, { label: 'Соврать', sub: 'Безопаснее' }, { label: 'Промолчать', desc: 'Ирука сам догадается.' }],
+}, () => {}))), null, null, true);
 // ---------- бой: настоящая сцена, чтобы видеть фоны арен с бойцами и интерфейсом ----------
 battleFrame('battle_yard', 'sasuke', 'yard');
 battleFrame('battle_field', 'sasuke', 'field');

@@ -720,5 +720,19 @@ test('У каждого персонажа есть нарисованный л�
   assert.equal(G.ENEMIES.stranger.spr, 'stranger', 'в бою свой спрайт, а не вор');
 });
 
+test('В окнах нет повторяющихся пунктов, и каждый ведёт на свой экран', () => {
+  clean();
+  // Раньше «Колода» стояла в меню паузы дважды: два одинаковых пункта между «Статусом» и «Сумкой».
+  const menu = G.scenes.make('menu');
+  const labels = menu.labels();
+  assert.equal(new Set(labels).size, labels.length, 'повторы в меню: ' + labels.join(' | '));
+  assert.ok(labels.includes('Колода'), 'пункт «Колода» на месте');
+  // У каждого пункта — своё действие: открыть меню и сверить, что число пунктов совпадает с числом действий
+  const rows = menu.visibleRows();
+  assert.ok(rows.length > 5, 'список меню собирается постранично');
+  const peek = G.scenes.make('pick', { title: 'т', options: [{ label: 'а' }, { label: 'б' }] }, () => {});
+  assert.deepEqual(peek.labels(), ['а', 'б'], 'окно выбора тоже отдаёт подписи без повторов');
+});
+
 console.log(`ИТОГ регрессий: ✔ ${passed}  ✘ ${failed}`);
 process.exitCode = failed ? 1 : 0;

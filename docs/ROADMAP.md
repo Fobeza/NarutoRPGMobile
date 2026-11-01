@@ -36,4 +36,4 @@
 ## Надёжность и инструменты
 - [ ] Оценить дальнейшее разделение отрисовки и логики `src/scenes/battle.js` с golden до/после
 - [ ] Перепроверить фактические использования `G.ENEMIES.konohamaru` перед решением о новом бое или удалении
-- [ ] CI (GitHub Actions): сборка + `tools/check_node.py` на каждый push
+- [x] CI (GitHub Actions): сборка + `tools/check_node.py` на каждый push — `.github/workflows/check.yml`

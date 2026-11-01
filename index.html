@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: 'b448402f', date: '2026-10-25 14:44', debug: false };
+const BUILD = { release: '3.0', version: '3bb5be32', date: '2026-11-01 14:37', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -21883,7 +21883,6 @@ G.scenes.register('menu', () => {
     { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
     { label: 'История', act: () => G.scenes.push(G.scenes.make('log')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
-    { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
     { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
