@@ -428,6 +428,42 @@ test('Карточная дуэль: усталость, стабильност�
   assert.ok(blocks / n > 0.4, 'counter читает повторную тайдзюцу-серию: ' + (blocks / n).toFixed(2));
 });
 
+test('Навыки героя работают так, как написано в описаниях', () => {
+  const base = { enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: () => 0.5, stability: 100, techs: [], fatigue: 0, surge: false };
+  const duel = (skills) => { h.seed(st => { st.hero.skills = skills; }); return G.duel.create(Object.assign({ skills }, base)); };
+  const amount = (D, id) => parseInt(G.duel.preview(D, id)[0], 10);
+  // «Упорство»: +25% урона на последних силах, выше 30% HP бонуса нет
+  let D = duel(['grit']); const lowGrit = (D.P.hp = Math.round(D.P.hpMax * 0.2), amount(D, 'strike'));
+  D = duel([]); D.P.hp = Math.round(D.P.hpMax * 0.2); const lowPlain = amount(D, 'strike');
+  assert.ok(lowGrit > lowPlain, `«Упорство» усиливает удар ниже 30% HP: ${lowPlain} → ${lowGrit}`);
+  const fullGrit = (D = duel(['grit']), amount(D, 'strike')), fullPlain = (D = duel([]), amount(D, 'strike'));
+  assert.equal(fullGrit, fullPlain, 'при полном HP «Упорство» не влияет');
+  // «Меткий глаз»: +20% урона «Кунаю»
+  const kunaiEye = (D = duel(['eagle_eye']), amount(D, 'kunai')), kunaiPlain = (D = duel([]), amount(D, 'kunai'));
+  assert.ok(kunaiEye > kunaiPlain, `«Меткий глаз» усиливает кунай: ${kunaiPlain} → ${kunaiEye}`);
+  // «Крепкий орешек»: один раз за бой герой остаётся на 1 HP вместо поражения
+  D = duel(['tough']); D.E.dmg = 99; D.intent = { kind: 'strike', name: 'Удар', dmg: 99, hits: 1 };
+  Object.assign(D.P, { hp: 1, block: 0, clones: 0, dodge: 0 }); G.duel.endTurn(D);
+  assert.equal(D.P.hp, 1); assert.equal(D.toughUsed, true); assert.ok(!D.over, 'первый смертельный удар пережит');
+  Object.assign(D.P, { hp: 1, block: 0, clones: 0, dodge: 0 }); D.intent = { kind: 'strike', name: 'Удар', dmg: 99, hits: 1 }; G.duel.endTurn(D);
+  assert.ok(D.over && !D.over.win, 'второй смертельный удар в том же бою добивает');
+  // «Быстрые руки»: +1,5 с на печати рук
+  h.seed(st => { st.hero.skills = []; }); const sealsPlain = G.scenes.make('train', 'seals', () => {}).dur().seals;
+  h.seed(st => { st.hero.skills = ['fast_hands']; }); const sealsFast = G.scenes.make('train', 'seals', () => {}).dur().seals;
+  assert.equal(Math.round((sealsFast - sealsPlain) * 10) / 10, 1.5, `печати: ${sealsPlain} → ${sealsFast} с`);
+  // «Аналитик»: видно, через сколько ходов враг применит приём, и сколько пройдёт от замаха
+  h.seed(st => { st.hero.skills = ['analyst']; });
+  const b = battle('ko');
+  b.D.E.tech = { name: 'Техника', power: 1, kind: 'dmg', cost: 10 }; b.D.E.cd = 2; b.D.E.ch = 99; b.D.E.charged = 0;
+  b.D.intent = { kind: 'strike', name: 'Удар', dmg: 5, hits: 1 };
+  assert.ok(b.intentLines(b.D.intent)[1].includes('приём через 2'), 'виден отсчёт до приёма: ' + b.intentLines(b.D.intent)[1]);
+  b.D.intent = { kind: 'charge', name: 'Замах', interrupt: 3 }; const heavy = b.intentLines(b.D.intent)[1];
+  assert.ok(/пройдёт \d+/.test(heavy), 'виден урон заряженного приёма: ' + heavy);
+  h.seed(st => { st.hero.skills = []; });
+  const nb = battle('ko'); nb.D.E.tech = { name: 'Техника', power: 1, kind: 'dmg', cost: 10 }; nb.D.E.cd = 2; nb.D.E.ch = 99;
+  nb.D.intent = { kind: 'strike', name: 'Удар', dmg: 5, hits: 1 };
+  assert.ok(!nb.intentLines(nb.D.intent)[1].includes('приём'), 'без «Аналитика» отсчёта нет');
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });

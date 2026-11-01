@@ -154,6 +154,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
   }
 
+  // «Аналитик»: в бою видно, когда у врага будет готов приём (перезарядка) — этого больше нигде не показать.
+  function techNote() {
+    if (!D.has('analyst') || !D.E.tech) return '';
+    const t = D.E.tech, need = t.cost || 0;
+    if (D.E.charged || (D.E.cd <= 0 && D.E.ch >= need)) return ' · приём готов';
+    if (D.E.cd > 0) return ` · приём через ${D.E.cd}`;
+    return ' · приёму не хватает чакры';
+  }
   function intentLines(intent) {
     if (!intent) return ['Бой завершён', ''];
     if (afterEvents === 'enemy' && phase === 'play') return ['Ответ противника', intent.name];
@@ -161,17 +169,23 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (D.E.status.stun > 0) return [intent.name, 'Оглушён: действие будет пропущено'];
     if (attack) {
       let extra = intent.kind === 'drain' ? ' · кража чакры' : intent.kind === 'bind' ? ' · теневая связка' : '';
-      return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}`];
+      return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}${techNote()}`];
     }
-    if (intent.kind === 'charge') return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+    if (intent.kind === 'charge') {
+      // с «Аналитиком» видно, сколько снимет заряженный приём: это главный удар врага
+      const heavy = D.has('analyst') ? G.duel.chargePreview(D) : 0;
+      if (heavy > 0) return ['Замах: готовит тяжёлый приём', `Сорвать 3 звена · пройдёт ${heavy}`];
+      return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+    }
     if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
     if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
     if (intent.kind === 'fear') return [intent.name, 'Иллюзия: −1 карта и −1 действие на следующий ход'];
-    return [intent.name, intent.kind === 'idle' ? 'Можно спокойно развить атаку' : 'Враг не атакует в этом ходу'];
+    return [intent.name, (intent.kind === 'idle' ? 'Можно спокойно развить атаку' : 'Враг не атакует в этом ходу') + techNote()];
   }
 
   const S = {
     name: 'battle', D,
+    intentLines,                       // для автотеста: строки намерения и подсказка «Аналитика»
     touch() { return {}; },
     enter() {
       if (G.state.started && !G.state.battleCheckpoint) G.state.battleCheckpoint = JSON.stringify(Object.assign({}, G.state, { battleCheckpoint: null }));

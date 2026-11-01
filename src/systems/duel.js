@@ -136,11 +136,11 @@ G.duel = (() => {
     const mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
     return Math.round((i.dmg || 0) * (i.hits || 1) * mul);
   }
-  function expectedIncoming(D) {
-    let total = 0;
-    if (!isAttack(D) || D.E.status.stun > 0) return 0;
-    const i = D.intent, mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
-    let block = D.P.block, clones = D.P.clones;
+  // Сколько пройдёт от конкретного намерения (блок, клоны, уклон уже учтены).
+  function incomingOf(D, i) {
+    if (!i || D.E.status.stun > 0) return 0;
+    const mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
+    let block = D.P.block, clones = D.P.clones, total = 0;
     for (let n = 0; n < (i.hits || 1); n++) {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
       let d = (i.dmg || 0) * mul * (1 - dodge);
@@ -150,6 +150,9 @@ G.duel = (() => {
     }
     return Math.round(total);
   }
+  function expectedIncoming(D) { return isAttack(D) ? incomingOf(D, D.intent) : 0; }
+  // «Аналитик»: сколько снимет заряженный приём, если не сорвать замах.
+  function chargePreview(D) { return D.E.tech && D.E.tech.kind === 'dmg' ? incomingOf(D, techIntent(D, true)) : 0; }
 
   // ── формулы карт ──
   function comboBonus() {
@@ -157,14 +160,17 @@ G.duel = (() => {
     let b = 0; for (const [id, c] of Object.entries(G.COMBOS || {})) if (G.combat.knowsCombo(id) && id !== 'academy') b += c.bonus || 0; return b;
   }
   function mastery(id) { return G.combat && G.state ? G.combat.mastery(id) : 0; }
+  // «Упорство»: на последних силах герой бьёт сильнее (описание навыка — data/hero.js).
+  const lowHp = (D) => (D.has('grit') && D.P.hp / Math.max(1, D.P.hpMax) < 0.3 ? 1.25 : 1);
   function damageFormula(D, id) {
-    const P = D.P, tai = P.st('tai'), nin = P.st('nin'), spd = P.st('spd'), mul = fatMul(D);
+    const P = D.P, tai = P.st('tai'), nin = P.st('nin'), spd = P.st('spd'), mul = fatMul(D) * lowHp(D);
     const taiMul = (1 + Math.min(P.chain, 4) * (0.08 + comboBonus())) * mul;
     const techMul = (1 + mastery(id) * 0.06) * (P.focus ? 1.25 : 1) * (D.E.status.mark ? 1.5 : 1) * mul;
     const f = (amount, hits = 1, extra = {}) => Object.assign({ amount, hits, tech: false }, extra);
     const t = (amount, extra = {}) => Object.assign({ amount: amount * techMul, hits: 1, tech: true }, extra);
     if (id === 'strike') return f((5 + tai) * taiMul);
-    if (id === 'kunai') return f((4 + spd * 0.6) * mul);
+    // «Меткий глаз»: метание (кунай) точнее и сильнее
+    if (id === 'kunai') return f((4 + spd * 0.6) * mul * (D.has('eagle_eye') ? 1.2 : 1));
     if (id === 'combo') return f((2 + tai * 0.45) * taiMul, 3);
     if (id === 'feint') return f((4 + tai * 0.5) * mul);
     if (id === 'chakra_shot') return t(7 + nin * 1.3, { ignoreDodge: true });
@@ -307,6 +313,7 @@ G.duel = (() => {
     if (def.release) P.heat = 0;
     (def.exhaust || def.item ? D.exhaust : D.discard).push(c);
     D.last = { pAct: c.id, q: 1, surge, damage: dealt };
+    lastStand(D, ev);
     checkEnd(D);
     D.events = ev;
     return ev;
@@ -357,6 +364,7 @@ G.duel = (() => {
         note(ev, 'e', 'status', 'Иллюзия: на следующий ход меньше рука и действия', { to: 'p', fx: 'e:fear' });
       }
     }
+    lastStand(D, ev);
     if (E.status.burn > 0 && E.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
     P.fat = clamp(P.fat + FAT_ROUND * (1 - P.st('end') * 0.025), 0, 100);
     P.heat = clamp(P.heat + 2, 0, 100); E.ch = Math.min(E.chMax, E.ch + 2);
@@ -370,6 +378,13 @@ G.duel = (() => {
     D.events = ev;
     if (!D.over) startTurn(D);
     return ev;
+  }
+  // «Крепкий орешек»: один раз за бой смертельный удар оставляет героя на 1 HP.
+  function lastStand(D, ev) {
+    if (D.P.hp > 0 || D.toughUsed || !D.has('tough')) return false;
+    D.P.hp = 1; D.toughUsed = true;
+    if (ev) note(ev, 'p', 'info', 'Крепкий орешек: ты устоял на 1 HP', { to: 'p', heal: 0 });
+    return true;
   }
   function checkEnd(D) {
     if (D.E.hp <= 0 || (D.mode === 'spar' && D.E.hp <= D.E.hpMax * SPAR_END)) { D.over = { win: true }; D.phase = 'over'; }
@@ -443,6 +458,6 @@ G.duel = (() => {
 
   function options(D) { return D.hand.map((c) => ({ id: c.id, uid: c.uid, label: cardDef(c.id).name, cost: cardDef(c.id).cost, off: canPlay(D, c).ok ? null : canPlay(D, c).why })); }
   function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
-  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming,
+  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview,
     stability, mulberry, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
 })();
