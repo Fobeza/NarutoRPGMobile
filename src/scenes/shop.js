@@ -148,11 +148,12 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const icon = l.cardH < 56 ? 36 : 48;
         G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - icon) / 2), cy + 1, icon, icon);
         if (lk) { ctx.globalAlpha = .5; ctx.fillStyle = '#2a1e14'; ctx.fillRect(cx + 2, cy + 2, l.cardW - 7, l.cardH - 7); ctx.globalAlpha = 1; }
-        // ценник на плашке: «рё», как во всей лавке; на узкой карточке — короткое «р»
+        // ценник на плашке: «рё», как во всей лавке; на узкой карточке — короткое «р».
+        // Цифры остаются мелким шрифтом: в нём ноль уже не путается с восьмёркой (смотри make_font.py).
         const tag = lk ? '—' : F.small.measure(it.price + ' рё') + 10 <= l.cardW - 7 ? it.price + ' рё' : it.price + 'р';
         const tw = F.small.measure(tag) + 8, tx = cx + l.cardW - 6 - tw, ty = cy + l.cardH - 19;
-        U.panel(ctx, tx, ty, tw, 13, 'night');
-        F.small.draw(ctx, tag, tx + tw - 4, ty + 2,
+        U.panel(ctx, tx, ty, tw, 15, 'night');
+        F.small.draw(ctx, tag, tx + tw - 4, ty + 4,
           { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', shadow: '#160c06' });
       }
       const pages = Math.ceil(items.length / l.per);
@@ -186,7 +187,9 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       // кнопки внизу + деньги
       U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, onSite(it) ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
       U.button(ctx, L.exitB.x, L.exitB.y, L.exitB.w, L.exitB.h, 'Выйти', 'normal');
-      F.small.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + h.h - 12, { align: 'right', color: '#8a5a10' });
+      const moneyTail = F.small.measure(' рё'), moneyX = h.x + h.w - 12 - moneyTail;
+      G.font.draw(ctx, String(G.state.vars.money), moneyX, h.y + h.h - 16, { align: 'right', color: '#8a5a10' });
+      F.small.draw(ctx, ' рё', moneyX, h.y + h.h - 12, { color: '#8a5a10' });
     },
   };
   return S;

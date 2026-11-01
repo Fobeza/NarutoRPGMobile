@@ -153,7 +153,7 @@ body { position: fixed; inset: 0; }
 
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: '91e3c7cd', date: '2026-11-01 17:33', debug: false };
+const BUILD = { release: '3.0', version: 'e6c33f36', date: '2026-11-01 17:58', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -1263,7 +1263,7 @@ G.FONT_DATA = {
    "-": ".......|.......|.......|.......|.......|.......|.......|#######|.......|.......|.......|.......|.......|.......|.......|.......",
    ".": "..|..|..|..|..|..|..|..|..|..|##|##|..|..|..|..",
    "/": "......|......|....##|....##|...##.|...##.|..##..|..##..|.##...|.##...|##....|##....|......|......|......|......",
-   "0": ".......|.......|.#####.|##...##|##...##|##..###|##.####|####.##|###..##|##...##|##...##|.#####.|.......|.......|.......|.......",
+   "0": ".......|.......|.#####.|##...##|##...##|##...##|##.#.##|##.#.##|##...##|##...##|##...##|.#####.|.......|.......|.......|.......",
    "1": "......|......|..##..|.###..|####..|..##..|..##..|..##..|..##..|..##..|..##..|######|......|......|......|......",
    "2": ".......|.......|.#####.|##...##|##...##|.....##|....##.|...##..|..##...|.##....|##.....|#######|.......|.......|.......|.......",
    "3": ".......|.......|.#####.|##...##|##...##|.....##|..####.|.....##|.....##|##...##|##...##|.#####.|.......|.......|.......|.......",
@@ -1474,7 +1474,7 @@ G.FONT_DATA = {
    "-": ".....|.....|.....|.....|.....|.....|#####|.....|.....|.....|.....|.....",
    ".": ".|.|.|.|.|.|.|.|#|#|.|.",
    "/": "....|....|...#|...#|..#.|..#.|.#..|.#..|#...|#...|....|....",
-   "0": ".....|.....|.###.|#...#|#..##|#.#.#|##..#|#...#|#...#|.###.|.....|.....",
+   "0": ".....|.....|.###.|#...#|#...#|#.#.#|#.#.#|#...#|#...#|.###.|.....|.....",
    "1": "...|...|.#.|##.|.#.|.#.|.#.|.#.|.#.|###|...|...",
    "2": ".....|.....|.###.|#...#|#...#|....#|...#.|..#..|.#...|#####|.....|.....",
    "3": ".....|.....|.###.|#...#|....#|..##.|....#|....#|#...#|.###.|.....|.....",
@@ -18849,12 +18849,15 @@ G.scenes.register('world', (pos) => {
       const running = G.scenes.top() === this && !G.scenes.busy;
       let clk = g.clock();
       if (running && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');
-      const cw = F.measure('00:00'), cx = Math.round(W / 2 - cw / 2) + 5;
+      const cw = G.font.measure('00:00'), cx = Math.round(W / 2 - cw / 2);
       if (night && wt.icon === '☀') U.icon(ctx, 'moon', cx - 14, 4, '#c8d0ff');
       else F.draw(ctx, wt.icon, cx - 12, 5, { color: wt.col });
-      F.draw(ctx, clk, cx, 5, { color: v.min >= 23 * 60 ? '#ff8a6a' : night ? '#9ab0ff' : '#f8eed0' });
-      const mt = v.money + ' рё';
-      F.draw(ctx, mt, W - 6, 5, { align: 'right', color: '#f4d46a' });
+      // Цифры часов и денег — основным шрифтом: они решают (сколько времени до урока, хватает ли
+      // на рамен), а мелкий на телефоне приходится разбирать. Подписи остаются мелкими.
+      G.font.draw(ctx, clk, cx, 2, { color: v.min >= 23 * 60 ? '#ff8a6a' : night ? '#9ab0ff' : '#f8eed0' });
+      const mw = G.font.small.measure(' рё');
+      G.font.draw(ctx, String(v.money), W - 4 - mw, 2, { align: 'right', color: '#f4d46a' });
+      G.font.small.draw(ctx, ' рё', W - 4 - mw, 6, { color: '#c8a860' });
       // здоровье, чакра, усталость: значок + бамбуковая шкала (у усталости полная шкала — плохо)
       const bars = [['heart', C.hp, v.hp / 100], ['drop', C.chakra, v.chakra / 100], ['bolt', C.fatigue, v.fatigue / 100]];
       const cell = (W - 8) / 3;
@@ -19467,11 +19470,12 @@ G.scenes.register('shop', (shopId, opts = {}) => {
         const icon = l.cardH < 56 ? 36 : 48;
         G.icons.draw(ctx, it.id, cx + Math.floor((l.cardW - 3 - icon) / 2), cy + 1, icon, icon);
         if (lk) { ctx.globalAlpha = .5; ctx.fillStyle = '#2a1e14'; ctx.fillRect(cx + 2, cy + 2, l.cardW - 7, l.cardH - 7); ctx.globalAlpha = 1; }
-        // ценник на плашке: «рё», как во всей лавке; на узкой карточке — короткое «р»
+        // ценник на плашке: «рё», как во всей лавке; на узкой карточке — короткое «р».
+        // Цифры остаются мелким шрифтом: в нём ноль уже не путается с восьмёркой (смотри make_font.py).
         const tag = lk ? '—' : F.small.measure(it.price + ' рё') + 10 <= l.cardW - 7 ? it.price + ' рё' : it.price + 'р';
         const tw = F.small.measure(tag) + 8, tx = cx + l.cardW - 6 - tw, ty = cy + l.cardH - 19;
-        U.panel(ctx, tx, ty, tw, 13, 'night');
-        F.small.draw(ctx, tag, tx + tw - 4, ty + 2,
+        U.panel(ctx, tx, ty, tw, 15, 'night');
+        F.small.draw(ctx, tag, tx + tw - 4, ty + 4,
           { align: 'right', color: lk ? '#9c8662' : !G.game.canPay(it.price) ? '#ff9a7a' : '#f4d46a', shadow: '#160c06' });
       }
       const pages = Math.ceil(items.length / l.per);
@@ -19505,7 +19509,9 @@ G.scenes.register('shop', (shopId, opts = {}) => {
       // кнопки внизу + деньги
       U.button(ctx, L.buyB.x, L.buyB.y, L.buyB.w, L.buyB.h, onSite(it) ? 'Взять' : 'Купить', qmode ? 'on' : 'sel');
       U.button(ctx, L.exitB.x, L.exitB.y, L.exitB.w, L.exitB.h, 'Выйти', 'normal');
-      F.small.draw(ctx, G.state.vars.money + ' рё', h.x + h.w - 12, h.y + h.h - 12, { align: 'right', color: '#8a5a10' });
+      const moneyTail = F.small.measure(' рё'), moneyX = h.x + h.w - 12 - moneyTail;
+      G.font.draw(ctx, String(G.state.vars.money), moneyX, h.y + h.h - 16, { align: 'right', color: '#8a5a10' });
+      F.small.draw(ctx, ' рё', moneyX, h.y + h.h - 12, { color: '#8a5a10' });
     },
   };
   return S;
@@ -21082,6 +21088,21 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
   }
 
+  // Числа в бою набираем основным шрифтом: в них решают урон, ходы и проценты, а мелкий
+  // шрифт на телефоне приходится разбирать. Текст остаётся мелким, чтобы строка влезала целиком.
+  function drawNumLine(ctx, text, x, y, maxW, color, shadow) {
+    if (FS.measure(text) > maxW) return FS.draw(ctx, text, x, y, { color, shadow, maxW });
+    const parts = String(text).split(/(\d+(?:[.,/]\d+)*)/).filter((p) => p.length);
+    const width = parts.reduce((sum, p) => sum + (/^\d/.test(p) ? G.font.measure(p) : FS.measure(p)), 0);
+    if (width > maxW) return FS.draw(ctx, text, x, y, { color, shadow, maxW });
+    let cx = x;
+    for (const p of parts) {
+      const big = /^\d/.test(p);
+      if (big) G.font.draw(ctx, p, cx, y, { color, shadow });
+      else FS.draw(ctx, p, cx, y + 3, { color, shadow });
+      cx += big ? G.font.measure(p) + 1 : FS.measure(p) + 1;
+    }
+  }
   // «Аналитик»: в бою видно, когда у врага будет готов приём (перезарядка) — этого больше нигде не показать.
   function techNote() {
     if (!D.has('analyst') || !D.E.tech) return '';
@@ -21254,14 +21275,14 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      else if (mode === 'spar') F.draw(ctx, 'до 30% здоровья', W - 6, 33, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
       U.panel(ctx, 0, py, W, g.PH, 'plank');
       const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
-      FS.draw(ctx, lines[0], 7, py + 5, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
-      FS.draw(ctx, lines[1], 7, py + 16, { color: '#f8eed0', shadow: PAL.ink, maxW: W - 14 });
+      FS.draw(ctx, lines[0], 7, py + 4, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
+      drawNumLine(ctx, lines[1], 7, py + 16, W - 14, '#f8eed0', PAL.ink);
       FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
       FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
       if (phase === 'end') {

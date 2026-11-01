@@ -949,12 +949,15 @@ G.scenes.register('world', (pos) => {
       const running = G.scenes.top() === this && !G.scenes.busy;
       let clk = g.clock();
       if (running && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');
-      const cw = F.measure('00:00'), cx = Math.round(W / 2 - cw / 2) + 5;
+      const cw = G.font.measure('00:00'), cx = Math.round(W / 2 - cw / 2);
       if (night && wt.icon === '☀') U.icon(ctx, 'moon', cx - 14, 4, '#c8d0ff');
       else F.draw(ctx, wt.icon, cx - 12, 5, { color: wt.col });
-      F.draw(ctx, clk, cx, 5, { color: v.min >= 23 * 60 ? '#ff8a6a' : night ? '#9ab0ff' : '#f8eed0' });
-      const mt = v.money + ' рё';
-      F.draw(ctx, mt, W - 6, 5, { align: 'right', color: '#f4d46a' });
+      // Цифры часов и денег — основным шрифтом: они решают (сколько времени до урока, хватает ли
+      // на рамен), а мелкий на телефоне приходится разбирать. Подписи остаются мелкими.
+      G.font.draw(ctx, clk, cx, 2, { color: v.min >= 23 * 60 ? '#ff8a6a' : night ? '#9ab0ff' : '#f8eed0' });
+      const mw = G.font.small.measure(' рё');
+      G.font.draw(ctx, String(v.money), W - 4 - mw, 2, { align: 'right', color: '#f4d46a' });
+      G.font.small.draw(ctx, ' рё', W - 4 - mw, 6, { color: '#c8a860' });
       // здоровье, чакра, усталость: значок + бамбуковая шкала (у усталости полная шкала — плохо)
       const bars = [['heart', C.hp, v.hp / 100], ['drop', C.chakra, v.chakra / 100], ['bolt', C.fatigue, v.fatigue / 100]];
       const cell = (W - 8) / 3;

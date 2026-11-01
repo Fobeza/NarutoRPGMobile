@@ -370,6 +370,9 @@ function frame(name, setup, bg, sz, touch) {
     G.scenes.stack.length = 0;
     const FW = sz ? sz[0] : W, FH = sz ? sz[1] : H;
     screen.width = FW; screen.height = FH; ctx.ensure();
+    // Сцены читают G.screen.W/H, а не переменные кадра: без этого «узкий» кадр рисовался бы
+    // в прежнем размере и в PNG оставалась чёрная полоса.
+    G.screen.W = FW; G.screen.H = FH;
     setup();
     for (let i = 0; i < 6; i++) for (const s of G.scenes.stack.slice()) s.update && s.update(0.05);
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.clips = []; ctx.stack = [];
@@ -395,14 +398,14 @@ function backdrop() {
   ctx.fillStyle = '#2e6a32'; ctx.fillRect(0, 176, W, 6);
 }
 
-function battleFrame(name, enemy, terrain) {
+function battleFrame(name, enemy, terrain, sz) {
   frame(name, () => {
     const sc = G.scenes.make('battle', { enemy, mode: 'spar', terrain }, () => {});
     G.scenes.stack.length = 0;
     G.scenes.push(sc);
     sc.enter && sc.enter();
     for (let i = 0; i < 40; i++) sc.update(.05);
-  }, null, [240, 320]);
+  }, null, sz || [240, 320]);
 }
 
 // ---------- набор кадров: всё в main(), чтобы файл можно было подключать из других скриптов ----------
@@ -471,6 +474,26 @@ frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
 frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+// Таблица цифр: ноль не должен читаться как восьмёрка даже в мелком шрифте.
+// Пары «0 8», «30 38», «85/85» и «6 5» — те места, где ошибка стоит дороже всего.
+frame('font_digits', () => {
+  G.scenes.stack.length = 0;
+  G.scenes.push({ name: 'digits', draw(c) {
+    c.fillStyle = '#14141e'; c.fillRect(0, 0, W, H);
+    const rows = [
+      ['Основной 8×16', (f, x, y) => G.font.draw(c, f, x, y, { color: '#f8eed0' })],
+      ['Мелкий 6×12', (f, x, y) => G.font.small.draw(c, f, x, y, { color: '#a8d8ff' })],
+    ];
+    rows.forEach(([title, put], i) => {
+      const y = 10 + i * 74;
+      G.font.small.draw(c, title, 6, y, { color: '#8ad07a' });
+      put('0123456789', 6, y + 12);
+      put('0 8 30 38 6 5', 6, y + 28);
+      put('85/85 1008 300 0%', 6, y + 44);
+    });
+    G.font.small.draw(c, 'Оба шрифта: ноль — овал с точкой, восьмёрка — два кольца', 6, H - 14, { color: '#c8c8d8', maxW: W - 12 });
+  } });
+}, null, [240, 160]);
 
 // ---------- главный экран и окна поверх мира ----------
 // Ставим настоящую сцену мира (HUD, карта, жители, джойстик), а сверху — окно.
@@ -493,6 +516,8 @@ battleFrame('battle_yard', 'sasuke', 'yard');
 battleFrame('battle_field', 'sasuke', 'field');
 battleFrame('battle_ring', 'sasuke', 'ring');
 battleFrame('battle_night', 'sasuke', 'night');
+// Тот же бой на «узком» экране 294×480 — плотность, при которой шрифт мельчает и цифры решают.
+battleFrame('battle_narrow', 'sasuke', 'field', [294, 480]);
 
 // ---------- кадры окружения: контакты текстур, комната, улица ----------
 const TEX = ['tex_floor','tex_planks','tex_tatami','tex_mat','tex_tilefloor','tex_dustfloor','tex_grass','tex_grass2',

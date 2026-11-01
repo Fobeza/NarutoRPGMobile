@@ -360,6 +360,24 @@ const uiMissing = new Map();
 check(uiMissing.size === 0, `символы интерфейса в шрифте: непокрытых ${uiMissing.size}`);
 for (const [ch, n] of uiMissing) say(`     - «${ch}» U+${ch.codePointAt(0).toString(16).toUpperCase()} × ${n} (нарисуется «?») `);
 
+// 6в. Ноль не должен читаться как восьмёрка: в середине нуля точка, а не перечёркивание.
+// Terminus рисует ноль с диагональю, и на телефоне «85/85», «300», «0%» читались как «8».
+// Признаки хорошего нуля, которые видно в самом глифе: он симметричен по горизонтали
+// (у перечёркнутого диагональю симметрии нет) и в его середине есть точка.
+for (const face of ['body', 'small']) {
+  const rows = G.FONT_DATA[face].glyphs['0'].split('|');
+  const cells = rows.map((r) => [...r]);
+  const ys = [], xs = [];
+  cells.forEach((row, y) => row.forEach((c, x) => { if (c === '#') { ys.push(y); xs.push(x); } }));
+  const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const body = cells.slice(y0, y1 + 1).map((row) => row.slice(x0, x1 + 1).join(''));
+  const mirrored = body.slice().reverse().join('|') === body.join('|');
+  const midY = Math.floor((body.length - 1) / 2), midX = Math.floor((body[0].length - 1) / 2);
+  const dot = body[midY][midX] === '#' || body[midY + 1][midX] === '#';
+  check(mirrored && dot, `${face}: ноль симметричен и с точкой в середине (симметрия: ${mirrored ? 'да' : 'нет'}, точка: ${dot ? 'есть' : 'нет'})`);
+  check(G.FONT_DATA[face].glyphs['0'] !== G.FONT_DATA[face].glyphs['8'], `${face}: ноль не совпадает с восьмёркой`);
+}
+
 // ─────────── 7. сцены: update + draw ───────────
 section('СЦЕНЫ (update + draw без исключений)');
 h.seed();
