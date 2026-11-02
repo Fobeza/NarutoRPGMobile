@@ -129,8 +129,9 @@ G.game = (() => {
     get v() { return G.state.vars; },
 
     // Загрузить сохранение из слота и войти в мир («Продолжить», импорт, резервная копия)
-    loadSaved() {
-      const st = G.storage.load();
+    // slot — номер слота; без него загружается новейший (прежнее поведение «Продолжить»)
+    loadSaved(slot) {
+      const st = G.storage.load(slot);
       G.game.newState();
       if (st) Object.assign(G.state, st);
       this.fix(G.state);

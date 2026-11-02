@@ -13,15 +13,34 @@ G.scenes.register('menu', () => {
     return {x,y,w,h,row,rows,z,top:y+header,paged};
   }
   function reveal(g){first=G.util.clamp(first,Math.max(0,idx-g.rows+1),idx);first=Math.min(first,items().length-g.rows);}
+  // Мир под меню: только он умеет прокручивать время.
+  const world = () => G.scenes.stack.find((s) => s.name === 'world');
+  // «Подождать»: 15 минут, час или до вечера. Часы идут как обычно — с усталостью и событиями.
+  function waitMenu() {
+    const w = world();
+    const why = !w ? 'Только в мире' : w.waitWhy();
+    if (why) {
+      G.audio.sfx.error();
+      G.scenes.push(G.scenes.make('pick', { title: 'ПОДОЖДАТЬ', text: 'Сейчас ждать нельзя: ' + why.toLowerCase() + '.', options: [{ label: 'Понятно' }] }));
+      return;
+    }
+    const spec = w.waitSpec();
+    G.scenes.push(G.scenes.make('pick', spec, (i) => {
+      if (i < 0) return;
+      const mins = spec.options[i].min;
+      G.scenes.pop();                                   // закрыть меню: мир должен снова стать верхним
+      if (mins > 0) w.skipTime(mins);
+    }));
+  }
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
+    { label: 'Подождать', act: waitMenu },
     { label: 'Задания', act: () => G.scenes.push(G.scenes.make('journal')) },
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
     { label: 'История', act: () => G.scenes.push(G.scenes.make('log')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
-    { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
     { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },

@@ -154,6 +154,29 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (id === 'release') { fx.flash = 0.3; fx.flashCol = '#c080ff'; }
   }
 
+  // Числа в бою набираем основным шрифтом: в них решают урон, ходы и проценты, а мелкий
+  // шрифт на телефоне приходится разбирать. Текст остаётся мелким, чтобы строка влезала целиком.
+  function drawNumLine(ctx, text, x, y, maxW, color, shadow) {
+    if (FS.measure(text) > maxW) return FS.draw(ctx, text, x, y, { color, shadow, maxW });
+    const parts = String(text).split(/(\d+(?:[.,/]\d+)*)/).filter((p) => p.length);
+    const width = parts.reduce((sum, p) => sum + (/^\d/.test(p) ? G.font.measure(p) : FS.measure(p)), 0);
+    if (width > maxW) return FS.draw(ctx, text, x, y, { color, shadow, maxW });
+    let cx = x;
+    for (const p of parts) {
+      const big = /^\d/.test(p);
+      if (big) G.font.draw(ctx, p, cx, y, { color, shadow });
+      else FS.draw(ctx, p, cx, y + 3, { color, shadow });
+      cx += big ? G.font.measure(p) + 1 : FS.measure(p) + 1;
+    }
+  }
+  // «Аналитик»: в бою видно, когда у врага будет готов приём (перезарядка) — этого больше нигде не показать.
+  function techNote() {
+    if (!D.has('analyst') || !D.E.tech) return '';
+    const t = D.E.tech, need = t.cost || 0;
+    if (D.E.charged || (D.E.cd <= 0 && D.E.ch >= need)) return ' · приём готов';
+    if (D.E.cd > 0) return ` · приём через ${D.E.cd}`;
+    return ' · приёму не хватает чакры';
+  }
   function intentLines(intent) {
     if (!intent) return ['Бой завершён', ''];
     if (afterEvents === 'enemy' && phase === 'play') return ['Ответ противника', intent.name];
@@ -161,17 +184,24 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (D.E.status.stun > 0) return [intent.name, 'Оглушён: действие будет пропущено'];
     if (attack) {
       let extra = intent.kind === 'drain' ? ' · кража чакры' : intent.kind === 'bind' ? ' · теневая связка' : '';
-      return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}`];
+      if (intent.pierce) extra += ' · сквозь блок';   // коронный приём обходит блок — нужен уклон или клоны
+      return [intent.name + (intent.hits > 1 ? ` · ${intent.hits} удара` : ''), `Ожидаемый урон ${G.duel.expectedIncoming(D)}${extra}${techNote()}`];
     }
-    if (intent.kind === 'charge') return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+    if (intent.kind === 'charge') {
+      // с «Аналитиком» видно, сколько снимет заряженный приём: это главный удар врага
+      const heavy = D.has('analyst') ? G.duel.chargePreview(D) : 0;
+      if (heavy > 0) return ['Замах: готовит тяжёлый приём', `Сорвать 3 звена · пройдёт ${heavy}`];
+      return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+    }
     if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
     if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
     if (intent.kind === 'fear') return [intent.name, 'Иллюзия: −1 карта и −1 действие на следующий ход'];
-    return [intent.name, intent.kind === 'idle' ? 'Можно спокойно развить атаку' : 'Враг не атакует в этом ходу'];
+    return [intent.name, (intent.kind === 'idle' ? 'Можно спокойно развить атаку' : 'Враг не атакует в этом ходу') + techNote()];
   }
 
   const S = {
     name: 'battle', D,
+    intentLines,                       // для автотеста: строки намерения и подсказка «Аналитика»
     touch() { return {}; },
     enter() {
       if (G.state.started && !G.state.battleCheckpoint) G.state.battleCheckpoint = JSON.stringify(Object.assign({}, G.state, { battleCheckpoint: null }));
@@ -312,14 +342,14 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      else if (mode === 'spar') F.draw(ctx, 'до 30% здоровья', W - 6, 33, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
       U.panel(ctx, 0, py, W, g.PH, 'plank');
       const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
-      FS.draw(ctx, lines[0], 7, py + 5, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
-      FS.draw(ctx, lines[1], 7, py + 16, { color: '#f8eed0', shadow: PAL.ink, maxW: W - 14 });
+      FS.draw(ctx, lines[0], 7, py + 4, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
+      drawNumLine(ctx, lines[1], 7, py + 16, W - 14, '#f8eed0', PAL.ink);
       FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
       FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
       if (phase === 'end') {

@@ -19,6 +19,6 @@ jobs:
       - name: Сборка
         run: python3 build.py
       - name: Сборка не отличается от закоммиченной
-        run: git diff --exit-code -- index.html sw.js map-editor.html
+        run: git diff --exit-code -- index.html sw.js map-editor.html art/runtime
       - name: Проверки без браузера
         run: python3 tools/check_node.py

@@ -1,7 +1,10 @@
 // Service Worker «Воля Огня»: кэширует игру при первом запуске → дальше работает без интернета.
 // Стратегия: сначала кэш (мгновенный запуск), в фоне — проверка обновления.
-const CACHE = 'wof-b448402f';
-const FILES = ['./', './index.html', './sw.js'];
+// Всё, что нужно для старта (index.html + art/runtime/*.js), лежит в FILES, поэтому в офлайне игра
+// поднимается целиком; меняется версия — старый кэш удаляется в activate.
+const CACHE = 'wof-fb9858bf';
+// Список файлов игры; данные арта build.py дописывает сам (арт вынесен из index.html).
+const FILES = ['./', './index.html', './sw.js', './art/runtime/house_art_data.js', './art/runtime/char_art_data.js', './art/runtime/environment_art_data.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));

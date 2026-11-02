@@ -14,6 +14,19 @@ G.calendar = {
     2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 9: 'Урок: хождение по дереву', 12: 'Урок: Хенге', 14: 'Урок: хождение по воде', 16: 'Урок: Буншин', 17: 'Урок гендзюцу', 21: 'ЭКЗАМЕН НА ГЕНИНА',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
+  // Последний день, на который в игре вообще есть содержимое: события календаря, сюжетные сцены
+  // и шаги заданий с днём. Дальше листать нечего — за финалом первой главы пустые недели и месяцы
+  // (docs/PLAN_FIX_2026-11-01.md, этап 7). Граница считается из данных, поэтому новые сцены,
+  // побочные цепочки и вторая глава сдвинут её сами, без правки числа руками.
+  lastDay() {
+    let last = 1;
+    for (const d of Object.keys(this.EVENTS)) last = Math.max(last, +d);
+    for (const e of G.STORY || []) last = Math.max(last, e.day || 0);
+    for (const q of Object.values(G.QUESTS || {})) for (const st of q.steps || []) if (st.day) last = Math.max(last, st.day);
+    return Math.max(28, last);   // меньше месяца календарь не показываем: обрезанная сетка выглядит поломкой
+  },
+  // Глава 1 пройдена: флаг ставит эпилог главной ветки (data/main_story.js, mq_epilogue)
+  finished() { return !!G.state.flags.postgame; },
   upcoming(n = 8) {
     const d0 = G.state.vars.day, out = [];
     for (let d = d0; d <= d0 + G.game.MONTH_DAYS && out.length < n; d++) {

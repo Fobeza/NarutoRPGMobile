@@ -20,7 +20,7 @@
 
 ```bash
 # 1. поправить файлы в src/  (что где лежит — ниже и в docs/)
-python3 build.py                    # 2. собрать → index.html + sw.js + map-editor.html
+python3 build.py                    # 2. собрать → index.html + sw.js + art/runtime/* + map-editor.html
 python3 tools/check_node.py         # 3. быстрые проверки без браузера (~12 с, нужен Node.js 18+)
 python3 tools/check_all.py --quick  # 4. то же + браузерные тесты (полная проверка — без --quick)
 # После проверок: коммит в рабочую ветку → PR → merge в main → дождаться GitHub Pages
@@ -37,9 +37,12 @@ python3 tools/check_all.py --quick  # 4. то же + браузерные тес
 ```
 NarutoRPGMobile/
 ├── index.html, sw.js      ← СОБРАННАЯ ИГРА (не править руками — перезаписывается build.py)
+├── art/runtime/           ← СОБРАННЫЕ данные графики (дома, персонажи, окружение): отдельные файлы,
+│                             чтобы index.html оставался 1,5 МБ; их тоже пишет build.py
 ├── map-editor.html        ← СОБРАННЫЙ РЕДАКТОР (не править вручную)
 ├── art/                   компактные мастеры графики и manifest
-├── build.py               сборщик: склеивает src/ в один index.html (порядок модулей — список JS_FILES)
+├── build.py               сборщик: склеивает src/ в index.html (порядок модулей — JS_FILES), выносит
+│                          данные графики в art/runtime/ (ART_FILES) и пишет sw.js с их списком
 ├── src/
 │   ├── data/              ДАННЫЕ — сюда заходишь чаще всего
 │   │   ├── characters.js    внешность всех персонажей (цвета, причёски, одежда, детали)

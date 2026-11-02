@@ -121,14 +121,20 @@ G.storage = {
     return true;
   },
 
-  // Информация о слотах для экрана «Сохранение»: день, время, дата записи
+  // Информация о слотах для экрана «Сохранение» и выбора на титуле: день, время, дата записи, имя героя
   slotInfo(i) {
     const d = this._good(this.KEY_SLOTS[i] || this.KEY_SAVE);
     if (!d) return null;
     const dt = new Date(d.t || 0);
     const pad = (n) => String(n).padStart(2, '0');
-    return { day: d.state.vars.day, min: d.state.vars.min, t: d.t || 0,
+    return { day: d.state.vars.day, min: d.state.vars.min, t: d.t || 0, name: d.state.hero.name || 'Герой',
       when: `${pad(dt.getDate())}.${pad(dt.getMonth() + 1)}, ${pad(dt.getHours())}:${pad(dt.getMinutes())}` };
+  },
+  // Заполненные слоты по возрастанию номера: титул показывает список, если записей больше одной
+  filled() {
+    const out = [];
+    for (let i = 0; i < this.SLOTS; i++) if (this._good(this.KEY_SLOTS[i])) out.push(i);
+    return out;
   },
   // Новейший слот: «Продолжить» на титульном экране открывает именно его
   newestSlot() {

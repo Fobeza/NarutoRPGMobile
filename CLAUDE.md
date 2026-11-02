@@ -6,7 +6,7 @@
 ## Команды
 
 ```bash
-python3 build.py                     # src/ → index.html + sw.js + map-editor.html (корень репозитория = сайт GitHub Pages)
+python3 build.py                     # src/ → index.html + sw.js + art/runtime/*.js + map-editor.html (корень = сайт GitHub Pages)
 python3 -m http.server 8765          # локальный сервер из корня → http://localhost:8765/?debug=1
 python3 tools/check_node.py          # быстрые проверки без браузера (~12 с, нужен Node.js) — после любой правки
 python3 tools/check_all.py --quick   # сборка + Node-проверки + быстрые браузерные тесты
@@ -22,7 +22,8 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 
 ## Правила
 
-1. **Никогда не правь `index.html` и корневой `sw.js` руками** — это результат сборки. Правь `src/`, потом `python3 build.py`.
+1. **Никогда не правь `index.html`, корневой `sw.js` и `art/runtime/*.js` руками** — это результат сборки
+   (данные графики `art/runtime/` собираются из `src/gfx/*_art_data.js` через `ART_FILES`). Правь `src/`, потом `python3 build.py`.
 2. Всё в глобальном `G`. Новый файл → добавь в `JS_FILES` в `build.py` (порядок важен: при загрузке модуль видит только то, что выше).
 3. Контент — это данные: персонажи `src/data/characters.js`, расписания `src/data/schedule.js`, задания `data/quests.js`,
    предметы `data/items.js`, бой `data/duel_data.js` (правила — `docs/COMBAT.md`, ядро `systems/duel.js`), диалоги — язык из `docs/SCRIPTS.md`. Рецепты — `docs/CONTENT_GUIDE.md`.

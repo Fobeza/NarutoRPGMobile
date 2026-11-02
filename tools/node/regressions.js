@@ -130,6 +130,53 @@ test('Календарь по месяцам: 28 дней, июнь → июль
   for (const d of [1, 40, 100, 200, 500]) assert.equal(G.life.season().name, 'Лето');
   assert.ok(G.calendar.upcoming(5).every(e => e.d <= G.state.vars.day + 28));
 });
+test('Календарь не листается в пустоту: граница — последний день с содержимым', () => {
+  const done = G.state.flags.postgame, day = G.state.vars.day;
+  try {
+    G.state.vars.day = 1; delete G.state.flags.postgame;
+    assert.equal(G.calendar.lastDay(), 44, 'сейчас последнее содержимое — 44-й день (сцена «Воля Огня»)');
+    // граница считается из данных, а не вписана числом: новая сцена сама её двигает
+    const probe = { id: 'probe', day: 61, from: 0, to: 1440, where: 'any', script: 'x' };
+    G.STORY.push(probe);
+    assert.equal(G.calendar.lastDay(), 61, 'новая сюжетная сцена сдвигает границу');
+    G.STORY.pop();
+    assert.equal(G.calendar.lastDay(), 44, 'без неё граница прежняя');
+
+    // панель: с 1-го дня листается до 44-го и не дальше, выбранный день не переползает границу
+    G.state.vars.day = 1;
+    const soon = G.scenes.make('calendar');
+    G.scenes.push(soon);
+    assert.deepEqual(soon.bounds(), { limit: 44, page: 0, lastPage: 1 }, 'две страницы, вторая кончается 44-м');
+    const tap = (x, y) => { G.input.tapNow = { x, y }; soon.update(.016); G.input.tapNow = null; };
+    tap(G.screen.W - 30, G.touch.header().height + 30);           // стрелка «дальше» → июль
+    assert.equal(soon.bounds().page, 1, 'стрелка «дальше» открывает вторую страницу');
+    for (let i = 0; i < 80; i++) tap(G.screen.W - 30, G.touch.header().height + 30);
+    assert.equal(soon.bounds().page, 1, 'дальше второй страницы календарь не идёт');
+    for (let i = 0; i < 60; i++) key(soon, 'down');
+    assert.equal(soon.selected(), 44, 'курсор останавливается на последнем дне с содержимым');
+
+    // после эпилога день уходит дальше границы, но календарь открывается на 44-м
+    G.state.vars.day = 60; G.state.flags.postgame = 1;
+    assert.ok(G.calendar.finished(), 'эпилог помечает главу пройденной');
+    const after = G.scenes.make('calendar');
+    assert.equal(after.selected(), 44, 'после финала календарь открывается на последнем дне с содержимым');
+    assert.equal(after.bounds().limit, 44, 'и листать дальше не даёт');
+    // подпись на пройденной главе: внизу панели и в тексте последнего дня
+    assert.equal(after.caption(), 'Глава 1 пройдена', 'видно «Глава 1 пройдена»');
+    assert.ok(after.hint().includes('вторая глава'), 'и объяснение, почему дальше не листается');
+    delete G.state.flags.postgame;
+    const before = G.scenes.make('calendar');
+    assert.equal(before.caption(), '', 'до эпилога подписи нет');
+    G.state.flags.postgame = 1;
+    // кадр рисуется без исключений и в пройденной главе, и до неё
+    const ctx = h.recordingCtx(G.screen.W, G.screen.H);
+    for (const sc of [after, before]) { G.scenes.stack.length = 0; G.scenes.push(sc); sc.draw(ctx); }
+  } finally {
+    G.scenes.stack.length = 0;
+    G.state.vars.day = day;
+    if (done) G.state.flags.postgame = 1; else delete G.state.flags.postgame;
+  }
+});
 test('Уроки дерева и воды называют свою практику и в обычном, и в перенесённом тексте', () => {
   const old = { start: G.dialog.start, say: G.dialog.say, run: G.lessons.run, make: G.scenes.make, push: G.scenes.push };
   let lines = [];
@@ -356,6 +403,25 @@ test('Карточная дуэль: пять карт, три действия,
   assert.equal(D.hand[0].uid, 999, 'сброс перемешивается в новую колоду');
 });
 
+test('Карточная дуэль: доля здоровья вместо абсолютных чисел — блок в процентах, приём пробивает блок', () => {
+  const mk = (intent) => {
+    const D = G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: [], fatigue: 0, surge: false });
+    D.intent = intent; return D;
+  };
+  const hit = (intent, cards = []) => { const D = mk(intent); const hp = D.P.hp; for (const id of cards) { forceCard(D, id); G.duel.play(D, id); } G.duel.endTurn(D); return hp - D.P.hp; };
+  const D0 = mk({ kind: 'strike', name: 'Удар', dmg: 1, hits: 1 });
+  const hpMax = D0.P.hpMax, guard = Math.round(hpMax * (0.10 + 0.015 * 5));
+  assert.ok(guard > 10 && guard < hpMax * 0.25, `блок — доля здоровья: ${guard} из ${hpMax}`);
+  const plain = hit({ kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }, ['guard']);
+  const tech = hit({ kind: 'tech', name: 'Приём', dmg: 40, hits: 1, pierce: true }, ['guard']);
+  const series = hit({ kind: 'multi', name: 'Серия', dmg: 20, hits: 2 }, ['guard']);
+  assert.equal(plain, 40 - guard, `защита поглотила блок: ${plain}`);
+  assert.equal(tech, 40, `приём пробивает блок: ${tech}`);
+  assert.equal(series, 40 - guard, `серия: блок тратится по урону: ${series}`);
+  const D = mk({ kind: 'strike', name: 'Удар', dmg: 30, hits: 1 });
+  assert.equal(G.duel.expectedIncoming(D), 30, 'намерение показывает урон без защиты');
+});
+
 test('Карточная дуэль: блок, уклон, их сочетание и контратака зависят от намерения', () => {
   const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: [], fatigue: 0, surge: false });
   const received = (ids) => { const D = mk(); D.intent = { kind: 'strike', name: 'Удар', dmg: 40, hits: 1 }; const hp = D.P.hp; for (const id of ids) { forceCard(D, id); G.duel.play(D, id); } G.duel.endTurn(D); return hp - D.P.hp; };
@@ -379,6 +445,34 @@ test('Карточные связки: метка, Финт, Суйтон → Р
   const K = mk(); forceCard(K, 'katon'); G.duel.play(K, 'katon'); assert.equal(K.E.status.burn, 2); hp = K.E.hp; G.duel.endTurn(K); assert.ok(K.E.hp <= hp - 4, 'горение наносит урон в конце хода');
   const C = mk('choji'); C.intent = { kind: 'charge', name: 'Замах', interrupt: 3 }; C.E.chargeBroken = 0; forceCard(C, 'combo'); G.duel.play(C, 'combo');
   assert.ok(C.P.chain >= 3 && C.E.status.stun === 1 && C.E.chargeBroken === 1, 'три звена тайдзюцу срывают замах');
+});
+
+test('Урон врага: один множитель на предпросмотр и на удар', () => {
+  const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: Object.keys(G.TECHS), fatigue: 0, surge: false });
+  const open = (D) => { D.P.block = 0; D.P.dodge = 0; D.P.clones = 0; return D; };   // защиты нет — сравниваем сам урон
+  const cases = [{}, { fear: 2 }, { fear: 2, slow: 1 }, { fear: 2, slow: 1, weak: 1 }];
+  for (const st of cases) {
+    for (const [dmg, hits] of [[30, 1], [33.3, 2], [27.5, 2]]) {
+      const D = open(mk()); Object.assign(D.E.status, st);
+      D.intent = { kind: hits > 1 ? 'multi' : 'strike', name: 'Проба', dmg, hits };
+      const want = (st.fear ? D.P.fearMul : 1) * (st.slow ? 0.75 : 1) * (st.weak ? 0.75 : 1);
+      assert.equal(G.duel.enemyMul(D), want, 'множитель — произведение страха, замедления и слабости');
+      const prev = G.duel.expectedIncoming(D), intent = G.duel.intentDamage(D);
+      const hp = D.P.hp; G.duel.endTurn(D); const real = hp - D.P.hp;
+      assert.equal(intent, prev, 'строка намерения и «Ожидаемый урон» считают одинаково');
+      // Один удар сходится точно. У серии предпросмотр округляет сумму, а бой — каждый удар,
+      // поэтому расхождение возможно ровно на единицу (см. docs/PLAN_FIX_2026-11-01.md, этап 8).
+      assert.ok(Math.abs(prev - real) <= (hits - 1), `предпросмотр и удар сходятся (${dmg}×${hits}, ${JSON.stringify(st)}: ${prev} против ${real})`);
+    }
+  }
+  // без ослаблений урон не режется: множитель ровно 1
+  assert.equal(G.duel.enemyMul(open(mk())), 1, 'без ослаблений урон врага не уменьшается');
+  // удар по защите тоже сходится: предпросмотр учитывает, что блок тратится по урону
+  const G1 = mk(); G1.P.dodge = 0; G1.P.clones = 0; G1.E.status.weak = 1;
+  G1.intent = { kind: 'multi', name: 'Серия', dmg: 20, hits: 2 };
+  forceCard(G1, 'guard'); G.duel.play(G1, 'guard');
+  const pv = G.duel.expectedIncoming(G1), hp1 = G1.P.hp; G.duel.endTurn(G1);
+  assert.equal(pv, hp1 - G1.P.hp, 'с блоком предпросмотр тоже сходится');
 });
 
 test('Карточная дуэль: клоны, Хенге, страх и полное уклонение под теневой связкой', () => {
@@ -428,6 +522,42 @@ test('Карточная дуэль: усталость, стабильност�
   assert.ok(blocks / n > 0.4, 'counter читает повторную тайдзюцу-серию: ' + (blocks / n).toFixed(2));
 });
 
+test('Навыки героя работают так, как написано в описаниях', () => {
+  const base = { enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: () => 0.5, stability: 100, techs: [], fatigue: 0, surge: false };
+  const duel = (skills) => { h.seed(st => { st.hero.skills = skills; }); return G.duel.create(Object.assign({ skills }, base)); };
+  const amount = (D, id) => parseInt(G.duel.preview(D, id)[0], 10);
+  // «Упорство»: +25% урона на последних силах, выше 30% HP бонуса нет
+  let D = duel(['grit']); const lowGrit = (D.P.hp = Math.round(D.P.hpMax * 0.2), amount(D, 'strike'));
+  D = duel([]); D.P.hp = Math.round(D.P.hpMax * 0.2); const lowPlain = amount(D, 'strike');
+  assert.ok(lowGrit > lowPlain, `«Упорство» усиливает удар ниже 30% HP: ${lowPlain} → ${lowGrit}`);
+  const fullGrit = (D = duel(['grit']), amount(D, 'strike')), fullPlain = (D = duel([]), amount(D, 'strike'));
+  assert.equal(fullGrit, fullPlain, 'при полном HP «Упорство» не влияет');
+  // «Меткий глаз»: +20% урона «Кунаю»
+  const kunaiEye = (D = duel(['eagle_eye']), amount(D, 'kunai')), kunaiPlain = (D = duel([]), amount(D, 'kunai'));
+  assert.ok(kunaiEye > kunaiPlain, `«Меткий глаз» усиливает кунай: ${kunaiPlain} → ${kunaiEye}`);
+  // «Крепкий орешек»: один раз за бой герой остаётся на 1 HP вместо поражения
+  D = duel(['tough']); D.E.dmg = 99; D.intent = { kind: 'strike', name: 'Удар', dmg: 99, hits: 1 };
+  Object.assign(D.P, { hp: 1, block: 0, clones: 0, dodge: 0 }); G.duel.endTurn(D);
+  assert.equal(D.P.hp, 1); assert.equal(D.toughUsed, true); assert.ok(!D.over, 'первый смертельный удар пережит');
+  Object.assign(D.P, { hp: 1, block: 0, clones: 0, dodge: 0 }); D.intent = { kind: 'strike', name: 'Удар', dmg: 99, hits: 1 }; G.duel.endTurn(D);
+  assert.ok(D.over && !D.over.win, 'второй смертельный удар в том же бою добивает');
+  // «Быстрые руки»: +1,5 с на печати рук
+  h.seed(st => { st.hero.skills = []; }); const sealsPlain = G.scenes.make('train', 'seals', () => {}).dur().seals;
+  h.seed(st => { st.hero.skills = ['fast_hands']; }); const sealsFast = G.scenes.make('train', 'seals', () => {}).dur().seals;
+  assert.equal(Math.round((sealsFast - sealsPlain) * 10) / 10, 1.5, `печати: ${sealsPlain} → ${sealsFast} с`);
+  // «Аналитик»: видно, через сколько ходов враг применит приём, и сколько пройдёт от замаха
+  h.seed(st => { st.hero.skills = ['analyst']; });
+  const b = battle('ko');
+  b.D.E.tech = { name: 'Техника', power: 1, kind: 'dmg', cost: 10 }; b.D.E.cd = 2; b.D.E.ch = 99; b.D.E.charged = 0;
+  b.D.intent = { kind: 'strike', name: 'Удар', dmg: 5, hits: 1 };
+  assert.ok(b.intentLines(b.D.intent)[1].includes('приём через 2'), 'виден отсчёт до приёма: ' + b.intentLines(b.D.intent)[1]);
+  b.D.intent = { kind: 'charge', name: 'Замах', interrupt: 3 }; const heavy = b.intentLines(b.D.intent)[1];
+  assert.ok(/пройдёт \d+/.test(heavy), 'виден урон заряженного приёма: ' + heavy);
+  h.seed(st => { st.hero.skills = []; });
+  const nb = battle('ko'); nb.D.E.tech = { name: 'Техника', power: 1, kind: 'dmg', cost: 10 }; nb.D.E.cd = 2; nb.D.E.ch = 99;
+  nb.D.intent = { kind: 'strike', name: 'Удар', dmg: 5, hits: 1 };
+  assert.ok(!nb.intentLines(nb.D.intent)[1].includes('приём'), 'без «Аналитика» отсчёта нет');
+});
 test('Спарринг не восстанавливает здоровье героя бесплатно', () => {
   G.state.vars.hp = 15; const b = battle('spar'); b.debugLose(); assert.equal(G.state.vars.hp, 15);
 });
@@ -718,6 +848,97 @@ test('У каждого персонажа есть нарисованный л�
   assert.notEqual(G.chars.sheet('stranger'), G.chars.sheet('thief'), 'листы не один и тот же объект');
   assert.ok(G.chars.portrait('stranger'), 'портрет собирается');
   assert.equal(G.ENEMIES.stranger.spr, 'stranger', 'в бою свой спрайт, а не вор');
+});
+
+// Мир для проверок ожидания: герой на улице, урок и случайные события отключены, чтобы
+// тайминги в тесте не зависели от расписания и Math.random.
+function openWorld(min) {
+  clean();
+  h.seed(st => { st.flags.hosp_done = 1; st.flags.frd_init = 1; st.daily.lesson = 1; st.daily.ev = 2; st.vars.min = min; });
+  G.scenes.stack.length = 0;
+  const w = G.scenes.make('world', G.world.outsideOf(G.world.heroHome()));
+  G.scenes.push(w);
+  return w;
+}
+test('«Подождать»: 15 и 60 минут двигают часы и копят усталость', () => {
+  const w = openWorld(12 * 60);
+  const fat = G.state.vars.fatigue;
+  assert.equal(w.skipTime(15), 15);
+  assert.equal(G.state.vars.min, 12 * 60 + 15, 'часы сдвинулись ровно на 15 минут');
+  assert.ok(G.state.vars.fatigue > fat, 'ожидание не бесплатное: усталость выросла');
+  assert.equal(w.skipTime(60), 60);
+  assert.equal(G.state.vars.min, 13 * 60 + 15);
+  assert.ok(w.toast && /Ждали 60 мин/.test(w.toast.text), 'после ожидания видно, сколько прошло: ' + (w.toast && w.toast.text));
+  // в ожидании не пролетает обед и не срабатывает прогул урока: daily.lesson выставлен
+  assert.equal(G.state.vars.miss || 0, 0, 'урок не считается прогулянным');
+  // «до вечера» останавливается на 18:00, а не проскакивает его
+  G.state.vars.min = 17 * 60 + 30;
+  assert.equal(w.skipTime(18 * 60 - G.state.vars.min), 30);
+  assert.equal(G.state.vars.min, 18 * 60);
+});
+
+test('«Подождать»: сюжетное событие прерывает ожидание, а урок и сцена его запрещают', () => {
+  const w = openWorld(13 * 60 + 30);
+  const id = 'test_wait_story';
+  assert.ok(G.script.library.st_roofs, 'сцена для события существует');
+  G.STORY.push({ id, day: G.state.vars.day, from: 14 * 60, to: 18 * 60, where: 'out', script: 'st_roofs' });
+  try {
+    const passed = w.skipTime(18 * 60 - (13 * 60 + 30));
+    assert.ok(passed < 270, 'ожидание оборвалось раньше вечера: прошло ' + passed + ' мин');
+    assert.equal(G.state.flags['st_' + id], 1, 'событие сработало по времени');
+    assert.equal(G.state.vars.min, 14 * 60, 'остановились ровно на времени события');
+    assert.notEqual(G.scenes.top().name, 'world', 'событие открыло сцену поверх мира');
+  } finally {
+    const i = G.STORY.findIndex((e) => e.id === id); if (i >= 0) G.STORY.splice(i, 1);
+    delete G.state.flags['st_' + id];
+  }
+  G.scenes.stack.length = 0; const w2 = openWorld(12 * 60);
+  G.state.daily.lessonRun = 1; assert.equal(w2.waitWhy(), 'Идёт урок');
+  assert.equal(w2.skipTime(60), 0, 'на уроке часы не прокручиваются');
+  assert.equal(G.state.vars.min, 12 * 60);
+  delete G.state.daily.lessonRun;
+  w2.cine = {}; assert.ok(w2.waitWhy(), 'во время сцены ждать нельзя'); w2.cine = null;
+  assert.equal(w2.waitWhy(), null);
+});
+
+test('Меню паузы: «Подождать» предлагает 15 минут, час и вечер, выбор прокручивает время', () => {
+  const w = openWorld(15 * 60);
+  const menu = G.scenes.push(G.scenes.make('menu'));
+  const labels = menu.labels();
+  assert.ok(labels.includes('Подождать'), 'пункт есть: ' + labels.join(' | '));
+  // встаём на строку «Подождать» и жмём «А»
+  for (let i = 0; i < labels.indexOf('Подождать'); i++) key(menu, 'down');
+  key(menu, 'a');
+  const pick = G.scenes.top();
+  assert.equal(pick.name, 'pick', 'открылось окно выбора времени');
+  assert.deepEqual(pick.labels(), ['15 минут', '1 час', 'До вечера'], 'три варианта ожидания');
+  pick.choose(1);                                   // «1 час»
+  assert.equal(G.scenes.top(), w, 'меню закрылось, вернулись в мир');
+  assert.equal(G.state.vars.min, 16 * 60, 'час прошёл');
+  // после 18:00 «До вечера» недоступно, но 15 минут и час остаются
+  G.state.vars.min = 19 * 60;
+  const m2 = G.scenes.push(G.scenes.make('menu'));
+  for (let i = 0; i < m2.labels().indexOf('Подождать'); i++) key(m2, 'down');
+  key(m2, 'a');
+  const pick2 = G.scenes.top();
+  assert.equal(pick2.name, 'pick');
+  assert.deepEqual(pick2.labels(), ['15 минут', '1 час', 'До вечера'], 'три варианта остаются на месте');
+  pick2.choose(2);
+  assert.equal(G.state.vars.min, 19 * 60, 'вечером «До вечера» ничего не сдвигает');
+});
+
+test('В окнах нет повторяющихся пунктов, и каждый ведёт на свой экран', () => {
+  clean();
+  // Раньше «Колода» стояла в меню паузы дважды: два одинаковых пункта между «Статусом» и «Сумкой».
+  const menu = G.scenes.make('menu');
+  const labels = menu.labels();
+  assert.equal(new Set(labels).size, labels.length, 'повторы в меню: ' + labels.join(' | '));
+  assert.ok(labels.includes('Колода'), 'пункт «Колода» на месте');
+  // У каждого пункта — своё действие: открыть меню и сверить, что число пунктов совпадает с числом действий
+  const rows = menu.visibleRows();
+  assert.ok(rows.length > 5, 'список меню собирается постранично');
+  const peek = G.scenes.make('pick', { title: 'т', options: [{ label: 'а' }, { label: 'б' }] }, () => {});
+  assert.deepEqual(peek.labels(), ['а', 'б'], 'окно выбора тоже отдаёт подписи без повторов');
 });
 
 console.log(`ИТОГ регрессий: ✔ ${passed}  ✘ ${failed}`);

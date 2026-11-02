@@ -49,7 +49,10 @@ G.scenes.register('train', (kind, opts, onDone) => {
     cat: 'Лови кошку Тору! Касайся клетки, где она выглянет.',
     sort: 'Сортируй: коснись левой или правой половины экрана.',
   };
-  const DUR = { meditate: 16, tree: 14, seals: 16, cat: 18 };
+  // Длительность мини-игр в секундах. «Быстрые руки» дают +1,5 с на печати — больше успеешь сложить.
+  // Считаем на старте тренировки: навыки героя к этому моменту могли измениться.
+  const durOf = () => ({ meditate: 16, tree: 14, seals: 16 + (G.hero.has('fast_hands') ? 1.5 : 0), cat: 18 });
+  let DUR = durOf();
 
   function init() {
     if (kind === 'throw') { st.n = 0; st.max = 8; st.x = 0; st.sp = 1.6; st.zone = 9 + (G.hero.has('eagle_eye') ? 4 : 0); total = 8; }
@@ -91,7 +94,8 @@ G.scenes.register('train', (kind, opts, onDone) => {
   const S = {
     name: 'train', kind,
     finishNow(s) { score = s * total; finish(); },   // для автотеста
-    enter() { init(); },
+    dur: durOf,                                      // для автотеста: сколько длится мини-игра
+    enter() { DUR = durOf(); init(); },
     // кнопка удержания нужна только в играх, где значение берётся из held('a')
     touch() { return { action: phase === 'play' && (kind === 'meditate' || kind === 'tree') ? { label: 'Держи' } : null }; },
     update(dt) {

@@ -360,6 +360,24 @@ const uiMissing = new Map();
 check(uiMissing.size === 0, `символы интерфейса в шрифте: непокрытых ${uiMissing.size}`);
 for (const [ch, n] of uiMissing) say(`     - «${ch}» U+${ch.codePointAt(0).toString(16).toUpperCase()} × ${n} (нарисуется «?») `);
 
+// 6в. Ноль не должен читаться как восьмёрка: в середине нуля точка, а не перечёркивание.
+// Terminus рисует ноль с диагональю, и на телефоне «85/85», «300», «0%» читались как «8».
+// Признаки хорошего нуля, которые видно в самом глифе: он симметричен по горизонтали
+// (у перечёркнутого диагональю симметрии нет) и в его середине есть точка.
+for (const face of ['body', 'small']) {
+  const rows = G.FONT_DATA[face].glyphs['0'].split('|');
+  const cells = rows.map((r) => [...r]);
+  const ys = [], xs = [];
+  cells.forEach((row, y) => row.forEach((c, x) => { if (c === '#') { ys.push(y); xs.push(x); } }));
+  const y0 = Math.min(...ys), y1 = Math.max(...ys), x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const body = cells.slice(y0, y1 + 1).map((row) => row.slice(x0, x1 + 1).join(''));
+  const mirrored = body.slice().reverse().join('|') === body.join('|');
+  const midY = Math.floor((body.length - 1) / 2), midX = Math.floor((body[0].length - 1) / 2);
+  const dot = body[midY][midX] === '#' || body[midY + 1][midX] === '#';
+  check(mirrored && dot, `${face}: ноль симметричен и с точкой в середине (симметрия: ${mirrored ? 'да' : 'нет'}, точка: ${dot ? 'есть' : 'нет'})`);
+  check(G.FONT_DATA[face].glyphs['0'] !== G.FONT_DATA[face].glyphs['8'], `${face}: ноль не совпадает с восьмёркой`);
+}
+
 // ─────────── 7. сцены: update + draw ───────────
 section('СЦЕНЫ (update + draw без исключений)');
 h.seed();
@@ -456,6 +474,22 @@ check(outOfWindow.length === 0, `целевые окна баланса («ср�
 for (const o of outOfWindow.slice(0, 20)) say('     - ' + o);
 const timeouts = rows.filter((r) => r.timeout > 0);
 check(timeouts.length === 0, `боёв, не уложившихся в лимит ходов: ${timeouts.length}`);
+// Урон врага задан долей здоровья героя (этап 4): ни один удар, даже заряженный приём, не снимает всё
+// здоровье разом — иначе бой снова превращается в лотерею «повезло с уклоном или нет».
+const refStats = { tai: 5, nin: 5, gen: 5, chakra: 5, ctrl: 5, spd: 5, end: 5, know: 5 };
+const badHits = [];
+for (const id of Object.keys(G.ENEMIES)) {
+  const e = G.ENEMIES[id];
+  const share = e.share != null ? e.share : G.duel.TUNE.baseShare;
+  if (!(share >= 0.1 && share <= 0.8)) { badHits.push(`${e.name}: доля ${share} вне 0,1–0,8`); continue; }
+  const D = G.duel.create({ enemy: id, mode: 'ko', stats: refStats, techs: [], rng: G.duel.mulberry(1), stability: 100, fatigue: 0, surge: false });
+  const hp = D.P.hpMax;
+  const tech = e.tech && e.tech.kind === 'dmg' ? Math.min(share * (e.tech.power || 1), G.duel.TUNE.techShare) * hp * 1.25 : 0;
+  const worst = Math.max(D.E.dmg, D.E.dmg * G.duel.TUNE.series, tech);
+  if (worst >= hp) badHits.push(`${e.name}: удар ${Math.round(worst)} при здоровье ${hp}`);
+}
+check(badHits.length === 0, `урон врага — доля здоровья героя: смертельных с одного удара ${badHits.length} из ${Object.keys(G.ENEMIES).length}`);
+for (const o of badHits.slice(0, 8)) say('     - ' + o);
 // minTurns — защита от «финала в три хода»: бой обязан быть длинным, даже если сборка его выигрывает
 const minTurns = TGT.TARGETS.minTurns || {};
 const short = [];
@@ -504,6 +538,47 @@ check(G.storage.importCode('WOF1:' + Buffer.from(JSON.stringify({ v: 99, state: 
   G.storage.wipe();
 }
 
+// Титул: несколько сохранений — «Продолжить» спрашивает, с какого, и грузит именно выбранный слот.
+// До этапа 5 «Загрузить игру» в меню сохранений ставила G.storage.active, но G.game.loadSaved()
+// его игнорировал и всегда открывал новейший слот.
+{
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 4, then: null };
+  G.storage.wipe();
+  h.seed((st) => { st.vars.day = 3; st.vars.min = 8 * 60; st.hero.name = 'Первый'; });
+  G.storage.save(G.state, { slot: 0 });
+  h.seed((st) => { st.vars.day = 12; st.vars.min = 7 * 60; st.hero.name = 'Второй'; });
+  G.storage.save(G.state, { slot: 1 });
+  check(G.storage.filled().length === 2 && G.storage.newestSlot() === 1,
+    `два слота, новейший — ${G.storage.newestSlot() + 1}-й`);
+  const info = G.storage.slotInfo(0);
+  check(!!info && info.name === 'Первый' && info.day === 3, `слот 1: ${info && info.name}, день ${info && info.day}`);
+
+  const T = G.scenes.push(G.scenes.make('title'));
+  const menu = T.menu().map((x) => x.label);
+  check(menu.includes('Продолжить') && menu.includes('Загрузить слот'), 'на титуле «Продолжить» и «Загрузить слот»: ' + menu.join(' / '));
+  T.menu().find((x) => x.label === 'Продолжить').act();
+  const P = G.scenes.top();
+  check(!!P && P.name === 'pick' && P.labels().length === G.storage.SLOTS + 1,
+    '«Продолжить» открыла выбор слотов: ' + (P && P.labels ? P.labels().join(' / ') : 'нет окна'));
+  P.choose(0);                                  // слот 1 — не новейший
+  G.scenes.update(1);                           // пережить затемнение
+  check(G.state.vars.day === 3 && G.storage.active === 0,
+    `выбор слота 1 загрузил день ${G.state.vars.day}, активный слот ${G.storage.active + 1}`);
+
+  // одно сохранение — прежнее поведение: «Продолжить» грузит сразу, без вопроса
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 4, then: null };
+  G.storage.wipe(1);
+  const T2 = G.scenes.push(G.scenes.make('title'));
+  T2.menu().find((x) => x.label === 'Продолжить').act();
+  check(G.scenes.top() === T2 && G.scenes.fade.dir === 1, 'одно сохранение — загрузка без выбора слота');
+  G.scenes.update(1);
+  check(G.state.vars.day === 3, `единственный слот загрузился: день ${G.state.vars.day}`);
+
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 4, then: null };
+  G.storage.wipe();
+  h.seed();
+}
+
 // аудит B09/B10: награды дружбы за все пересечённые уровни, каждая один раз
 {
   h.seed((st) => { st.vars.friend_naruto = 14; });
@@ -521,6 +596,30 @@ check(G.storage.importCode('WOF1:' + Buffer.from(JSON.stringify({ v: 99, state: 
   G.state.started = true; G.state.daily = {}; G.state.vars.miss = 0;
   G.game.sleep();
   check(G.state.vars.miss === 1, 'сон вместо урока засчитывается как прогул');
+}
+
+// ─────────── вес и офлайн: данные арта живут отдельно от бандла ───────────
+// Арт (дома, персонажи, окружение) вынесен в art/runtime/*.js: index.html качается и разбирается
+// втрое быстрее, а sw.js кэширует арт отдельными файлами. Проверяем, что вынос не «полу-вынос»:
+// данных в бандле нет, внешние файлы существуют, service worker их знает, G.ART_STR всё ещё строка.
+section('ВЕС И ОФЛАЙН');
+{
+  const root = h.ROOT;
+  const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+  const htmlKb = fs.statSync(path.join(root, 'index.html')).size / 1024;
+  const externals = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map((m) => m[1]);
+  check(htmlKb < 2048, `index.html = ${htmlKb.toFixed(0)} КБ (данные арта вынесены)`);
+  check(!/G\.ART_STR\s*=\s*Object\.assign/.test(html), 'в index.html нет встроенных данных арта');
+  const lost = externals.filter((u) => !fs.existsSync(path.join(root, u)));
+  check(externals.length >= 3 && lost.length === 0,
+    `внешних файлов арта ${externals.length}, на диске не найдено: ${lost.length}${lost.length ? ' → ' + lost.join(', ') : ''}`);
+  const swSrc = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+  const list = (swSrc.match(/const FILES = \[([^\]]*)\]/) || [])[1] || '';
+  const missed = externals.filter((u) => !list.includes(`'./${u}'`));
+  check(missed.length === 0, `sw.js кэширует каждый внешний файл${missed.length ? ' — нет: ' + missed.join(', ') : ''}`);
+  const kinds = ['house', 'chars', 'env'];
+  check(kinds.every((k) => typeof (G.ART_STR || {})[k] === 'string' && !!G.art.data(k)),
+    `G.ART_STR заполнен из внешних файлов и G.art.data разбирает: ${kinds.join(', ')}`);
 }
 
 // ─────────── итог ───────────

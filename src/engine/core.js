@@ -1,5 +1,7 @@
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
-const G = (typeof window !== 'undefined' ? window : globalThis).G = {};
+// Объект мог появиться раньше бандла: данные арта (art/runtime/*.js) кладут себя в G.ART_STR ещё до
+// этого файла — поэтому берём готовый G, а не создаём новый.
+const G = (() => { const w = typeof window !== 'undefined' ? window : globalThis; return w.G || (w.G = {}); })();
 
 G.CONFIG = {
   TILE: 16,           // размер тайла в пикселях

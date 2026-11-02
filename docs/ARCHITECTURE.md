@@ -37,7 +37,7 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 | `G.friends` / `G.FRIENDS` | systems/friends.js | дружба, подарки, совместные тренировки |
 | `G.train` / `G.TRAININGS` | systems/train.js | тренировки и подработки-мини-игры |
 | `G.ENEMIES`, `G.TECHS`, `G.COMBOS`, `G.ARENAS`, `G.SEALS` | data/duel_data.js | бой |
-| `G.duel` | systems/duel.js | ядро боя «Дуэль»: `create`, `play`, `bot`, `simulate`, `cost` |
+| `G.duel` | systems/duel.js | ядро боя «Дуэль»: `create`, `play`, `bot`, `simulate`, `cost`, `enemyMul` (общий множитель урона врага) |
 | `G.deck` | systems/deck.js | колода героя: `ensure`, `own`, `count`, `add`, `remove`, `give`, `full`, `reward`; экран — `scenes/deckview.js` |
 | `G.art` | gfx/art.js | ленивый разбор тяжёлой графики: `data('house' \| 'chars' \| 'env')`, `has`, `clear` |
 | `G.purple` | systems/purple.js | фиолетовая чакра героя: стабильность, выбросы |
@@ -48,18 +48,34 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 - Время: `G.state.vars.day` (1–56) и `vars.min` (минуты от полуночи). 1 реальная секунда ≈ 1 игровая минута (`systems/life.js`, `RATE`).
 - День недели: `(day - 1) % 7`, 0 = Пн. Будни — `G.life.weekday(day)`. Учебные дни — `G.academy.isSchoolDay(day)`.
 - Сохранение — `engine/storage.js` → `localStorage` (+ резервная копия, экспорт кода).
-  Слотов три (`KEY_SLOTS`): слот 0 — автосейвы, 1 и 2 — ручные; `slotInfo(i)`, `newestSlot()`, `load(slot)`,
-  `save(state, { slot })`, `wipe(slot)`. «Продолжить» на титульном экране открывает новейший слот.
+  Слотов три (`KEY_SLOTS`): слот 0 — автосейвы, 1 и 2 — ручные; `slotInfo(i)`, `filled()`, `newestSlot()`,
+  `load(slot)`, `save(state, { slot })`, `wipe(slot)`. На титуле «Продолжить» при одной записи грузит сразу,
+  при нескольких — открывает выбор слота (`filled()`), а «Загрузить слот» показывает тот же список;
+  `G.game.loadSaved(slot)` грузит выбранный слот, без аргумента — новейший.
   Новые поля состояния дописывай в `defaults()` в `systems/game.js`; для старых сохранений недостающее
   заполняет `G.game.fix()`, а структуру проверяет `G.storage.valid()`.
 
-## Графика: ленивый разбор
+## Графика: данные снаружи, разбор — ленивый
 
-Тяжёлые данные картинок (`gfx/house_art_data.js` ~3 МБ, `gfx/char_art_data.js`, `gfx/environment_art_data.js`)
-лежат в сборке **строкой** (`G.ART_STR.house/chars/env`) и разбираются `JSON.parse` при первом обращении через
-`G.art.data(...)`; результат кэшируется. Так браузер не разбирает литералы на 4 МБ при старте, а ненужные
-картинки не разбираются вовсе. Сами данные по-прежнему генерируют `tools/import_art.py`, `tools/import_chars.py`
-и `tools/import_environment.py` — они пишут именно строковый формат.
+Тяжёлые данные картинок (`src/gfx/house_art_data.js` ~3 МБ, `char_art_data.js`, `environment_art_data.js`)
+**в бандл не входят**. `build.py` (списки `ART_FILES`, `ART_OUT`) пишет их отдельными файлами
+`art/runtime/*.js` рядом с `index.html`, а `shell.html` подключает их обычными тегами скриптов до
+основного скрипта. Внутри файла данные лежат **строкой** (`G.ART_STR.house/chars/env`) и разбираются
+`JSON.parse` при первом обращении через `G.art.data(...)`; результат кэшируется. Так браузер не
+разбирает литералы на 4 МБ при старте, ненужные картинки не разбираются вовсе, а код и арт
+кэшируются браузером и `sw.js` как разные файлы.
+
+Порядок и подводный камень: `art/runtime/*.js` грузятся **раньше** бандла, поэтому каждый файл
+обёрнут в функцию с параметром `G` и берёт `window.G`, создавая объект при необходимости;
+`engine/core.js` по той же причине не создаёт `G` заново, а переиспользует готовый
+(`w.G || (w.G = {})`). Теги — без `defer`/`async`: `G.ART_STR` обязан быть готов до старта игры,
+потому что `G.art.data()` синхронный (на нём держатся `house_art.js`, `chars_render.js`,
+`environment_art.js`). `sw.js` держит все три файла в `FILES`, иначе в офлайне игра осталась бы без
+картинок; список дописывает `build.py`.
+
+Данные по-прежнему генерируют `tools/import_art.py`, `tools/import_chars.py` и
+`tools/import_environment.py` — они пишут именно строковый формат, `build.py` их только копирует.
+`tools/node/harness.js` читает `<script src="…">` с диска, поэтому Node-проверки видят тот же арт.
 
 ## Мир
 
