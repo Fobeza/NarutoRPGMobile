@@ -474,6 +474,13 @@ frame('ui_status', () => { G.scenes.push(G.scenes.make('status')); });
 frame('ui_journal', () => { G.scenes.push(G.scenes.make('journal')); });
 frame('ui_shop', () => { G.scenes.push(G.scenes.make('shop', 'ichiraku')); }, backdrop);
 frame('ui_title', () => { G.scenes.push(G.scenes.make('title')); });
+// Календарь после финала: день ушёл дальше содержимого, поэтому открывается на последнем дне
+// с подписью «Глава 1 пройдена», а дни за границей нарисованы бледными (этап 7).
+frame('ui_calendar_end', () => {
+  G.state.vars.day = 60; G.state.flags.postgame = 1;
+  G.scenes.push(G.scenes.make('calendar'));
+});
+G.state.vars.day = 1; delete G.state.flags.postgame;   // дальше кадры рисуем в обычном состоянии
 // Титул, когда сохранений несколько: «Продолжить» спрашивает, с какого слота играть
 frame('ui_title_slots', () => {
   const day = G.state.vars.day;

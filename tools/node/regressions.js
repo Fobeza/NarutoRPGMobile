@@ -130,6 +130,53 @@ test('Календарь по месяцам: 28 дней, июнь → июль
   for (const d of [1, 40, 100, 200, 500]) assert.equal(G.life.season().name, 'Лето');
   assert.ok(G.calendar.upcoming(5).every(e => e.d <= G.state.vars.day + 28));
 });
+test('Календарь не листается в пустоту: граница — последний день с содержимым', () => {
+  const done = G.state.flags.postgame, day = G.state.vars.day;
+  try {
+    G.state.vars.day = 1; delete G.state.flags.postgame;
+    assert.equal(G.calendar.lastDay(), 44, 'сейчас последнее содержимое — 44-й день (сцена «Воля Огня»)');
+    // граница считается из данных, а не вписана числом: новая сцена сама её двигает
+    const probe = { id: 'probe', day: 61, from: 0, to: 1440, where: 'any', script: 'x' };
+    G.STORY.push(probe);
+    assert.equal(G.calendar.lastDay(), 61, 'новая сюжетная сцена сдвигает границу');
+    G.STORY.pop();
+    assert.equal(G.calendar.lastDay(), 44, 'без неё граница прежняя');
+
+    // панель: с 1-го дня листается до 44-го и не дальше, выбранный день не переползает границу
+    G.state.vars.day = 1;
+    const soon = G.scenes.make('calendar');
+    G.scenes.push(soon);
+    assert.deepEqual(soon.bounds(), { limit: 44, page: 0, lastPage: 1 }, 'две страницы, вторая кончается 44-м');
+    const tap = (x, y) => { G.input.tapNow = { x, y }; soon.update(.016); G.input.tapNow = null; };
+    tap(G.screen.W - 30, G.touch.header().height + 30);           // стрелка «дальше» → июль
+    assert.equal(soon.bounds().page, 1, 'стрелка «дальше» открывает вторую страницу');
+    for (let i = 0; i < 80; i++) tap(G.screen.W - 30, G.touch.header().height + 30);
+    assert.equal(soon.bounds().page, 1, 'дальше второй страницы календарь не идёт');
+    for (let i = 0; i < 60; i++) key(soon, 'down');
+    assert.equal(soon.selected(), 44, 'курсор останавливается на последнем дне с содержимым');
+
+    // после эпилога день уходит дальше границы, но календарь открывается на 44-м
+    G.state.vars.day = 60; G.state.flags.postgame = 1;
+    assert.ok(G.calendar.finished(), 'эпилог помечает главу пройденной');
+    const after = G.scenes.make('calendar');
+    assert.equal(after.selected(), 44, 'после финала календарь открывается на последнем дне с содержимым');
+    assert.equal(after.bounds().limit, 44, 'и листать дальше не даёт');
+    // подпись на пройденной главе: внизу панели и в тексте последнего дня
+    assert.equal(after.caption(), 'Глава 1 пройдена', 'видно «Глава 1 пройдена»');
+    assert.ok(after.hint().includes('вторая глава'), 'и объяснение, почему дальше не листается');
+    delete G.state.flags.postgame;
+    const before = G.scenes.make('calendar');
+    assert.equal(before.caption(), '', 'до эпилога подписи нет');
+    G.state.flags.postgame = 1;
+    // кадр рисуется без исключений и в пройденной главе, и до неё
+    const ctx = h.recordingCtx(G.screen.W, G.screen.H);
+    for (const sc of [after, before]) { G.scenes.stack.length = 0; G.scenes.push(sc); sc.draw(ctx); }
+  } finally {
+    G.scenes.stack.length = 0;
+    G.state.vars.day = day;
+    if (done) G.state.flags.postgame = 1; else delete G.state.flags.postgame;
+  }
+});
 test('Уроки дерева и воды называют свою практику и в обычном, и в перенесённом тексте', () => {
   const old = { start: G.dialog.start, say: G.dialog.say, run: G.lessons.run, make: G.scenes.make, push: G.scenes.push };
   let lines = [];

@@ -159,7 +159,7 @@ body { position: fixed; inset: 0; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: 'c19b8b6a', date: '2026-11-01 19:04', debug: false };
+const BUILD = { release: '3.0', version: '567321f4', date: '2026-11-02 02:18', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -8737,6 +8737,19 @@ G.calendar = {
     2: 'Первый урок', 4: 'Наруто зовёт на крыши', 8: 'Урок: Каварими', 9: 'Урок: хождение по дереву', 12: 'Урок: Хенге', 14: 'Урок: хождение по воде', 16: 'Урок: Буншин', 17: 'Урок гендзюцу', 21: 'ЭКЗАМЕН НА ГЕНИНА',
   },
   birthday(day = G.state.vars.day) { return this.BDAY[day] || null; },
+  // Последний день, на который в игре вообще есть содержимое: события календаря, сюжетные сцены
+  // и шаги заданий с днём. Дальше листать нечего — за финалом первой главы пустые недели и месяцы
+  // (docs/PLAN_FIX_2026-11-01.md, этап 7). Граница считается из данных, поэтому новые сцены,
+  // побочные цепочки и вторая глава сдвинут её сами, без правки числа руками.
+  lastDay() {
+    let last = 1;
+    for (const d of Object.keys(this.EVENTS)) last = Math.max(last, +d);
+    for (const e of G.STORY || []) last = Math.max(last, e.day || 0);
+    for (const q of Object.values(G.QUESTS || {})) for (const st of q.steps || []) if (st.day) last = Math.max(last, st.day);
+    return Math.max(28, last);   // меньше месяца календарь не показываем: обрезанная сетка выглядит поломкой
+  },
+  // Глава 1 пройдена: флаг ставит эпилог главной ветки (data/main_story.js, mq_epilogue)
+  finished() { return !!G.state.flags.postgame; },
   upcoming(n = 8) {
     const d0 = G.state.vars.day, out = [];
     for (let d = d0; d <= d0 + G.game.MONTH_DAYS && out.length < n; d++) {
@@ -20063,16 +20076,23 @@ G.scenes.register('journal', () => {
 
 
 // ===== scenes/calendar.js =====
-// Календарь (месяц = 4 недели, 2 страницы за игру) и расписания персонажей.
+// Календарь (месяц = 4 недели) и расписания персонажей.
+// Граница календаря — последний день с содержимым (G.calendar.lastDay(), сейчас 44-й): за финалом
+// первой главы пустых недель и месяцев не показываем, а на пройденной главе внизу видна подпись.
 G.scenes.register('calendar', () => {
   const F = G.font;
   const STORY_NAMES = { tora: 'Пропал кот Тора', konohamaru: 'Мелкий Коноханамару', iruka_story: 'Вечер с Ирукой', hinata_rain: 'Дождь и Хината', ino_sakura: 'Ино и Сакура',
     sasuke_sunset: 'Закат с Саске', clouds: 'Шикамару и облака', anko: 'Анко и данго', will_fire: 'Воля Огня', roofs: 'Крыши с Наруто' };
   const WEATHER = { sun: 'ясно', cloud: 'облачно', rain: 'дождь' };
-  let tab = 0, sel = G.state.vars.day, ci = 0, wk = true;
+  const CHAPTER = 'Глава 1 пройдена', NEXT = 'Дальше — вторая глава, её ещё пишут';
+  const limit = () => G.calendar.lastDay();
+  // открываемся на сегодняшнем дне, но не за границей содержимого (в свободной игре день идёт дальше неё)
+  let tab = 0, sel = Math.min(G.state.vars.day, limit()), ci = 0, wk = true;
   const ids = G.schedule.who();
   const page = () => Math.floor((sel - 1) / 28);
-  const limit = () => Math.min(9999,Math.max(112,Math.ceil((G.state.vars.day+28)/28)*28));
+  const lastPage = () => Math.floor((limit() - 1) / 28);
+  // единственная точка смены дня: держит выбор в границах и не щёлкает впустую
+  const select = (d) => { d = G.util.clamp(d, 1, limit()); if (d !== sel) { sel = d; G.audio.sfx.select(); } };
 
   function dayItems(d) {
     const out = [];
@@ -20081,6 +20101,7 @@ G.scenes.register('calendar', () => {
     for (const e of G.STORY) if (e.day === d && STORY_NAMES[e.id] && ev !== STORY_NAMES[e.id]) out.push({ c: '#c8581a', t: STORY_NAMES[e.id] });
     if (G.calendar.BDAY[d]) out.push({ c: '#c89010', t: 'День рождения: ' + G.chars.nameOf(G.calendar.BDAY[d]) });
     if(d>112&&G.calendar.birthday(d))out.push({c:'#c89010',t:'День рождения: '+G.chars.nameOf(G.calendar.birthday(d))});
+    if (d === limit() && G.calendar.finished()) out.push({ c: '#c89010', t: NEXT });   // видно, если влезает в панель
     if (G.academy.isSchoolDay(d)) out.push({ c: '#3a62a0', t: 'Уроки 8:00–13:00. Вход 7:30–9:30' + ((d - 1) % 7 === 4 ? ' · тест' : '') });
     else if (d <= 21) out.push({ c: '#8a7a60', t: (d - 1) % 7 >= 5 ? 'Выходной' : d === 1 ? 'Первый день в деревне' : 'Нет уроков' });
     const Q = G.state.quests || {};
@@ -20102,6 +20123,13 @@ G.scenes.register('calendar', () => {
 
   return {
     name: 'calendar',touch(){return {back:true,roomyBack:true};},
+    // наружу — только для проверок и кадров (как menu() у титула): граница календаря, выбранный день,
+    // список строк дня и подпись пройденной главы (текст рисуется шрифтом-атласом, из лога рисования его не видно)
+    bounds() { return { limit: limit(), page: page(), lastPage: lastPage() }; },
+    selected() { return sel; },
+    items(d = sel) { return dayItems(d); },
+    caption() { return G.calendar.finished() ? CHAPTER : ''; },
+    hint() { return G.calendar.finished() ? NEXT : ''; },
     update(dt) {
       const I = G.input, W = G.screen.W;
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
@@ -20111,8 +20139,8 @@ G.scenes.register('calendar', () => {
         if (t.y >= 20 && t.y < 42) { const nt = t.x < W / 2 ? 0 : 1; if (nt !== tab) { tab = nt; G.audio.sfx.select(); } return; }
         if (tab === 0) {
           const cw = (W - 14) / 7, col = Math.floor((t.x - 7) / cw), row = Math.floor((t.y - GY) / CH);
-          if (col >= 0 && col < 7 && row >= 0 && row < 4) { sel = page() * 28 + row * 7 + col + 1; G.audio.sfx.select(); }
-          else if (t.y >= 42 && t.y < GY) { sel = t.x < W / 2 ? Math.max(1, sel - 28) : Math.min(limit(), sel + 28); G.audio.sfx.select(); }
+          if (col >= 0 && col < 7 && row >= 0 && row < 4) select(page() * 28 + row * 7 + col + 1);   // пустые ячейки за границей не выбираются
+          else if (t.y >= 42 && t.y < GY) select(t.x < W / 2 ? sel - 28 : sel + 28);
         } else {
           if (t.y < 68) { ci = (ci + (t.x < W / 2 ? ids.length - 1 : 1)) % ids.length; G.audio.sfx.select(); }
           else if (t.y < 90) { wk = !wk; G.audio.sfx.select(); }
@@ -20121,10 +20149,10 @@ G.scenes.register('calendar', () => {
       }
       if (I.pressed('a')) { tab = 1 - tab; G.audio.sfx.select(); return; }
       if (tab === 0) {
-        if (I.repeat('left', dt)) { sel = Math.max(1, sel - 1); G.audio.sfx.select(); }
-        if (I.repeat('right', dt)) { sel = Math.min(limit(), sel + 1); G.audio.sfx.select(); }
-        if (I.repeat('up', dt)) { sel = Math.max(1, sel - 7); G.audio.sfx.select(); }
-        if (I.repeat('down', dt)) { sel = Math.min(limit(), sel + 7); G.audio.sfx.select(); }
+        if (I.repeat('left', dt)) select(sel - 1);
+        if (I.repeat('right', dt)) select(sel + 1);
+        if (I.repeat('up', dt)) select(sel - 7);
+        if (I.repeat('down', dt)) select(sel + 7);
       } else {
         if (I.repeat('left', dt)) { ci = (ci + ids.length - 1) % ids.length; G.audio.sfx.select(); }
         if (I.repeat('right', dt)) { ci = (ci + 1) % ids.length; G.audio.sfx.select(); }
@@ -20146,15 +20174,16 @@ G.scenes.register('calendar', () => {
       U.panel(ctx, 4, 44, W - 8, GY + 4 * CH - 40, 'frame');
       const mname = G.game.monthName(pg * 28 + 1) + (G.game.year(pg * 28 + 1) > 1 ? ', год ' + G.game.year(pg * 28 + 1) : '');
       F.draw(ctx, mname, W / 2, 49, { align: 'center', color: C.redDark });
-      F.draw(ctx, '<', 14, 49, { color: pg > 0 ? C.red : C.inkFaint }); F.draw(ctx, '>', W - 18, 49, { color: C.red });
+      F.draw(ctx, '<', 14, 49, { color: pg > 0 ? C.red : C.inkFaint }); F.draw(ctx, '>', W - 18, 49, { color: pg < lastPage() ? C.red : C.inkFaint });
       for (let c = 0; c < 7; c++) F.small.draw(ctx, ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][c], 7 + c * cw + cw / 2, 64, { align: 'center', color: c > 4 ? C.red : C.inkDim });
       for (let r = 0; r < 4; r++) for (let c = 0; c < 7; c++) {
-        const d = pg * 28 + r * 7 + c + 1;
-        if (d > limit()) continue;
+        const d = pg * 28 + r * 7 + c + 1, open = d <= limit();
         const x = Math.round(7 + c * cw), y = GY + r * CH, w = Math.round(cw) - 2;
         U.card(ctx, x, y, w, CH - 3, d === sel);
         if (d === V.day) { ctx.fillStyle = C.ok; ctx.fillRect(x + 3, y + 3, 5, 5); }
-        F.small.draw(ctx, String(G.game.dayOfMonth(d)), x + 5 + (d === V.day ? 5 : 0), y + 3, { color: d < V.day ? C.inkFaint : c > 4 ? C.red : C.ink });
+        // за границей содержимого день виден бледным и без меток: календарь честно кончается, но сетка не рвётся
+        F.small.draw(ctx, String(G.game.dayOfMonth(d)), x + 5 + (d === V.day ? 5 : 0), y + 3, { color: !open || d < V.day ? C.inkFaint : c > 4 ? C.red : C.ink });
+        if (!open) continue;
         marks(d).slice(0, 3).forEach((col, i) => { ctx.fillStyle = col; ctx.fillRect(x + 4 + i * 6, y + CH - 11, 5, 5); });
         if (G.academy.isSchoolDay(d)) { ctx.fillStyle = '#3a62a0'; ctx.fillRect(x + w - 8, y + 4, 5, 5); }
       }
@@ -20163,12 +20192,16 @@ G.scenes.register('calendar', () => {
       U.panel(ctx, 4, dy, W - 8, H - dy - 4, 'well');
       let y = dy + 8;
       F.draw(ctx, `${G.game.date(sel)} · ${G.game.dayNameFull(sel)}`, 12, y, { color: C.redDark }); y += 16;
+      // Пройденная глава: подпись одной строкой внизу панели (мелкий шрифт, 12 px) и место под неё.
+      // В строку с датой она не влезает: на 192 px «16 июля · Вторник» уже занимает всю ширину.
+      const cap = this.caption(), bottom = H - (cap ? 34 : 20);
       for (const it of dayItems(sel)) {
-        if (y > H - 20) break;
+        if (y > bottom) break;
         ctx.fillStyle = it.c; ctx.fillRect(12, y + 3, 4, 4);
-        for (const ln of F.small.wrap(it.t, W - 36)) { if (y > H - 20) break; F.small.draw(ctx, ln, 21, y, { color: C.ink }); y += 12; }
+        for (const ln of F.small.wrap(it.t, W - 36)) { if (y > bottom) break; F.small.draw(ctx, ln, 21, y, { color: C.ink }); y += 12; }
         y += 2;
       }
+      if (cap) F.small.draw(ctx, cap, 12, H - 16, { color: C.redDark });
     },
     drawSched(ctx, W, H, V) {
       const U = G.ui, C = U.C, id = ids[ci], s = G.SCHED[id];
