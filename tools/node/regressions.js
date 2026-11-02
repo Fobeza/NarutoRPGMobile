@@ -447,6 +447,34 @@ test('Карточные связки: метка, Финт, Суйтон → Р
   assert.ok(C.P.chain >= 3 && C.E.status.stun === 1 && C.E.chargeBroken === 1, 'три звена тайдзюцу срывают замах');
 });
 
+test('Урон врага: один множитель на предпросмотр и на удар', () => {
+  const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: Object.keys(G.TECHS), fatigue: 0, surge: false });
+  const open = (D) => { D.P.block = 0; D.P.dodge = 0; D.P.clones = 0; return D; };   // защиты нет — сравниваем сам урон
+  const cases = [{}, { fear: 2 }, { fear: 2, slow: 1 }, { fear: 2, slow: 1, weak: 1 }];
+  for (const st of cases) {
+    for (const [dmg, hits] of [[30, 1], [33.3, 2], [27.5, 2]]) {
+      const D = open(mk()); Object.assign(D.E.status, st);
+      D.intent = { kind: hits > 1 ? 'multi' : 'strike', name: 'Проба', dmg, hits };
+      const want = (st.fear ? D.P.fearMul : 1) * (st.slow ? 0.75 : 1) * (st.weak ? 0.75 : 1);
+      assert.equal(G.duel.enemyMul(D), want, 'множитель — произведение страха, замедления и слабости');
+      const prev = G.duel.expectedIncoming(D), intent = G.duel.intentDamage(D);
+      const hp = D.P.hp; G.duel.endTurn(D); const real = hp - D.P.hp;
+      assert.equal(intent, prev, 'строка намерения и «Ожидаемый урон» считают одинаково');
+      // Один удар сходится точно. У серии предпросмотр округляет сумму, а бой — каждый удар,
+      // поэтому расхождение возможно ровно на единицу (см. docs/PLAN_FIX_2026-11-01.md, этап 8).
+      assert.ok(Math.abs(prev - real) <= (hits - 1), `предпросмотр и удар сходятся (${dmg}×${hits}, ${JSON.stringify(st)}: ${prev} против ${real})`);
+    }
+  }
+  // без ослаблений урон не режется: множитель ровно 1
+  assert.equal(G.duel.enemyMul(open(mk())), 1, 'без ослаблений урон врага не уменьшается');
+  // удар по защите тоже сходится: предпросмотр учитывает, что блок тратится по урону
+  const G1 = mk(); G1.P.dodge = 0; G1.P.clones = 0; G1.E.status.weak = 1;
+  G1.intent = { kind: 'multi', name: 'Серия', dmg: 20, hits: 2 };
+  forceCard(G1, 'guard'); G.duel.play(G1, 'guard');
+  const pv = G.duel.expectedIncoming(G1), hp1 = G1.P.hp; G.duel.endTurn(G1);
+  assert.equal(pv, hp1 - G1.P.hp, 'с блоком предпросмотр тоже сходится');
+});
+
 test('Карточная дуэль: клоны, Хенге, страх и полное уклонение под теневой связкой', () => {
   const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 6, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(4), stability: 100, techs: Object.keys(G.TECHS), fatigue: 0, surge: false });
   let D = mk(); D.intent = { kind: 'multi', name: 'Серия', dmg: 20, hits: 2 }; forceCard(D, 'bunshin'); let hp = D.P.hp; G.duel.play(D, 'bunshin'); G.duel.endTurn(D);

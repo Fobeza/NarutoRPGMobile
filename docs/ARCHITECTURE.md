@@ -37,7 +37,7 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 | `G.friends` / `G.FRIENDS` | systems/friends.js | дружба, подарки, совместные тренировки |
 | `G.train` / `G.TRAININGS` | systems/train.js | тренировки и подработки-мини-игры |
 | `G.ENEMIES`, `G.TECHS`, `G.COMBOS`, `G.ARENAS`, `G.SEALS` | data/duel_data.js | бой |
-| `G.duel` | systems/duel.js | ядро боя «Дуэль»: `create`, `play`, `bot`, `simulate`, `cost` |
+| `G.duel` | systems/duel.js | ядро боя «Дуэль»: `create`, `play`, `bot`, `simulate`, `cost`, `enemyMul` (общий множитель урона врага) |
 | `G.deck` | systems/deck.js | колода героя: `ensure`, `own`, `count`, `add`, `remove`, `give`, `full`, `reward`; экран — `scenes/deckview.js` |
 | `G.art` | gfx/art.js | ленивый разбор тяжёлой графики: `data('house' \| 'chars' \| 'env')`, `has`, `clear` |
 | `G.purple` | systems/purple.js | фиолетовая чакра героя: стабильность, выбросы |

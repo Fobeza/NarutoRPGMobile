@@ -159,7 +159,7 @@ body { position: fixed; inset: 0; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: '567321f4', date: '2026-11-02 02:18', debug: false };
+const BUILD = { release: '3.0', version: 'fb9858bf', date: '2026-11-02 05:30', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -8013,16 +8013,24 @@ G.duel = (() => {
     if (D.intent.block) E.block = D.intent.block;
     if (D.intent.dodge) E.dodge = D.intent.dodge;
   }
+  // ── урон врага: один множитель на все места ──
+  // Ослабления врага — страх (его сила зависит от Гендзюцу героя), замедление и слабость — считают
+  // три разных места: предпросмотр намерения (intentDamage), строка «Ожидаемый урон» (incomingOf) и
+  // сам удар (enemyHit). Держим формулу здесь, иначе предпросмотр однажды тихо разойдётся с уроном.
+  const SLOW_MUL = 0.75, WEAK_MUL = 0.75;
+  function enemyMul(D) {
+    const s = D.E.status;
+    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.slow > 0 ? SLOW_MUL : 1) * (s.weak > 0 ? WEAK_MUL : 1);
+  }
   function intentDamage(D) {
     const i = D.intent;
     if (!i || !isAttack(D) || D.E.status.stun > 0) return 0;
-    const mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
-    return Math.round((i.dmg || 0) * (i.hits || 1) * mul);
+    return Math.round((i.dmg || 0) * (i.hits || 1) * enemyMul(D));
   }
   // Сколько пройдёт от конкретного намерения (блок, клоны, уклон уже учтены).
   function incomingOf(D, i) {
     if (!i || D.E.status.stun > 0) return 0;
-    const mul = (D.E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (D.E.status.slow > 0 ? 0.75 : 1) * (D.E.status.weak > 0 ? 0.75 : 1);
+    const mul = enemyMul(D);
     let block = D.P.block, clones = D.P.clones, total = 0;
     for (let n = 0; n < (i.hits || 1); n++) {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
@@ -8204,9 +8212,9 @@ G.duel = (() => {
 
   // ── ход противника ──
   function enemyHit(D, raw, ev, name) {
-    const P = D.P, E = D.E;
+    const P = D.P;
     let total = 0;
-    const mul = (E.status.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (E.status.slow > 0 ? 0.75 : 1) * (E.status.weak > 0 ? 0.75 : 1);
+    const mul = enemyMul(D);
     for (let n = 0; n < (D.intent.hits || 1); n++) {
       const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
       let d = raw * mul * (1 - dodge);
@@ -8341,7 +8349,7 @@ G.duel = (() => {
 
   function options(D) { return D.hand.map((c) => ({ id: c.id, uid: c.uid, label: cardDef(c.id).name, cost: cardDef(c.id).cost, off: canPlay(D, c).ok ? null : canPlay(D, c).why })); }
   function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
-  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview,
+  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview, enemyMul,
     stability, mulberry, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
 })();
 
