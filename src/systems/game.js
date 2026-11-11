@@ -41,8 +41,6 @@ G.game = (() => {
       tracked: null,       // отслеживаемое задание
       cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
       deck: null,          // колода героя: список id карт (10–20), см. systems/deck.js
-      cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
-      deck: null,          // колода героя: список id (10–20 карт)
       marker: null,        // своя метка на карте { x, y, label } (в тайлах Конохи)
       fog: '',             // исследованные участки карты (строка 0/1 по блокам 8×8 тайлов)
     };
@@ -132,8 +130,10 @@ G.game = (() => {
     // slot — номер слота; без него загружается новейший (прежнее поведение «Продолжить»)
     loadSaved(slot) {
       const st = G.storage.load(slot);
+      const loaded = G.storage.active;   // слот, из которого читали: newState() сбрасывает его в основной
       G.game.newState();
-      if (st) Object.assign(G.state, st);
+      // автосейвы идут в тот же слот, что загружен: иначе загрузка слота 3 затирала слот 1 при первом же входе в дом
+      if (st) { Object.assign(G.state, st); G.storage.active = loaded; }
       this.fix(G.state);
       G.scenes.fadeTo(G.scenes.make('world', G.state.pos || null));
       return !!st;

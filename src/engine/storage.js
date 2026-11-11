@@ -1,10 +1,10 @@
-// Хранилище: один слот сохранения + резервная копия + настройки + экспорт/импорт кодом.
+// Хранилище: три слота сохранения + резервная копия + настройки + экспорт/импорт кодом.
 // Этап 4: резервная копия «утро дня N» (пишется при сне), экспорт/импорт кодом, версия формата и миграции.
 G.storage = {
   KEY_SAVE: 'wof_save_v1',
   KEY_BACKUP: 'wof_save_v1_bak',
   KEY_SETTINGS: 'wof_settings',
-  // Три слота: 0 — основной (в него пишут автосейвы), 1 и 2 — ручные.
+  // Три слота. Автосейвы идут в активный: тот, что загружен или в который сохранили последним; новая игра — в слот 0.
   KEY_SLOTS: ['wof_save_v1', 'wof_save_v1_s1', 'wof_save_v1_s2'],
   SLOTS: 3,
   active: 0,
@@ -163,7 +163,7 @@ G.storage = {
     const keys = slot == null ? this.KEY_SLOTS.concat([this.KEY_BACKUP]) : [this.KEY_SLOTS[slot]];
     try { for (const k of keys) localStorage.removeItem(k); } catch (_) {}
     for (const k of keys) { delete this._mem[k]; delete this._fresh[k]; }
-    try { const w = this._wn(); delete w[this.KEY_SAVE]; delete w[this.KEY_BACKUP]; window.name = JSON.stringify(w); } catch (_) {}
+    try { const w = this._wn(); for (const k of keys) delete w[k]; window.name = JSON.stringify(w); } catch (_) {}   // запасная копия во вкладке — те же ключи, что стёрли
   },
 
   // Экспорт: строка, которую можно скопировать и вставить в другом месте
@@ -186,7 +186,7 @@ G.storage = {
     } catch (_) { return false; }
   },
 
-  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true },
+  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true, crt:'off' },
   loadSettings() {
     const s = this._get(this.KEY_SETTINGS);
     if (s) Object.assign(this.settings, s);
@@ -196,6 +196,7 @@ G.storage = {
     if(!['simple','detailed'].includes(this.settings.mapDetail))this.settings.mapDetail='detailed';
     if(![1,1.3].includes(this.settings.mapMarkerSize))this.settings.mapMarkerSize=1;
     this.settings.mapLabels=this.settings.mapLabels!==false;
+    if(!['off','soft','full'].includes(this.settings.crt))this.settings.crt='off';
     return this.settings;
   },
   saveSettings() { this._set(this.KEY_SETTINGS, this.settings); },

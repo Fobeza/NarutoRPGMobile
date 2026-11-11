@@ -73,12 +73,15 @@ G.villageDetails = (() => {
     for(const b of m.buildings){
       if(!b.door)continue;
       const dx=b.door.tx*T+8, front=(b.door.ty+1)*T, seed=Math.floor(G.util.hash2(b.tx,b.ty,311)*1000);
+      // Порог, до которого герой не дойдёт (ворота А-Ун «открываются» наружу, за стену), остаётся пустым:
+      // коврик с описанием там был предметом, который нельзя осмотреть (его ловил render_map.py).
+      const reachable=!m.reach||!!m.reach[(b.door.ty+1)*m.w+b.door.tx];
       // коврик у порога
-      if(mats<70){
+      if(mats<70&&reachable){
         put('doormat',dx,front+T-6,{layer:'floor',talk:['Плетёный коврик у входа. Края вытерты до соломы.']});mats++;
       }
       // сандалии рядом с ковриком
-      if(seed%3===0){
+      if(seed%3===0&&reachable){
         // Сандалии лежат на той же клетке перед дверью, что и коврик, только сбоку.
         for(const off of [15,-15]){
           const sx=dx+(seed%2?off:-off);

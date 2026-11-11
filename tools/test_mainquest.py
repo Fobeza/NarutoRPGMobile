@@ -67,7 +67,8 @@ with sync_playwright() as p:
     # ── финал первой главы: вечер у ворот → доклад → бой с Незнакомцем → развязка ──
     page.evaluate("G.state.vars.min = 19 * 60; G.quests.step('main', 'stranger'); G.quests.step('main', 'report'); 1")
     check(page.evaluate("G.quests.curStep('main').id") == 'duel', 'после доклада текущий шаг — бой у ворот')
-    page.evaluate("G.events.emit('battle', { enemy: 'stranger', mode: 'ko' }, { win: true }); 1")
+    # победу отмечает сценарий после боя (mq_final_win), а не само событие: проигрываем его, как это делает G.flow.battle
+    page.evaluate("G.events.emit('battle', { enemy: 'stranger', mode: 'ko' }, { win: true }); const r = G.script.runner('mq_final_win'); for (let i = 0; i < 40; i++) if (r.next().op === 'end') break; 1")
     check(page.evaluate("G.quests.curStep('main').id") == 'ending', 'победа над Незнакомцем открывает развязку')
     page.evaluate("G.quests.step('main', 'ending'); 1")
     fin = page.evaluate("[G.quests.done('main'), G.state.frQueue.includes('mq_epilogue'), G.state.flags.mq_won]")

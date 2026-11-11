@@ -55,6 +55,29 @@ body { position: fixed; inset: 0; }
   box-shadow: 0 0 0 1px #6a6a7a, 0 0 0 4px #17161d, 0 10px 26px rgba(0,0,0,.65);
 }
 
+/* ===== CRT-фильтр (engine/crt.js): слой строк развёртки и виньетки поверх холста ===== */
+#screen-box { position: relative; line-height: 0; border-radius: 4px; }
+#crt {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: none;
+  pointer-events: none; border-radius: 4px;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+/* строки развёртки затемняют картинку — возвращаем яркость и чуть насыщаем, как люминофор */
+body.crt-soft #screen { filter: brightness(1.10) contrast(1.04) saturate(1.08); }
+body.crt-full #screen { filter: brightness(1.20) contrast(1.08) saturate(1.16); }
+body.crt-soft #screen, body.crt-soft #crt, body.crt-soft #screen-box { border-radius: 9px; }
+body.crt-full #screen, body.crt-full #crt, body.crt-full #screen-box { border-radius: 14px; }
+/* «СИЛЬНО»: по экрану медленно сползает светлая полоса кадровой развёртки */
+#crt-roll { display: none; position: absolute; left: 0; right: 0; top: 0; height: 100%; overflow: hidden; pointer-events: none; border-radius: 14px; }
+body.crt-full #crt-roll { display: block; }
+#crt-roll::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.045) 60%, rgba(255,255,255,0));
+  transform: translateY(-120%); animation: crt-roll 7s linear infinite; will-change: transform;
+}
+@keyframes crt-roll { from { transform: translateY(-120%); } to { transform: translateY(680%); } }
+@media (prefers-reduced-motion: reduce) { #crt-roll::before { animation: none; } }
+
 /* ===== Ввод текста и код сохранения: окна «Свитки и дерево» (дерево, пергамент, красная печать) ===== */
 #text-entry {
   position: fixed; inset: 0; background: rgba(14,8,4,.74);
@@ -119,7 +142,12 @@ body { position: fixed; inset: 0; }
 <body>
 <div id="app">
   <div id="screen-wrap">
-    <canvas id="screen" width="192" height="256"></canvas>
+    <!-- #crt — слой CRT-фильтра поверх игры (engine/crt.js); касания проходят сквозь него -->
+    <div id="screen-box">
+      <canvas id="screen" width="192" height="256"></canvas>
+      <canvas id="crt" width="1" height="1" aria-hidden="true"></canvas>
+      <div id="crt-roll" aria-hidden="true"></div>
+    </div>
   </div>
 </div>
 
@@ -159,7 +187,7 @@ body { position: fixed; inset: 0; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: 'fb9858bf', date: '2026-11-02 05:30', debug: false };
+const BUILD = { release: '3.0', version: '9ba3ed5e', date: '2026-11-11 20:37', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -322,6 +350,77 @@ G.screen = {
     return { x: ((clientX - r.left) / r.width) * this.W, y: ((clientY - r.top) / r.height) * this.H };
   },
 };
+
+
+// ===== engine/crt.js =====
+// CRT-фильтр: вид экрана старого кинескопа поверх игры. Настройка «CRT-экран»: ВЫКЛ / МЯГКО / СИЛЬНО.
+//
+// Игровой холст не трогаем вовсе: поверх него лежит второй холст (#crt) в ФИЗИЧЕСКИХ пикселях, на
+// котором один раз (при смене размера или настройки) нарисованы строки развёртки, теневая маска,
+// виньетка и блик стекла. Кадр игры от этого не дорожает — слой статичен, его склеивает видеокарта.
+// Строки привязаны к сетке игры: одна тёмная кромка на каждый игровой пиксель (devScale физических),
+// поэтому муара нет ни при какой «плотности пикселей». Касания слой не перехватывает (pointer-events: none).
+// Яркость, съеденную строками, возвращает CSS-фильтр на самом холсте (см. style.css, body.crt-*).
+G.crt = (() => {
+  const MODES = [
+    { id: 'off', name: 'ВЫКЛ' },
+    // line — затемнение нижней кромки каждой строки; mask — сила RGB-маски; vig — виньетка по краям; glare — блик стекла
+    { id: 'soft', name: 'МЯГКО', line: 0.26, mask: 0.05, vig: 0.30, glare: 0.035 },
+    { id: 'full', name: 'СИЛЬНО', line: 0.46, mask: 0.11, vig: 0.50, glare: 0.06 },
+  ];
+  const find = (id) => MODES.find((m) => m.id === id) || MODES[0];
+  const mode = () => find(G.storage && G.storage.settings.crt);
+
+  // Плитка «одна игровая строка»: высота — s физических пикселей, ширина — 3 (красный, зелёный, синий столбцы маски).
+  // Затемнение растёт к нижней кромке строки по кубу: при s = 2 это «светлая/тёмная», при s = 6 — мягкий спад.
+  function tile(s, m) {
+    const c = document.createElement('canvas'); c.width = 3; c.height = s;
+    const x = c.getContext('2d');
+    if (m.mask > 0) {
+      ['255,40,40', '40,255,40', '60,60,255'].forEach((rgb, i) => { x.fillStyle = `rgba(${rgb},${m.mask})`; x.fillRect(i, 0, 1, s); });
+    }
+    for (let i = 0; i < s; i++) {
+      const a = m.line * Math.pow((i + 1) / s, 3);
+      x.fillStyle = `rgba(0,0,0,${a.toFixed(3)})`; x.fillRect(0, i, 3, 1);
+    }
+    return c;
+  }
+
+  function render() {
+    if (typeof document === 'undefined') return;
+    const cv = document.getElementById('crt'), m = mode();
+    const cl = document.body && document.body.classList;
+    if (cl) for (const k of MODES) cl.toggle('crt-' + k.id, k.id === m.id && m.id !== 'off');
+    if (!cv || !cv.getContext) return;
+    if (m.id === 'off') { cv.width = cv.height = 1; cv.style.display = 'none'; return; }   // холст 1×1 — память не держим
+    const s = Math.max(1, Math.round(G.screen.devScale || 2)), W = G.screen.W * s, H = G.screen.H * s;
+    cv.width = W; cv.height = H; cv.style.display = 'block';
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    // 1) строки развёртки и маска
+    const pat = ctx.createPattern(tile(s, m), 'repeat');
+    if (pat) { ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H); }
+    // 2) виньетка: эллипс на весь экран (круговой градиент, растянутый по высоте) — имитация выпуклого стекла
+    const R = W * 0.78;
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(1, H / W);
+    const g = ctx.createRadialGradient(0, 0, R * 0.52, 0, 0, R);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.7, `rgba(0,0,0,${(m.vig * 0.45).toFixed(3)})`); g.addColorStop(1, `rgba(0,0,0,${m.vig})`);
+    ctx.fillStyle = g; ctx.fillRect(-W / 2, -W / 2, W, W); ctx.restore();
+    // 3) блик стекла: светлая полоса сверху, уходящая в ноль к трети экрана
+    const gl = ctx.createLinearGradient(0, 0, W * 0.35, H * 0.34);
+    gl.addColorStop(0, `rgba(255,255,255,${m.glare})`); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H * 0.34);
+  }
+
+  return {
+    MODES, mode, render,
+    name() { return mode().name; },
+    set(id) { G.storage.settings.crt = find(id).id; G.storage.saveSettings(); render(); },
+    cycle() { const i = MODES.indexOf(mode()); this.set(MODES[(i + 1) % MODES.length].id); },
+  };
+})();
+// Размер экрана сменился (поворот, плотность пикселей) — слой перерисовывается под новую сетку.
+G.events.on('resize', () => G.crt.render());
 
 
 // ===== engine/input.js =====
@@ -998,13 +1097,13 @@ G.scenes = {
 
 
 // ===== engine/storage.js =====
-// Хранилище: один слот сохранения + резервная копия + настройки + экспорт/импорт кодом.
+// Хранилище: три слота сохранения + резервная копия + настройки + экспорт/импорт кодом.
 // Этап 4: резервная копия «утро дня N» (пишется при сне), экспорт/импорт кодом, версия формата и миграции.
 G.storage = {
   KEY_SAVE: 'wof_save_v1',
   KEY_BACKUP: 'wof_save_v1_bak',
   KEY_SETTINGS: 'wof_settings',
-  // Три слота: 0 — основной (в него пишут автосейвы), 1 и 2 — ручные.
+  // Три слота. Автосейвы идут в активный: тот, что загружен или в который сохранили последним; новая игра — в слот 0.
   KEY_SLOTS: ['wof_save_v1', 'wof_save_v1_s1', 'wof_save_v1_s2'],
   SLOTS: 3,
   active: 0,
@@ -1163,7 +1262,7 @@ G.storage = {
     const keys = slot == null ? this.KEY_SLOTS.concat([this.KEY_BACKUP]) : [this.KEY_SLOTS[slot]];
     try { for (const k of keys) localStorage.removeItem(k); } catch (_) {}
     for (const k of keys) { delete this._mem[k]; delete this._fresh[k]; }
-    try { const w = this._wn(); delete w[this.KEY_SAVE]; delete w[this.KEY_BACKUP]; window.name = JSON.stringify(w); } catch (_) {}
+    try { const w = this._wn(); for (const k of keys) delete w[k]; window.name = JSON.stringify(w); } catch (_) {}   // запасная копия во вкладке — те же ключи, что стёрли
   },
 
   // Экспорт: строка, которую можно скопировать и вставить в другом месте
@@ -1186,7 +1285,7 @@ G.storage = {
     } catch (_) { return false; }
   },
 
-  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true },
+  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true, crt:'off' },
   loadSettings() {
     const s = this._get(this.KEY_SETTINGS);
     if (s) Object.assign(this.settings, s);
@@ -1196,6 +1295,7 @@ G.storage = {
     if(!['simple','detailed'].includes(this.settings.mapDetail))this.settings.mapDetail='detailed';
     if(![1,1.3].includes(this.settings.mapMarkerSize))this.settings.mapMarkerSize=1;
     this.settings.mapLabels=this.settings.mapLabels!==false;
+    if(!['off','soft','full'].includes(this.settings.crt))this.settings.crt='off';
     return this.settings;
   },
   saveSettings() { this._set(this.KEY_SETTINGS, this.settings); },
@@ -6259,8 +6359,6 @@ G.game = (() => {
       tracked: null,       // отслеживаемое задание
       cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
       deck: null,          // колода героя: список id карт (10–20), см. systems/deck.js
-      cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
-      deck: null,          // колода героя: список id (10–20 карт)
       marker: null,        // своя метка на карте { x, y, label } (в тайлах Конохи)
       fog: '',             // исследованные участки карты (строка 0/1 по блокам 8×8 тайлов)
     };
@@ -6350,8 +6448,10 @@ G.game = (() => {
     // slot — номер слота; без него загружается новейший (прежнее поведение «Продолжить»)
     loadSaved(slot) {
       const st = G.storage.load(slot);
+      const loaded = G.storage.active;   // слот, из которого читали: newState() сбрасывает его в основной
       G.game.newState();
-      if (st) Object.assign(G.state, st);
+      // автосейвы идут в тот же слот, что загружен: иначе загрузка слота 3 затирала слот 1 при первом же входе в дом
+      if (st) { Object.assign(G.state, st); G.storage.active = loaded; }
       this.fix(G.state);
       G.scenes.fadeTo(G.scenes.make('world', G.state.pos || null));
       return !!st;
@@ -17288,12 +17388,15 @@ G.villageDetails = (() => {
     for(const b of m.buildings){
       if(!b.door)continue;
       const dx=b.door.tx*T+8, front=(b.door.ty+1)*T, seed=Math.floor(G.util.hash2(b.tx,b.ty,311)*1000);
+      // Порог, до которого герой не дойдёт (ворота А-Ун «открываются» наружу, за стену), остаётся пустым:
+      // коврик с описанием там был предметом, который нельзя осмотреть (его ловил render_map.py).
+      const reachable=!m.reach||!!m.reach[(b.door.ty+1)*m.w+b.door.tx];
       // коврик у порога
-      if(mats<70){
+      if(mats<70&&reachable){
         put('doormat',dx,front+T-6,{layer:'floor',talk:['Плетёный коврик у входа. Края вытерты до соломы.']});mats++;
       }
       // сандалии рядом с ковриком
-      if(seed%3===0){
+      if(seed%3===0&&reachable){
         // Сандалии лежат на той же клетке перед дверью, что и коврик, только сбоку.
         for(const off of [15,-15]){
           const sx=dx+(seed%2?off:-off);
@@ -19686,12 +19789,14 @@ G.scenes.register('bag', () => {
 
 // ===== scenes/deckview.js =====
 // Экран «Колода»: слева карты, которые есть у героя, справа — что взято в бой.
-// ←/→ — колонка, ↑/↓ — карта, A или второе касание — переложить. B — закрыть.
+// ←/→ — колонка, ↑/↓ — карта, A или второе касание — переложить. B или «Назад» — закрыть.
 // Правила колоды — systems/deck.js (10–20 карт, до трёх копий, техники добавляются сами).
 G.scenes.register('deckview', () => {
   let W = G.screen.W;
   const F = G.font, AU = G.audio, In = G.input, D = () => G.deck;
-  const ROW = 17, TOP = 66;
+  const ROW = 17;
+  // Раскладка от шапки с кнопкой «Назад» (G.touch.header): панели колонок, их заголовок и первая строка списка.
+  const top = () => { const hh = G.touch.header().height; return { info: hh - 1, panel: hh + 27, rows: hh + 46 }; };
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
 
   // Колонка 0 — «Есть» (можно положить), колонка 1 — «В колоде» (можно убрать)
@@ -19707,6 +19812,8 @@ G.scenes.register('deckview', () => {
 
   const S = {
     name: 'deckview',
+    // без этого на телефоне с экрана было не выйти: «Назад» рисует G.touch, клавиши B на сенсорном экране нет
+    touch() { return { back: true, roomyBack: true }; },
     lists,   // для автотеста: [лежит вне колоды, лежит в колоде]
     move(fromCol, id) {   // переложить одну карту (и для автотеста)
       if (!id) return false;
@@ -19719,8 +19826,8 @@ G.scenes.register('deckview', () => {
     update(dt) {
       W = G.screen.W;
       if (msgT > 0) msgT -= dt;
-      const L = lists(), rows = this.rows();
-      if (In.pressed('b')) { AU.sfx.cancel(); G.scenes.pop(); return; }
+      const L = lists(), rows = this.rows(), TOP = top().rows;
+      if (In.pressed('b') || In.pressed('menu')) { AU.sfx.cancel(); G.scenes.pop(); return; }
       if (In.pressed('left') || In.pressed('right')) { col = 1 - col; AU.sfx.blip(); }
       const n = L[col].length;
       if (In.repeat('up', dt) && n) { sel[col] = (sel[col] + n - 1) % n; AU.sfx.blip(); }
@@ -19728,7 +19835,7 @@ G.scenes.register('deckview', () => {
       if (In.tapNow) {
         const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, li = Math.floor((tp.y - TOP) / ROW), i = li + scroll[c];
         const px = c * (W / 2) + 4 + (W / 2 - 7) - 18, bot = TOP + rows * ROW;
-        if (tp.x >= px && tp.y >= 38 && tp.y < 52 && scroll[c] > 0) { col = c; sel[c] = Math.max(0, sel[c] - rows); AU.sfx.blip(); }
+        if (tp.x >= px && tp.y >= top().panel - 4 && tp.y < TOP - 2 && scroll[c] > 0) { col = c; sel[c] = Math.max(0, sel[c] - rows); AU.sfx.blip(); }
         else if (tp.x >= px && tp.y >= bot - 6 && tp.y < bot + 8 && scroll[c] + rows < L[c].length) { col = c; sel[c] = Math.min(L[c].length - 1, sel[c] + rows); AU.sfx.blip(); }
         else if (tp.y > TOP - 2 && li >= 0 && li < rows && tp.y < bot && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }
       } else if (In.pressed('a') && n) this.move(col, L[col][Math.min(sel[col], n - 1)]);
@@ -19737,21 +19844,24 @@ G.scenes.register('deckview', () => {
         if (sel[c] < scroll[c]) scroll[c] = sel[c]; if (sel[c] >= scroll[c] + rows) scroll[c] = sel[c] - rows + 1;
       }
     },
-    rows() { return Math.floor((G.screen.H - TOP - 66) / ROW); },
+    rows() { return Math.max(3, Math.floor((G.screen.H - top().rows - 66) / ROW)); },
     draw(ctx) {
       W = G.screen.W;
       const H = G.screen.H, L = lists(), rows = this.rows(), U = G.ui, C = U.C;
+      const hd = G.touch.header(), g = top(), TOP = g.rows;
       U.backdrop(ctx);
-      U.title(ctx, 'КОЛОДА', W / 2, 3, 90);
-      F.small.draw(ctx, `${D().size()}/${D().MAX} карт · минимум ${D().MIN}`, W / 2, 24, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
+      U.title(ctx, 'КОЛОДА', hd.titleX, hd.titleY, 80);
+      F.small.draw(ctx, `${D().size()}/${D().MAX} карт · минимум ${D().MIN}`, W / 2, g.info, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
       const techs = D().techs();
-      F.small.draw(ctx, techs.length ? 'Техники в колоде: ' + techs.join(', ') : 'Техник пока нет', W / 2, 38, { align: 'center', color: C.inkDim, maxW: W - 10 });
+      // строка на тёмном дереве: чернильный цвет здесь не читался
+      F.small.draw(ctx, techs.length ? 'Техники: ' + techs.join(', ') : 'Техник пока нет', W / 2, g.info + 13, { align: 'center', color: '#d8c8a0', shadow: C.woodEdge, maxW: W - 10 });
       for (const c of [0, 1]) {
-        const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - 56;
-        U.panel(ctx, x, 56, w, h, 'frame');
-        F.draw(ctx, c ? 'В колоде' : 'Свои карты', x + w / 2, 60, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
+        const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - g.panel;
+        U.panel(ctx, x, g.panel, w, h, 'frame');
+        const head = c ? 'В колоде' : 'Свои карты';   // на узком экране крупный заголовок вылезал за рамку
+        (F.measure(head) > w - 14 ? F.small : F).draw(ctx, head, x + w / 2, g.panel + 5, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
         if (!L[c].length) F.small.draw(ctx, c ? 'Пусто' : 'Всё в колоде', x + w / 2, TOP + 6, { align: 'center', color: C.inkDim });
-        if (scroll[c] > 0) F.small.draw(ctx, '▲', x + w - 12, 60, { color: C.red });
+        if (scroll[c] > 0) F.small.draw(ctx, '▲', x + w - 12, g.panel + 5, { color: C.red });
         if (scroll[c] + rows < L[c].length) F.small.draw(ctx, '▼', x + w - 12, TOP + rows * ROW - 2, { color: C.red });
         for (let i = 0; i < rows; i++) {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
@@ -19765,7 +19875,8 @@ G.scenes.register('deckview', () => {
       const cur = L[col][sel[col]];
       const iy = H - 58;
       U.panel(ctx, 4, iy, W - 8, 54, 'frame');
-      F.small.draw(ctx, msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — убрать из колоды' : 'Коснись ещё раз — положить в колоду') : 'Слева — свои карты, справа — колода', 12, iy + 9, { color: msgT > 0 ? C.redDark : C.redDark, maxW: W - 24 });
+      const hint = msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — убрать' : 'Коснись ещё раз — в колоду') : 'Слева — свои, справа — колода';
+      F.small.draw(ctx, hint, 12, iy + 9, { color: C.redDark, maxW: W - 24 });
       if (cur) {
         F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}, всего ${D().own(cur)}`, 12, iy + 24, { color: C.ink, maxW: W - 24 });
         F.small.wrap(G.CARDS[cur].text || '', W - 24).slice(0, 1).forEach((ln, i) => F.small.draw(ctx, ln, 12, iy + 36 + i * 10, { color: C.inkDim }));
@@ -19778,10 +19889,11 @@ G.scenes.register('deckview', () => {
 
 // ===== scenes/log.js =====
 // Экран «История»: последние реплики диалогов — можно вернуться и перечитать, что тебе сказали.
-// Строки листаются ↑/↓ и перетаскиванием; новые внизу.
+// Строки листаются ↑/↓ или касанием: верхняя половина листа — раньше, нижняя — позже; новые внизу.
 G.scenes.register('log', () => {
   const F = G.font, In = G.input, U = G.ui;
-  const ROW = 11, TOP = 40, BOT = 26;
+  const ROW = 11, BOT = 26;
+  const top = () => G.touch.header().height + 20;   // лист начинается под шапкой с кнопкой «Назад» и строкой подсказки
   let scroll = 0;   // сдвиг от конца: 0 — последние строки
   const lines = () => {
     const L = (G.state.dlgLog || []).slice();
@@ -19789,10 +19901,12 @@ G.scenes.register('log', () => {
     for (const t of L) for (const ln of F.small.wrap(t, W)) out.push(ln);
     return out;
   };
-  const rows = () => Math.floor((G.screen.H - TOP - BOT) / ROW);
+  const rows = () => Math.max(1, Math.floor((G.screen.H - top() - BOT) / ROW));
   const maxScroll = () => Math.max(0, lines().length - rows());
   return {
     name: 'log',
+    // без этого на телефоне с экрана было не выйти: клавиши B на сенсорном экране нет
+    touch() { return { back: true, roomyBack: true }; },
     lines, rows, maxScroll,
     update(dt) {
       const I = In;
@@ -19802,16 +19916,18 @@ G.scenes.register('log', () => {
       if (I.pressed('left')) { scroll = maxScroll(); G.audio.sfx.blip(); }
       if (I.pressed('right')) { scroll = 0; G.audio.sfx.blip(); }
       if (I.tapNow) {
-        const y = I.tapNow.y;
-        if (y < TOP) scroll = Math.min(maxScroll(), scroll + rows());
-        else if (y > G.screen.H - BOT) scroll = Math.max(0, scroll - rows());
+        // касание листа: верхняя половина — на страницу раньше, нижняя — позже (раньше зоны были узкими полосками у краёв)
+        const y = I.tapNow.y, mid = (top() + G.screen.H - BOT) / 2, page = Math.max(1, rows() - 1);
+        if (y >= top() - 6 && y < mid) scroll = Math.min(maxScroll(), scroll + page);
+        else if (y >= mid) scroll = Math.max(0, scroll - page);
       }
     },
     draw(ctx) {
-      const W = G.screen.W, C = U.C, L = lines(), n = rows();
+      const W = G.screen.W, C = U.C, L = lines(), n = rows(), hd = G.touch.header(), TOP = top();
       U.backdrop(ctx);
-      U.title(ctx, 'ИСТОРИЯ', W / 2, 3, 90);
-      F.small.draw(ctx, L.length ? 'Прокрутка: ↑/↓, ◀ — к началу' : 'Пока никто ничего не сказал', W / 2, 24, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
+      U.title(ctx, 'ИСТОРИЯ', hd.titleX, hd.titleY, 80);
+      const hint = !L.length ? 'Пока никто ничего не сказал' : maxScroll() ? 'Верх листа — раньше, низ — позже' : 'Последние реплики';
+      F.small.draw(ctx, hint, W / 2, hd.height, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge, maxW: W - 10 });
       U.panel(ctx, 4, TOP - 6, W - 8, G.screen.H - TOP - BOT + 6, 'frame');
       const start = Math.max(0, L.length - n - scroll);
       for (let i = 0; i < n; i++) {
@@ -19819,7 +19935,8 @@ G.scenes.register('log', () => {
         const last = start + i >= L.length - 2;
         F.small.draw(ctx, t, 9, TOP + i * ROW, { color: last ? C.ink : C.inkDim, maxW: W - 18 });
       }
-      if (scroll > 0) F.small.draw(ctx, '▼ есть новее', W - 10, G.screen.H - BOT + 4, { align: 'right', color: C.red });
+      if (scroll > 0) F.small.draw(ctx, '▼ есть новее', W - 10, G.screen.H - BOT + 4, { align: 'right', color: '#f4d46a', shadow: C.woodEdge });
+      if (scroll < maxScroll()) F.small.draw(ctx, '▲ есть раньше', 10, G.screen.H - BOT + 4, { color: '#f4d46a', shadow: C.woodEdge });
     },
   };
 });
@@ -20564,7 +20681,13 @@ G.scenes.register('savemenu', () => {
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
       } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
-      else if (info && k === 2) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+      else if (info && k === 2) {
+        // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
+        G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
+          options: [{ label: 'Нет, оставить' }, { label: 'Да, стереть' }] }, (a) => {
+          if (a === 1) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+        }));
+      }
     }));
   };
 
@@ -20597,7 +20720,7 @@ G.scenes.register('savemenu', () => {
             close(); G.audio.sfx.confirm(); G.game.loadSaved();
           } });
       } },
-      { label: bi ? 'Резервная копия' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
+      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
         if (!bi) { G.audio.sfx.error(); return; }
         if (G.storage.restoreBackup()) { G.audio.sfx.confirm(); G.game.loadSaved(); }
       } },
@@ -21040,6 +21163,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   let ev = [], evI = 0, evT = 0, afterEvents = 'card', lastIntent = D.intent, result = null, endT = 0, said = null;
   const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
   let tip = !G.state.flags.card_duel_tip;
+  let quitT = 0;   // «Сдаться» срабатывает со второго нажатия: кнопка стоит вплотную к «Конец»
   const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -21080,7 +21204,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     const check = selectedCard() ? G.duel.canPlay(D, selectedCard()) : { ok: false, why: 'Нет карты' };
     actions.push({ id: 'play', label: 'Играть', zone: 'action', off: check.ok ? null : check.why });
     if (pageCount() > 1) actions.push({ id: 'next', label: '›', zone: 'action' });
-    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: 'Сдаться', zone: 'action' });
+    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: quitT > 0 ? 'Точно?' : 'Сдаться', zone: 'action' });
     const aw = Math.floor((g.W - pad * 2 - gap * (actions.length - 1)) / actions.length);
     actions.forEach((b, i) => { b.x = pad + i * (aw + gap); b.y = g.py + g.PH - g.d.bh - 3; b.w = aw; b.h = g.d.bh; out.push(b); });
     return out;
@@ -21109,6 +21233,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   }
   function pick(b) {
     if (phase !== 'choose' || !b) return;
+    if (b.id !== 'quit') quitT = 0;   // любое другое действие отменяет переспрос
     if (b.zone === 'hand') {
       const c = D.hand.find((x) => x.uid === b.uid);
       if (selected === b.uid) playCard(b.ref);
@@ -21117,7 +21242,11 @@ G.scenes.register('battle', (opts, onEnd) => {
     }
     if (b.id === 'play') { const c = selectedCard(); if (c) playCard(c); else say('Выбери карту'); return; }
     if (b.id === 'end') { endPlayerTurn(); return; }
-    if (b.id === 'quit') { finish(false, true); return; }
+    if (b.id === 'quit') {
+      if (quitT > 0) { finish(false, true); return; }
+      quitT = 2.5; AU.sfx.blip();
+      return;
+    }
     if (b.id === 'prev' || b.id === 'next') {
       handPage = (handPage + (b.id === 'next' ? 1 : -1) + pageCount()) % pageCount();
       const c = D.hand[handPage * 5]; if (c) selected = c.uid;
@@ -21239,7 +21368,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     endTurn: endPlayerTurn,
     choose(id) {
       if (phase !== 'choose') return false;
-      if (id === 'end' || id === 'quit') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
+      if (id === 'quit') { finish(false, true); return true; }   // программно — без переспроса
+      if (id === 'end') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
       const c = D.hand.find((x) => x.id === id || x.id === String(id).replace(/^(tech|item):/, '') || 'uid:' + x.uid === id);
       return c ? playCard(c) : false;
     },
@@ -21252,6 +21382,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     buttons,
     update(dt) {
       t += dt; if (phase === 'end') endT += dt;
+      if (quitT > 0) quitT = Math.max(0, quitT - dt);
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
       for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
@@ -21365,7 +21496,9 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, G.state.hero.name || 'Герой', 6, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(6, 16, bw, D.P.hp, D.P.hpMax, C.hp); bar(6, 24, bw, D.P.ch, D.P.chMax, C.chakra); bar(6, 32, bw, D.P.fat, 100, C.fatigue); bar(6, 40, bw, D.P.heat, 100, '#e0a8ff');
       FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 8 + bw, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
-      FS.draw(ctx, 'уст. · накал', 6, 47, { color: '#d8c8a0', outline: PAL.ink });
+      // подписи двух нижних шкал — цветом своей шкалы, иначе не понять, какая из них какая
+      FS.draw(ctx, 'усталость', 6, 47, { color: '#f0b84a', outline: PAL.ink });
+      FS.draw(ctx, 'накал', 6 + bw, 47, { align: 'right', color: '#e0a8ff', outline: PAL.ink });
       FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
@@ -21377,8 +21510,13 @@ G.scenes.register('battle', (opts, onEnd) => {
       const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
       FS.draw(ctx, lines[0], 7, py + 4, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
       drawNumLine(ctx, lines[1], 7, py + 16, W - 14, '#f8eed0', PAL.ink);
-      FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
-      FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
+      // Две подписи в одной строке: на узком экране («крупно», 196 точек) полные не помещаются и наезжали друг на друга
+      let turnL = `Ход ${D.round} · действия ${D.P.ap}/${G.duel.TUNE.ap}`;
+      let deckL = `Колода ${D.deck.length} · сброс ${D.discard.length}`;
+      if (FS.measure(turnL) + FS.measure(deckL) > W - 22) { turnL = `Ход ${D.round} · дейст. ${D.P.ap}/${G.duel.TUNE.ap}`; deckL = `Кол. ${D.deck.length} · сбр. ${D.discard.length}`; }
+      const deckW = Math.min(FS.measure(deckL), Math.floor(W * 0.45));
+      FS.draw(ctx, turnL, 7, py + 29, { color: '#d8c8a0', maxW: W - 22 - deckW });
+      FS.draw(ctx, deckL, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: deckW });
       if (phase === 'end') {
         F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
         FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
@@ -21389,8 +21527,10 @@ G.scenes.register('battle', (opts, onEnd) => {
         FS.wrap(said.text, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 45 + i * 11, { color: '#f8eed0', shadow: PAL.ink }));
         return;
       }
-      if (tip) {
-        ['Три действия — до трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0' }));
+      if (quitT > 0) {
+        FS.draw(ctx, 'Сдаться? Нажми «Точно?»', 9, py + 45, { color: '#ff9a80', shadow: PAL.ink, maxW: W - 18 });
+      } else if (tip) {
+        ['До трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0', maxW: W - 18 }));
       } else {
         const c = selectedCard();
         if (c) {
@@ -22172,6 +22312,7 @@ G.scenes.register('settings', () => {
     { label: 'Джойстик', value: ({0.75:'ПЛАВНО',1:'ОБЫЧНО',1.3:'ЧУТКО'})[S.stickSensitivity||1], act: () => { const a=[0.75,1,1.3];S.stickSensitivity=a[(a.indexOf(S.stickSensitivity||1)+1)%3];G.storage.saveSettings(); } },
     { label: 'Вибрация', value: onoff(S.vibration), act: () => { S.vibration=!S.vibration;G.storage.saveSettings(); } },
     { label: 'Пиксели', value: G.screen.densityOptions().length > 1 ? G.screen.density().name : 'АВТО', dis: G.screen.densityOptions().length < 2, act: () => G.screen.cycleDensity() },
+    { label: 'CRT-экран', value: G.crt.name(), act: () => G.crt.cycle() },
     { label: 'Отладка', value: onoff(G.debug.on), act: () => G.debug.toggle() },
     ...(G.debug.on ? [{ label: 'Читы', act: () => G.scenes.push(G.scenes.make('cheats')) }, { label: 'Шрифт', act: () => G.scenes.push(G.scenes.make('fonttest')) }] : []),
     { label: 'Назад', act: () => G.scenes.pop() },

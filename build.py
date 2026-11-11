@@ -19,7 +19,7 @@ DEV = os.path.join(ROOT, "build")           # служебное (редакто
 # Новый файл → добавь его сюда в подходящую группу (см. docs/ARCHITECTURE.md).
 JS_FILES = [
     # ── движок: экран, ввод, звук, сцены, сохранения ──
-    "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
+    "engine/core.js", "engine/screen.js", "engine/crt.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/art.js", "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
     "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",

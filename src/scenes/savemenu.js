@@ -20,7 +20,13 @@ G.scenes.register('savemenu', () => {
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
       } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
-      else if (info && k === 2) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+      else if (info && k === 2) {
+        // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
+        G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
+          options: [{ label: 'Нет, оставить' }, { label: 'Да, стереть' }] }, (a) => {
+          if (a === 1) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+        }));
+      }
     }));
   };
 
@@ -53,7 +59,7 @@ G.scenes.register('savemenu', () => {
             close(); G.audio.sfx.confirm(); G.game.loadSaved();
           } });
       } },
-      { label: bi ? 'Резервная копия' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
+      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
         if (!bi) { G.audio.sfx.error(); return; }
         if (G.storage.restoreBackup()) { G.audio.sfx.confirm(); G.game.loadSaved(); }
       } },

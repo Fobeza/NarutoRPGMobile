@@ -469,7 +469,8 @@ with sync_playwright() as p:
     check(not page.evaluate("G.storage.importCode('WOF1:мусор')"), "неверный код отклонён")
     key(page, "Escape"); time.sleep(0.3)
     key(page, "ArrowUp", 2)        # «Сохранение…» — предпоследний пункт
-    key(page, "KeyZ"); time.sleep(0.4); key(page, "ArrowDown"); key(page, "KeyZ"); time.sleep(0.6)
+    # «Экспорт кода» — пятая строка: после «Сохранить сейчас» идут три слота (раньше слотов не было, и хватало одного шага)
+    key(page, "KeyZ"); time.sleep(0.4); key(page, "ArrowDown", 4); key(page, "KeyZ"); time.sleep(0.6)
     check(page.evaluate("G.scenes.top().name === 'savemenu' && G.scenes.top().boxOpen"), "окно экспорта кода открылось")
     shot(page, "60_export")
     page.dispatch_event("#cb-cancel", "pointerdown"); time.sleep(0.3)

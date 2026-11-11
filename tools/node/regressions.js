@@ -807,6 +807,75 @@ test('Три слота сохранения: запись, дата, новей
   assert.equal(G.storage.slotInfo(0).day, 7, 'другие слоты не тронуты');
 });
 
+test('Загруженный слот остаётся активным: автосейв не затирает основной', () => {
+  clean();
+  G.storage.wipe();
+  G.state.started = true;
+  G.state.vars.day = 5; assert.ok(G.storage.save(G.state, { slot: 0 }));
+  G.state.vars.day = 9; assert.ok(G.storage.save(G.state, { slot: 2 }));
+  G.state.vars.day = 5; assert.ok(G.storage.save(G.state, { slot: 0 }));   // основной — новейший
+  G.game.loadSaved(2);
+  assert.equal(G.state.vars.day, 9, 'загружен слот 3');
+  assert.equal(G.storage.active, 2, 'активным остаётся загруженный слот');
+  G.storage.save(G.state);                                                  // так пишет автосейв
+  assert.equal(G.storage.slotInfo(0).day, 5, 'основной слот не затёрт чужим прогрессом');
+  assert.equal(G.storage.slotInfo(2).day, 9);
+  G.game.newState();
+  assert.equal(G.storage.active, 0, 'новая игра пишется в основной слот');
+  G.storage.wipe(); G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };
+});
+
+test('CRT-фильтр: режимы по кругу, настройка сохраняется, мусор заменяется на «выкл»', () => {
+  const S = G.storage.settings, keep = S.crt;
+  G.crt.set('off');
+  assert.equal(G.crt.name(), 'ВЫКЛ');
+  G.crt.cycle(); assert.equal(S.crt, 'soft');
+  G.crt.cycle(); assert.equal(S.crt, 'full');
+  const cv = document.getElementById('crt');
+  assert.equal(cv.width, G.screen.W * G.screen.devScale, 'слой в физических пикселях: строка на игровой пиксель');
+  assert.equal(cv.height, G.screen.H * G.screen.devScale);
+  S.crt = 'off'; G.storage.loadSettings();
+  assert.equal(S.crt, 'full', 'настройка пережила загрузку');
+  G.crt.cycle(); assert.equal(S.crt, 'off');
+  assert.equal(cv.width, 1, 'выключенный слой не держит память');
+  S.crt = 'wat'; G.storage.saveSettings(); G.storage.loadSettings();
+  assert.equal(S.crt, 'off', 'неизвестное значение заменено');
+  const list = [];
+  const sc = G.scenes.make('settings'), ctx = h.recordingCtx(), old = G.font.draw;
+  G.font.draw = function (c, t, ...a) { list.push(t); return old.call(this, c, t, ...a); };
+  try { sc.draw(ctx); } finally { G.font.draw = old; }
+  assert.ok(list.includes('CRT-экран'), 'пункт есть в настройках');
+  G.crt.set(['off', 'soft', 'full'].includes(keep) ? keep : 'off');
+});
+
+test('Из «Колоды» и «Истории» можно выйти касанием: у экранов есть кнопка «Назад»', () => {
+  clean();
+  for (const name of ['deckview', 'log']) {
+    const sc = G.scenes.make(name), cfg = sc.touch && sc.touch();
+    assert.ok(cfg && cfg.back, name + ': сцена просит кнопку «Назад»');
+    const ctx = h.recordingCtx();
+    sc.update(0.016); sc.draw(ctx);
+    assert.ok(ctx.log.length > 20, name + ': экран рисуется');
+  }
+});
+
+test('«Сдаться» в бою срабатывает только со второго нажатия', () => {
+  clean();
+  h.rng(7);
+  const b = G.scenes.make('battle', { enemy: 'kiba', mode: 'spar' }, () => {});
+  G.scenes.push(b);
+  for (let i = 0; i < 60 && b.state !== 'menu'; i++) b.update(0.1);
+  const press = () => { const q = b.buttons().find((x) => x.id === 'quit'); G.input.tapNow = { x: q.x + 2, y: q.y + 2 }; b.update(0.016); G.input.tapNow = null; };
+  press();
+  assert.equal(b.state, 'menu', 'первое нажатие только переспрашивает');
+  assert.equal(b.buttons().find((x) => x.id === 'quit').label, 'Точно?');
+  for (let i = 0; i < 40; i++) b.update(0.1);                                // переспрос истёк
+  assert.equal(b.buttons().find((x) => x.id === 'quit').label, 'Сдаться');
+  press(); press();
+  assert.equal(b.state, 'end', 'второе нажатие подряд — сдача');
+  h.rngOff(); G.scenes.stack.length = 0; G.state.battleCheckpoint = null;
+});
+
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
   clean();
   G.state.dlgLog = [];

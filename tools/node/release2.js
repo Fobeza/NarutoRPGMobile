@@ -2,7 +2,8 @@
 'use strict';
 const assert=require('node:assert/strict'),h=require('./harness.js'),{G}=h;
 let passed=0;
-function seed(day=33){h.seed();G.state.learning={};G.state.vars.day=day;G.state.vars.min=900;G.state.vars.hp=100;G.state.vars.chakra=100;G.state.inv={kunai:5,smoke_bomb:2,wire:2,book_traps:1};G.scenes.stack.length=0;G.scenes.fade={a:0,dir:0,speed:3,then:null};G.input.pressed=()=>false;G.input.tapNow=null;}
+// Зерно обязательно: бой берёт Math.random, и без него манекен изредка (≈5%) падал за один ход — проверка «плавала».
+function seed(day=33){h.rng(1);h.seed();G.state.learning={};G.state.vars.day=day;G.state.vars.min=900;G.state.vars.hp=100;G.state.vars.chakra=100;G.state.inv={kunai:5,smoke_bomb:2,wire:2,book_traps:1};G.scenes.stack.length=0;G.scenes.fade={a:0,dir:0,speed:3,then:null};G.input.pressed=()=>false;G.input.tapNow=null;}
 function test(name,fn){seed();try{fn();console.log('✔ '+name);passed++;}catch(e){console.error('✘ '+name);throw e;}}
 function settle(b){for(let i=0;i<600&&b.state!=='menu'&&b.state!=='end';i++)b.update(.1);}
 function battle(mode='spar',enemy='dummy',cb=()=>{}){const b=G.scenes.make('battle',{enemy,mode},cb);G.scenes.push(b);b.enter();settle(b);return b;}
