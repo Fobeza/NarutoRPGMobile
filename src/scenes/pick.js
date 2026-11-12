@@ -5,7 +5,8 @@ G.scenes.register('pick', (o, cb) => {
   const opts = o.options;
   // o.focus — строка, выбранная при открытии (титул: «Продолжить» ставит на новейший слот)
   let focus = Math.max(0, Math.min(opts.length - 1, o.focus || 0)), scroll = 0;
-  const ROW = 18;
+  // строка под палец: около 40 CSS-пикселей, но не меньше прежних 18 точек и не больше 28 (иначе список не влезает)
+  const ROW = Math.max(18, Math.min(28, Math.ceil(40 / (G.screen.scale || 1)))), PADY = Math.floor((ROW - 18) / 2);
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {
     name: 'pick', transparent: true,
@@ -44,8 +45,8 @@ G.scenes.register('pick', (o, cb) => {
         const y = g.ly + i * ROW, sel = k === focus;
         U.row(ctx, g.x + 6, y - 1, g.w - 12, ROW - 2, sel);
         const col = op.off ? C.inkFaint : sel ? '#f8eed0' : C.ink;
-        F.draw(ctx, op.label, g.x + 14, y + 2, { color: col, shadow: sel && !op.off ? '#5a1408' : null, maxW: g.w - 30 - (op.sub ? F.small.measure(op.sub) + 8 : 0) });
-        if (op.sub) F.small.draw(ctx, op.sub, g.x + g.w - 14, y + 4, { align: 'right', color: op.off ? C.inkFaint : sel ? '#f4d46a' : C.inkDim });
+        F.draw(ctx, op.label, g.x + 14, y + 2 + PADY, { color: col, shadow: sel && !op.off ? '#5a1408' : null, maxW: g.w - 30 - (op.sub ? F.small.measure(op.sub) + 8 : 0) });
+        if (op.sub) F.small.draw(ctx, op.sub, g.x + g.w - 14, y + 4 + PADY, { align: 'right', color: op.off ? C.inkFaint : sel ? '#f4d46a' : C.inkDim });
       }
       if (scroll > 0) F.small.draw(ctx, '▲', g.x + g.w - 12, g.y + 4, { color: C.red });
       if (scroll + g.n < opts.length) F.small.draw(ctx, '▼', g.x + g.w - 12, g.y + g.h - 12, { color: C.red });

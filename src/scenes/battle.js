@@ -16,6 +16,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   let quitT = 0;   // «Сдаться» срабатывает со второго нажатия: кнопка стоит вплотную к «Конец»
   const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const fxOn = () => G.storage.settings.fx !== false;   // «Эффекты: выкл» — без тряски и вспышек на весь экран
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const hit = (b, p) => p && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
   const sfx = {
@@ -265,14 +266,14 @@ G.scenes.register('battle', (opts, onEnd) => {
 
     draw(ctx) {
       const g = geo(), W = g.W, AH = g.AH;
-      const sx = fx.shake > 0 ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
+      const sx = fx.shake > 0 && fxOn() ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
       ctx.save(); ctx.translate(sx, 0);
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g); this.drawFx(ctx);
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
-      if (fx.flash > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
+      if (fx.flash > 0 && fxOn()) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
       this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
         ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
@@ -324,7 +325,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       ctx.restore();
       if (isP) {
-        const k = Math.max(D.P.heat / 100, fx.aura);
+        // аура: накал боя, вспышка «Выброса» или почти пустая чакра (то же правило, что на улице, — G.purple.lowAura)
+        const k = Math.max(D.P.heat / 100, fx.aura, G.purple.lowAura(D.P.ch / Math.max(1, D.P.chMax) * 100));
         if (k > 0.05) {
           ctx.save();
           for (let i = 0; i < 5 + Math.round(k * 10); i++) {
@@ -337,7 +339,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       const tags = [];
       if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.block) tags.push('блок ' + Math.round(D.P.block)); }
-      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
+      else { if (D.E.status.stun > 0) tags.push('оглушён'); else if (D.E.steady > 0) tags.push('устоит'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
       tags.slice(0, 2).forEach((s, i) => FS.draw(ctx, s, x, Math.max(53, y - 62 + i * 9), { align: 'center', color: '#fff2cf', outline: PAL.ink }));
     },
     drawHud(ctx, g) {
@@ -351,8 +353,10 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, 'накал', 6 + bw, 47, { align: 'right', color: '#e0a8ff', outline: PAL.ink });
       FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
+      // число здоровья врага — как у героя: добивание считают, а не прикидывают по шкале
+      FS.draw(ctx, `${Math.round(D.E.hp)}/${D.E.hpMax}`, W - 4, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') F.draw(ctx, 'до 30% здоровья', W - 6, 33, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;

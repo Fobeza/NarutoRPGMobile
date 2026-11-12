@@ -187,7 +187,7 @@ body.crt-full #crt-roll { display: block; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: '9ba3ed5e', date: '2026-11-11 20:37', debug: false };
+const BUILD = { release: '3.0', version: '43fe187b', date: '2026-11-12 08:16', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -2495,7 +2495,9 @@ G.ui = (() => {
     ROW,
     rect(n, w, o = {}) {
       w = Math.min(w, G.screen.W - 8);
-      const row = Math.min(ROW, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
+      // строка под палец: не ниже 44 CSS-пикселей, пока список помещается в экран (на iPhone SE точка = 1 CSS-пиксель)
+      const want = Math.max(ROW, Math.ceil(44 / (G.screen.scale || 1)));
+      const row = Math.min(want, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
       const h = 24 + n * row + 10 + (o.extra || 0);
       return { x: Math.round((G.screen.W - w) / 2), y: Math.max(14, Math.round((G.screen.H - h) / 2) - 6), w, h, row };
     },
@@ -2510,8 +2512,8 @@ G.ui = (() => {
       panel(ctx, r.x, r.y, r.w, r.h, 'frame');
       title && U_title(ctx, title, r.x + r.w / 2, r.y - 7, 0);
       items.forEach((it, i) => {
-        const y = menu.rowY(r, i), sel = i === idx;
-        row(ctx, r.x + 6, y - 1, r.w - 12, r.row - 2, sel);
+        const y0 = menu.rowY(r, i), sel = i === idx, y = y0 + Math.max(0, Math.floor((r.row - 20) / 2));   // подпись по центру высокой строки
+        row(ctx, r.x + 6, y0 - 1, r.w - 12, r.row - 2, sel);
         const col = it.dis ? C.inkFaint : sel ? '#f8eed0' : C.ink;
         F.draw(ctx, it.label, r.x + 14, y + 3, { color: col, shadow: sel && !it.dis ? '#5a1408' : null, maxW: r.w - 28 - (it.value ? F.measure(it.value) + 8 : 0) });
         if (it.value) F.draw(ctx, it.value, r.x + r.w - 14, y + 3, { align: 'right', color: sel ? '#f4d46a' : C.redDark, shadow: sel ? '#5a1408' : null });
@@ -7090,7 +7092,7 @@ G.ENEMIES = {
   hinata: {name:'Хината',spr:'hinata',male:false,grow:false,share:0.62,dmg:31,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
   choji: {name:'Чоджи',spr:'choji',male:true,grow:false,share:0.60,dmg:29,hp:144,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
   ino: {name:'Ино',spr:'ino',male:false,grow:false,share:0.60,dmg:50.2,hp:84,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
-  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,share:0.62,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
+  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,share:0.62,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:0},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
   bully: {name:'Хулиган',spr:'bully',male:true,grow:true,share:0.34,dmg:19.1,hp:50,ch:20,tai:4,nin:1,gen:0,spd:3,end:4,know:1,style:'rush',tech:{name:'Бросок кунаев',power:1.3,kind:'dmg',cost:10},lines:{start:'Эй, мелкий! Гони деньги!',hurt:'Ах ты!',win:'Ха, слабак!',lose:'Б-бежим отсюда!'}},
   senior: {name:'Старшеклассник',spr:'bully',male:true,grow:false,share:0.42,dmg:25,hp:80,ch:40,tai:7,nin:4,gen:2,spd:8,end:9,know:8,style:'counter',tech:{name:'Бросок кунаев',power:1.5,kind:'dmg',cost:12},lines:{start:'Свиток? Попробуй отними, малявка!',hurt:'Тц, шустрый!',low:'Да кто ты такой?!',win:'Свиток останется у нас.',lose:'Ладно-ладно, забирай!'}},
   thief: {name:'Ночной вор',spr:'thief',male:true,grow:true,share:0.44,dmg:29,hp:50,ch:30,tai:4,nin:2,gen:2,spd:7,end:4,know:4,style:'trickster',tech:{name:'Дымовая завеса',power:0,kind:'fear',cost:12},lines:{start:'Ученичок? Не мешай работать.',hurt:'Шустрый...',win:'Сладких снов.',lose:'Сдаюсь! Отдам всё!'}},
@@ -7163,8 +7165,8 @@ for (const [id, t] of Object.entries(G.TECHS)) {
   };
 }
 G.CARDS.kawarimi.text = 'Полностью избежать атаки и нанести контрудар. Срабатывает только против атакующего намерения.';
-G.CARDS.henge.text = 'Враг пропускает действие в конце хода. Одно надёжное превращение за бой.';
-G.CARDS.fear.text = 'Страх на два действия: враг наносит на 35% меньше урона и теряет блок.';
+G.CARDS.henge.text = 'Враг пропускает действие в конце хода. Дважды подряд оглушить нельзя.';
+G.CARDS.fear.text = 'Страх на два действия: враг бьёт на треть слабее (сильнее с Гендзюцу) и теряет блок.';
 G.CARDS.bunshin.text = 'Два клона. Каждый принимает на себя один удар; после призыва вы берёте карту.';
 G.CARDS.sexy.text = 'Противник-мужчина пропускает действие. На остальных — слабость на один ход.';
 G.CARDS.shunshin.text = 'Сильный удар от Скорости и полное уклонение от ответной атаки.';
@@ -7941,8 +7943,11 @@ G.purple = (() => {
     v.purple_ctl = Math.min(PRACTICE_CAP, (v.purple_ctl || 0) + add);
     return add;
   }
-  // сила ауры 0..1: ярче при полной чакре
-  function aura() { return clamp(((V().chakra || 0) - 50) / 50, 0, 1); }
+  // сила ауры 0..1: фиолетовая чакра проступает, когда обычной почти не осталось.
+  // Ниже LOW (35%) появляются первые искры, к 5% аура горит в полную силу; при полной чакре её не видно.
+  const LOW = 35;
+  const lowAura = (pct) => clamp((LOW - pct) / (LOW - 5), 0, 1);
+  function aura() { const c = V().chakra; return lowAura(c == null ? 100 : c); }
   // искры вокруг героя; вспышка после выброса
   function drawAura(ctx, world, a) {
     if (G.storage.settings.fx === false || !G.state.started) return;
@@ -7958,7 +7963,7 @@ G.purple = (() => {
     }
     ctx.restore();
   }
-  return { COLOR, PRACTICE, stability, chance, roll, apply, practice, aura, drawAura, BOOST: 1.5, flashUntil: 0 };
+  return { COLOR, PRACTICE, stability, chance, roll, apply, practice, aura, lowAura, LOW, drawAura, BOOST: 1.5, flashUntil: 0 };
 })();
 
 
@@ -8114,13 +8119,13 @@ G.duel = (() => {
     if (D.intent.dodge) E.dodge = D.intent.dodge;
   }
   // ── урон врага: один множитель на все места ──
-  // Ослабления врага — страх (его сила зависит от Гендзюцу героя), замедление и слабость — считают
+  // Ослабления врага — страх (его сила зависит от Гендзюцу героя) и слабость — считают
   // три разных места: предпросмотр намерения (intentDamage), строка «Ожидаемый урон» (incomingOf) и
   // сам удар (enemyHit). Держим формулу здесь, иначе предпросмотр однажды тихо разойдётся с уроном.
-  const SLOW_MUL = 0.75, WEAK_MUL = 0.75;
+  const WEAK_MUL = 0.75;
   function enemyMul(D) {
     const s = D.E.status;
-    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.slow > 0 ? SLOW_MUL : 1) * (s.weak > 0 ? WEAK_MUL : 1);
+    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.weak > 0 ? WEAK_MUL : 1);
   }
   function intentDamage(D) {
     const i = D.intent;
@@ -8182,7 +8187,7 @@ G.duel = (() => {
       else if (id === 'feint') lines.push('Снять защиту');
       else if (id === 'katon') lines.push('Горение ×2');
       else if (id === 'suiton') lines.push('Мокрый ×2');
-      else if (id === 'raiton') lines.push(D.E.status.wet > 0 ? 'Оглушение!' : 'Нужен Суйтон');
+      else if (id === 'raiton') lines.push(D.E.status.wet > 0 ? (steady(D) ? 'Враг устоит' : 'Оглушение!') : 'Нужен Суйтон');
       else if (id === 'fuuton') lines.push('+1 карта');
       else if (id === 'shunshin') lines.push('Уклон 100%');
       else if (id === 'release') lines.push('Сквозь защиту');
@@ -8194,8 +8199,8 @@ G.duel = (() => {
       guard: [`${block} блок`], evade: ['65% уклон'], focus: [`+${Math.round(8 + P.st('ctrl'))} чакры`, 'Техника +25%'],
       analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${blockOf(P, 'stanceReply')} ответ`],
       breath: [`+${Math.round(3 + P.st('end') * 0.3)} зд.`, '−4 усталости'], kawarimi: ['Уклон 100%', `${Math.round(8 + P.st('tai') * 0.8)} ответ`],
-      henge: ['Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
-      bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: ['Отмена хода'],
+      henge: [steady(D) ? 'Враг устоит' : 'Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? (steady(D) ? 'Враг устоит' : 'Оглушение') : 'Слабость'],
+      bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: [steady(D) ? 'Враг устоит' : 'Отмена хода'],
     };
     return table[id] || [G.CARDS[id] ? G.CARDS[id].kind : ''];
   }
@@ -8209,7 +8214,7 @@ G.duel = (() => {
     if (id.startsWith('tech:') || id.startsWith('item:')) id = id.slice(5);
     return D.hand.find((c) => c.id === id) || null;
   }
-  // Цена карты для героя: гендзюцу дешевле на 1 за каждые 4 очка Гендзюцу.
+  // Цена карты для героя: гендзюцу дешевле на 1 за каждые 6 очков Гендзюцу.
   function cost(D, id) {
     const d = cardDef(id); if (!d) return 0;
     const base = d.cost || 0;
@@ -8230,6 +8235,15 @@ G.duel = (() => {
     if (c.id === 'evade' && P.status.bind > 0) return { ok: false, why: 'Теневая связка мешает уклону' };
     if (c.id === 'smoke_bomb' && !isAttack(D)) return { ok: false, why: 'Враг не атакует' };
     return { ok: true, card: c, def: d };
+  }
+  // Оглушение врага. «Стойкость»: пропустив ход, враг собирается, и на следующий ход оглушение не проходит —
+  // иначе Хенге, Вспышка, Секси-дзюцу и Райтон по мокрой цели отменяют ходы подряд, и бой идёт без единого удара.
+  // Срыв замаха серией тайдзюцу (force) проходит всегда: это задуманный ответ на тяжёлый приём.
+  const steady = (D) => D.E.steady > 0;
+  function stunEnemy(D, ev, text, fx, force) {
+    if (!force && steady(D)) { note(ev, 'e', 'info', `${D.E.name} устоял: дважды подряд не оглушить`, { to: 'p' }); return false; }
+    D.E.status.stun = 1; note(ev, 'p', force ? 'counter' : 'status', text, { fx });
+    return true;
   }
   function note(ev, who, type, text, extra) { ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p' }, extra || {})); }
   function playerDamage(D, c, formula, ev) {
@@ -8280,10 +8294,10 @@ G.duel = (() => {
     else if (c.id === 'stance') { gainBlock(D, blockOf(P, 'stance'), ev); P.riposte += blockOf(P, 'stanceReply'); }
     else if (c.id === 'breath') { heal(D, 3 + P.st('end') * 0.3, ev, 'Дыхание восстанавливает силы'); P.fat = Math.max(0, P.fat - 4); }
     else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += blockOf(P, 'kawarimiReply'); note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
-    else if (c.id === 'henge' || c.id === 'flash_bomb') { E.status.stun = 1; note(ev, 'p', 'status', `${def.name}: действие врага отменено`, { fx: c.id }); }
+    else if (c.id === 'henge' || c.id === 'flash_bomb') stunEnemy(D, ev, `${def.name}: действие врага отменено`, c.id);
     else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', `Ложный страх: урон врага −${Math.round((1 - P.fearMul) * 100)}% на два действия`, { fx: c.id }); }
     else if (c.id === 'bunshin') { P.clones = Math.max(P.clones, 2); draw(D, 1); note(ev, 'p', 'status', 'Буншин: два клона и дополнительная карта', { fx: c.id, to: 'p' }); }
-    else if (c.id === 'sexy') { if (E.male) E.status.stun = 1; else E.status.weak = 1; note(ev, 'p', 'status', E.male ? 'Секси-дзюцу: враг оглушён' : 'Не сработало: враг ослаблен', { fx: c.id }); }
+    else if (c.id === 'sexy') { if (E.male) stunEnemy(D, ev, 'Секси-дзюцу: враг оглушён', c.id); else { E.status.weak = 1; note(ev, 'p', 'status', 'Не сработало: враг ослаблен', { fx: c.id }); } }
     else if (c.id === 'shunshin') P.dodge = 1;
     else if (c.id === 'smoke_bomb') { P.dodge = 1; note(ev, 'p', 'status', 'Дымовая завеса', { fx: c.id, to: 'p' }); }
     else if (c.id === 'bandage') heal(D, P.hpMax * 0.25, ev, 'Бинт восстанавливает здоровье');
@@ -8297,9 +8311,9 @@ G.duel = (() => {
     if (c.id === 'fuuton') { E.status.weak = 1; draw(D, 1); }
     if (c.id === 'katon' && dealt > 0) E.status.burn = 2;
     if (c.id === 'suiton' && dealt > 0) E.status.wet = 2;
-    if (c.id === 'raiton' && dealt > 0 && E.status.wet > 0) { E.status.stun = 1; note(ev, 'p', 'status', 'Райтон по мокрой цели: оглушение', { fx: c.id }); }
+    if (c.id === 'raiton' && dealt > 0 && E.status.wet > 0) stunEnemy(D, ev, 'Райтон по мокрой цели: оглушение', c.id);
     if (def.kind === 'tai') P.chain += formula ? formula.hits : 1;
-    if (def.kind === 'tai' && D.intent.kind === 'charge' && P.chain >= 3 && !E.chargeBroken) { E.chargeBroken = 1; E.status.stun = 1; note(ev, 'p', 'counter', 'Серия тайдзюцу срывает замах!', { fx: c.id }); }
+    if (def.kind === 'tai' && D.intent.kind === 'charge' && P.chain >= 3 && !E.chargeBroken) { E.chargeBroken = 1; stunEnemy(D, ev, 'Серия тайдзюцу срывает замах!', c.id, true); }
     if (surge && surge.kind === 'backfire') { const rec = Math.max(3, Math.round(dealt * 0.25)); P.hp = clamp(P.hp - rec, 0, P.hpMax); D.stats.taken += rec; note(ev, 'p', 'backfire', `Срыв чакры: отдача ${rec}`, { dmg: rec, to: 'p', fx: 'release' }); }
     if (def.release) P.heat = 0;
     (def.exhaust || def.item ? D.exhaust : D.discard).push(c);
@@ -8333,12 +8347,12 @@ G.duel = (() => {
     D.discard.push(...D.hand.splice(0));
     D.prevCards = P.turnCards.slice();
     E.block = 0; E.dodge = 0;
-    if (E.status.stun > 0) note(ev, 'e', 'info', `${E.name}: действие пропущено`, { to: 'p' });
+    if (E.status.stun > 0) { E.steady = 2; note(ev, 'e', 'info', `${E.name}: действие пропущено`, { to: 'p' }); }   // steady: следующий ход оглушить нельзя
     else if (intent.kind === 'charge') { E.charged = 1; E.chargeBroken = 0; note(ev, 'e', 'status', `${E.name} готовит тяжёлый приём`, { to: 'p' }); }
     else if (intent.kind === 'block' || intent.kind === 'evade') { E.ch = Math.min(E.chMax, E.ch + 4); note(ev, 'e', 'info', intent.kind === 'block' ? 'Враг удерживает защиту' : 'Враг меняет позицию', { to: 'p' }); }
     else if (intent.kind === 'idle') note(ev, 'e', 'info', 'Враг ждёт', { to: 'p' });
     else if (isAttack(D)) {
-      if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      if (intent.cost != null) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }   // приём (даже бесплатный) уходит на перезарядку
       const dealt = enemyHit(D, intent.dmg || 0, ev, intent.name);
       if (intent.kind === 'drain' && dealt > 0) { const n = Math.min(P.ch, Math.round(8 + E.nin)); P.ch -= n; E.ch = Math.min(E.chMax, E.ch + n); note(ev, 'e', 'drain', `Чакра украдена: ${n}`, { to: 'p', fx: 'e:drain' }); }
       if (intent.kind === 'bind' && dealt > 0) { P.status.bind = 2; note(ev, 'e', 'status', 'Теневая связка: уклон недоступен на ход', { to: 'p', fx: 'e:bind' }); }
@@ -8347,7 +8361,7 @@ G.duel = (() => {
         note(ev, 'p', 'counter', `Контрудар: ${n}`, { dmg: n, to: 'e', fx: 'kawarimi' });
       }
     } else if (intent.kind === 'fear') {
-      if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      if (intent.cost != null) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
       if (D.rng() < (P.genResist || 0)) {
         note(ev, 'p', 'status', 'Иллюзия развеяна: своё гендзюцу сильнее', { to: 'p', fx: 'e:fear' });
       } else {
@@ -8356,10 +8370,12 @@ G.duel = (() => {
       }
     }
     lastStand(D, ev);
-    if (E.status.burn > 0 && E.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
+    // павший герой не побеждает «посмертно»: горение не тикает, если его уже добили
+    if (E.status.burn > 0 && E.hp > 0 && P.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
     P.fat = clamp(P.fat + FAT_ROUND * (1 - P.st('end') * 0.025), 0, 100);
     P.heat = clamp(P.heat + 2, 0, 100); E.ch = Math.min(E.chMax, E.ch + 2);
-    for (const s of ['stun', 'fear', 'weak', 'wet', 'vuln', 'burn', 'slow']) if (E.status[s] > 0) E.status[s]--;
+    for (const s of ['stun', 'fear', 'weak', 'wet', 'vuln', 'burn']) if (E.status[s] > 0) E.status[s]--;
+    if (E.steady > 0) E.steady--;
     for (const s of ['bind', 'fear']) if (P.status[s] > 0) P.status[s]--;
     if (E.cd > 0) E.cd--;
     D.turns++;
@@ -8405,14 +8421,14 @@ G.duel = (() => {
     else if (id === 'kunai') s += hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) && !E.status.mark ? 13 : 0;
     else if (id === 'feint') s += E.block + E.dodge * 20 + 4;
     else if (id === 'kawarimi') s = incoming + blockOf(P, 'kawarimiReply');
-    else if (id === 'henge' || id === 'flash_bomb') s = incoming + (intent.kind === 'charge' ? 24 : 10);
+    else if (id === 'henge' || id === 'flash_bomb') s = steady(D) ? -30 : incoming + (intent.kind === 'charge' ? 24 : 10);
     else if (id === 'fear') s = incoming * 0.7 + E.block;
     else if (id === 'bunshin') s = incoming * 0.85 + (intent.hits || 1) * 5;
-    else if (id === 'sexy') s = E.male ? incoming + 14 : incoming * 0.25;
+    else if (id === 'sexy') s = E.male ? (steady(D) ? -30 : incoming + 14) : incoming * 0.25;
     else if (id === 'shunshin') s += incoming;
     else if (id === 'katon') s += 8;
     else if (id === 'suiton') s += has('raiton') ? 18 : 3;
-    else if (id === 'raiton') s += E.status.wet > 0 ? incoming + 16 : 0;
+    else if (id === 'raiton') s += E.status.wet > 0 && !steady(D) ? incoming + 16 : 0;
     else if (id === 'fuuton') s += incoming * 0.25 + 6;
     else if (id === 'release') s += 12;
     else if (id === 'smoke_bomb') s = incoming + 5;
@@ -8945,7 +8961,7 @@ G.academy = {
       if (p.learn || p.learnFlag) {   // технику объяснят после уроков: очередь, чтобы пропуски не затирали друг друга
         const q = G.state.makeupQ || (G.state.makeupQ = []);
         if (!q.includes(v.day)) q.push(v.day);
-        if (w && w.showToast) setTimeout(() => w.showToast('Техника: зайди в класс после 13:00'), 2400);
+        if (w && w.notes) w.notes.push({ title: '📜 Пропущена техника', text: 'Зайди в класс после 13:00 — Ирука объяснит', col: '#7ad0ff', t: 5 });
       }
     }
   },
@@ -20671,7 +20687,8 @@ G.scenes.register('savemenu', () => {
   // Один слот: «Сохранить сюда / Загрузить / Стереть» через окно выбора
   const slotMenu = (i) => {
     const info = G.storage.slotInfo(i);
-    const opts = [{ label: 'Сохранить сюда', desc: info ? `сейчас: день ${info.day}, ${G.game.clock(info.min)}` : 'слот пуст' }];
+    const auto = i === G.storage.active ? ' Автосейв пишет сюда.' : ' После записи автосейв пойдёт сюда.';
+    const opts = [{ label: 'Сохранить сюда', desc: (info ? `Сейчас: день ${info.day}, ${G.game.clock(info.min)}.` : 'Слот пуст.') + auto }];
     if (info) opts.push({ label: 'Загрузить игру', desc: `день ${info.day}, ${G.game.clock(info.min)} · ${info.when}` });
     if (info) opts.push({ label: 'Стереть слот', desc: 'Без резервной копии слотов' });
     opts.push({ label: 'Отмена' });
@@ -20680,7 +20697,13 @@ G.scenes.register('savemenu', () => {
         const w = world(); w && w.savePos();
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
-      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
+      } else if (info && k === 1) {
+        // загрузка выбрасывает всё, что сделано после последнего автосейва, — переспрашиваем
+        G.scenes.push(G.scenes.make('pick', { title: `ЗАГРУЗИТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Несохранённое в текущей игре пропадёт.`,
+          options: [{ label: 'Нет, остаться' }, { label: 'Да, загрузить' }] }, (a) => {
+          if (a === 1) { G.storage.active = i; G.game.loadSaved(i); }
+        }));
+      }
       else if (info && k === 2) {
         // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
         G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
@@ -20693,7 +20716,8 @@ G.scenes.register('savemenu', () => {
 
   const slotLabel = (i) => {
     const inf = G.storage.slotInfo(i);
-    return { label: `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
+    // ▸ — активный слот: в него идут автосейвы и «Сохранить сейчас»
+    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
   };
 
   const items = () => {
@@ -21166,6 +21190,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   let quitT = 0;   // «Сдаться» срабатывает со второго нажатия: кнопка стоит вплотную к «Конец»
   const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const fxOn = () => G.storage.settings.fx !== false;   // «Эффекты: выкл» — без тряски и вспышек на весь экран
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const hit = (b, p) => p && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
   const sfx = {
@@ -21415,14 +21440,14 @@ G.scenes.register('battle', (opts, onEnd) => {
 
     draw(ctx) {
       const g = geo(), W = g.W, AH = g.AH;
-      const sx = fx.shake > 0 ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
+      const sx = fx.shake > 0 && fxOn() ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
       ctx.save(); ctx.translate(sx, 0);
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g); this.drawFx(ctx);
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
-      if (fx.flash > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
+      if (fx.flash > 0 && fxOn()) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
       this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
         ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
@@ -21474,7 +21499,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       ctx.restore();
       if (isP) {
-        const k = Math.max(D.P.heat / 100, fx.aura);
+        // аура: накал боя, вспышка «Выброса» или почти пустая чакра (то же правило, что на улице, — G.purple.lowAura)
+        const k = Math.max(D.P.heat / 100, fx.aura, G.purple.lowAura(D.P.ch / Math.max(1, D.P.chMax) * 100));
         if (k > 0.05) {
           ctx.save();
           for (let i = 0; i < 5 + Math.round(k * 10); i++) {
@@ -21487,7 +21513,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       const tags = [];
       if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.block) tags.push('блок ' + Math.round(D.P.block)); }
-      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
+      else { if (D.E.status.stun > 0) tags.push('оглушён'); else if (D.E.steady > 0) tags.push('устоит'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
       tags.slice(0, 2).forEach((s, i) => FS.draw(ctx, s, x, Math.max(53, y - 62 + i * 9), { align: 'center', color: '#fff2cf', outline: PAL.ink }));
     },
     drawHud(ctx, g) {
@@ -21501,8 +21527,10 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, 'накал', 6 + bw, 47, { align: 'right', color: '#e0a8ff', outline: PAL.ink });
       FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
+      // число здоровья врага — как у героя: добивание считают, а не прикидывают по шкале
+      FS.draw(ctx, `${Math.round(D.E.hp)}/${D.E.hpMax}`, W - 4, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') F.draw(ctx, 'до 30% здоровья', W - 6, 33, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
@@ -21958,7 +21986,8 @@ G.scenes.register('pick', (o, cb) => {
   const opts = o.options;
   // o.focus — строка, выбранная при открытии (титул: «Продолжить» ставит на новейший слот)
   let focus = Math.max(0, Math.min(opts.length - 1, o.focus || 0)), scroll = 0;
-  const ROW = 18;
+  // строка под палец: около 40 CSS-пикселей, но не меньше прежних 18 точек и не больше 28 (иначе список не влезает)
+  const ROW = Math.max(18, Math.min(28, Math.ceil(40 / (G.screen.scale || 1)))), PADY = Math.floor((ROW - 18) / 2);
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {
     name: 'pick', transparent: true,
@@ -21997,8 +22026,8 @@ G.scenes.register('pick', (o, cb) => {
         const y = g.ly + i * ROW, sel = k === focus;
         U.row(ctx, g.x + 6, y - 1, g.w - 12, ROW - 2, sel);
         const col = op.off ? C.inkFaint : sel ? '#f8eed0' : C.ink;
-        F.draw(ctx, op.label, g.x + 14, y + 2, { color: col, shadow: sel && !op.off ? '#5a1408' : null, maxW: g.w - 30 - (op.sub ? F.small.measure(op.sub) + 8 : 0) });
-        if (op.sub) F.small.draw(ctx, op.sub, g.x + g.w - 14, y + 4, { align: 'right', color: op.off ? C.inkFaint : sel ? '#f4d46a' : C.inkDim });
+        F.draw(ctx, op.label, g.x + 14, y + 2 + PADY, { color: col, shadow: sel && !op.off ? '#5a1408' : null, maxW: g.w - 30 - (op.sub ? F.small.measure(op.sub) + 8 : 0) });
+        if (op.sub) F.small.draw(ctx, op.sub, g.x + g.w - 14, y + 4 + PADY, { align: 'right', color: op.off ? C.inkFaint : sel ? '#f4d46a' : C.inkDim });
       }
       if (scroll > 0) F.small.draw(ctx, '▲', g.x + g.w - 12, g.y + 4, { color: C.red });
       if (scroll + g.n < opts.length) F.small.draw(ctx, '▼', g.x + g.w - 12, g.y + g.h - 12, { color: C.red });
@@ -22363,19 +22392,30 @@ G.scenes.register('gallery', () => {
 
   return {
     name: 'gallery',
+    touch() { return { back: true, roomyBack: true }; },   // крупная шапка, как в «Статусе»: кнопка ≥44 CSS и не касается заголовка
+    off() { return G.touch.header().height - 20; },         // на сколько содержимое сдвинуто вниз под шапку
+    grid() { const W = G.screen.W, perRow = Math.max(6, Math.floor((W - 16) / 18)), top = 194 + this.off(); return { perRow, top }; },
     update(dt) {
       t += dt;
       const I = G.input;
       if (I.repeat('left', dt)) { idx = (idx + ids.length - 1) % ids.length; G.audio.sfx.select(); }
       if (I.repeat('right', dt)) { idx = (idx + 1) % ids.length; G.audio.sfx.select(); }
-      if (I.tapNow) { idx = (idx + (I.tapNow.x < G.screen.W / 2 ? ids.length - 1 : 1)) % ids.length; G.audio.sfx.select(); }
+      if (I.tapNow) {
+        // касание человечка в нижней сетке выбирает его; выше сетки — листаем, как раньше (левая/правая половина)
+        const g = this.grid(), p = I.tapNow, col = Math.round((p.x - 17) / 18), rowI = Math.floor((p.y - g.top - 8) / 26), k = rowI * g.perRow + col;
+        if (p.y >= g.top + 8 && col >= 0 && col < g.perRow && rowI >= 0 && k < ids.length) idx = k;
+        else if (p.y < g.top) idx = (idx + (p.x < G.screen.W / 2 ? ids.length - 1 : 1)) % ids.length;
+        G.audio.sfx.select();
+      }
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); }
     },
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, U = G.ui, C = U.C, F = G.font;
       U.backdrop(ctx);
-      U.title(ctx, 'ГАЛЕРЕЯ', W / 2, 3, 90);
+      const hd = G.touch.header();
+      U.title(ctx, 'ГАЛЕРЕЯ', hd.titleX, hd.titleY, 80);
       const id = ids[idx];
+      ctx.save(); ctx.translate(0, this.off());
       U.panel(ctx, 4, 21, W - 8, 24, 'frame');
       F.draw(ctx, '‹', 16, 28, { color: C.red }); F.draw(ctx, '›', W - 20, 28, { color: C.red });
       F.draw(ctx, G.chars.nameOf(id), W / 2, 28, { align: 'center', color: C.redDark });
@@ -22400,14 +22440,15 @@ G.scenes.register('gallery', () => {
         ctx.drawImage(s, f * 16, r * 20, 16, 20, 10 + (r * 3 + f) * ((W - 24) / 12), 160, 16, 20);
 
       // все персонажи в ряд: выбранный подсвечен красной карточкой
-      const perRow = Math.max(6, Math.floor((W - 16) / 18)), top = 194;
-      U.panel(ctx, 4, top, W - 8, H - top - 4, 'frame');
+      const perRow = this.grid().perRow, top = 194, HH = H - this.off();   // координаты — в сдвинутой системе
+      U.panel(ctx, 4, top, W - 8, HH - top - 4, 'frame');
       ids.forEach((cid, i) => {
         const x = 17 + (i % perRow) * 18, y = top + 30 + Math.floor(i / perRow) * 26;
-        if (y > H - 10) return;
+        if (y > HH - 10) return;
         if (cid === id) U.card(ctx, x - 9, y - 22, 18, 25, true);
         G.chars.draw(ctx, cid, 'down', G.chars.WALK[Math.floor(t * 4 + i) % 4], x, y);
       });
+      ctx.restore();
     },
   };
 });

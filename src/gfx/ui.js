@@ -249,7 +249,9 @@ G.ui = (() => {
     ROW,
     rect(n, w, o = {}) {
       w = Math.min(w, G.screen.W - 8);
-      const row = Math.min(ROW, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
+      // строка под палец: не ниже 44 CSS-пикселей, пока список помещается в экран (на iPhone SE точка = 1 CSS-пиксель)
+      const want = Math.max(ROW, Math.ceil(44 / (G.screen.scale || 1)));
+      const row = Math.min(want, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
       const h = 24 + n * row + 10 + (o.extra || 0);
       return { x: Math.round((G.screen.W - w) / 2), y: Math.max(14, Math.round((G.screen.H - h) / 2) - 6), w, h, row };
     },
@@ -264,8 +266,8 @@ G.ui = (() => {
       panel(ctx, r.x, r.y, r.w, r.h, 'frame');
       title && U_title(ctx, title, r.x + r.w / 2, r.y - 7, 0);
       items.forEach((it, i) => {
-        const y = menu.rowY(r, i), sel = i === idx;
-        row(ctx, r.x + 6, y - 1, r.w - 12, r.row - 2, sel);
+        const y0 = menu.rowY(r, i), sel = i === idx, y = y0 + Math.max(0, Math.floor((r.row - 20) / 2));   // подпись по центру высокой строки
+        row(ctx, r.x + 6, y0 - 1, r.w - 12, r.row - 2, sel);
         const col = it.dis ? C.inkFaint : sel ? '#f8eed0' : C.ink;
         F.draw(ctx, it.label, r.x + 14, y + 3, { color: col, shadow: sel && !it.dis ? '#5a1408' : null, maxW: r.w - 28 - (it.value ? F.measure(it.value) + 8 : 0) });
         if (it.value) F.draw(ctx, it.value, r.x + r.w - 14, y + 3, { align: 'right', color: sel ? '#f4d46a' : C.redDark, shadow: sel ? '#5a1408' : null });

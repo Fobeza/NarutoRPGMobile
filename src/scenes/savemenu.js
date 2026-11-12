@@ -10,7 +10,8 @@ G.scenes.register('savemenu', () => {
   // Один слот: «Сохранить сюда / Загрузить / Стереть» через окно выбора
   const slotMenu = (i) => {
     const info = G.storage.slotInfo(i);
-    const opts = [{ label: 'Сохранить сюда', desc: info ? `сейчас: день ${info.day}, ${G.game.clock(info.min)}` : 'слот пуст' }];
+    const auto = i === G.storage.active ? ' Автосейв пишет сюда.' : ' После записи автосейв пойдёт сюда.';
+    const opts = [{ label: 'Сохранить сюда', desc: (info ? `Сейчас: день ${info.day}, ${G.game.clock(info.min)}.` : 'Слот пуст.') + auto }];
     if (info) opts.push({ label: 'Загрузить игру', desc: `день ${info.day}, ${G.game.clock(info.min)} · ${info.when}` });
     if (info) opts.push({ label: 'Стереть слот', desc: 'Без резервной копии слотов' });
     opts.push({ label: 'Отмена' });
@@ -19,7 +20,13 @@ G.scenes.register('savemenu', () => {
         const w = world(); w && w.savePos();
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
-      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
+      } else if (info && k === 1) {
+        // загрузка выбрасывает всё, что сделано после последнего автосейва, — переспрашиваем
+        G.scenes.push(G.scenes.make('pick', { title: `ЗАГРУЗИТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Несохранённое в текущей игре пропадёт.`,
+          options: [{ label: 'Нет, остаться' }, { label: 'Да, загрузить' }] }, (a) => {
+          if (a === 1) { G.storage.active = i; G.game.loadSaved(i); }
+        }));
+      }
       else if (info && k === 2) {
         // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
         G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
@@ -32,7 +39,8 @@ G.scenes.register('savemenu', () => {
 
   const slotLabel = (i) => {
     const inf = G.storage.slotInfo(i);
-    return { label: `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
+    // ▸ — активный слот: в него идут автосейвы и «Сохранить сейчас»
+    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
   };
 
   const items = () => {

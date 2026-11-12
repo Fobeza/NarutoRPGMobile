@@ -6,19 +6,30 @@ G.scenes.register('gallery', () => {
 
   return {
     name: 'gallery',
+    touch() { return { back: true, roomyBack: true }; },   // крупная шапка, как в «Статусе»: кнопка ≥44 CSS и не касается заголовка
+    off() { return G.touch.header().height - 20; },         // на сколько содержимое сдвинуто вниз под шапку
+    grid() { const W = G.screen.W, perRow = Math.max(6, Math.floor((W - 16) / 18)), top = 194 + this.off(); return { perRow, top }; },
     update(dt) {
       t += dt;
       const I = G.input;
       if (I.repeat('left', dt)) { idx = (idx + ids.length - 1) % ids.length; G.audio.sfx.select(); }
       if (I.repeat('right', dt)) { idx = (idx + 1) % ids.length; G.audio.sfx.select(); }
-      if (I.tapNow) { idx = (idx + (I.tapNow.x < G.screen.W / 2 ? ids.length - 1 : 1)) % ids.length; G.audio.sfx.select(); }
+      if (I.tapNow) {
+        // касание человечка в нижней сетке выбирает его; выше сетки — листаем, как раньше (левая/правая половина)
+        const g = this.grid(), p = I.tapNow, col = Math.round((p.x - 17) / 18), rowI = Math.floor((p.y - g.top - 8) / 26), k = rowI * g.perRow + col;
+        if (p.y >= g.top + 8 && col >= 0 && col < g.perRow && rowI >= 0 && k < ids.length) idx = k;
+        else if (p.y < g.top) idx = (idx + (p.x < G.screen.W / 2 ? ids.length - 1 : 1)) % ids.length;
+        G.audio.sfx.select();
+      }
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); }
     },
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, U = G.ui, C = U.C, F = G.font;
       U.backdrop(ctx);
-      U.title(ctx, 'ГАЛЕРЕЯ', W / 2, 3, 90);
+      const hd = G.touch.header();
+      U.title(ctx, 'ГАЛЕРЕЯ', hd.titleX, hd.titleY, 80);
       const id = ids[idx];
+      ctx.save(); ctx.translate(0, this.off());
       U.panel(ctx, 4, 21, W - 8, 24, 'frame');
       F.draw(ctx, '‹', 16, 28, { color: C.red }); F.draw(ctx, '›', W - 20, 28, { color: C.red });
       F.draw(ctx, G.chars.nameOf(id), W / 2, 28, { align: 'center', color: C.redDark });
@@ -43,14 +54,15 @@ G.scenes.register('gallery', () => {
         ctx.drawImage(s, f * 16, r * 20, 16, 20, 10 + (r * 3 + f) * ((W - 24) / 12), 160, 16, 20);
 
       // все персонажи в ряд: выбранный подсвечен красной карточкой
-      const perRow = Math.max(6, Math.floor((W - 16) / 18)), top = 194;
-      U.panel(ctx, 4, top, W - 8, H - top - 4, 'frame');
+      const perRow = this.grid().perRow, top = 194, HH = H - this.off();   // координаты — в сдвинутой системе
+      U.panel(ctx, 4, top, W - 8, HH - top - 4, 'frame');
       ids.forEach((cid, i) => {
         const x = 17 + (i % perRow) * 18, y = top + 30 + Math.floor(i / perRow) * 26;
-        if (y > H - 10) return;
+        if (y > HH - 10) return;
         if (cid === id) U.card(ctx, x - 9, y - 22, 18, 25, true);
         G.chars.draw(ctx, cid, 'down', G.chars.WALK[Math.floor(t * 4 + i) % 4], x, y);
       });
+      ctx.restore();
     },
   };
 });

@@ -450,13 +450,13 @@ test('Карточные связки: метка, Финт, Суйтон → Р
 test('Урон врага: один множитель на предпросмотр и на удар', () => {
   const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: Object.keys(G.TECHS), fatigue: 0, surge: false });
   const open = (D) => { D.P.block = 0; D.P.dodge = 0; D.P.clones = 0; return D; };   // защиты нет — сравниваем сам урон
-  const cases = [{}, { fear: 2 }, { fear: 2, slow: 1 }, { fear: 2, slow: 1, weak: 1 }];
+  const cases = [{}, { fear: 2 }, { weak: 1 }, { fear: 2, weak: 1 }];
   for (const st of cases) {
     for (const [dmg, hits] of [[30, 1], [33.3, 2], [27.5, 2]]) {
       const D = open(mk()); Object.assign(D.E.status, st);
       D.intent = { kind: hits > 1 ? 'multi' : 'strike', name: 'Проба', dmg, hits };
-      const want = (st.fear ? D.P.fearMul : 1) * (st.slow ? 0.75 : 1) * (st.weak ? 0.75 : 1);
-      assert.equal(G.duel.enemyMul(D), want, 'множитель — произведение страха, замедления и слабости');
+      const want = (st.fear ? D.P.fearMul : 1) * (st.weak ? 0.75 : 1);
+      assert.equal(G.duel.enemyMul(D), want, 'множитель — произведение страха и слабости');
       const prev = G.duel.expectedIncoming(D), intent = G.duel.intentDamage(D);
       const hp = D.P.hp; G.duel.endTurn(D); const real = hp - D.P.hp;
       assert.equal(intent, prev, 'строка намерения и «Ожидаемый урон» считают одинаково');
@@ -874,6 +874,53 @@ test('«Сдаться» в бою срабатывает только со вт
   press(); press();
   assert.equal(b.state, 'end', 'второе нажатие подряд — сдача');
   h.rngOff(); G.scenes.stack.length = 0; G.state.battleCheckpoint = null;
+});
+
+test('Бой: дважды подряд не оглушить, срыв замаха проходит всегда', () => {
+  const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(3), stability: 100, techs: ['henge', 'sexy'], fatigue: 0, surge: false, inv: { flash_bomb: 1 } });
+  const D = mk(), give = (id) => { const c = { id, uid: ++D._uid }; D.hand.push(c); return c; };
+  D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 };
+  G.duel.play(D, give('henge'));
+  assert.equal(D.E.status.stun, 1, 'первое оглушение проходит');
+  let hp = D.P.hp; G.duel.endTurn(D);
+  assert.equal(D.P.hp, hp, 'оглушённый враг не бьёт');
+  D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 };
+  assert.deepEqual(G.duel.preview(D, 'sexy'), ['Враг устоит'], 'карта честно предупреждает');
+  G.duel.play(D, give('sexy'));
+  assert.ok(!(D.E.status.stun > 0), 'второе подряд оглушение не проходит');
+  hp = D.P.hp; G.duel.endTurn(D);
+  assert.ok(D.P.hp < hp, 'враг отвечает');
+  D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 };
+  D.inv.flash_bomb = 1; G.duel.play(D, give('flash_bomb'));
+  assert.equal(D.E.status.stun, 1, 'через ход оглушение снова доступно');
+  // срыв замаха серией тайдзюцу — задуманный ответ, стойкость ему не мешает
+  const B = mk(); B.E.steady = 2; B.intent = { kind: 'charge', name: 'Замах', interrupt: 3 };
+  B.hand.push({ id: 'combo', uid: ++B._uid }); G.duel.play(B, B.hand[B.hand.length - 1]);
+  assert.equal(B.E.status.stun, 1, 'замах сорван');
+});
+
+test('Бой: у каждого противника коронный приём достижим, павший герой не побеждает горением', () => {
+  for (const [id, e] of Object.entries(G.ENEMIES)) if (e.tech) assert.ok((e.tech.cost || 0) <= e.ch, id + ': приёму хватает запаса чакры');
+  const L = G.duel.create({ enemy: 'lee', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 6, end: 5, know: 4 }, rng: G.duel.mulberry(5), fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  let seen = false;
+  for (let i = 0; i < 40 && !L.over; i++) { if (L.intent.kind === 'tech') { seen = true; L.P.hp = L.P.hpMax; G.duel.endTurn(L); assert.equal(L.E.cd, 1, 'бесплатный приём тоже уходит на перезарядку'); break; } L.P.hp = L.P.hpMax; G.duel.endTurn(L); }
+  assert.ok(seen, 'Рок Ли применяет «Коноха Сэнпу»');
+  const D = G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 6, end: 5, know: 4 }, rng: G.duel.mulberry(1), fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  D.E.hp = 3; D.E.status.burn = 1; D.P.hp = 1; D.intent = { kind: 'strike', name: 'Удар', dmg: 50, hits: 1 };
+  G.duel.endTurn(D);
+  assert.ok(D.over && D.over.win === false, 'смертельный удар — поражение, горение уже не тикает');
+});
+
+test('Фиолетовая аура проступает, когда чакры мало, а не при полной', () => {
+  clean();
+  const v = G.state.vars;
+  v.chakra = 100; assert.equal(G.purple.aura(), 0, 'полная чакра — ауры нет');
+  v.chakra = 50; assert.equal(G.purple.aura(), 0);
+  v.chakra = 34; assert.ok(G.purple.aura() > 0, 'ниже 35% — первые искры');
+  v.chakra = 20; const mid = G.purple.aura();
+  v.chakra = 5; assert.equal(G.purple.aura(), 1, 'почти пусто — в полную силу');
+  assert.ok(mid > 0 && mid < 1);
+  v.chakra = 100;
 });
 
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
