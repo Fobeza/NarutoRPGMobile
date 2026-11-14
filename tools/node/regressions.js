@@ -983,6 +983,28 @@ test('Мастерство карт: применения в боях дают �
   delete v.use_strike; delete v.use_guard;
 });
 
+test('Итоги главы и «Новая игра+»: экран рисуется, карты и мастерство переносятся', () => {
+  clean();
+  const st = G.state; st.flags.postgame = 1; st.flags.genin = 1; st.vars.wins = 7; st.vars.battles = 9; st.vars.use_strike = 18;
+  G.deck.give('strike', 1);
+  const owned = st.cardOwned.strike;
+  const sc = G.scenes.make('ending'), ctx = h.recordingCtx();
+  sc.update(1); sc.draw(ctx);
+  assert.ok(ctx.log.length > 30, 'экран рисуется');
+  const rows = Object.fromEntries(G.ending.summary());
+  assert.equal(rows['Бои'], '7 побед из 9'); assert.equal(rows['Экзамен'], 'сдан — генин');
+  assert.ok(G.scenes.make('menu').labels().includes('Итоги главы'), 'после финала пункт есть в меню паузы');
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };
+  G.ending.newGamePlus();
+  assert.equal(G.state.started, false, 'новая игра');
+  assert.equal(G.state.vars.day, 1); assert.ok(!G.state.flags.postgame);
+  assert.equal(G.state.cardOwned.strike, owned, 'карты остались');
+  assert.equal(G.combat.mastery('strike'), 3, 'мастерство осталось');
+  assert.equal(G.state.vars.ngplus, 1);
+  assert.ok(G.storage.valid({ v: 2, state: JSON.parse(JSON.stringify(G.state)) }), 'такое состояние сохраняется');
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };
+});
+
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
   clean();
   G.state.dlgLog = [];

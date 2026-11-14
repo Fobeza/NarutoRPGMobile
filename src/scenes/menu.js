@@ -43,6 +43,7 @@ G.scenes.register('menu', () => {
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
     { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
     { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    ...(G.state.flags.postgame ? [{ label: 'Итоги главы', act: () => G.scenes.push(G.scenes.make('ending')) }] : []),
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение', act: () => G.scenes.push(G.scenes.make('savemenu')) },
     { label: 'В главное меню', act: () => {

@@ -217,7 +217,7 @@ G.game = (() => {
       const q = G.quests && G.quests.tracked(), st = q && G.quests.curStep(q);
       if (st) return st.text;
       // после финала первой главы задания кончились — но строка цели не должна пустовать
-      if (G.state.flags.postgame) return 'Свободная жизнь: тренируйся, дружи и бери поручения';
+      if (G.state.flags.postgame) return 'Свободная жизнь. Меню → Итоги главы: начать заново';
       const g = G.state.goal; return g ? GOALS[g] || g : null;
     },
 
