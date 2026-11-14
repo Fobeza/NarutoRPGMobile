@@ -13,8 +13,10 @@ G.scenes.register('battle', (opts, onEnd) => {
   let ev = [], evI = 0, evT = 0, afterEvents = 'card', lastIntent = D.intent, result = null, endT = 0, said = null;
   const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
   let tip = !G.state.flags.card_duel_tip;
+  let quitT = 0;   // «Сдаться» срабатывает со второго нажатия: кнопка стоит вплотную к «Конец»
   const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const fxOn = () => G.storage.settings.fx !== false;   // «Эффекты: выкл» — без тряски и вспышек на весь экран
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const hit = (b, p) => p && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
   const sfx = {
@@ -53,12 +55,27 @@ G.scenes.register('battle', (opts, onEnd) => {
     const check = selectedCard() ? G.duel.canPlay(D, selectedCard()) : { ok: false, why: 'Нет карты' };
     actions.push({ id: 'play', label: 'Играть', zone: 'action', off: check.ok ? null : check.why });
     if (pageCount() > 1) actions.push({ id: 'next', label: '›', zone: 'action' });
-    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: 'Сдаться', zone: 'action' });
+    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: quitT > 0 ? 'Точно?' : 'Сдаться', zone: 'action' });
     const aw = Math.floor((g.W - pad * 2 - gap * (actions.length - 1)) / actions.length);
     actions.forEach((b, i) => { b.x = pad + i * (aw + gap); b.y = g.py + g.PH - g.d.bh - 3; b.w = aw; b.h = g.d.bh; out.push(b); });
     return out;
   }
 
+  // Имя карты в узкой клетке руки: до двух строк. Слово, которое не влезает, делится после гласной ближе к середине.
+  function cardName(name, maxW) {
+    const out = [];
+    for (const word of FS.wrap(name, maxW)) {
+      if (FS.measure(word) <= maxW || out.length) { out.push(word); continue; }
+      const ch = [...word], fits = (n) => FS.measure(ch.slice(0, n).join('') + (ch[n - 1] === '-' ? '' : '-')) <= maxW;
+      let cut = -1;
+      const hy = word.indexOf('-'); if (hy > 0 && fits(hy + 1)) cut = hy + 1;                                  // «Секси-/дзюцу»
+      if (cut < 0) for (let i = 1; i < ch.length - 2; i++) if (/[аеёиоуыэюя]/i.test(ch[i]) && fits(i + 1)) cut = i + 1;   // по слогу
+      if (cut < 0) for (let n = ch.length - 1; n > 1; n--) if (fits(n)) { cut = n; break; }                       // как влезет
+      if (cut < 0) { out.push(word); continue; }
+      out.push(ch.slice(0, cut).join('') + (ch[cut - 1] === '-' ? '' : '-'), ch.slice(cut).join(''));
+    }
+    return out.slice(0, 2);
+  }
   function say(text) { said = { text, t: 2.4 }; }
   function playCard(ref) {
     if (phase !== 'choose') return false;
@@ -82,6 +99,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   }
   function pick(b) {
     if (phase !== 'choose' || !b) return;
+    if (b.id !== 'quit') quitT = 0;   // любое другое действие отменяет переспрос
     if (b.zone === 'hand') {
       const c = D.hand.find((x) => x.uid === b.uid);
       if (selected === b.uid) playCard(b.ref);
@@ -90,7 +108,11 @@ G.scenes.register('battle', (opts, onEnd) => {
     }
     if (b.id === 'play') { const c = selectedCard(); if (c) playCard(c); else say('Выбери карту'); return; }
     if (b.id === 'end') { endPlayerTurn(); return; }
-    if (b.id === 'quit') { finish(false, true); return; }
+    if (b.id === 'quit') {
+      if (quitT > 0) { finish(false, true); return; }
+      quitT = 2.5; AU.sfx.warn();
+      return;
+    }
     if (b.id === 'prev' || b.id === 'next') {
       handPage = (handPage + (b.id === 'next' ? 1 : -1) + pageCount()) % pageCount();
       const c = D.hand[handPage * 5]; if (c) selected = c.uid;
@@ -139,7 +161,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     V.battles = (V.battles || 0) + 1; if (win) V.wins = (V.wins || 0) + 1;
     G.train.addXp('tai', 0.6 * stats.hits + 1); G.train.addXp('spd', 0.7 * stats.evades);
     if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); V.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
-    for (const [id, n] of Object.entries(D.stats.used)) if (G.TECHS[id]) V['use_' + id] = (V['use_' + id] || 0) + n;
+    // мастерство растёт у всех своих карт (кроме предметов); новые ступени показываем на экране итога
+    const grown = [];
+    for (const [id, n] of Object.entries(D.stats.used)) {
+      if (!G.CARDS[id] || G.CARDS[id].item) continue;
+      const was = G.combat.mastery(id); V['use_' + id] = (V['use_' + id] || 0) + n;
+      if (G.combat.mastery(id) > was) { grown.push(`${G.CARDS[id].name} ${G.combat.stars(id)}`); G.game.note(`Карта освоена: ${G.CARDS[id].name} ${G.combat.stars(id)}`); }
+    }
+    result.grown = grown;
     G.game.advance(5 + 3 * D.round);
     const line = ed.lines && (win ? ed.lines.lose : ed.lines.win);
     say(line ? G.util.fmt(line, { name: G.state.hero.name }) : win ? 'Победа!' : 'Поражение...');
@@ -191,7 +220,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       // с «Аналитиком» видно, сколько снимет заряженный приём: это главный удар врага
       const heavy = D.has('analyst') ? G.duel.chargePreview(D) : 0;
       if (heavy > 0) return ['Замах: готовит тяжёлый приём', `Сорвать 3 звена · пройдёт ${heavy}`];
-      return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+      return ['Замах: готовит тяжёлый приём', 'Сорви: 3 удара тайдзюцу'];
     }
     if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
     if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
@@ -212,7 +241,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     endTurn: endPlayerTurn,
     choose(id) {
       if (phase !== 'choose') return false;
-      if (id === 'end' || id === 'quit') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
+      if (id === 'quit') { finish(false, true); return true; }   // программно — без переспроса
+      if (id === 'end') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
       const c = D.hand.find((x) => x.id === id || x.id === String(id).replace(/^(tech|item):/, '') || 'uid:' + x.uid === id);
       return c ? playCard(c) : false;
     },
@@ -225,12 +255,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     buttons,
     update(dt) {
       t += dt; if (phase === 'end') endT += dt;
+      if (quitT > 0) quitT = Math.max(0, quitT - dt);
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
       for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
-      if (phase === 'intro') { if (t > 1.1 || I.tapNow || I.pressed('a')) phase = 'choose'; return; }
+      // заставку с особенностью врага держим дольше и не даём проскочить случайным касанием
+      if (phase === 'intro') { const hold = G.ENEMY_TRAITS[ed.trait] ? 2.6 : 1.1; if (t > hold || (t > 0.5 && (I.tapNow || I.pressed('a')))) phase = 'choose'; return; }
       if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.42)) nextEvent(); return; }
       if (phase === 'end') {
         if (endT > 0.8 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
@@ -257,19 +289,22 @@ G.scenes.register('battle', (opts, onEnd) => {
 
     draw(ctx) {
       const g = geo(), W = g.W, AH = g.AH;
-      const sx = fx.shake > 0 ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
+      const sx = fx.shake > 0 && fxOn() ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
       ctx.save(); ctx.translate(sx, 0);
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g); this.drawFx(ctx);
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
-      if (fx.flash > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
+      if (fx.flash > 0 && fxOn()) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
       this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
+        const trI = G.ENEMY_TRAITS[ed.trait], trLines = trI ? FS.wrap(`${trI.name}: ${trI.text}`, W - 12).slice(0, 3) : [];
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, AH / 2 - 24, W, 48 + Math.max(0, trLines.length - 1) * 11);
         F.draw(ctx, ed.name, W / 2, AH / 2 - 15, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
-        FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
+        // особенность противника — главное, что нужно знать до первого хода
+        if (trLines.length) trLines.forEach((ln, i) => FS.draw(ctx, ln, W / 2, AH / 2 + 6 + i * 11, { align: 'center', color: '#f8eed0' }));
+        else FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0', maxW: W - 8 });
       }
     },
     drawFx(ctx) {
@@ -316,7 +351,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       ctx.restore();
       if (isP) {
-        const k = Math.max(D.P.heat / 100, fx.aura);
+        // аура: накал боя, вспышка «Выброса» или почти пустая чакра (то же правило, что на улице, — G.purple.lowAura)
+        const k = Math.max(D.P.heat / 100, fx.aura, G.purple.lowAura(D.P.ch / Math.max(1, D.P.chMax) * 100));
         if (k > 0.05) {
           ctx.save();
           for (let i = 0; i < 5 + Math.round(k * 10); i++) {
@@ -329,7 +365,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       const tags = [];
       if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.block) tags.push('блок ' + Math.round(D.P.block)); }
-      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
+      else { if (D.E.status.stun > 0) tags.push('оглушён'); else if (D.E.steady > 0) tags.push('устоит'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
       tags.slice(0, 2).forEach((s, i) => FS.draw(ctx, s, x, Math.max(53, y - 62 + i * 9), { align: 'center', color: '#fff2cf', outline: PAL.ink }));
     },
     drawHud(ctx, g) {
@@ -338,11 +374,17 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, G.state.hero.name || 'Герой', 6, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(6, 16, bw, D.P.hp, D.P.hpMax, C.hp); bar(6, 24, bw, D.P.ch, D.P.chMax, C.chakra); bar(6, 32, bw, D.P.fat, 100, C.fatigue); bar(6, 40, bw, D.P.heat, 100, '#e0a8ff');
       FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 8 + bw, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
-      FS.draw(ctx, 'уст. · накал', 6, 47, { color: '#d8c8a0', outline: PAL.ink });
-      FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      // подписи двух нижних шкал — цветом своей шкалы, иначе не понять, какая из них какая
+      FS.draw(ctx, 'усталость', 6, 47, { color: '#f0b84a', outline: PAL.ink });
+      FS.draw(ctx, 'накал', 6 + bw, 47, { align: 'right', color: '#e0a8ff', outline: PAL.ink });
+      const ehp = `${Math.round(D.E.hp)}/${D.E.hpMax}`;
+      FS.draw(ctx, ed.name, W - 6 - bw, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw - FS.measure(ehp) - 4 });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
+      // число здоровья врага — как у героя: добивание считают, а не прикидывают по шкале
+      FS.draw(ctx, ehp, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink });
+      if (G.ENEMY_TRAITS[ed.trait]) FS.draw(ctx, G.ENEMY_TRAITS[ed.trait].name, W - 6, 44, { align: 'right', color: '#ffe28a', outline: PAL.ink, maxW: bw });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') F.draw(ctx, 'до 30% здоровья', W - 6, 33, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      else if (mode === 'spar') FS.draw(ctx, 'бой до 30%', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
@@ -350,20 +392,28 @@ G.scenes.register('battle', (opts, onEnd) => {
       const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
       FS.draw(ctx, lines[0], 7, py + 4, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
       drawNumLine(ctx, lines[1], 7, py + 16, W - 14, '#f8eed0', PAL.ink);
-      FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
-      FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
+      // Две подписи в одной строке: на узком экране («крупно», 196 точек) полные не помещаются и наезжали друг на друга
+      let turnL = `Ход ${D.round} · действия ${D.P.ap}/${G.duel.TUNE.ap}`;
+      let deckL = `Колода ${D.deck.length} · сброс ${D.discard.length}`;
+      if (FS.measure(turnL) + FS.measure(deckL) > W - 22) { turnL = `Ход ${D.round} · дейст. ${D.P.ap}/${G.duel.TUNE.ap}`; deckL = `Кол. ${D.deck.length} · сбр. ${D.discard.length}`; }
+      const deckW = Math.min(FS.measure(deckL), Math.floor(W * 0.45));
+      FS.draw(ctx, turnL, 7, py + 29, { color: '#d8c8a0', maxW: W - 22 - deckW });
+      FS.draw(ctx, deckL, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: deckW });
       if (phase === 'end') {
         F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
         FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
-        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 99, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        if (result.grown && result.grown.length) FS.draw(ctx, 'Освоено: ' + result.grown.join(', '), W / 2, py + 89, { align: 'center', color: '#ffe28a', shadow: PAL.ink, maxW: W - 16 });
+        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 101, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
         return;
       }
       if (phase === 'play' && said) {
         FS.wrap(said.text, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 45 + i * 11, { color: '#f8eed0', shadow: PAL.ink }));
         return;
       }
-      if (tip) {
-        ['Три действия — до трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0' }));
+      if (quitT > 0) {
+        FS.draw(ctx, 'Сдаться? Нажми «Точно?»', 9, py + 45, { color: '#ff9a80', shadow: PAL.ink, maxW: W - 18 });
+      } else if (tip) {
+        ['До трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0', maxW: W - 18 }));
       } else {
         const c = selectedCard();
         if (c) {
@@ -383,9 +433,11 @@ G.scenes.register('battle', (opts, onEnd) => {
           ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
           const price = G.duel.cost(D, c.id);
           FS.draw(ctx, price ? String(price) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
-          const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
-          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
+          // имя карты целиком: длинное слово переносим по слогу («Дыха-/ние»), а не режем многоточием
+          const nameLines = cardName(def.short || def.name, b.w - 5);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 3 }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
+          const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {
           const i = bs.indexOf(b);
           U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');

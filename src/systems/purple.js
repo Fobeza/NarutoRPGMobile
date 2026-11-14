@@ -39,8 +39,11 @@ G.purple = (() => {
     v.purple_ctl = Math.min(PRACTICE_CAP, (v.purple_ctl || 0) + add);
     return add;
   }
-  // сила ауры 0..1: ярче при полной чакре
-  function aura() { return clamp(((V().chakra || 0) - 50) / 50, 0, 1); }
+  // сила ауры 0..1: фиолетовая чакра проступает, когда обычной почти не осталось.
+  // Ниже LOW (35%) появляются первые искры, к 5% аура горит в полную силу; при полной чакре её не видно.
+  const LOW = 35;
+  const lowAura = (pct) => clamp((LOW - pct) / (LOW - 5), 0, 1);
+  function aura() { const c = V().chakra; return lowAura(c == null ? 100 : c); }
   // искры вокруг героя; вспышка после выброса
   function drawAura(ctx, world, a) {
     if (G.storage.settings.fx === false || !G.state.started) return;
@@ -56,5 +59,5 @@ G.purple = (() => {
     }
     ctx.restore();
   }
-  return { COLOR, PRACTICE, stability, chance, roll, apply, practice, aura, drawAura, BOOST: 1.5, flashUntil: 0 };
+  return { COLOR, PRACTICE, stability, chance, roll, apply, practice, aura, lowAura, LOW, drawAura, BOOST: 1.5, flashUntil: 0 };
 })();

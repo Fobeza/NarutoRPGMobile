@@ -19,7 +19,7 @@ DEV = os.path.join(ROOT, "build")           # служебное (редакто
 # Новый файл → добавь его сюда в подходящую группу (см. docs/ARCHITECTURE.md).
 JS_FILES = [
     # ── движок: экран, ввод, звук, сцены, сохранения ──
-    "engine/core.js", "engine/screen.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
+    "engine/core.js", "engine/screen.js", "engine/crt.js", "engine/input.js", "engine/touch.js", "engine/audio.js", "engine/ambience.js", "engine/scenes.js", "engine/storage.js",
     # ── графика: палитра, шрифт, спрайты, персонажи, тайлы ──
     "gfx/art.js", "gfx/palette.js", "gfx/font_data.js", "gfx/font.js", "gfx/sprites.js", "gfx/shade.js", "gfx/ui.js",
     "gfx/chars.js", "data/characters.js", "gfx/chars_render.js",
@@ -41,8 +41,8 @@ JS_FILES = [
     "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/guards.js", "world/fx.js", "world/village_stories.js",
     "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/street_events.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
-    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
-    "scenes/bag.js", "scenes/deckview.js", "scenes/log.js", "scenes/daysum.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
+    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/world_npc.js", "scenes/world_actions.js", "scenes/world_time.js", "scenes/world_draw.js", "scenes/mapview.js", "scenes/shop.js",
+    "scenes/bag.js", "scenes/deckview.js", "scenes/log.js", "scenes/daysum.js", "scenes/ending.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
     "scenes/pick.js", "scenes/fishing.js", "scenes/storage.js", "scenes/menu.js", "scenes/settings.js",

@@ -450,13 +450,13 @@ test('Карточные связки: метка, Финт, Суйтон → Р
 test('Урон врага: один множитель на предпросмотр и на удар', () => {
   const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(9), stability: 100, techs: Object.keys(G.TECHS), fatigue: 0, surge: false });
   const open = (D) => { D.P.block = 0; D.P.dodge = 0; D.P.clones = 0; return D; };   // защиты нет — сравниваем сам урон
-  const cases = [{}, { fear: 2 }, { fear: 2, slow: 1 }, { fear: 2, slow: 1, weak: 1 }];
+  const cases = [{}, { fear: 2 }, { weak: 1 }, { fear: 2, weak: 1 }];
   for (const st of cases) {
     for (const [dmg, hits] of [[30, 1], [33.3, 2], [27.5, 2]]) {
       const D = open(mk()); Object.assign(D.E.status, st);
       D.intent = { kind: hits > 1 ? 'multi' : 'strike', name: 'Проба', dmg, hits };
-      const want = (st.fear ? D.P.fearMul : 1) * (st.slow ? 0.75 : 1) * (st.weak ? 0.75 : 1);
-      assert.equal(G.duel.enemyMul(D), want, 'множитель — произведение страха, замедления и слабости');
+      const want = (st.fear ? D.P.fearMul : 1) * (st.weak ? 0.75 : 1);
+      assert.equal(G.duel.enemyMul(D), want, 'множитель — произведение страха и слабости');
       const prev = G.duel.expectedIncoming(D), intent = G.duel.intentDamage(D);
       const hp = D.P.hp; G.duel.endTurn(D); const real = hp - D.P.hp;
       assert.equal(intent, prev, 'строка намерения и «Ожидаемый урон» считают одинаково');
@@ -805,6 +805,204 @@ test('Три слота сохранения: запись, дата, новей
   G.storage.wipe(2);
   assert.equal(G.storage.slotInfo(2), null, 'слот стирается');
   assert.equal(G.storage.slotInfo(0).day, 7, 'другие слоты не тронуты');
+});
+
+test('Загруженный слот остаётся активным: автосейв не затирает основной', () => {
+  clean();
+  G.storage.wipe();
+  G.state.started = true;
+  G.state.vars.day = 5; assert.ok(G.storage.save(G.state, { slot: 0 }));
+  G.state.vars.day = 9; assert.ok(G.storage.save(G.state, { slot: 2 }));
+  G.state.vars.day = 5; assert.ok(G.storage.save(G.state, { slot: 0 }));   // основной — новейший
+  G.game.loadSaved(2);
+  assert.equal(G.state.vars.day, 9, 'загружен слот 3');
+  assert.equal(G.storage.active, 2, 'активным остаётся загруженный слот');
+  G.storage.save(G.state);                                                  // так пишет автосейв
+  assert.equal(G.storage.slotInfo(0).day, 5, 'основной слот не затёрт чужим прогрессом');
+  assert.equal(G.storage.slotInfo(2).day, 9);
+  G.game.newState();
+  assert.equal(G.storage.active, 0, 'новая игра пишется в основной слот');
+  G.storage.wipe(); G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };
+});
+
+test('CRT-фильтр: режимы по кругу, настройка сохраняется, мусор заменяется на «выкл»', () => {
+  const S = G.storage.settings, keep = S.crt;
+  G.crt.set('off');
+  assert.equal(G.crt.name(), 'ВЫКЛ');
+  G.crt.cycle(); assert.equal(S.crt, 'soft');
+  G.crt.cycle(); assert.equal(S.crt, 'full');
+  const cv = document.getElementById('crt');
+  assert.equal(cv.width, G.screen.W * G.screen.devScale, 'слой в физических пикселях: строка на игровой пиксель');
+  assert.equal(cv.height, G.screen.H * G.screen.devScale);
+  S.crt = 'off'; G.storage.loadSettings();
+  assert.equal(S.crt, 'full', 'настройка пережила загрузку');
+  G.crt.cycle(); assert.equal(S.crt, 'off');
+  assert.equal(cv.width, 1, 'выключенный слой не держит память');
+  S.crt = 'wat'; G.storage.saveSettings(); G.storage.loadSettings();
+  assert.equal(S.crt, 'off', 'неизвестное значение заменено');
+  const list = [];
+  const sc = G.scenes.make('settings'), ctx = h.recordingCtx(), old = G.font.draw;
+  G.font.draw = function (c, t, ...a) { list.push(t); return old.call(this, c, t, ...a); };
+  try { sc.draw(ctx); } finally { G.font.draw = old; }
+  assert.ok(list.includes('CRT-экран'), 'пункт есть в настройках');
+  G.crt.set(['off', 'soft', 'full'].includes(keep) ? keep : 'off');
+});
+
+test('Из «Колоды» и «Истории» можно выйти касанием: у экранов есть кнопка «Назад»', () => {
+  clean();
+  for (const name of ['deckview', 'log']) {
+    const sc = G.scenes.make(name), cfg = sc.touch && sc.touch();
+    assert.ok(cfg && cfg.back, name + ': сцена просит кнопку «Назад»');
+    const ctx = h.recordingCtx();
+    sc.update(0.016); sc.draw(ctx);
+    assert.ok(ctx.log.length > 20, name + ': экран рисуется');
+  }
+});
+
+test('«Сдаться» в бою срабатывает только со второго нажатия', () => {
+  clean();
+  h.rng(7);
+  const b = G.scenes.make('battle', { enemy: 'kiba', mode: 'spar' }, () => {});
+  G.scenes.push(b);
+  for (let i = 0; i < 60 && b.state !== 'menu'; i++) b.update(0.1);
+  const press = () => { const q = b.buttons().find((x) => x.id === 'quit'); G.input.tapNow = { x: q.x + 2, y: q.y + 2 }; b.update(0.016); G.input.tapNow = null; };
+  press();
+  assert.equal(b.state, 'menu', 'первое нажатие только переспрашивает');
+  assert.equal(b.buttons().find((x) => x.id === 'quit').label, 'Точно?');
+  for (let i = 0; i < 40; i++) b.update(0.1);                                // переспрос истёк
+  assert.equal(b.buttons().find((x) => x.id === 'quit').label, 'Сдаться');
+  press(); press();
+  assert.equal(b.state, 'end', 'второе нажатие подряд — сдача');
+  h.rngOff(); G.scenes.stack.length = 0; G.state.battleCheckpoint = null;
+});
+
+test('Бой: дважды подряд не оглушить, срыв замаха проходит всегда', () => {
+  const mk = () => G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 8, gen: 4, chakra: 8, ctrl: 5, spd: 5, end: 5, know: 5 }, rng: G.duel.mulberry(3), stability: 100, techs: ['henge', 'sexy'], fatigue: 0, surge: false, inv: { flash_bomb: 1 } });
+  const D = mk(), give = (id) => { const c = { id, uid: ++D._uid }; D.hand.push(c); return c; };
+  D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 };
+  G.duel.play(D, give('henge'));
+  assert.equal(D.E.status.stun, 1, 'первое оглушение проходит');
+  let hp = D.P.hp; G.duel.endTurn(D);
+  assert.equal(D.P.hp, hp, 'оглушённый враг не бьёт');
+  D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 };
+  assert.deepEqual(G.duel.preview(D, 'sexy'), ['Враг устоит'], 'карта честно предупреждает');
+  G.duel.play(D, give('sexy'));
+  assert.ok(!(D.E.status.stun > 0), 'второе подряд оглушение не проходит');
+  hp = D.P.hp; G.duel.endTurn(D);
+  assert.ok(D.P.hp < hp, 'враг отвечает');
+  D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 };
+  D.inv.flash_bomb = 1; G.duel.play(D, give('flash_bomb'));
+  assert.equal(D.E.status.stun, 1, 'через ход оглушение снова доступно');
+  // срыв замаха серией тайдзюцу — задуманный ответ, стойкость ему не мешает
+  const B = mk(); B.E.steady = 2; B.intent = { kind: 'charge', name: 'Замах', interrupt: 3 };
+  B.hand.push({ id: 'combo', uid: ++B._uid }); G.duel.play(B, B.hand[B.hand.length - 1]);
+  assert.equal(B.E.status.stun, 1, 'замах сорван');
+});
+
+test('Бой: у каждого противника коронный приём достижим, павший герой не побеждает горением', () => {
+  for (const [id, e] of Object.entries(G.ENEMIES)) if (e.tech) assert.ok((e.tech.cost || 0) <= e.ch, id + ': приёму хватает запаса чакры');
+  const L = G.duel.create({ enemy: 'lee', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 6, end: 5, know: 4 }, rng: G.duel.mulberry(5), fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  let seen = false;
+  for (let i = 0; i < 40 && !L.over; i++) { if (L.intent.kind === 'tech') { seen = true; L.P.hp = L.P.hpMax; G.duel.endTurn(L); assert.equal(L.E.cd, 1, 'бесплатный приём тоже уходит на перезарядку'); break; } L.P.hp = L.P.hpMax; G.duel.endTurn(L); }
+  assert.ok(seen, 'Рок Ли применяет «Коноха Сэнпу»');
+  const D = G.duel.create({ enemy: 'kiba', mode: 'ko', stats: { tai: 6, nin: 5, gen: 4, chakra: 5, ctrl: 5, spd: 6, end: 5, know: 4 }, rng: G.duel.mulberry(1), fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  D.E.hp = 3; D.E.status.burn = 1; D.P.hp = 1; D.intent = { kind: 'strike', name: 'Удар', dmg: 50, hits: 1 };
+  G.duel.endTurn(D);
+  assert.ok(D.over && D.over.win === false, 'смертельный удар — поражение, горение уже не тикает');
+});
+
+test('Фиолетовая аура проступает, когда чакры мало, а не при полной', () => {
+  clean();
+  const v = G.state.vars;
+  v.chakra = 100; assert.equal(G.purple.aura(), 0, 'полная чакра — ауры нет');
+  v.chakra = 50; assert.equal(G.purple.aura(), 0);
+  v.chakra = 34; assert.ok(G.purple.aura() > 0, 'ниже 35% — первые искры');
+  v.chakra = 20; const mid = G.purple.aura();
+  v.chakra = 5; assert.equal(G.purple.aura(), 1, 'почти пусто — в полную силу');
+  assert.ok(mid > 0 && mid < 1);
+  v.chakra = 100;
+});
+
+test('Время — за действия: стоим — часы стоят, идём — идут, G.life.RATE = 0 их останавливает', () => {
+  clean();
+  const v = G.state.vars, keep = G.life.RATE; G.life.acc = 0;
+  const m0 = v.min, f0 = v.fatigue;
+  for (let i = 0; i < 600; i++) G.life.tick(0.1, false, false);            // минута реального времени на месте
+  assert.equal(v.min, m0, 'на месте время не идёт');
+  assert.equal(v.fatigue, f0, 'и усталость не копится');
+  for (let i = 0; i < 100; i++) G.life.tick(0.1, false, true);             // десять секунд ходьбы
+  assert.ok(v.min - m0 >= 9 && v.min - m0 <= 11, 'десять секунд ходьбы — около десяти минут: ' + (v.min - m0));
+  const m1 = v.min; G.life.RATE = 0;
+  for (let i = 0; i < 100; i++) G.life.tick(0.1, false, true);
+  assert.equal(v.min, m1, 'RATE = 0 останавливает часы (раньше настройка не действовала)');
+  G.life.RATE = keep; G.life.acc = 0;
+});
+
+test('Особенности противников: у каждой — работающее правило и текст', () => {
+  const ST = { tai: 6, nin: 6, gen: 4, chakra: 6, ctrl: 5, spd: 6, end: 5, know: 4 };
+  const mk = (enemy, techs = []) => G.duel.create({ enemy, mode: 'ko', stats: ST, rng: G.duel.mulberry(11), stability: 100, techs, fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  const give = (D, id) => { const c = { id, uid: ++D._uid }; D.hand.push(c); return c; };
+  const idle = (D) => { D.intent = { kind: 'idle', name: 'Ждёт' }; D.E.block = 0; D.E.dodge = 0; };
+  for (const [id, e] of Object.entries(G.ENEMIES)) if (e.trait) assert.ok(G.ENEMY_TRAITS[e.trait] && G.ENEMY_TRAITS[e.trait].text, id + ': особенность описана');
+  // Стратег: вторая такая же карта за ход бьёт вполсилы
+  let D = mk('shikamaru'); idle(D); let hp = D.E.hp; G.duel.play(D, give(D, 'strike')); const first = hp - D.E.hp; D.P.chain = 0;
+  hp = D.E.hp; G.duel.play(D, give(D, 'strike')); assert.ok(hp - D.E.hp <= Math.ceil(first / 2), 'повтор «Удара» вполсилы');
+  // Широкая кость: каждый удар слабее на 2
+  D = mk('choji'); idle(D); const base = Math.round(G.duel.preview(D, 'strike')[0].split(' ')[0]); hp = D.E.hp; G.duel.play(D, give(D, 'strike'));
+  assert.ok(hp - D.E.hp <= base - 1, 'удар по Чоджи слабее предпросмотра');
+  // Шаринган: первая техника хода теряет больше половины урона
+  D = mk('sasuke', ['shunshin']); idle(D); hp = D.E.hp; const full = parseInt(G.duel.preview(D, 'shunshin')[0], 10); G.duel.play(D, give(D, 'shunshin'));
+  assert.ok(hp - D.E.hp < full * 0.5, 'первая техника встречает уклон');
+  // Бьякуган: клоны не спасают
+  D = mk('hinata'); D.P.clones = 2; D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 }; hp = D.P.hp; G.duel.endTurn(D);
+  assert.ok(D.P.hp < hp, 'удар прошёл сквозь клонов');
+  // Печать: удар сжигает чакру
+  D = mk('stranger'); D.intent = { kind: 'strike', name: 'Удар', dmg: 10, hits: 1 }; const ch = D.P.ch; G.duel.endTurn(D);
+  assert.ok(D.P.ch <= ch - G.duel.TRAIT.seal + 9, 'чакра сгорела (с учётом восстановления за ход)');
+  // Врата: ниже половины здоровья бьёт сильнее
+  D = mk('lee'); const m1 = G.duel.enemyMul(D); D.E.hp = D.E.hpMax * 0.4; assert.equal(G.duel.enemyMul(D), m1 * G.duel.TRAIT.gates);
+  // Не сдамся: один раз встаёт
+  D = mk('naruto'); idle(D); D.E.hp = 1; G.duel.play(D, give(D, 'strike'));
+  assert.ok(!D.over && D.E.hp > 1, 'Наруто встал'); idle(D); D.E.hp = 1; G.duel.play(D, give(D, 'strike')); assert.ok(D.over && D.over.win, 'второй раз — победа');
+  // Опыт: Ируку не оглушить; Акамару: три удара в серии
+  D = mk('iruka', ['henge']); assert.deepEqual(G.duel.preview(D, 'henge'), ['Враг устоит']);
+  D = mk('kiba'); let pack = false; for (let i = 0; i < 60 && !D.over; i++) { if (D.intent.kind === 'multi') { pack = D.intent.hits === 3; break; } D.P.hp = D.P.hpMax; G.duel.endTurn(D); }
+  assert.ok(pack, 'серия Кибы — три удара');
+});
+
+test('Мастерство карт: применения в боях дают ступени, ступень усиливает карту', () => {
+  clean();
+  const v = G.state.vars, mk = () => G.duel.create({ enemy: 'dummy', mode: 'ko', stats: G.state.hero.stats, rng: G.duel.mulberry(2), stability: 100, fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  delete v.use_strike; delete v.use_guard;
+  const d0 = parseInt(G.duel.preview(mk(), 'strike')[0], 10), b0 = parseInt(G.duel.preview(mk(), 'guard')[0], 10);
+  assert.equal(G.combat.mastery('strike'), 0); assert.equal(G.combat.stars('strike'), '');
+  v.use_strike = 18; v.use_guard = 18;
+  assert.equal(G.combat.mastery('strike'), 3); assert.equal(G.combat.stars('strike'), '★★★');
+  assert.ok(parseInt(G.duel.preview(mk(), 'strike')[0], 10) > d0, 'освоенный «Удар» сильнее');
+  assert.ok(parseInt(G.duel.preview(mk(), 'guard')[0], 10) > b0, 'освоенный «Блок» держит больше');
+  delete v.use_strike; delete v.use_guard;
+});
+
+test('Итоги главы и «Новая игра+»: экран рисуется, карты и мастерство переносятся', () => {
+  clean();
+  const st = G.state; st.flags.postgame = 1; st.flags.genin = 1; st.vars.wins = 7; st.vars.battles = 9; st.vars.use_strike = 18;
+  G.deck.give('strike', 1);
+  const owned = st.cardOwned.strike;
+  const sc = G.scenes.make('ending'), ctx = h.recordingCtx();
+  sc.update(1); sc.draw(ctx);
+  assert.ok(ctx.log.length > 30, 'экран рисуется');
+  const rows = Object.fromEntries(G.ending.summary());
+  assert.equal(rows['Бои'], '7 побед из 9'); assert.equal(rows['Экзамен'], 'сдан — генин');
+  assert.ok(G.scenes.make('menu').labels().includes('Итоги главы'), 'после финала пункт есть в меню паузы');
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };
+  G.ending.newGamePlus();
+  assert.equal(G.state.started, false, 'новая игра');
+  assert.equal(G.state.vars.day, 1); assert.ok(!G.state.flags.postgame);
+  assert.equal(G.state.cardOwned.strike, owned, 'карты остались');
+  assert.equal(G.combat.mastery('strike'), 3, 'мастерство осталось');
+  assert.equal(G.state.vars.ngplus, 1);
+  assert.ok(G.storage.valid({ v: 2, state: JSON.parse(JSON.stringify(G.state)) }), 'такое состояние сохраняется');
+  G.scenes.stack.length = 0; G.scenes.fade = { a: 0, dir: 0, speed: 3, then: null };
 });
 
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {

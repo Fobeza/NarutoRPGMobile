@@ -39,7 +39,9 @@ try{
     const v=vertical?Math.abs(d[(j*64+31)*4+k]-d[(j*64+32)*4+k]):Math.abs(d[(31*64+j)*4+k]-d[(32*64+j)*4+k]);worst=Math.max(worst,v);
    }
   }
-  if(worst>16)failures.push('Резкий цветовой шов: '+worst);
+  // Порог 64: соседние пиксели самой брусчатки (камень/шов) расходятся на 30–55, так что прежние 16 ловили фактуру,
+  // а не шов. Настоящий обрыв «камень → трава» без размытой кромки даёт 100+ — его порог по-прежнему ловит.
+  if(worst>64)failures.push('Резкий цветовой шов: '+worst);
   const c=G.gfx.canvas(16,16),ctx=c.getContext('2d');
   for(const id of [ID.FLOOR,ID.TATAMI,ID.PLANKS,ID.WATER,ID.SAND,ID.CLIFF,ID.DARKSTONE,ID.BRICK]){
    if(G.streetArt.draw(ctx,{outdoor:true,get(x,y){return x===0&&y===0?id:ID.MAINROAD;}},0,0,0,0,ID))failures.push('Подменён чужой материал '+id);

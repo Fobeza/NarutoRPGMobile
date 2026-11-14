@@ -114,7 +114,7 @@ G.academy = {
       if (p.learn || p.learnFlag) {   // технику объяснят после уроков: очередь, чтобы пропуски не затирали друг друга
         const q = G.state.makeupQ || (G.state.makeupQ = []);
         if (!q.includes(v.day)) q.push(v.day);
-        if (w && w.showToast) setTimeout(() => w.showToast('Техника: зайди в класс после 13:00'), 2400);
+        if (w && w.notes) w.notes.push({ title: '📜 Пропущена техника', text: 'Зайди в класс после 13:00 — Ирука объяснит', col: '#7ad0ff', t: 5 });
       }
     }
   },

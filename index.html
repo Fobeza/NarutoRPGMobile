@@ -55,6 +55,29 @@ body { position: fixed; inset: 0; }
   box-shadow: 0 0 0 1px #6a6a7a, 0 0 0 4px #17161d, 0 10px 26px rgba(0,0,0,.65);
 }
 
+/* ===== CRT-фильтр (engine/crt.js): слой строк развёртки и виньетки поверх холста ===== */
+#screen-box { position: relative; line-height: 0; border-radius: 4px; }
+#crt {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: none;
+  pointer-events: none; border-radius: 4px;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+/* строки развёртки затемняют картинку — возвращаем яркость и чуть насыщаем, как люминофор */
+body.crt-soft #screen { filter: brightness(1.10) contrast(1.04) saturate(1.08); }
+body.crt-full #screen { filter: brightness(1.20) contrast(1.08) saturate(1.16); }
+body.crt-soft #screen, body.crt-soft #crt, body.crt-soft #screen-box { border-radius: 9px; }
+body.crt-full #screen, body.crt-full #crt, body.crt-full #screen-box { border-radius: 14px; }
+/* «СИЛЬНО»: по экрану медленно сползает светлая полоса кадровой развёртки */
+#crt-roll { display: none; position: absolute; left: 0; right: 0; top: 0; height: 100%; overflow: hidden; pointer-events: none; border-radius: 14px; }
+body.crt-full #crt-roll { display: block; }
+#crt-roll::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 18%;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.045) 60%, rgba(255,255,255,0));
+  transform: translateY(-120%); animation: crt-roll 7s linear infinite; will-change: transform;
+}
+@keyframes crt-roll { from { transform: translateY(-120%); } to { transform: translateY(680%); } }
+@media (prefers-reduced-motion: reduce) { #crt-roll::before { animation: none; } }
+
 /* ===== Ввод текста и код сохранения: окна «Свитки и дерево» (дерево, пергамент, красная печать) ===== */
 #text-entry {
   position: fixed; inset: 0; background: rgba(14,8,4,.74);
@@ -119,7 +142,12 @@ body { position: fixed; inset: 0; }
 <body>
 <div id="app">
   <div id="screen-wrap">
-    <canvas id="screen" width="192" height="256"></canvas>
+    <!-- #crt — слой CRT-фильтра поверх игры (engine/crt.js); касания проходят сквозь него -->
+    <div id="screen-box">
+      <canvas id="screen" width="192" height="256"></canvas>
+      <canvas id="crt" width="1" height="1" aria-hidden="true"></canvas>
+      <div id="crt-roll" aria-hidden="true"></div>
+    </div>
   </div>
 </div>
 
@@ -159,7 +187,7 @@ body { position: fixed; inset: 0; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: 'fb9858bf', date: '2026-11-02 05:30', debug: false };
+const BUILD = { release: '3.0', version: '2d4cdc66', date: '2026-11-14 05:39', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -322,6 +350,77 @@ G.screen = {
     return { x: ((clientX - r.left) / r.width) * this.W, y: ((clientY - r.top) / r.height) * this.H };
   },
 };
+
+
+// ===== engine/crt.js =====
+// CRT-фильтр: вид экрана старого кинескопа поверх игры. Настройка «CRT-экран»: ВЫКЛ / МЯГКО / СИЛЬНО.
+//
+// Игровой холст не трогаем вовсе: поверх него лежит второй холст (#crt) в ФИЗИЧЕСКИХ пикселях, на
+// котором один раз (при смене размера или настройки) нарисованы строки развёртки, теневая маска,
+// виньетка и блик стекла. Кадр игры от этого не дорожает — слой статичен, его склеивает видеокарта.
+// Строки привязаны к сетке игры: одна тёмная кромка на каждый игровой пиксель (devScale физических),
+// поэтому муара нет ни при какой «плотности пикселей». Касания слой не перехватывает (pointer-events: none).
+// Яркость, съеденную строками, возвращает CSS-фильтр на самом холсте (см. style.css, body.crt-*).
+G.crt = (() => {
+  const MODES = [
+    { id: 'off', name: 'ВЫКЛ' },
+    // line — затемнение нижней кромки каждой строки; mask — сила RGB-маски; vig — виньетка по краям; glare — блик стекла
+    { id: 'soft', name: 'МЯГКО', line: 0.26, mask: 0.05, vig: 0.30, glare: 0.035 },
+    { id: 'full', name: 'СИЛЬНО', line: 0.46, mask: 0.11, vig: 0.50, glare: 0.06 },
+  ];
+  const find = (id) => MODES.find((m) => m.id === id) || MODES[0];
+  const mode = () => find(G.storage && G.storage.settings.crt);
+
+  // Плитка «одна игровая строка»: высота — s физических пикселей, ширина — 3 (красный, зелёный, синий столбцы маски).
+  // Затемнение растёт к нижней кромке строки по кубу: при s = 2 это «светлая/тёмная», при s = 6 — мягкий спад.
+  function tile(s, m) {
+    const c = document.createElement('canvas'); c.width = 3; c.height = s;
+    const x = c.getContext('2d');
+    if (m.mask > 0) {
+      ['255,40,40', '40,255,40', '60,60,255'].forEach((rgb, i) => { x.fillStyle = `rgba(${rgb},${m.mask})`; x.fillRect(i, 0, 1, s); });
+    }
+    for (let i = 0; i < s; i++) {
+      const a = m.line * Math.pow((i + 1) / s, 3);
+      x.fillStyle = `rgba(0,0,0,${a.toFixed(3)})`; x.fillRect(0, i, 3, 1);
+    }
+    return c;
+  }
+
+  function render() {
+    if (typeof document === 'undefined') return;
+    const cv = document.getElementById('crt'), m = mode();
+    const cl = document.body && document.body.classList;
+    if (cl) for (const k of MODES) cl.toggle('crt-' + k.id, k.id === m.id && m.id !== 'off');
+    if (!cv || !cv.getContext) return;
+    if (m.id === 'off') { cv.width = cv.height = 1; cv.style.display = 'none'; return; }   // холст 1×1 — память не держим
+    const s = Math.max(1, Math.round(G.screen.devScale || 2)), W = G.screen.W * s, H = G.screen.H * s;
+    cv.width = W; cv.height = H; cv.style.display = 'block';
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+    // 1) строки развёртки и маска
+    const pat = ctx.createPattern(tile(s, m), 'repeat');
+    if (pat) { ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H); }
+    // 2) виньетка: эллипс на весь экран (круговой градиент, растянутый по высоте) — имитация выпуклого стекла
+    const R = W * 0.78;
+    ctx.save(); ctx.translate(W / 2, H / 2); ctx.scale(1, H / W);
+    const g = ctx.createRadialGradient(0, 0, R * 0.52, 0, 0, R);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.7, `rgba(0,0,0,${(m.vig * 0.45).toFixed(3)})`); g.addColorStop(1, `rgba(0,0,0,${m.vig})`);
+    ctx.fillStyle = g; ctx.fillRect(-W / 2, -W / 2, W, W); ctx.restore();
+    // 3) блик стекла: светлая полоса сверху, уходящая в ноль к трети экрана
+    const gl = ctx.createLinearGradient(0, 0, W * 0.35, H * 0.34);
+    gl.addColorStop(0, `rgba(255,255,255,${m.glare})`); gl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H * 0.34);
+  }
+
+  return {
+    MODES, mode, render,
+    name() { return mode().name; },
+    set(id) { G.storage.settings.crt = find(id).id; G.storage.saveSettings(); render(); },
+    cycle() { const i = MODES.indexOf(mode()); this.set(MODES[(i + 1) % MODES.length].id); },
+  };
+})();
+// Размер экрана сменился (поворот, плотность пикселей) — слой перерисовывается под новую сетку.
+G.events.on('resize', () => G.crt.render());
 
 
 // ===== engine/input.js =====
@@ -786,6 +885,7 @@ G.audio = {
     bell()    { G.audio.bellTone(196, 4.5, 0.06); },
     puff()    { G.audio.noise(0.25, 0.2); G.audio.tone(300, 0.2, 'triangle', 0.1, 80); },
     error()   { G.audio.tone(160, 0.15, 'sawtooth', 0.1); },
+    warn()    { G.audio.tone(520, 0.09, 'square', 0.09); G.audio.tone(390, 0.16, 'square', 0.09, null, 0.1); },   // «точно?» перед необратимым: сдача, стирание, загрузка
   },
 };
 
@@ -998,13 +1098,13 @@ G.scenes = {
 
 
 // ===== engine/storage.js =====
-// Хранилище: один слот сохранения + резервная копия + настройки + экспорт/импорт кодом.
+// Хранилище: три слота сохранения + резервная копия + настройки + экспорт/импорт кодом.
 // Этап 4: резервная копия «утро дня N» (пишется при сне), экспорт/импорт кодом, версия формата и миграции.
 G.storage = {
   KEY_SAVE: 'wof_save_v1',
   KEY_BACKUP: 'wof_save_v1_bak',
   KEY_SETTINGS: 'wof_settings',
-  // Три слота: 0 — основной (в него пишут автосейвы), 1 и 2 — ручные.
+  // Три слота. Автосейвы идут в активный: тот, что загружен или в который сохранили последним; новая игра — в слот 0.
   KEY_SLOTS: ['wof_save_v1', 'wof_save_v1_s1', 'wof_save_v1_s2'],
   SLOTS: 3,
   active: 0,
@@ -1163,7 +1263,7 @@ G.storage = {
     const keys = slot == null ? this.KEY_SLOTS.concat([this.KEY_BACKUP]) : [this.KEY_SLOTS[slot]];
     try { for (const k of keys) localStorage.removeItem(k); } catch (_) {}
     for (const k of keys) { delete this._mem[k]; delete this._fresh[k]; }
-    try { const w = this._wn(); delete w[this.KEY_SAVE]; delete w[this.KEY_BACKUP]; window.name = JSON.stringify(w); } catch (_) {}
+    try { const w = this._wn(); for (const k of keys) delete w[k]; window.name = JSON.stringify(w); } catch (_) {}   // запасная копия во вкладке — те же ключи, что стёрли
   },
 
   // Экспорт: строка, которую можно скопировать и вставить в другом месте
@@ -1186,7 +1286,7 @@ G.storage = {
     } catch (_) { return false; }
   },
 
-  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true },
+  settings: { sound: true, textSpeed: 2, hints: true, minimap: true, lefty: false, buttonSize:1, stickSensitivity:1, vibration:false, mapDetail:'detailed', mapMarkerSize:1, mapLabels:true, music:true, ambience:true, crt:'off' },
   loadSettings() {
     const s = this._get(this.KEY_SETTINGS);
     if (s) Object.assign(this.settings, s);
@@ -1196,6 +1296,9 @@ G.storage = {
     if(!['simple','detailed'].includes(this.settings.mapDetail))this.settings.mapDetail='detailed';
     if(![1,1.3].includes(this.settings.mapMarkerSize))this.settings.mapMarkerSize=1;
     this.settings.mapLabels=this.settings.mapLabels!==false;
+    if(!['off','soft','full'].includes(this.settings.crt))this.settings.crt='off';
+    // «Эффекты» игрок не трогал — берём системное «Уменьшение движения»: без тряски, вспышек и частиц
+    try{if(this.settings.fx===undefined&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)this.settings.fx=false;}catch(_){}
     return this.settings;
   },
   saveSettings() { this._set(this.KEY_SETTINGS, this.settings); },
@@ -2395,7 +2498,9 @@ G.ui = (() => {
     ROW,
     rect(n, w, o = {}) {
       w = Math.min(w, G.screen.W - 8);
-      const row = Math.min(ROW, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
+      // строка под палец: не ниже 44 CSS-пикселей, пока список помещается в экран (на iPhone SE точка = 1 CSS-пиксель)
+      const want = Math.max(ROW, Math.ceil(44 / (G.screen.scale || 1)));
+      const row = Math.min(want, Math.max(13, Math.floor((G.screen.H - 48 - (o.extra || 0)) / n)));
       const h = 24 + n * row + 10 + (o.extra || 0);
       return { x: Math.round((G.screen.W - w) / 2), y: Math.max(14, Math.round((G.screen.H - h) / 2) - 6), w, h, row };
     },
@@ -2410,8 +2515,8 @@ G.ui = (() => {
       panel(ctx, r.x, r.y, r.w, r.h, 'frame');
       title && U_title(ctx, title, r.x + r.w / 2, r.y - 7, 0);
       items.forEach((it, i) => {
-        const y = menu.rowY(r, i), sel = i === idx;
-        row(ctx, r.x + 6, y - 1, r.w - 12, r.row - 2, sel);
+        const y0 = menu.rowY(r, i), sel = i === idx, y = y0 + Math.max(0, Math.floor((r.row - 20) / 2));   // подпись по центру высокой строки
+        row(ctx, r.x + 6, y0 - 1, r.w - 12, r.row - 2, sel);
         const col = it.dis ? C.inkFaint : sel ? '#f8eed0' : C.ink;
         F.draw(ctx, it.label, r.x + 14, y + 3, { color: col, shadow: sel && !it.dis ? '#5a1408' : null, maxW: r.w - 28 - (it.value ? F.measure(it.value) + 8 : 0) });
         if (it.value) F.draw(ctx, it.value, r.x + r.w - 14, y + 3, { align: 'right', color: sel ? '#f4d46a' : C.redDark, shadow: sel ? '#5a1408' : null });
@@ -6259,8 +6364,6 @@ G.game = (() => {
       tracked: null,       // отслеживаемое задание
       cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
       deck: null,          // колода героя: список id карт (10–20), см. systems/deck.js
-      cardOwned: null,     // свои карты боя: id → копий (G.deck.ensure заполнит по умолчанию)
-      deck: null,          // колода героя: список id (10–20 карт)
       marker: null,        // своя метка на карте { x, y, label } (в тайлах Конохи)
       fog: '',             // исследованные участки карты (строка 0/1 по блокам 8×8 тайлов)
     };
@@ -6350,8 +6453,10 @@ G.game = (() => {
     // slot — номер слота; без него загружается новейший (прежнее поведение «Продолжить»)
     loadSaved(slot) {
       const st = G.storage.load(slot);
+      const loaded = G.storage.active;   // слот, из которого читали: newState() сбрасывает его в основной
       G.game.newState();
-      if (st) Object.assign(G.state, st);
+      // автосейвы идут в тот же слот, что загружен: иначе загрузка слота 3 затирала слот 1 при первом же входе в дом
+      if (st) { Object.assign(G.state, st); G.storage.active = loaded; }
       this.fix(G.state);
       G.scenes.fadeTo(G.scenes.make('world', G.state.pos || null));
       return !!st;
@@ -6435,7 +6540,7 @@ G.game = (() => {
       const q = G.quests && G.quests.tracked(), st = q && G.quests.curStep(q);
       if (st) return st.text;
       // после финала первой главы задания кончились — но строка цели не должна пустовать
-      if (G.state.flags.postgame) return 'Свободная жизнь: тренируйся, дружи и бери поручения';
+      if (G.state.flags.postgame) return 'Свободная жизнь. Меню → Итоги главы: начать заново';
       const g = G.state.goal; return g ? GOALS[g] || g : null;
     },
 
@@ -6983,25 +7088,39 @@ G.COMBOS = {
 G.ENEMIES = {
   dummy: {name:'Манекен',spr:'dummy',male:false,grow:false,share:0.12,dmg:0,hp:25,ch:0,tai:1,nin:0,gen:0,spd:1,end:1,know:0,style:'dummy',lines:{start:'...',hurt:'*скрип*'}},
   dummy2: {name:'Манекен Ируки',spr:'dummy',male:false,grow:false,share:0.14,dmg:4,hp:30,ch:0,tai:2,nin:0,gen:0,spd:2,end:2,know:0,style:'dummy',lines:{start:'*скрип-скрип*'}},
-  kiba: {name:'Киба',spr:'kiba',male:true,grow:false,share:0.50,dmg:17.5,hp:55,ch:34,tai:7,nin:3,gen:1,spd:6,end:5,know:2,style:'rush',tech:{name:'Гацуга',power:1.8,kind:'dmg',cost:16},lines:{start:'Новенький? Мы с Акамару тебя мигом уделаем!',hurt:'Акамару, это ничего!',low:'Чёрт... да ты не так прост!',win:'Ха! Сила стаи!',lose:'Ладно-ладно... в следующий раз!'}},
-  naruto: {name:'Наруто',spr:'naruto',male:true,grow:false,share:0.58,dmg:20.5,hp:70,ch:80,tai:6,nin:4,gen:1,spd:7,end:10,know:1,style:'rush',tech:{name:'Теневые клоны',power:1.6,kind:'dmg',cost:20},lines:{start:'Даттебайо! Покажу тебе стиль будущего Хокаге!',hurt:'Ай-ай! Это нечестно!',low:'Я никогда не сдаюсь!',win:'Ура! Видел?!',lose:'Эх... ты крутой! Ещё раз!'}},
-  sasuke: {name:'Саске',spr:'sasuke',male:true,grow:false,share:0.66,dmg:38.9,hp:128,ch:60,tai:8,nin:6,gen:3,spd:8,end:8,know:5,style:'counter',tech:{name:'Огненный шар',power:2.2,kind:'dmg',cost:22},lines:{start:'Хм. Посмотрим, чего ты стоишь.',hurt:'Тц.',low:'Не может быть...',win:'Ты слабак.',lose:'...Неплохо. В следующий раз я не проиграю.'}},
-  shikamaru: {name:'Шикамару',spr:'shikamaru',male:true,grow:false,share:0.58,dmg:58.4,hp:135,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0.65,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
-  hinata: {name:'Хината',spr:'hinata',male:false,grow:false,share:0.62,dmg:31,hp:95,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
-  choji: {name:'Чоджи',spr:'choji',male:true,grow:false,share:0.60,dmg:29,hp:144,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
-  ino: {name:'Ино',spr:'ino',male:false,grow:false,share:0.60,dmg:50.2,hp:84,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
-  lee: {name:'Рок Ли',spr:'lee',male:true,grow:false,share:0.62,dmg:32.5,hp:70,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:14},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
+  kiba: {trait:'pack',name:'Киба',spr:'kiba',male:true,grow:false,share:0.50,dmg:17.5,hp:69,ch:34,tai:7,nin:3,gen:1,spd:6,end:5,know:2,style:'rush',tech:{name:'Гацуга',power:1.8,kind:'dmg',cost:16},lines:{start:'Новенький? Мы с Акамару тебя мигом уделаем!',hurt:'Акамару, это ничего!',low:'Чёрт... да ты не так прост!',win:'Ха! Сила стаи!',lose:'Ладно-ладно... в следующий раз!'}},
+  naruto: {trait:'stubborn',name:'Наруто',spr:'naruto',male:true,grow:false,share:0.58,dmg:20.5,hp:45,ch:80,tai:6,nin:4,gen:1,spd:7,end:10,know:1,style:'rush',tech:{name:'Теневые клоны',power:1.6,kind:'dmg',cost:20},lines:{start:'Даттебайо! Покажу тебе стиль будущего Хокаге!',hurt:'Ай-ай! Это нечестно!',low:'Я никогда не сдаюсь!',win:'Ура! Видел?!',lose:'Эх... ты крутой! Ещё раз!'}},
+  sasuke: {trait:'sharingan',name:'Саске',spr:'sasuke',male:true,grow:false,share:0.66,dmg:38.9,hp:189,ch:60,tai:8,nin:6,gen:3,spd:8,end:8,know:5,style:'counter',tech:{name:'Огненный шар',power:2.2,kind:'dmg',cost:22},lines:{start:'Хм. Посмотрим, чего ты стоишь.',hurt:'Тц.',low:'Не может быть...',win:'Ты слабак.',lose:'...Неплохо. В следующий раз я не проиграю.'}},
+  shikamaru: {trait:'planner',name:'Шикамару',spr:'shikamaru',male:true,grow:false,share:0.66,dmg:58.4,hp:173,ch:50,tai:3,nin:5,gen:2,spd:4,end:4,know:9,style:'reader',tech:{name:'Теневая ловушка',power:0.65,kind:'bind',cost:18},lines:{start:'Как же это всё хлопотно...',hurt:'Ох...',low:'Ладно, сдаюсь... почти.',win:'Сто ходов вперёд, как в шоги.',lose:'Хлопотно. Сдаюсь.'}},
+  hinata: {trait:'byakugan',name:'Хината',spr:'hinata',male:false,grow:false,share:0.62,dmg:31,hp:102,ch:60,tai:6,nin:5,gen:2,spd:6,end:5,know:5,style:'turtle',tech:{name:'Мягкий кулак',power:1.2,kind:'drain',cost:16},lines:{start:'Я... я постараюсь! Прости заранее!',hurt:'Н-ничего...',low:'Я не отступлю... как Наруто!',win:'Ой! Ты в порядке?!',lose:'Ты очень сильный...'}},
+  choji: {trait:'bulk',name:'Чоджи',spr:'choji',male:true,grow:false,share:0.66,dmg:29,hp:160,ch:50,tai:11,nin:6,gen:1,spd:2,end:11,know:2,style:'brute',tech:{name:'Баика',power:2.4,kind:'dmg',cost:20},lines:{start:'После боя — чипсы! Ням!',hurt:'Уф!',low:'Я не толстый! Я широкой кости!!!',win:'Хрум! Победные чипсы!',lose:'Пойду поем...'}},
+  ino: {name:'Ино',spr:'ino',male:false,grow:false,share:0.66,dmg:50.2,hp:163,ch:55,tai:4,nin:4,gen:7,spd:5,end:4,know:5,style:'trickster',tech:{name:'Иллюзия Яманака',power:0,kind:'fear',cost:18},lines:{start:'Быстренько закончим — мне ещё к Саске!',hurt:'Эй, причёска!',low:'Как ты смеешь?!',win:'Красота — тоже сила!',lose:'Хмф! Повезло тебе.'}},
+  lee: {trait:'gates',name:'Рок Ли',spr:'lee',male:true,grow:false,share:0.62,dmg:32.5,hp:142,ch:0,tai:10,nin:0,gen:0,spd:11,end:11,know:2,style:'rush',tech:{name:'Коноха Сэнпу',power:2,kind:'dmg',cost:0},lines:{start:'Сила юности! Покажи мне свою!',hurt:'Отличный удар!',low:'Гай-сенсей, я не подведу!',win:'Тренируйся! 500 кругов вокруг деревни!',lose:'Великолепно! Ты — мой соперник!'}},
   bully: {name:'Хулиган',spr:'bully',male:true,grow:true,share:0.34,dmg:19.1,hp:50,ch:20,tai:4,nin:1,gen:0,spd:3,end:4,know:1,style:'rush',tech:{name:'Бросок кунаев',power:1.3,kind:'dmg',cost:10},lines:{start:'Эй, мелкий! Гони деньги!',hurt:'Ах ты!',win:'Ха, слабак!',lose:'Б-бежим отсюда!'}},
   senior: {name:'Старшеклассник',spr:'bully',male:true,grow:false,share:0.42,dmg:25,hp:80,ch:40,tai:7,nin:4,gen:2,spd:8,end:9,know:8,style:'counter',tech:{name:'Бросок кунаев',power:1.5,kind:'dmg',cost:12},lines:{start:'Свиток? Попробуй отними, малявка!',hurt:'Тц, шустрый!',low:'Да кто ты такой?!',win:'Свиток останется у нас.',lose:'Ладно-ладно, забирай!'}},
   thief: {name:'Ночной вор',spr:'thief',male:true,grow:true,share:0.44,dmg:29,hp:50,ch:30,tai:4,nin:2,gen:2,spd:7,end:4,know:4,style:'trickster',tech:{name:'Дымовая завеса',power:0,kind:'fear',cost:12},lines:{start:'Ученичок? Не мешай работать.',hurt:'Шустрый...',win:'Сладких снов.',lose:'Сдаюсь! Отдам всё!'}},
   dog: {name:'Бродячий пёс',spr:'dog',male:false,grow:true,share:0.32,dmg:21.5,hp:40,ch:0,tai:5,nin:0,gen:0,spd:7,end:3,know:0,style:'rush',tech:{name:'Рывок',power:1.3,kind:'dmg',cost:0},lines:{start:'Р-р-р-гав!',lose:'Скуль-скуль...'}},
-  iruka: {name:'Ирука',spr:'iruka',male:true,grow:false,share:0.66,dmg:45.9,hp:113,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
+  iruka: {trait:'veteran',name:'Ирука',spr:'iruka',male:true,grow:false,share:0.66,dmg:45.9,hp:165,ch:70,tai:7,nin:6,gen:4,spd:7,end:7,know:8,style:'counter',tech:{name:'Приём сенсея',power:1.6,kind:'dmg',cost:16},lines:{start:'Колокольчик у меня на поясе. Сорви его — и тест пройден!',hurt:'Хорошо! Вот так!',low:'Ты вырос, {name}.',win:'Ещё рано. Тренируйся!',lose:'Молодец! Я горжусь тобой.'}},
   shino: {name:'Шино',spr:'shino',male:true,grow:false,share:0.50,dmg:30,hp:90,ch:70,tai:3,nin:6,gen:2,spd:4,end:5,know:8,style:'reader',tech:{name:'Жуки-разрушители',power:1,kind:'drain',cost:18},lines:{start:'Мои жуки уже в пути. Сдавайся — это логично.',hurt:'Интересно.',low:'Колония слабеет... но я не отступлю.',win:'Расчёт был верным.',lose:'Невероятно. Жуки... ошиблись.'}},
   anko: {name:'Анко',spr:'anko',male:false,grow:false,share:0.52,dmg:28,hp:85,ch:80,tai:7,nin:7,gen:3,spd:8,end:6,know:6,style:'trickster',tech:{name:'Змеиная хватка',power:0.55,kind:'bind',cost:18},lines:{start:'Покажи, на что способен, малявка!',hurt:'Ха! Неплохо!',low:'Даже не думала, что придётся вспотеть!',win:'Мало данго ты ешь, парень.',lose:'Ладно-ладно... ты меня удивил.'}},
   asuma: {name:'Асума',spr:'asuma',male:true,grow:false,share:0.54,dmg:30,hp:90,ch:90,tai:8,nin:7,gen:2,spd:7,end:8,know:8,style:'counter',tech:{name:'Клинки чакры',power:1.9,kind:'dmg',cost:20},lines:{start:'Шикамару твердит, что ты упрямый. Проверим.',hurt:'Хм, неплохо!',low:'Ладно, хватит играть.',win:'Вырастешь — станешь опасным.',lose:'Вот это да. Респект, малыш.'}},
-  stranger: {name:'Незнакомец в плаще',spr:'stranger',male:true,grow:false,share:0.74,dmg:44,hp:118,ch:80,tai:8,nin:7,gen:6,spd:8,end:7,know:9,style:'reader',tech:{name:'Печать подавления',power:1.7,kind:'dmg',cost:18},lines:{start:'Покажи, чего стоит твоя фиолетовая. Или уходи, пока цел.',hurt:'...Значит, не пустой звук.',low:'Держишься. Уже интересно.',win:'Слабо. Но не безнадёжно.',lose:'...Вот как это — когда держит кто-то, кроме страха.'}},
+  stranger: {trait:'seal',name:'Незнакомец в плаще',spr:'stranger',male:true,grow:false,share:0.74,dmg:44,hp:150,ch:80,tai:8,nin:7,gen:6,spd:8,end:7,know:9,style:'rush',tech:{name:'Печать подавления',power:1.7,kind:'dmg',cost:18},lines:{start:'Покажи, чего стоит твоя фиолетовая. Или уходи, пока цел.',hurt:'...Значит, не пустой звук.',low:'Держишься. Уже интересно.',win:'Слабо. Но не безнадёжно.',lose:'...Вот как это — когда держит кто-то, кроме страха.'}},
   konohamaru: {name:'Конохамару',spr:'konohamaru',male:true,grow:false,share:0.22,dmg:12,hp:45,ch:30,tai:3,nin:2,gen:1,spd:5,end:3,know:1,style:'trickster',tech:{name:'Проделка',power:1.2,kind:'dmg',cost:10},lines:{start:'Босс сказал, нужно сначала победить тебя! Сексуальное дзюцу-у-у!',hurt:'Ай! Я же внук Хокаге!',win:'Я круче всех!',lose:'Погоди... я вырасту и вернусь!'}},
 
+};
+
+// Особенности противников: у каждого заметного соперника — одно своё правило (числа и логика — systems/duel.js, TRAIT).
+// name и text показываются на заставке боя и под шкалами врага.
+G.ENEMY_TRAITS = {
+  pack:      { name: 'Акамару',    text: 'Серия — три удара, а не два.' },
+  stubborn:  { name: 'Не сдамся!', text: 'Один раз встаёт после поражения и возвращает четверть здоровья.' },
+  byakugan:  { name: 'Бьякуган',   text: 'Видит клонов: они не принимают её удары.' },
+  planner:   { name: 'Стратег',    text: 'Повтор одной карты за ход бьёт вполсилы.' },
+  gates:     { name: 'Врата',      text: 'Ниже половины здоровья бьёт на 30% сильнее.' },
+  bulk:      { name: 'Широкая кость', text: 'Каждый удар по нему слабее на 2: серии вязнут.' },
+  sharingan: { name: 'Шаринган',   text: 'Первая техника за ход встречает уклон 60%.' },
+  veteran:   { name: 'Опыт',       text: 'Оглушить нельзя.' },
+  seal:      { name: 'Печать',     text: 'Каждый его удар сжигает 10 чакры.' },
 };
 
 // Арены: объекты на 5 позициях
@@ -7016,8 +7135,10 @@ G.ARENAS = {
 };
 
 G.combat = {
-  // мастерство техники 0..3 (от количества применений)
-  mastery(t) { const u = G.state.vars['use_' + t] || 0; return u >= 18 ? 3 : u >= 10 ? 2 : u >= 4 ? 1 : 0; },
+  // мастерство карты 0..3 (от количества применений в боях): техники и обычные карты растут одинаково
+  MASTERY: [4, 10, 18],
+  mastery(t) { const u = (G.state.vars && G.state.vars['use_' + t]) || 0; return u >= 18 ? 3 : u >= 10 ? 2 : u >= 4 ? 1 : 0; },
+  stars(t) { return '★'.repeat(this.mastery(t)); },
   knows(t) { return !!G.state.flags['tech_' + t]; },
   knowsCombo(c) { return c === 'academy' || !!G.state.flags['combo_' + c]; },
 };
@@ -7063,8 +7184,8 @@ for (const [id, t] of Object.entries(G.TECHS)) {
   };
 }
 G.CARDS.kawarimi.text = 'Полностью избежать атаки и нанести контрудар. Срабатывает только против атакующего намерения.';
-G.CARDS.henge.text = 'Враг пропускает действие в конце хода. Одно надёжное превращение за бой.';
-G.CARDS.fear.text = 'Страх на два действия: враг наносит на 35% меньше урона и теряет блок.';
+G.CARDS.henge.text = 'Враг пропускает действие в конце хода. Дважды подряд оглушить нельзя.';
+G.CARDS.fear.text = 'Страх на два действия: враг бьёт на треть слабее (сильнее с Гендзюцу) и теряет блок.';
 G.CARDS.bunshin.text = 'Два клона. Каждый принимает на себя один удар; после призыва вы берёте карту.';
 G.CARDS.sexy.text = 'Противник-мужчина пропускает действие. На остальных — слабость на один ход.';
 G.CARDS.shunshin.text = 'Сильный удар от Скорости и полное уклонение от ответной атаки.';
@@ -7073,6 +7194,9 @@ G.CARDS.suiton.text = 'Урон и мокрый статус на два ход�
 G.CARDS.raiton.text = 'Электрический урон. По мокрой цели ×1,6 и оглушение на действие.';
 G.CARDS.fuuton.text = 'Урон, слабость на один ход и дополнительная карта. Снимает защиту врага.';
 G.CARDS.release = { name: 'Выброс', kind: 'nin', cost: 25, tech: true, exhaust: true, release: true, text: 'Требует накал 60. Мощный урон сквозь защиту; нестабильная чакра может усилить выброс или дать отдачу.' };
+
+// Короткие имена для узкой клетки руки (полное имя — в строке описания выбранной карты).
+for (const [id, short] of Object.entries({ fear: 'Страх', sexy: 'Секси', chakra_shot: 'Выстрел', katon: 'Катон', suiton: 'Суйтон', smoke_bomb: 'Дым' })) G.CARDS[id].short = short;
 
 // Двенадцать базовых карт: у нового героя уже есть атака, защита, добор и несколько связок.
 G.CARD_BASE_DECK = ['strike', 'strike', 'guard', 'guard', 'evade', 'kunai', 'focus', 'combo', 'feint', 'analyze', 'stance', 'breath'];
@@ -7602,7 +7726,10 @@ G.nav = (() => {
 // «Жизнь» (этап 4): непрерывные часы, погода, расписание персонажей, предупреждения о нуждах.
 // Часы идут только в сцене мира, когда сверху нет диалога, меню, лавки или карты (§14.3 п.5).
 G.life = (() => {
-  const RATE = 0.6;             // игровых минут за реальную секунду: сутки (1440 мин) = 40 реальных минут
+  // Время — за действия, а не за ожидание. Часы идут, только пока герой идёт (дорога стоит времени),
+  // и от самих дел: урок, тренировка, еда, работа, бой двигают их сами (G.game.advance). Стоишь — время стоит.
+  // RATE — игровых минут за секунду ходьбы: путь через всю деревню — около сорока минут шагом, двадцать пять бегом.
+  const RATE = 1.0;
   const WEATHER = {
     sun:   { icon: '☀', name: 'Ясно',    col: '#ffd84a' },
     cloud: { icon: '☁', name: 'Облачно', col: '#c8c8d8' },
@@ -7650,8 +7777,9 @@ G.life = (() => {
     },
 
     // Шаг часов. Возвращает, сколько целых минут прошло (0, если ни одной)
-    tick(dt, running) {
-      this.acc += dt * RATE;
+    tick(dt, running, moving = true) {
+      if (!moving) return 0;                 // стоим на месте — часы стоят
+      this.acc += dt * this.RATE;            // this.RATE: тесты и съёмка кадров останавливают часы через G.life.RATE = 0
       if (this.acc < 1) return 0;
       const n = Math.floor(this.acc);
       this.acc -= n;
@@ -7841,8 +7969,11 @@ G.purple = (() => {
     v.purple_ctl = Math.min(PRACTICE_CAP, (v.purple_ctl || 0) + add);
     return add;
   }
-  // сила ауры 0..1: ярче при полной чакре
-  function aura() { return clamp(((V().chakra || 0) - 50) / 50, 0, 1); }
+  // сила ауры 0..1: фиолетовая чакра проступает, когда обычной почти не осталось.
+  // Ниже LOW (35%) появляются первые искры, к 5% аура горит в полную силу; при полной чакре её не видно.
+  const LOW = 35;
+  const lowAura = (pct) => clamp((LOW - pct) / (LOW - 5), 0, 1);
+  function aura() { const c = V().chakra; return lowAura(c == null ? 100 : c); }
   // искры вокруг героя; вспышка после выброса
   function drawAura(ctx, world, a) {
     if (G.storage.settings.fx === false || !G.state.started) return;
@@ -7858,7 +7989,7 @@ G.purple = (() => {
     }
     ctx.restore();
   }
-  return { COLOR, PRACTICE, stability, chance, roll, apply, practice, aura, drawAura, BOOST: 1.5, flashUntil: 0 };
+  return { COLOR, PRACTICE, stability, chance, roll, apply, practice, aura, lowAura, LOW, drawAura, BOOST: 1.5, flashUntil: 0 };
 })();
 
 
@@ -7873,13 +8004,18 @@ G.duel = (() => {
   // Урон врага задан долей здоровья героя (см. G.ENEMIES[*].share): с ростом HP 85 → 95 бой не «ломается».
   // share — обычный удар; series — каждая из двух атак серии; techShare — потолок коронного приёма,
   // чтобы даже заряженный приём (×1,25) не снимал всё здоровье разом.
-  const TUNE = { hp: 1.2, enemyDmg: 1.0, baseShare: 0.3, series: 0.7, techShare: 0.75, hand: 5, ap: 3 };
+  const TUNE = { hp: 1.2, enemyDmg: 1.0, baseShare: 0.3, series: 0.7, packSeries: 0.5, techShare: 0.75, hand: 5, ap: 3 };
+  // Особенности противников (G.ENEMY_TRAITS, data/duel_data.js): числа — здесь, чтобы правило и текст жили рядом.
+  const TRAIT = { gates: 1.3, gatesAt: 0.5, bulk: 2, sharingan: 0.6, planner: 0.5, seal: 10, stubborn: 0.25 };
+  const trait = (D, id) => D.E.trait === id;
   // Блок героя — доля его hpMax, а не абсолютное число: иначе тяжёлые враги пробивают защиту насквозь.
   const BLOCK = { guard: [0.10, 0.015], stance: [0.06, 0.010], stanceReply: [0.05, 0.008], kawarimiReply: [0.08, 0.010] };
   // blockOf(P, kind) = доля hpMax + доля характеристики (коэффициенты — в BLOCK).
   const blockOf = (P, kind) => {
     const [base, per] = BLOCK[kind], stat = kind === 'guard' || kind === 'stance' ? P.st('end') : P.st('tai');
-    return Math.round(P.hpMax * (base + per * stat));
+    const card = kind === 'guard' ? 'guard' : kind === 'kawarimiReply' ? 'kawarimi' : 'stance';
+    const m = G.combat && G.state && G.state.vars ? G.combat.mastery(card) : 0;      // освоенная защита держит на 5% больше за ступень
+    return Math.round(P.hpMax * (base + per * stat) * (1 + m * 0.05));
   };
 
   function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -7999,7 +8135,9 @@ G.duel = (() => {
     };
     const choice = weighted(D, STYLE_MIX[E.style] || [['strike', 50], ['multi', 22], ['tech', 18], ['evade', 6], ['block', 4]]);
     if (choice === 'tech') return techOk ? techIntent(D) : strikeIntent(D);
-    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * TUNE.series, hits: 2 };
+    if (choice === 'multi') return E.trait === 'pack'
+      ? { kind: 'multi', name: 'Серия с Акамару', dmg: (E.dmg || 8) * TUNE.packSeries, hits: 3 }
+      : { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * TUNE.series, hits: 2 };
     if (choice === 'block') return { kind: 'block', name: 'Защита', block: 9 + E.end * 1.2 };
     if (choice === 'evade') return { kind: 'evade', name: 'Манёвр', dodge: 0.55 };
     return strikeIntent(D);
@@ -8014,13 +8152,14 @@ G.duel = (() => {
     if (D.intent.dodge) E.dodge = D.intent.dodge;
   }
   // ── урон врага: один множитель на все места ──
-  // Ослабления врага — страх (его сила зависит от Гендзюцу героя), замедление и слабость — считают
+  // Ослабления врага — страх (его сила зависит от Гендзюцу героя) и слабость — считают
   // три разных места: предпросмотр намерения (intentDamage), строка «Ожидаемый урон» (incomingOf) и
   // сам удар (enemyHit). Держим формулу здесь, иначе предпросмотр однажды тихо разойдётся с уроном.
-  const SLOW_MUL = 0.75, WEAK_MUL = 0.75;
+  const WEAK_MUL = 0.75;
   function enemyMul(D) {
     const s = D.E.status;
-    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.slow > 0 ? SLOW_MUL : 1) * (s.weak > 0 ? WEAK_MUL : 1);
+    const gates = trait(D, 'gates') && D.E.hp / Math.max(1, D.E.hpMax) < TRAIT.gatesAt ? TRAIT.gates : 1;   // Рок Ли: ниже половины здоровья бьёт сильнее
+    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.weak > 0 ? WEAK_MUL : 1) * gates;
   }
   function intentDamage(D) {
     const i = D.intent;
@@ -8035,7 +8174,7 @@ G.duel = (() => {
     for (let n = 0; n < (i.hits || 1); n++) {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
       let d = (i.dmg || 0) * mul * (1 - dodge);
-      if (clones > 0 && d > 0) { clones--; d = 0; }
+      if (clones > 0 && d > 0 && !trait(D, 'byakugan')) { clones--; d = 0; }
       const absorbed = i.pierce ? 0 : Math.min(block, d); block -= absorbed; d -= absorbed;
       total += Math.max(0, d);
     }
@@ -8057,7 +8196,8 @@ G.duel = (() => {
     const P = D.P, tai = P.st('tai'), nin = P.st('nin'), spd = P.st('spd'), mul = fatMul(D) * lowHp(D);
     const taiMul = (1 + Math.min(P.chain, 4) * (0.08 + comboBonus())) * mul;
     const techMul = (1 + mastery(id) * 0.06) * (P.focus ? 1.25 : 1) * (D.E.status.mark ? 1.5 : 1) * mul;
-    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount, hits, tech: false }, extra);
+    // Мастерство обычных карт: +5% урона за ступень (у техник — +6%, techMul). Растёт от применений в боях.
+    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount: amount * (1 + mastery(id) * 0.05), hits, tech: false }, extra);
     const t = (amount, extra = {}) => Object.assign({ amount: amount * techMul, hits: 1, tech: true }, extra);
     if (id === 'strike') return f((5 + tai) * taiMul);
     // «Меткий глаз»: метание (кунай) точнее и сильнее
@@ -8082,7 +8222,7 @@ G.duel = (() => {
       else if (id === 'feint') lines.push('Снять защиту');
       else if (id === 'katon') lines.push('Горение ×2');
       else if (id === 'suiton') lines.push('Мокрый ×2');
-      else if (id === 'raiton') lines.push(D.E.status.wet > 0 ? 'Оглушение!' : 'Нужен Суйтон');
+      else if (id === 'raiton') lines.push(D.E.status.wet > 0 ? (steady(D) ? 'Враг устоит' : 'Оглушение!') : 'Нужен Суйтон');
       else if (id === 'fuuton') lines.push('+1 карта');
       else if (id === 'shunshin') lines.push('Уклон 100%');
       else if (id === 'release') lines.push('Сквозь защиту');
@@ -8094,8 +8234,8 @@ G.duel = (() => {
       guard: [`${block} блок`], evade: ['65% уклон'], focus: [`+${Math.round(8 + P.st('ctrl'))} чакры`, 'Техника +25%'],
       analyze: [`+${2 + (P.know >= 5 ? 1 : 0)} карты`, 'Техника +25%'], stance: [`${stance} блок`, `${blockOf(P, 'stanceReply')} ответ`],
       breath: [`+${Math.round(3 + P.st('end') * 0.3)} зд.`, '−4 усталости'], kawarimi: ['Уклон 100%', `${Math.round(8 + P.st('tai') * 0.8)} ответ`],
-      henge: ['Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? 'Оглушение' : 'Слабость'],
-      bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: ['Отмена хода'],
+      henge: [steady(D) ? 'Враг устоит' : 'Отмена хода'], fear: ['Страх ×2', `−${Math.round((1 - P.fearMul) * 100)}% урона`], bunshin: ['2 клона', '+1 карта'], sexy: [D.E.male ? (steady(D) ? 'Враг устоит' : 'Оглушение') : 'Слабость'],
+      bandage: [`+${Math.round(P.hpMax * 0.25)} зд.`], chakra_pill: [`+${Math.round(P.chMax * 0.5)} чакры`], smoke_bomb: ['Уклон 100%'], flash_bomb: [steady(D) ? 'Враг устоит' : 'Отмена хода'],
     };
     return table[id] || [G.CARDS[id] ? G.CARDS[id].kind : ''];
   }
@@ -8109,7 +8249,7 @@ G.duel = (() => {
     if (id.startsWith('tech:') || id.startsWith('item:')) id = id.slice(5);
     return D.hand.find((c) => c.id === id) || null;
   }
-  // Цена карты для героя: гендзюцу дешевле на 1 за каждые 4 очка Гендзюцу.
+  // Цена карты для героя: гендзюцу дешевле на 1 за каждые 6 очков Гендзюцу.
   function cost(D, id) {
     const d = cardDef(id); if (!d) return 0;
     const base = d.cost || 0;
@@ -8131,13 +8271,27 @@ G.duel = (() => {
     if (c.id === 'smoke_bomb' && !isAttack(D)) return { ok: false, why: 'Враг не атакует' };
     return { ok: true, card: c, def: d };
   }
+  // Оглушение врага. «Стойкость»: пропустив ход, враг собирается, и на следующий ход оглушение не проходит —
+  // иначе Хенге, Вспышка, Секси-дзюцу и Райтон по мокрой цели отменяют ходы подряд, и бой идёт без единого удара.
+  // Срыв замаха серией тайдзюцу (force) проходит всегда: это задуманный ответ на тяжёлый приём.
+  const steady = (D) => D.E.steady > 0 || trait(D, 'veteran');   // Ирука: оглушить нельзя вовсе
+  function stunEnemy(D, ev, text, fx, force) {
+    if (!force && steady(D)) { note(ev, 'e', 'info', `${D.E.name} устоял: дважды подряд не оглушить`, { to: 'p' }); return false; }
+    D.E.status.stun = 1; note(ev, 'p', force ? 'counter' : 'status', text, { fx });
+    return true;
+  }
   function note(ev, who, type, text, extra) { ev.push(Object.assign({ who, type, text, to: who === 'p' ? 'e' : 'p' }, extra || {})); }
   function playerDamage(D, c, formula, ev) {
     const E = D.E;
     let total = 0;
+    const P = D.P, repeat = P.turnCards.filter((id) => id === c.id).length > 1;            // карта уже лежит в turnCards
+    const firstTech = formula.tech && P.turnCards.filter((id) => cardDef(id) && cardDef(id).tech).length === 1;
+    const dodge = trait(D, 'sharingan') && firstTech ? Math.max(E.dodge, TRAIT.sharingan) : E.dodge;   // Саске читает первую технику хода
     for (let n = 0; n < formula.hits; n++) {
       let d = formula.amount * (E.status.vuln > 0 ? 1.25 : 1);
-      if (!formula.ignoreDodge) d *= 1 - E.dodge;
+      if (trait(D, 'planner') && repeat) d *= TRAIT.planner;                                 // Шикамару: повтор карты в том же ходу предсказуем
+      if (!formula.ignoreDodge) d *= 1 - dodge;
+      if (trait(D, 'bulk')) d = Math.max(0, d - TRAIT.bulk);                                 // Чоджи: каждый удар слабее на 2
       const blocked = formula.pierce ? 0 : Math.min(E.block, d);
       E.block -= blocked; d = Math.max(0, d - blocked); d = Math.round(d);
       E.hp = clamp(E.hp - d, 0, E.hpMax); total += d;
@@ -8180,10 +8334,10 @@ G.duel = (() => {
     else if (c.id === 'stance') { gainBlock(D, blockOf(P, 'stance'), ev); P.riposte += blockOf(P, 'stanceReply'); }
     else if (c.id === 'breath') { heal(D, 3 + P.st('end') * 0.3, ev, 'Дыхание восстанавливает силы'); P.fat = Math.max(0, P.fat - 4); }
     else if (c.id === 'kawarimi') { P.dodge = 1; P.riposte += blockOf(P, 'kawarimiReply'); note(ev, 'p', 'status', 'Каварими: замена и контрудар', { fx: c.id, to: 'p' }); }
-    else if (c.id === 'henge' || c.id === 'flash_bomb') { E.status.stun = 1; note(ev, 'p', 'status', `${def.name}: действие врага отменено`, { fx: c.id }); }
+    else if (c.id === 'henge' || c.id === 'flash_bomb') stunEnemy(D, ev, `${def.name}: действие врага отменено`, c.id);
     else if (c.id === 'fear') { E.block = 0; E.status.fear = 2; note(ev, 'p', 'status', `Ложный страх: урон врага −${Math.round((1 - P.fearMul) * 100)}% на два действия`, { fx: c.id }); }
     else if (c.id === 'bunshin') { P.clones = Math.max(P.clones, 2); draw(D, 1); note(ev, 'p', 'status', 'Буншин: два клона и дополнительная карта', { fx: c.id, to: 'p' }); }
-    else if (c.id === 'sexy') { if (E.male) E.status.stun = 1; else E.status.weak = 1; note(ev, 'p', 'status', E.male ? 'Секси-дзюцу: враг оглушён' : 'Не сработало: враг ослаблен', { fx: c.id }); }
+    else if (c.id === 'sexy') { if (E.male) stunEnemy(D, ev, 'Секси-дзюцу: враг оглушён', c.id); else { E.status.weak = 1; note(ev, 'p', 'status', 'Не сработало: враг ослаблен', { fx: c.id }); } }
     else if (c.id === 'shunshin') P.dodge = 1;
     else if (c.id === 'smoke_bomb') { P.dodge = 1; note(ev, 'p', 'status', 'Дымовая завеса', { fx: c.id, to: 'p' }); }
     else if (c.id === 'bandage') heal(D, P.hpMax * 0.25, ev, 'Бинт восстанавливает здоровье');
@@ -8197,14 +8351,15 @@ G.duel = (() => {
     if (c.id === 'fuuton') { E.status.weak = 1; draw(D, 1); }
     if (c.id === 'katon' && dealt > 0) E.status.burn = 2;
     if (c.id === 'suiton' && dealt > 0) E.status.wet = 2;
-    if (c.id === 'raiton' && dealt > 0 && E.status.wet > 0) { E.status.stun = 1; note(ev, 'p', 'status', 'Райтон по мокрой цели: оглушение', { fx: c.id }); }
+    if (c.id === 'raiton' && dealt > 0 && E.status.wet > 0) stunEnemy(D, ev, 'Райтон по мокрой цели: оглушение', c.id);
     if (def.kind === 'tai') P.chain += formula ? formula.hits : 1;
-    if (def.kind === 'tai' && D.intent.kind === 'charge' && P.chain >= 3 && !E.chargeBroken) { E.chargeBroken = 1; E.status.stun = 1; note(ev, 'p', 'counter', 'Серия тайдзюцу срывает замах!', { fx: c.id }); }
+    if (def.kind === 'tai' && D.intent.kind === 'charge' && P.chain >= 3 && !E.chargeBroken) { E.chargeBroken = 1; stunEnemy(D, ev, 'Серия тайдзюцу срывает замах!', c.id, true); }
     if (surge && surge.kind === 'backfire') { const rec = Math.max(3, Math.round(dealt * 0.25)); P.hp = clamp(P.hp - rec, 0, P.hpMax); D.stats.taken += rec; note(ev, 'p', 'backfire', `Срыв чакры: отдача ${rec}`, { dmg: rec, to: 'p', fx: 'release' }); }
     if (def.release) P.heat = 0;
     (def.exhaust || def.item ? D.exhaust : D.discard).push(c);
     D.last = { pAct: c.id, q: 1, surge, damage: dealt };
     lastStand(D, ev);
+    enemyStand(D, ev);
     checkEnd(D);
     D.events = ev;
     return ev;
@@ -8218,11 +8373,12 @@ G.duel = (() => {
     for (let n = 0; n < (D.intent.hits || 1); n++) {
       const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
       let d = raw * mul * (1 - dodge);
-      if (P.clones > 0 && d > 0) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
+      if (P.clones > 0 && d > 0 && !trait(D, 'byakugan')) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
       const blocked = D.intent.pierce ? 0 : Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
       P.hp = clamp(P.hp - d, 0, P.hpMax); total += d; D.stats.taken += d;
       note(ev, 'e', d > 0 ? 'hit' : 'block', d > 0 ? name : `${name}: задержано`, { dmg: d, to: 'p', fx: D.intent.kind === 'tech' ? 'e:dmg' : null });
       if (d > 0) P.heat = clamp(P.heat + HEAT_HIT, 0, 100);
+      if (d > 0 && trait(D, 'seal') && P.ch > 0) { const n2 = Math.min(P.ch, TRAIT.seal); P.ch -= n2; note(ev, 'e', 'drain', `Печать жжёт чакру: −${n2}`, { to: 'p', fx: 'e:drain' }); }
     }
     return total;
   }
@@ -8233,12 +8389,12 @@ G.duel = (() => {
     D.discard.push(...D.hand.splice(0));
     D.prevCards = P.turnCards.slice();
     E.block = 0; E.dodge = 0;
-    if (E.status.stun > 0) note(ev, 'e', 'info', `${E.name}: действие пропущено`, { to: 'p' });
+    if (E.status.stun > 0) { E.steady = 2; note(ev, 'e', 'info', `${E.name}: действие пропущено`, { to: 'p' }); }   // steady: следующий ход оглушить нельзя
     else if (intent.kind === 'charge') { E.charged = 1; E.chargeBroken = 0; note(ev, 'e', 'status', `${E.name} готовит тяжёлый приём`, { to: 'p' }); }
-    else if (intent.kind === 'block' || intent.kind === 'evade') { E.ch = Math.min(E.chMax, E.ch + 4); note(ev, 'e', 'info', intent.kind === 'block' ? 'Враг удерживает защиту' : 'Враг меняет позицию', { to: 'p' }); }
+    else if (intent.kind === 'block' || intent.kind === 'evade') { note(ev, 'e', 'info', intent.kind === 'block' ? 'Враг удерживает защиту' : 'Враг меняет позицию', { to: 'p' }); }
     else if (intent.kind === 'idle') note(ev, 'e', 'info', 'Враг ждёт', { to: 'p' });
     else if (isAttack(D)) {
-      if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      if (intent.cost != null) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }   // приём (даже бесплатный) уходит на перезарядку
       const dealt = enemyHit(D, intent.dmg || 0, ev, intent.name);
       if (intent.kind === 'drain' && dealt > 0) { const n = Math.min(P.ch, Math.round(8 + E.nin)); P.ch -= n; E.ch = Math.min(E.chMax, E.ch + n); note(ev, 'e', 'drain', `Чакра украдена: ${n}`, { to: 'p', fx: 'e:drain' }); }
       if (intent.kind === 'bind' && dealt > 0) { P.status.bind = 2; note(ev, 'e', 'status', 'Теневая связка: уклон недоступен на ход', { to: 'p', fx: 'e:bind' }); }
@@ -8247,7 +8403,7 @@ G.duel = (() => {
         note(ev, 'p', 'counter', `Контрудар: ${n}`, { dmg: n, to: 'e', fx: 'kawarimi' });
       }
     } else if (intent.kind === 'fear') {
-      if (intent.cost) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
+      if (intent.cost != null) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }
       if (D.rng() < (P.genResist || 0)) {
         note(ev, 'p', 'status', 'Иллюзия развеяна: своё гендзюцу сильнее', { to: 'p', fx: 'e:fear' });
       } else {
@@ -8256,13 +8412,16 @@ G.duel = (() => {
       }
     }
     lastStand(D, ev);
-    if (E.status.burn > 0 && E.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
+    // павший герой не побеждает «посмертно»: горение не тикает, если его уже добили
+    if (E.status.burn > 0 && E.hp > 0 && P.hp > 0) { const n = 4; E.hp = clamp(E.hp - n, 0, E.hpMax); D.stats.damage += n; note(ev, 'p', 'tech', `Горение: ${n}`, { dmg: n, to: 'e', fx: 'katon' }); }
     P.fat = clamp(P.fat + FAT_ROUND * (1 - P.st('end') * 0.025), 0, 100);
     P.heat = clamp(P.heat + 2, 0, 100); E.ch = Math.min(E.chMax, E.ch + 2);
-    for (const s of ['stun', 'fear', 'weak', 'wet', 'vuln', 'burn', 'slow']) if (E.status[s] > 0) E.status[s]--;
+    for (const s of ['stun', 'fear', 'weak', 'wet', 'vuln', 'burn']) if (E.status[s] > 0) E.status[s]--;
+    if (E.steady > 0) E.steady--;
     for (const s of ['bind', 'fear']) if (P.status[s] > 0) P.status[s]--;
     if (E.cd > 0) E.cd--;
     D.turns++;
+    enemyStand(D, ev);
     checkEnd(D);
     if (!D.over && D.mode === 'survive' && D.round >= D.rounds) { D.over = { win: true }; D.phase = 'over'; }
     if (!D.over && D.round >= 40) { D.over = { win: E.hp / E.hpMax < P.hp / P.hpMax }; D.phase = 'over'; }
@@ -8275,6 +8434,14 @@ G.duel = (() => {
     if (D.P.hp > 0 || D.toughUsed || !D.has('tough')) return false;
     D.P.hp = 1; D.toughUsed = true;
     if (ev) note(ev, 'p', 'info', 'Крепкий орешек: ты устоял на 1 HP', { to: 'p', heal: 0 });
+    return true;
+  }
+  // Наруто: один раз за бой вместо поражения встаёт и возвращает четверть здоровья.
+  function enemyStand(D, ev) {
+    const E = D.E, floor = D.mode === 'spar' ? E.hpMax * SPAR_END : 0;
+    if (!trait(D, 'stubborn') || E.stood || E.hp > floor || D.P.hp <= 0) return false;
+    E.stood = true; E.hp = Math.round(Math.max(E.hp, floor) + E.hpMax * TRAIT.stubborn);
+    if (ev) note(ev, 'e', 'info', `${E.name}: «Я не сдамся!» — встаёт снова`, { to: 'p' });
     return true;
   }
   function checkEnd(D) {
@@ -8305,14 +8472,14 @@ G.duel = (() => {
     else if (id === 'kunai') s += hand.some((x) => damageFormula(D, x) && damageFormula(D, x).tech) && !E.status.mark ? 13 : 0;
     else if (id === 'feint') s += E.block + E.dodge * 20 + 4;
     else if (id === 'kawarimi') s = incoming + blockOf(P, 'kawarimiReply');
-    else if (id === 'henge' || id === 'flash_bomb') s = incoming + (intent.kind === 'charge' ? 24 : 10);
+    else if (id === 'henge' || id === 'flash_bomb') s = steady(D) ? -30 : incoming + (intent.kind === 'charge' ? 24 : 10);
     else if (id === 'fear') s = incoming * 0.7 + E.block;
     else if (id === 'bunshin') s = incoming * 0.85 + (intent.hits || 1) * 5;
-    else if (id === 'sexy') s = E.male ? incoming + 14 : incoming * 0.25;
+    else if (id === 'sexy') s = E.male ? (steady(D) ? -30 : incoming + 14) : incoming * 0.25;
     else if (id === 'shunshin') s += incoming;
     else if (id === 'katon') s += 8;
     else if (id === 'suiton') s += has('raiton') ? 18 : 3;
-    else if (id === 'raiton') s += E.status.wet > 0 ? incoming + 16 : 0;
+    else if (id === 'raiton') s += E.status.wet > 0 && !steady(D) ? incoming + 16 : 0;
     else if (id === 'fuuton') s += incoming * 0.25 + 6;
     else if (id === 'release') s += 12;
     else if (id === 'smoke_bomb') s = incoming + 5;
@@ -8349,7 +8516,7 @@ G.duel = (() => {
 
   function options(D) { return D.hand.map((c) => ({ id: c.id, uid: c.uid, label: cardDef(c.id).name, cost: cardDef(c.id).cost, off: canPlay(D, c).ok ? null : canPlay(D, c).why })); }
   function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
-  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview, enemyMul,
+  return { TUNE, TRAIT, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview, enemyMul,
     stability, mulberry, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
 })();
 
@@ -8845,7 +9012,7 @@ G.academy = {
       if (p.learn || p.learnFlag) {   // технику объяснят после уроков: очередь, чтобы пропуски не затирали друг друга
         const q = G.state.makeupQ || (G.state.makeupQ = []);
         if (!q.includes(v.day)) q.push(v.day);
-        if (w && w.showToast) setTimeout(() => w.showToast('Техника: зайди в класс после 13:00'), 2400);
+        if (w && w.notes) w.notes.push({ title: '📜 Пропущена техника', text: 'Зайди в класс после 13:00 — Ирука объяснит', col: '#7ad0ff', t: 5 });
       }
     }
   },
@@ -11059,6 +11226,7 @@ end
 : За воротами темно, и кто-то ждёт. Но ты уже знаешь: ты готов.
 set flag.postgame = 1
 call note Первая глава пройдена: «Воля Огня»
+call ending
 end
 `);
 
@@ -17288,12 +17456,15 @@ G.villageDetails = (() => {
     for(const b of m.buildings){
       if(!b.door)continue;
       const dx=b.door.tx*T+8, front=(b.door.ty+1)*T, seed=Math.floor(G.util.hash2(b.tx,b.ty,311)*1000);
+      // Порог, до которого герой не дойдёт (ворота А-Ун «открываются» наружу, за стену), остаётся пустым:
+      // коврик с описанием там был предметом, который нельзя осмотреть (его ловил render_map.py).
+      const reachable=!m.reach||!!m.reach[(b.door.ty+1)*m.w+b.door.tx];
       // коврик у порога
-      if(mats<70){
+      if(mats<70&&reachable){
         put('doormat',dx,front+T-6,{layer:'floor',talk:['Плетёный коврик у входа. Края вытерты до соломы.']});mats++;
       }
       // сандалии рядом с ковриком
-      if(seed%3===0){
+      if(seed%3===0&&reachable){
         // Сандалии лежат на той же клетке перед дверью, что и коврик, только сбоку.
         for(const off of [15,-15]){
           const sx=dx+(seed%2?off:-off);
@@ -17971,7 +18142,8 @@ G.scenes.register('prologue', () => {
 
 
 // ===== scenes/world.js =====
-// Сцена мира: ходьба по Конохе и интерьерам, двери, разговоры, слои, камера.
+// Сцена мира: ходьба по Конохе и интерьерам, смена карт, камера и главный цикл обновления.
+// Части сцены — world_npc.js, world_actions.js, world_time.js, world_draw.js (подмешиваются через G.worldParts).
 // pos: { map, x, y, dir }
 G.scenes.register('world', (pos) => {
   const T = G.CONFIG.TILE;
@@ -18171,6 +18343,12 @@ G.scenes.register('world', (pos) => {
           if (p.stepT <= 0) { G.audio.sfx.step(G.ambience.ground(this.map, p.x, p.y)); p.stepT = run ? 0.18 : 0.28; }
         } else { p.anim = 0; p.stepT = 0.06; }
       } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
+      // Бег — «джойстик до упора», и на маленьком экране палец упирается в край раньше. Десять секунд шагом
+      // на джойстике без единого рывка — подсказываем один раз, где это лечится.
+      if (I.stick.on && p.moving && !run && !tired && !G.state.flags.tip_run) {
+        this._walkT = (this._walkT || 0) + dt;
+        if (this._walkT > 10) this.tip('run', '▸ Бег', 'Отведи джойстик до упора. Не хватает экрана? Настройки → Джойстик: ЧУТКО');
+      } else if (run) G.state.flags.tip_run = 1;
 
       // NPC: обновляем только тех, кто рядом
       for (const n of this.npcs) {
@@ -18182,7 +18360,7 @@ G.scenes.register('world', (pos) => {
       // Скорость часов задаётся G.life.RATE.
       if (G.state.started && !G.scenes.busy && G.scenes.top() === this) {
         const before = v.min;
-        if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
+        if (G.life.tick(dt, run && p.moving, p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
       }
 
       if (G.life2) G.life2.poll(this, dt);
@@ -18203,7 +18381,58 @@ G.scenes.register('world', (pos) => {
       if (this.banner) { this.banner.t -= dt; if (this.banner.t <= 0) this.banner = null; }
     },
 
+    // Остальные методы сцены живут в частях: world_npc.js (жители), world_actions.js (кнопка A, лавки),
+    // world_time.js (часы, сон, обмороки) и world_draw.js (отрисовка) — их подмешивает цикл в конце фабрики.
 
+    showToast(text) { this.toast = { text, t: 2.2 }; },
+    viewH() { return G.screen.H - HUD_H - STRIP_H; },
+    // Масштаб: в помещениях комната крупнее (вписывается в экран), на улице — 1
+    zoom() {
+      const m = this.map;
+      if (!m || m.outdoor !== false) return 1;
+      const W = G.screen.W, VH = this.viewH();
+      const z = Math.min(W / (m.w * T + 8), VH / (m.h * T + 40));
+      return Math.max(1, Math.min(3, Math.floor(z * 4) / 4));
+    },
+
+    updateCamera() {
+      const z = this.z = this.zoom();
+      const W = G.screen.W / z, VH = this.viewH() / z, m = this.map, p = this.player;
+      const mw = m.w * T, mh = m.h * T;
+      let fx = p.x, fy = p.y;
+      const ct = G.cine && G.cine.camTarget();
+      if (ct) {
+        const k = this.camPos ? 0.12 : 1; this.camPos = this.camPos || { x: p.x, y: p.y };
+        this.camPos.x += (ct.x - this.camPos.x) * k; this.camPos.y += (ct.y - this.camPos.y) * k; fx = this.camPos.x; fy = this.camPos.y;
+      } else if (this.camPos && G.cine && G.cine.active) {
+        this.camPos.x += (p.x - this.camPos.x) * 0.12; this.camPos.y += (p.y - this.camPos.y) * 0.12; fx = this.camPos.x; fy = this.camPos.y;
+      } else this.camPos = null;
+      this.cam.x = mw <= W ? Math.round((mw - W) / 2) : G.util.clamp(Math.round(fx - W / 2), 0, mw - W);
+      this.cam.y = mh <= VH ? Math.round((mh - VH) / 2) : G.util.clamp(Math.round(fy - 10 - VH / 2), 0, mh - VH);
+    },
+
+    debugInfo() {
+      const p = this.player, m = this.map;
+      return [
+        `${m.id}  ${Math.round(p.x)},${Math.round(p.y)}  тайл ${Math.floor(p.x / T)},${Math.floor(p.y / T)}`,
+        `объектов ${m.objects.length}  видно ${this.visCount}  NPC ${m.npcs.length}`,
+        `чанков ${m.chunks.size}  генерация ${G.world.genMs || 0} мс`,
+        `след A*: ${this.trailMs || 0} мс  цель: ${(G.nav.current() || {}).label || '—'}`,
+        'Тап по карте — телепорт',
+      ];
+    },
+  };
+  for (const part of G.worldParts || []) Object.assign(S, part({ T, HUD_H, STRIP_H, FADE_BEHIND }));
+  return S;
+});
+
+
+// ===== scenes/world_npc.js =====
+// Сцена мира, часть «Жители»: проходимость клеток для NPC, выбор пути и шаг блуждающего жителя.
+// Методы подмешиваются в объект сцены (scenes/world.js: G.worldParts); this — сама сцена.
+// K — общие константы сцены: тайл, высота шапки и нижней полосы, объекты, за которыми герой просвечивает.
+G.worldParts = G.worldParts || [];
+G.worldParts.push(({ T, HUD_H, STRIP_H, FADE_BEHIND }) => ({
     // --- навигация NPC по клеткам: никаких шагов в стены ---
     npcWalk(tx, ty) {
       const T = G.CONFIG.TILE, m = this.map;
@@ -18280,7 +18509,15 @@ G.scenes.register('world', (pos) => {
         if (Math.random() < 0.35) n.dir = ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)];
       }
     },
+}));
 
+
+// ===== scenes/world_actions.js =====
+// Сцена мира, часть «Действия»: что случится по кнопке A (двери, разговоры, предметы, рыбалка), окно реплик, лавки.
+// Методы подмешиваются в объект сцены (scenes/world.js: G.worldParts); this — сама сцена.
+// K — общие константы сцены: тайл, высота шапки и нижней полосы, объекты, за которыми герой просвечивает.
+G.worldParts = G.worldParts || [];
+G.worldParts.push(({ T, HUD_H, STRIP_H, FADE_BEHIND }) => ({
     // ---------- Взаимодействие (A) ----------
     doorAction() {
       const p=this.player,m=this.map;if(p.roof||p.jump)return null;
@@ -18427,7 +18664,15 @@ G.scenes.register('world', (pos) => {
         this.talk(ate ? 'ramen_day1' : 'naruto_noramen');
       }
     },
+}));
 
+
+// ===== scenes/world_time.js =====
+// Сцена мира, часть «Время»: «Подождать», события по часам, обмороки, дорога домой, сон и новый день.
+// Методы подмешиваются в объект сцены (scenes/world.js: G.worldParts); this — сама сцена.
+// K — общие константы сцены: тайл, высота шапки и нижней полосы, объекты, за которыми герой просвечивает.
+G.worldParts = G.worldParts || [];
+G.worldParts.push(({ T, HUD_H, STRIP_H, FADE_BEHIND }) => ({
     // ---------- «Подождать» (меню паузы) ----------
     // Часы идут минута за минутой — так усталость, лавки, прогулы, урок и сюжет срабатывают
     // ровно как в обычной игре, а не «перепрыгивают» час. Ожидание бесплатным не бывает:
@@ -18481,7 +18726,7 @@ G.scenes.register('world', (pos) => {
       if (every(10)) this.softRefresh();
       if (every(120) && G.state.started) G.storage.save(G.state);          // автосейв раз в 2 часа
       // подсказки онбординга
-      if (m.outdoor) this.tip('clock', '⏰ Время идёт', `Игровая минута — ${(1 / G.life.RATE).toFixed(1)} сек. В меню и диалогах часы стоят`);
+      if (m.outdoor) this.tip('clock', '⏰ Время — за дела', 'Часы идут, пока ты идёшь или чем-то занят. Стоишь — время стоит. Ждать: Меню → Подождать');
       if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам');
       if (crossed(19 * 60)) this.tip('evening', '🌙 Вечер', 'Лавки закрываются в 19–23 часа. Смотри часы на карте');
       // лавка закрывается
@@ -18495,7 +18740,7 @@ G.scenes.register('world', (pos) => {
       if (crossed(22 * 60)) this.tip('night', '🌙 Поздно', 'С 23:00 ученикам нельзя на улицу — патруль отправит домой');
       if (crossed(23 * 60) && m.outdoor) { this.notes.push({ title: '🌙 Комендантский час', text: 'Ученикам пора по домам!', col: '#9ab0ff', t: 3 }); G.audio.sfx.error(); }
       if (now >= 26 * 60) return this.faint('late');
-      if (m.outdoor && now >= 23 * 60 + 30 && every(10) && Math.random() < 0.3) this.talk('patrol_curfew');
+      if (m.outdoor && now >= 23 * 60 + 30 && every(10) && Math.random() < 0.6) this.talk('patrol_curfew');   // патруль надёжный: комендантский час — не пустая угроза
     },
 
     // Обморок: от усталости днём — больница, поздно ночью — сон где стоишь
@@ -18541,34 +18786,15 @@ G.scenes.register('world', (pos) => {
         }));
       }, 2);
     },
+}));
 
-    showToast(text) { this.toast = { text, t: 2.2 }; },
-    viewH() { return G.screen.H - HUD_H - STRIP_H; },
-    // Масштаб: в помещениях комната крупнее (вписывается в экран), на улице — 1
-    zoom() {
-      const m = this.map;
-      if (!m || m.outdoor !== false) return 1;
-      const W = G.screen.W, VH = this.viewH();
-      const z = Math.min(W / (m.w * T + 8), VH / (m.h * T + 40));
-      return Math.max(1, Math.min(3, Math.floor(z * 4) / 4));
-    },
 
-    updateCamera() {
-      const z = this.z = this.zoom();
-      const W = G.screen.W / z, VH = this.viewH() / z, m = this.map, p = this.player;
-      const mw = m.w * T, mh = m.h * T;
-      let fx = p.x, fy = p.y;
-      const ct = G.cine && G.cine.camTarget();
-      if (ct) {
-        const k = this.camPos ? 0.12 : 1; this.camPos = this.camPos || { x: p.x, y: p.y };
-        this.camPos.x += (ct.x - this.camPos.x) * k; this.camPos.y += (ct.y - this.camPos.y) * k; fx = this.camPos.x; fy = this.camPos.y;
-      } else if (this.camPos && G.cine && G.cine.active) {
-        this.camPos.x += (p.x - this.camPos.x) * 0.12; this.camPos.y += (p.y - this.camPos.y) * 0.12; fx = this.camPos.x; fy = this.camPos.y;
-      } else this.camPos = null;
-      this.cam.x = mw <= W ? Math.round((mw - W) / 2) : G.util.clamp(Math.round(fx - W / 2), 0, mw - W);
-      this.cam.y = mh <= VH ? Math.round((mh - VH) / 2) : G.util.clamp(Math.round(fy - 10 - VH / 2), 0, mh - VH);
-    },
-
+// ===== scenes/world_draw.js =====
+// Сцена мира, часть «Отрисовка»: кадр мира, стрелка и след к цели, мини-карта, уведомления, дождь, свет, HUD и нижняя полоса.
+// Методы подмешиваются в объект сцены (scenes/world.js: G.worldParts); this — сама сцена.
+// K — общие константы сцены: тайл, высота шапки и нижней полосы, объекты, за которыми герой просвечивает.
+G.worldParts = G.worldParts || [];
+G.worldParts.push(({ T, HUD_H, STRIP_H, FADE_BEHIND }) => ({
     // ---------- Отрисовка ----------
     draw(ctx) {
       const z = this.z || 1, SW = G.screen.W, SVH = this.viewH();
@@ -18921,7 +19147,7 @@ G.scenes.register('world', (pos) => {
       const night = g.isNight();
       const running = G.scenes.top() === this && !G.scenes.busy;
       let clk = g.clock();
-      if (running && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');
+      if (running && this.player.moving && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');   // двоеточие мигает, только пока часы идут
       const cw = G.font.measure('00:00'), cx = Math.round(W / 2 - cw / 2);
       if (night && wt.icon === '☀') U.icon(ctx, 'moon', cx - 14, 4, '#c8d0ff');
       else F.draw(ctx, wt.icon, cx - 12, 5, { color: wt.col });
@@ -18962,20 +19188,7 @@ G.scenes.register('world', (pos) => {
         F.draw(ctx, this.place, 18, y + 7, { color: '#f8eed0', shadow: '#160c06', maxW });
       }
     },
-
-    debugInfo() {
-      const p = this.player, m = this.map;
-      return [
-        `${m.id}  ${Math.round(p.x)},${Math.round(p.y)}  тайл ${Math.floor(p.x / T)},${Math.floor(p.y / T)}`,
-        `объектов ${m.objects.length}  видно ${this.visCount}  NPC ${m.npcs.length}`,
-        `чанков ${m.chunks.size}  генерация ${G.world.genMs || 0} мс`,
-        `след A*: ${this.trailMs || 0} мс  цель: ${(G.nav.current() || {}).label || '—'}`,
-        'Тап по карте — телепорт',
-      ];
-    },
-  };
-  return S;
-});
+}));
 
 
 // ===== scenes/mapview.js =====
@@ -19686,12 +19899,14 @@ G.scenes.register('bag', () => {
 
 // ===== scenes/deckview.js =====
 // Экран «Колода»: слева карты, которые есть у героя, справа — что взято в бой.
-// ←/→ — колонка, ↑/↓ — карта, A или второе касание — переложить. B — закрыть.
+// ←/→ — колонка, ↑/↓ — карта, A или второе касание — переложить. B или «Назад» — закрыть.
 // Правила колоды — systems/deck.js (10–20 карт, до трёх копий, техники добавляются сами).
 G.scenes.register('deckview', () => {
   let W = G.screen.W;
   const F = G.font, AU = G.audio, In = G.input, D = () => G.deck;
-  const ROW = 17, TOP = 66;
+  const ROW = 17;
+  // Раскладка от шапки с кнопкой «Назад» (G.touch.header): панели колонок, их заголовок и первая строка списка.
+  const top = () => { const hh = G.touch.header().height; return { info: hh - 2, panel: hh + 34, rows: hh + 53 }; };
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
 
   // Колонка 0 — «Есть» (можно положить), колонка 1 — «В колоде» (можно убрать)
@@ -19707,6 +19922,8 @@ G.scenes.register('deckview', () => {
 
   const S = {
     name: 'deckview',
+    // без этого на телефоне с экрана было не выйти: «Назад» рисует G.touch, клавиши B на сенсорном экране нет
+    touch() { return { back: true, roomyBack: true }; },
     lists,   // для автотеста: [лежит вне колоды, лежит в колоде]
     move(fromCol, id) {   // переложить одну карту (и для автотеста)
       if (!id) return false;
@@ -19719,8 +19936,8 @@ G.scenes.register('deckview', () => {
     update(dt) {
       W = G.screen.W;
       if (msgT > 0) msgT -= dt;
-      const L = lists(), rows = this.rows();
-      if (In.pressed('b')) { AU.sfx.cancel(); G.scenes.pop(); return; }
+      const L = lists(), rows = this.rows(), TOP = top().rows;
+      if (In.pressed('b') || In.pressed('menu')) { AU.sfx.cancel(); G.scenes.pop(); return; }
       if (In.pressed('left') || In.pressed('right')) { col = 1 - col; AU.sfx.blip(); }
       const n = L[col].length;
       if (In.repeat('up', dt) && n) { sel[col] = (sel[col] + n - 1) % n; AU.sfx.blip(); }
@@ -19728,7 +19945,7 @@ G.scenes.register('deckview', () => {
       if (In.tapNow) {
         const tp = In.tapNow, c = tp.x < W / 2 ? 0 : 1, li = Math.floor((tp.y - TOP) / ROW), i = li + scroll[c];
         const px = c * (W / 2) + 4 + (W / 2 - 7) - 18, bot = TOP + rows * ROW;
-        if (tp.x >= px && tp.y >= 38 && tp.y < 52 && scroll[c] > 0) { col = c; sel[c] = Math.max(0, sel[c] - rows); AU.sfx.blip(); }
+        if (tp.x >= px && tp.y >= top().panel - 4 && tp.y < TOP - 2 && scroll[c] > 0) { col = c; sel[c] = Math.max(0, sel[c] - rows); AU.sfx.blip(); }
         else if (tp.x >= px && tp.y >= bot - 6 && tp.y < bot + 8 && scroll[c] + rows < L[c].length) { col = c; sel[c] = Math.min(L[c].length - 1, sel[c] + rows); AU.sfx.blip(); }
         else if (tp.y > TOP - 2 && li >= 0 && li < rows && tp.y < bot && i >= 0 && i < L[c].length) { col = c; if (sel[c] === i) this.move(c, L[c][i]); sel[c] = i; }
       } else if (In.pressed('a') && n) this.move(col, L[col][Math.min(sel[col], n - 1)]);
@@ -19737,27 +19954,30 @@ G.scenes.register('deckview', () => {
         if (sel[c] < scroll[c]) scroll[c] = sel[c]; if (sel[c] >= scroll[c] + rows) scroll[c] = sel[c] - rows + 1;
       }
     },
-    rows() { return Math.floor((G.screen.H - TOP - 66) / ROW); },
+    rows() { return Math.max(3, Math.floor((G.screen.H - top().rows - 66) / ROW)); },
     draw(ctx) {
       W = G.screen.W;
       const H = G.screen.H, L = lists(), rows = this.rows(), U = G.ui, C = U.C;
+      const hd = G.touch.header(), g = top(), TOP = g.rows;
       U.backdrop(ctx);
-      U.title(ctx, 'КОЛОДА', W / 2, 3, 90);
-      F.small.draw(ctx, `${D().size()}/${D().MAX} карт · минимум ${D().MIN}`, W / 2, 24, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
+      U.title(ctx, 'КОЛОДА', hd.titleX, hd.titleY, 80);
+      F.small.draw(ctx, `${D().size()}/${D().MAX} карт · минимум ${D().MIN}`, W / 2, g.info, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
       const techs = D().techs();
-      F.small.draw(ctx, techs.length ? 'Техники в колоде: ' + techs.join(', ') : 'Техник пока нет', W / 2, 38, { align: 'center', color: C.inkDim, maxW: W - 10 });
+      // строка на тёмном дереве: чернильный цвет здесь не читался
+      F.small.wrap(techs.length ? 'Техники: ' + techs.join(', ') : 'Техник пока нет', W - 10).slice(0, 2).forEach((ln, i) => F.small.draw(ctx, ln, W / 2, g.info + 12 + i * 10, { align: 'center', color: '#d8c8a0', shadow: C.woodEdge, maxW: W - 10 }));
       for (const c of [0, 1]) {
-        const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - 56;
-        U.panel(ctx, x, 56, w, h, 'frame');
-        F.draw(ctx, c ? 'В колоде' : 'Свои карты', x + w / 2, 60, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
+        const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - g.panel;
+        U.panel(ctx, x, g.panel, w, h, 'frame');
+        const head = c ? 'В колоде' : 'Свои карты';   // на узком экране крупный заголовок вылезал за рамку
+        (F.measure(head) > w - 14 ? F.small : F).draw(ctx, head, x + w / 2, g.panel + 5, { align: 'center', color: c === col ? C.redDark : C.inkFaint });
         if (!L[c].length) F.small.draw(ctx, c ? 'Пусто' : 'Всё в колоде', x + w / 2, TOP + 6, { align: 'center', color: C.inkDim });
-        if (scroll[c] > 0) F.small.draw(ctx, '▲', x + w - 12, 60, { color: C.red });
+        if (scroll[c] > 0) F.small.draw(ctx, '▲', x + w - 12, g.panel + 5, { color: C.red });
         if (scroll[c] + rows < L[c].length) F.small.draw(ctx, '▼', x + w - 12, TOP + rows * ROW - 2, { color: C.red });
         for (let i = 0; i < rows; i++) {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
           const y = TOP + i * ROW, on = c === col && k === sel[c], def = G.CARDS[id];
           U.row(ctx, x + 5, y - 1, w - 10, ROW - 1, on);
-          F.small.draw(ctx, def.name, x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
+          F.small.draw(ctx, def.name + (G.combat.stars(id) ? ' ' + G.combat.stars(id) : ''), x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
           const cnt = c ? D().count(id) : D().own(id);
           F.small.draw(ctx, '×' + cnt, x + w - 9, y + 2, { align: 'right', color: on ? '#f4d46a' : C.inkDim });
         }
@@ -19765,9 +19985,11 @@ G.scenes.register('deckview', () => {
       const cur = L[col][sel[col]];
       const iy = H - 58;
       U.panel(ctx, 4, iy, W - 8, 54, 'frame');
-      F.small.draw(ctx, msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — убрать из колоды' : 'Коснись ещё раз — положить в колоду') : 'Слева — свои карты, справа — колода', 12, iy + 9, { color: msgT > 0 ? C.redDark : C.redDark, maxW: W - 24 });
+      const hint = msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — убрать' : 'Коснись ещё раз — в колоду') : 'Слева — свои, справа — колода';
+      F.small.draw(ctx, hint, 12, iy + 9, { color: C.redDark, maxW: W - 24 });
       if (cur) {
-        F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}, всего ${D().own(cur)}`, 12, iy + 24, { color: C.ink, maxW: W - 24 });
+        const use = G.state.vars['use_' + cur] || 0, lvl = G.combat.mastery(cur), next = G.combat.MASTERY[lvl];
+        F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}/${D().own(cur)} · ` + (next ? `до ★ ещё ${next - use}` : 'освоена ★★★'), 12, iy + 24, { color: C.ink, maxW: W - 24 });
         F.small.wrap(G.CARDS[cur].text || '', W - 24).slice(0, 1).forEach((ln, i) => F.small.draw(ctx, ln, 12, iy + 36 + i * 10, { color: C.inkDim }));
       }
     },
@@ -19778,10 +20000,11 @@ G.scenes.register('deckview', () => {
 
 // ===== scenes/log.js =====
 // Экран «История»: последние реплики диалогов — можно вернуться и перечитать, что тебе сказали.
-// Строки листаются ↑/↓ и перетаскиванием; новые внизу.
+// Строки листаются ↑/↓ или касанием: верхняя половина листа — раньше, нижняя — позже; новые внизу.
 G.scenes.register('log', () => {
   const F = G.font, In = G.input, U = G.ui;
-  const ROW = 11, TOP = 40, BOT = 26;
+  const ROW = 11, BOT = 26;
+  const top = () => G.touch.header().height + 20;   // лист начинается под шапкой с кнопкой «Назад» и строкой подсказки
   let scroll = 0;   // сдвиг от конца: 0 — последние строки
   const lines = () => {
     const L = (G.state.dlgLog || []).slice();
@@ -19789,10 +20012,12 @@ G.scenes.register('log', () => {
     for (const t of L) for (const ln of F.small.wrap(t, W)) out.push(ln);
     return out;
   };
-  const rows = () => Math.floor((G.screen.H - TOP - BOT) / ROW);
+  const rows = () => Math.max(1, Math.floor((G.screen.H - top() - BOT) / ROW));
   const maxScroll = () => Math.max(0, lines().length - rows());
   return {
     name: 'log',
+    // без этого на телефоне с экрана было не выйти: клавиши B на сенсорном экране нет
+    touch() { return { back: true, roomyBack: true }; },
     lines, rows, maxScroll,
     update(dt) {
       const I = In;
@@ -19802,16 +20027,18 @@ G.scenes.register('log', () => {
       if (I.pressed('left')) { scroll = maxScroll(); G.audio.sfx.blip(); }
       if (I.pressed('right')) { scroll = 0; G.audio.sfx.blip(); }
       if (I.tapNow) {
-        const y = I.tapNow.y;
-        if (y < TOP) scroll = Math.min(maxScroll(), scroll + rows());
-        else if (y > G.screen.H - BOT) scroll = Math.max(0, scroll - rows());
+        // касание листа: верхняя половина — на страницу раньше, нижняя — позже (раньше зоны были узкими полосками у краёв)
+        const y = I.tapNow.y, mid = (top() + G.screen.H - BOT) / 2, page = Math.max(1, rows() - 1);
+        if (y >= top() - 6 && y < mid) scroll = Math.min(maxScroll(), scroll + page);
+        else if (y >= mid) scroll = Math.max(0, scroll - page);
       }
     },
     draw(ctx) {
-      const W = G.screen.W, C = U.C, L = lines(), n = rows();
+      const W = G.screen.W, C = U.C, L = lines(), n = rows(), hd = G.touch.header(), TOP = top();
       U.backdrop(ctx);
-      U.title(ctx, 'ИСТОРИЯ', W / 2, 3, 90);
-      F.small.draw(ctx, L.length ? 'Прокрутка: ↑/↓, ◀ — к началу' : 'Пока никто ничего не сказал', W / 2, 24, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
+      U.title(ctx, 'ИСТОРИЯ', hd.titleX, hd.titleY, 80);
+      const hint = !L.length ? 'Пока никто ничего не сказал' : maxScroll() ? 'Верх листа — раньше, низ — позже' : 'Последние реплики';
+      F.small.draw(ctx, hint, W / 2, hd.height, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge, maxW: W - 10 });
       U.panel(ctx, 4, TOP - 6, W - 8, G.screen.H - TOP - BOT + 6, 'frame');
       const start = Math.max(0, L.length - n - scroll);
       for (let i = 0; i < n; i++) {
@@ -19819,7 +20046,8 @@ G.scenes.register('log', () => {
         const last = start + i >= L.length - 2;
         F.small.draw(ctx, t, 9, TOP + i * ROW, { color: last ? C.ink : C.inkDim, maxW: W - 18 });
       }
-      if (scroll > 0) F.small.draw(ctx, '▼ есть новее', W - 10, G.screen.H - BOT + 4, { align: 'right', color: C.red });
+      if (scroll > 0) F.small.draw(ctx, '▼ есть новее', W - 10, G.screen.H - BOT + 4, { align: 'right', color: '#f4d46a', shadow: C.woodEdge });
+      if (scroll < maxScroll()) F.small.draw(ctx, '▲ есть раньше', 10, G.screen.H - BOT + 4, { color: '#f4d46a', shadow: C.woodEdge });
     },
   };
 });
@@ -19877,6 +20105,105 @@ G.scenes.register('daysum', (summary, onDone) => {
     },
   };
 });
+
+
+// ===== scenes/ending.js =====
+// Экран «Итоги главы»: открывается после эпилога первой главы и из меню паузы, пока идёт свободная жизнь.
+// Показывает, чем закончились три недели, и даёт выбор: остаться в деревне или начать заново с тем,
+// что герой действительно вынес из этого прохождения, — картами и их мастерством («Новая игра+»).
+G.ending = {
+  // Строки итога: [подпись, значение]. Отдельной функцией — её же читают проверки.
+  summary() {
+    const st = G.state, v = st.vars, f = st.flags;
+    const friends = Object.keys(G.FRIENDS).filter((id) => G.friends.level(id) > 0).sort((a, b) => G.friends.pts(b) - G.friends.pts(a));
+    const quests = Object.values(st.quests || {}).filter((q) => q.st === 'done').length;
+    const cards = Object.keys(G.CARDS).filter((id) => G.combat.mastery(id) > 0).length;
+    const stars = Object.keys(G.CARDS).reduce((n, id) => n + G.combat.mastery(id), 0);
+    return [
+      ['Прожито дней', String(v.day)],
+      ['Экзамен', f.genin ? 'сдан — генин' : 'не сдан'],
+      ['У ворот', f.mq_won ? 'победа' : 'выстоял'],
+      ['Бои', `${v.wins || 0} побед из ${v.battles || 0}`],
+      ['Учёба', G.academy.avg() ? `${G.academy.avg()} · посещ. ${G.academy.attendance()}%` : '—'],
+      ['Задания', String(quests)],
+      ['Друзья', friends.length ? friends.slice(0, 3).map((id) => G.chars.nameOf(id) + ' ' + '♥'.repeat(G.friends.level(id))).join(', ') : '—'],
+      ['Освоено карт', cards ? `${cards} · ★ ×${stars}` : '—'],
+      ['Стабильность', String(G.purple.stability())],
+    ];
+  },
+  // Что переносится в «Новую игру+»: свои карты, колода, мастерство карт и счётчик прохождений.
+  carry() {
+    const st = G.state, uses = {};
+    for (const [k, n] of Object.entries(st.vars)) if (k.startsWith('use_')) uses[k] = n;
+    return { cardOwned: JSON.parse(JSON.stringify(st.cardOwned || null)), deck: (st.deck || []).slice(), uses, ngplus: (st.vars.ngplus || 0) + 1 };
+  },
+  newGamePlus() {
+    const c = this.carry();
+    const st = G.game.newState();
+    if (c.cardOwned) { st.cardOwned = c.cardOwned; st.deck = c.deck; }
+    Object.assign(st.vars, c.uses, { ngplus: c.ngplus });
+    G.deck.ensure(st);
+    G.scenes.fadeTo(G.scenes.make('prologue'));
+  },
+};
+
+G.scenes.register('ending', (onDone) => {
+  const F = G.font, FS = G.font.small, U = G.ui, C = U.C;
+  let t = 0, focus = 0;
+  const rows = G.ending.summary();
+  const geo = () => {
+    const W = G.screen.W, H = G.screen.H, bh = Math.max(22, Math.ceil(44 / (G.screen.scale || 1))), bw = Math.floor((W - 20) / 2);
+    const ph = 40 + rows.length * 13 + 10, py = Math.max(30, Math.round((H - ph - bh - 14) / 2));
+    return { W, H, bh, bw, ph, py, by: py + ph + 8, b: [{ x: 8, w: bw }, { x: 12 + bw, w: bw }] };
+  };
+  const stay = () => { G.audio.sfx.confirm(); G.scenes.pop(); onDone && onDone(); };
+  const again = () => {
+    G.scenes.push(G.scenes.make('pick', { title: 'НОВАЯ ИГРА+', text: 'Начать историю заново. С тобой останутся карты, колода и их мастерство.',
+      options: [{ label: 'Нет, остаться', desc: 'Свободная жизнь в деревне продолжается.' }, { label: 'Да, начать заново', desc: 'Текущее сохранение останется в своём слоте до первой записи новой игры.' }] }, (i) => {
+      if (i === 1) G.ending.newGamePlus();
+    }));
+  };
+  return {
+    name: 'ending',
+    touch() { return {}; },
+    summary: () => rows,
+    update(dt) {
+      t += dt;
+      const I = G.input, g = geo();
+      if (t < 0.6) return;
+      if (I.pressed('left') || I.pressed('right')) { focus = 1 - focus; G.audio.sfx.blip(); }
+      if (I.tapNow) {
+        const p = I.tapNow, i = g.b.findIndex((b) => p.x >= b.x && p.x < b.x + b.w && p.y >= g.by && p.y < g.by + g.bh);
+        if (i === 0) stay(); else if (i === 1) again();
+        return;
+      }
+      if (I.pressed('b')) return stay();
+      if (I.pressed('a')) (focus ? again : stay)();
+    },
+    draw(ctx) {
+      const g = geo(), W = g.W;
+      ctx.fillStyle = '#0e0c16'; ctx.fillRect(0, 0, W, g.H);
+      for (let i = 0; i < 50; i++) { ctx.fillStyle = Math.sin(t * 2 + i) > 0.6 ? '#ffffff' : '#7a7aa0'; ctx.fillRect((i * 53) % W, (i * 37) % g.H, 1, 1); }
+      U.panel(ctx, 6, g.py, W - 12, g.ph, 'frame');
+      U.title(ctx, 'ГЛАВА ПРОЙДЕНА', W / 2, g.py - 7, 0);
+      F.draw(ctx, G.state.hero.name || 'Герой', W / 2, g.py + 14, { align: 'center', color: C.redDark });
+      FS.draw(ctx, (G.state.vars.ngplus ? `Прохождение ${G.state.vars.ngplus + 1} · ` : '') + '«Воля Огня», глава первая', W / 2, g.py + 28, { align: 'center', color: C.inkDim, maxW: W - 28 });
+      rows.forEach(([k, val], i) => {
+        const y = g.py + 42 + i * 13;
+        FS.draw(ctx, k, 16, y, { color: C.inkDim });
+        FS.draw(ctx, val, W - 16, y, { align: 'right', color: C.ink, maxW: W - 40 - FS.measure(k) });
+      });
+      ['Остаться', 'Новая игра+'].forEach((label, i) => {
+        const b = g.b[i];
+        U.button(ctx, b.x, g.by, b.w, g.bh, '', i === focus ? 'sel' : 'normal');
+        FS.draw(ctx, label, b.x + b.w / 2, g.by + Math.round(g.bh / 2) - 4, { align: 'center', color: '#f8eed0', shadow: '#160c06', maxW: b.w - 6 });
+      });
+    },
+  };
+});
+// call ending — показать итоги главы после реплик (эпилог)
+G.script.actions.ending = () => { G.game.pending = { type: 'ending' }; };
+G.flow.ending = (a, world) => G.scenes.push(G.scenes.make('ending'));
 
 
 // ===== scenes/cheats.js =====
@@ -19958,7 +20285,7 @@ G.scenes.register('cheats', () => {
 // Журнал заданий (§2.6): вкладки «Активные / Выполненные», подробности, выбор отслеживаемого.
 G.scenes.register('journal', () => {
   let tab = 0, idx = 0, top = 0, detail = null, toast = null, toastT = 0;
-  const TABS = ['Активные', 'Завершённые'];
+  const TABS = ['Активные', 'Готовые'];   // «Завершённые» не помещались во вкладку на экране 196 точек
 
   const items = () => {
     const Qs = G.quests;
@@ -20115,6 +20442,15 @@ G.scenes.register('calendar', () => {
     const Q = G.state.quests || {};
     for (const id of Object.keys(Q)) if (Q[id].st === 'active' && Q[id].due === d && G.QUESTS[id]) out.push({ c: '#b8321c', t: 'Срок: ' + G.QUESTS[id].title });
     out.push({ c: '#6a5238', t: 'Погода: ' + WEATHER[G.life.weather(d)] });
+    // сегодня — ещё и «чем заняться»: возможности, о которых игра иначе не говорит
+    if (d === G.state.vars.day && G.state.started) {
+      const min = G.state.vars.min, f = G.state.flags, tips = [];
+      if (min < 18 * 60) tips.push('доска поручений у Резиденции (до 18:00)');
+      tips.push(G.life.raining() ? 'в дождь клюёт лучше — удочка и река' : 'рыбалка у реки и на пирсе');
+      if (f.roofs || f.st_roofs) tips.push('по крышам быстрее: A у стены дома');
+      tips.push(min < 21 * 60 ? 'тренировка на полигоне' : 'ночная лавка открыта с 21:00');
+      out.push({ c: '#4a8a3a', t: 'Чем заняться: ' + tips.slice(0, 3).join('; ') + '.' });
+    }
     return out;
   }
   function marks(d) {
@@ -20434,9 +20770,10 @@ G.scenes.register('status', () => {
     update(dt) {
       const I = G.input;
       if (I.pressed('b') || I.pressed('a') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
-      if (I.repeat('up', dt)) scroll -= 48;
-      if (I.repeat('down', dt)) scroll += 48;
-      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -80 : 80;G.audio.sfx.select(); }
+      const page = Math.max(48, G.screen.H - header().height - footer() - 28);   // почти страница: строка, на которой остановились, остаётся на экране
+      if (I.repeat('up', dt)) scroll -= page;
+      if (I.repeat('down', dt)) scroll += page;
+      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -page : page;G.audio.sfx.select(); }
       scroll = G.util.clamp(scroll, 0, maxScroll());
     },
     draw(ctx) {
@@ -20554,7 +20891,8 @@ G.scenes.register('savemenu', () => {
   // Один слот: «Сохранить сюда / Загрузить / Стереть» через окно выбора
   const slotMenu = (i) => {
     const info = G.storage.slotInfo(i);
-    const opts = [{ label: 'Сохранить сюда', desc: info ? `сейчас: день ${info.day}, ${G.game.clock(info.min)}` : 'слот пуст' }];
+    const auto = i === G.storage.active ? ' Автосейв пишет сюда.' : ' После записи автосейв пойдёт сюда.';
+    const opts = [{ label: 'Сохранить сюда', desc: (info ? `Сейчас: день ${info.day}, ${G.game.clock(info.min)}.` : 'Слот пуст.') + auto }];
     if (info) opts.push({ label: 'Загрузить игру', desc: `день ${info.day}, ${G.game.clock(info.min)} · ${info.when}` });
     if (info) opts.push({ label: 'Стереть слот', desc: 'Без резервной копии слотов' });
     opts.push({ label: 'Отмена' });
@@ -20563,14 +20901,29 @@ G.scenes.register('savemenu', () => {
         const w = world(); w && w.savePos();
         const ok = G.storage.save(G.state, { slot: i });
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
-      } else if (info && k === 1) { G.storage.active = i; G.game.loadSaved(i); }
-      else if (info && k === 2) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+      } else if (info && k === 1) {
+        // загрузка выбрасывает всё, что сделано после последнего автосейва, — переспрашиваем
+        G.audio.sfx.warn();
+        G.scenes.push(G.scenes.make('pick', { title: `ЗАГРУЗИТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Несохранённое в текущей игре пропадёт.`,
+          options: [{ label: 'Нет, остаться' }, { label: 'Да, загрузить' }] }, (a) => {
+          if (a === 1) { G.storage.active = i; G.game.loadSaved(i); }
+        }));
+      }
+      else if (info && k === 2) {
+        // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
+        G.audio.sfx.warn();
+        G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
+          options: [{ label: 'Нет, оставить' }, { label: 'Да, стереть' }] }, (a) => {
+          if (a === 1) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
+        }));
+      }
     }));
   };
 
   const slotLabel = (i) => {
     const inf = G.storage.slotInfo(i);
-    return { label: `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
+    // ▸ — активный слот: в него идут автосейвы и «Сохранить сейчас»
+    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `д.${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
   };
 
   const items = () => {
@@ -20597,7 +20950,7 @@ G.scenes.register('savemenu', () => {
             close(); G.audio.sfx.confirm(); G.game.loadSaved();
           } });
       } },
-      { label: bi ? 'Резервная копия' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
+      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `д.${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
         if (!bi) { G.audio.sfx.error(); return; }
         if (G.storage.restoreBackup()) { G.audio.sfx.confirm(); G.game.loadSaved(); }
       } },
@@ -21040,8 +21393,10 @@ G.scenes.register('battle', (opts, onEnd) => {
   let ev = [], evI = 0, evT = 0, afterEvents = 'card', lastIntent = D.intent, result = null, endT = 0, said = null;
   const fx = { shake: 0, flash: 0, flashCol: '#fff', pops: [], fxs: [], hurtP: 0, hurtE: 0, lungeP: 0, lungeE: 0, aura: 0 };
   let tip = !G.state.flags.card_duel_tip;
+  let quitT = 0;   // «Сдаться» срабатывает со второго нажатия: кнопка стоит вплотную к «Конец»
   const stats = { hits: 0, evades: 0, techs: 0 };
   const rnd = (a, b) => a + Math.random() * (b - a);
+  const fxOn = () => G.storage.settings.fx !== false;   // «Эффекты: выкл» — без тряски и вспышек на весь экран
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const hit = (b, p) => p && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h;
   const sfx = {
@@ -21080,12 +21435,27 @@ G.scenes.register('battle', (opts, onEnd) => {
     const check = selectedCard() ? G.duel.canPlay(D, selectedCard()) : { ok: false, why: 'Нет карты' };
     actions.push({ id: 'play', label: 'Играть', zone: 'action', off: check.ok ? null : check.why });
     if (pageCount() > 1) actions.push({ id: 'next', label: '›', zone: 'action' });
-    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: 'Сдаться', zone: 'action' });
+    actions.push({ id: 'end', label: 'Конец', zone: 'action' }, { id: 'quit', label: quitT > 0 ? 'Точно?' : 'Сдаться', zone: 'action' });
     const aw = Math.floor((g.W - pad * 2 - gap * (actions.length - 1)) / actions.length);
     actions.forEach((b, i) => { b.x = pad + i * (aw + gap); b.y = g.py + g.PH - g.d.bh - 3; b.w = aw; b.h = g.d.bh; out.push(b); });
     return out;
   }
 
+  // Имя карты в узкой клетке руки: до двух строк. Слово, которое не влезает, делится после гласной ближе к середине.
+  function cardName(name, maxW) {
+    const out = [];
+    for (const word of FS.wrap(name, maxW)) {
+      if (FS.measure(word) <= maxW || out.length) { out.push(word); continue; }
+      const ch = [...word], fits = (n) => FS.measure(ch.slice(0, n).join('') + (ch[n - 1] === '-' ? '' : '-')) <= maxW;
+      let cut = -1;
+      const hy = word.indexOf('-'); if (hy > 0 && fits(hy + 1)) cut = hy + 1;                                  // «Секси-/дзюцу»
+      if (cut < 0) for (let i = 1; i < ch.length - 2; i++) if (/[аеёиоуыэюя]/i.test(ch[i]) && fits(i + 1)) cut = i + 1;   // по слогу
+      if (cut < 0) for (let n = ch.length - 1; n > 1; n--) if (fits(n)) { cut = n; break; }                       // как влезет
+      if (cut < 0) { out.push(word); continue; }
+      out.push(ch.slice(0, cut).join('') + (ch[cut - 1] === '-' ? '' : '-'), ch.slice(cut).join(''));
+    }
+    return out.slice(0, 2);
+  }
   function say(text) { said = { text, t: 2.4 }; }
   function playCard(ref) {
     if (phase !== 'choose') return false;
@@ -21109,6 +21479,7 @@ G.scenes.register('battle', (opts, onEnd) => {
   }
   function pick(b) {
     if (phase !== 'choose' || !b) return;
+    if (b.id !== 'quit') quitT = 0;   // любое другое действие отменяет переспрос
     if (b.zone === 'hand') {
       const c = D.hand.find((x) => x.uid === b.uid);
       if (selected === b.uid) playCard(b.ref);
@@ -21117,7 +21488,11 @@ G.scenes.register('battle', (opts, onEnd) => {
     }
     if (b.id === 'play') { const c = selectedCard(); if (c) playCard(c); else say('Выбери карту'); return; }
     if (b.id === 'end') { endPlayerTurn(); return; }
-    if (b.id === 'quit') { finish(false, true); return; }
+    if (b.id === 'quit') {
+      if (quitT > 0) { finish(false, true); return; }
+      quitT = 2.5; AU.sfx.warn();
+      return;
+    }
     if (b.id === 'prev' || b.id === 'next') {
       handPage = (handPage + (b.id === 'next' ? 1 : -1) + pageCount()) % pageCount();
       const c = D.hand[handPage * 5]; if (c) selected = c.uid;
@@ -21166,7 +21541,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     V.battles = (V.battles || 0) + 1; if (win) V.wins = (V.wins || 0) + 1;
     G.train.addXp('tai', 0.6 * stats.hits + 1); G.train.addXp('spd', 0.7 * stats.evades);
     if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); V.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
-    for (const [id, n] of Object.entries(D.stats.used)) if (G.TECHS[id]) V['use_' + id] = (V['use_' + id] || 0) + n;
+    // мастерство растёт у всех своих карт (кроме предметов); новые ступени показываем на экране итога
+    const grown = [];
+    for (const [id, n] of Object.entries(D.stats.used)) {
+      if (!G.CARDS[id] || G.CARDS[id].item) continue;
+      const was = G.combat.mastery(id); V['use_' + id] = (V['use_' + id] || 0) + n;
+      if (G.combat.mastery(id) > was) { grown.push(`${G.CARDS[id].name} ${G.combat.stars(id)}`); G.game.note(`Карта освоена: ${G.CARDS[id].name} ${G.combat.stars(id)}`); }
+    }
+    result.grown = grown;
     G.game.advance(5 + 3 * D.round);
     const line = ed.lines && (win ? ed.lines.lose : ed.lines.win);
     say(line ? G.util.fmt(line, { name: G.state.hero.name }) : win ? 'Победа!' : 'Поражение...');
@@ -21218,7 +21600,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       // с «Аналитиком» видно, сколько снимет заряженный приём: это главный удар врага
       const heavy = D.has('analyst') ? G.duel.chargePreview(D) : 0;
       if (heavy > 0) return ['Замах: готовит тяжёлый приём', `Сорвать 3 звена · пройдёт ${heavy}`];
-      return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+      return ['Замах: готовит тяжёлый приём', 'Сорви: 3 удара тайдзюцу'];
     }
     if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
     if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
@@ -21239,7 +21621,8 @@ G.scenes.register('battle', (opts, onEnd) => {
     endTurn: endPlayerTurn,
     choose(id) {
       if (phase !== 'choose') return false;
-      if (id === 'end' || id === 'quit') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
+      if (id === 'quit') { finish(false, true); return true; }   // программно — без переспроса
+      if (id === 'end') { const b = buttons().find((x) => x.id === id); pick(b); return true; }
       const c = D.hand.find((x) => x.id === id || x.id === String(id).replace(/^(tech|item):/, '') || 'uid:' + x.uid === id);
       return c ? playCard(c) : false;
     },
@@ -21252,12 +21635,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     buttons,
     update(dt) {
       t += dt; if (phase === 'end') endT += dt;
+      if (quitT > 0) quitT = Math.max(0, quitT - dt);
       fx.shake = Math.max(0, fx.shake - dt * 14); fx.flash = Math.max(0, fx.flash - dt); fx.hurtP = Math.max(0, fx.hurtP - dt); fx.hurtE = Math.max(0, fx.hurtE - dt);
       fx.lungeP = Math.max(0, fx.lungeP - dt * 3); fx.lungeE = Math.max(0, fx.lungeE - dt * 3); fx.aura = Math.max(0, fx.aura - dt);
       for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
-      if (phase === 'intro') { if (t > 1.1 || I.tapNow || I.pressed('a')) phase = 'choose'; return; }
+      // заставку с особенностью врага держим дольше и не даём проскочить случайным касанием
+      if (phase === 'intro') { const hold = G.ENEMY_TRAITS[ed.trait] ? 2.6 : 1.1; if (t > hold || (t > 0.5 && (I.tapNow || I.pressed('a')))) phase = 'choose'; return; }
       if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.42)) nextEvent(); return; }
       if (phase === 'end') {
         if (endT > 0.8 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
@@ -21284,19 +21669,22 @@ G.scenes.register('battle', (opts, onEnd) => {
 
     draw(ctx) {
       const g = geo(), W = g.W, AH = g.AH;
-      const sx = fx.shake > 0 ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
+      const sx = fx.shake > 0 && fxOn() ? Math.round(rnd(-fx.shake, fx.shake) * 0.5) : 0;
       ctx.save(); ctx.translate(sx, 0);
       const bg = G.battleBg.get(TERRAIN, W, AH, 30); ctx.drawImage(bg, 0, 0);
       G.battleBg.clouds && G.battleBg.clouds(ctx, TERRAIN, 0, 0, W, AH, t);
       this.drawFighter(ctx, 'p', g); this.drawFighter(ctx, 'e', g); this.drawFx(ctx);
       for (const p of fx.pops) F.draw(ctx, p.txt, Math.round(p.x), Math.round(p.y), { align: 'center', color: p.col, outline: PAL.ink });
       ctx.restore();
-      if (fx.flash > 0) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
+      if (fx.flash > 0 && fxOn()) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
       this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
+        const trI = G.ENEMY_TRAITS[ed.trait], trLines = trI ? FS.wrap(`${trI.name}: ${trI.text}`, W - 12).slice(0, 3) : [];
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, AH / 2 - 24, W, 48 + Math.max(0, trLines.length - 1) * 11);
         F.draw(ctx, ed.name, W / 2, AH / 2 - 15, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
-        FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
+        // особенность противника — главное, что нужно знать до первого хода
+        if (trLines.length) trLines.forEach((ln, i) => FS.draw(ctx, ln, W / 2, AH / 2 + 6 + i * 11, { align: 'center', color: '#f8eed0' }));
+        else FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0', maxW: W - 8 });
       }
     },
     drawFx(ctx) {
@@ -21343,7 +21731,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       ctx.restore();
       if (isP) {
-        const k = Math.max(D.P.heat / 100, fx.aura);
+        // аура: накал боя, вспышка «Выброса» или почти пустая чакра (то же правило, что на улице, — G.purple.lowAura)
+        const k = Math.max(D.P.heat / 100, fx.aura, G.purple.lowAura(D.P.ch / Math.max(1, D.P.chMax) * 100));
         if (k > 0.05) {
           ctx.save();
           for (let i = 0; i < 5 + Math.round(k * 10); i++) {
@@ -21356,7 +21745,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       }
       const tags = [];
       if (isP) { if (D.P.clones) tags.push('клоны ' + D.P.clones); if (D.P.status.bind) tags.push('тень'); if (D.P.status.fear) tags.push('страх'); if (D.P.block) tags.push('блок ' + Math.round(D.P.block)); }
-      else { if (D.E.status.stun > 0) tags.push('оглушён'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
+      else { if (D.E.status.stun > 0) tags.push('оглушён'); else if (D.E.steady > 0) tags.push('устоит'); if (D.E.status.fear > 0) tags.push('страх'); if (D.E.status.wet > 0) tags.push('мокрый'); if (D.E.status.burn > 0) tags.push('горит'); if (D.E.status.mark > 0) tags.push('метка'); }
       tags.slice(0, 2).forEach((s, i) => FS.draw(ctx, s, x, Math.max(53, y - 62 + i * 9), { align: 'center', color: '#fff2cf', outline: PAL.ink }));
     },
     drawHud(ctx, g) {
@@ -21365,11 +21754,17 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, G.state.hero.name || 'Герой', 6, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw });
       bar(6, 16, bw, D.P.hp, D.P.hpMax, C.hp); bar(6, 24, bw, D.P.ch, D.P.chMax, C.chakra); bar(6, 32, bw, D.P.fat, 100, C.fatigue); bar(6, 40, bw, D.P.heat, 100, '#e0a8ff');
       FS.draw(ctx, `${Math.round(D.P.hp)}/${D.P.hpMax}`, 8 + bw, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
-      FS.draw(ctx, 'уст. · накал', 6, 47, { color: '#d8c8a0', outline: PAL.ink });
-      FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      // подписи двух нижних шкал — цветом своей шкалы, иначе не понять, какая из них какая
+      FS.draw(ctx, 'усталость', 6, 47, { color: '#f0b84a', outline: PAL.ink });
+      FS.draw(ctx, 'накал', 6 + bw, 47, { align: 'right', color: '#e0a8ff', outline: PAL.ink });
+      const ehp = `${Math.round(D.E.hp)}/${D.E.hpMax}`;
+      FS.draw(ctx, ed.name, W - 6 - bw, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw - FS.measure(ehp) - 4 });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
+      // число здоровья врага — как у героя: добивание считают, а не прикидывают по шкале
+      FS.draw(ctx, ehp, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink });
+      if (G.ENEMY_TRAITS[ed.trait]) FS.draw(ctx, G.ENEMY_TRAITS[ed.trait].name, W - 6, 44, { align: 'right', color: '#ffe28a', outline: PAL.ink, maxW: bw });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') F.draw(ctx, 'до 30% здоровья', W - 6, 33, { align: 'right', color: '#d8c8a0', outline: PAL.ink });
+      else if (mode === 'spar') FS.draw(ctx, 'бой до 30%', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
@@ -21377,20 +21772,28 @@ G.scenes.register('battle', (opts, onEnd) => {
       const lines = intentLines(phase === 'play' && afterEvents === 'enemy' ? lastIntent : D.intent);
       FS.draw(ctx, lines[0], 7, py + 4, { color: '#ffe28a', shadow: PAL.ink, maxW: W - 14 });
       drawNumLine(ctx, lines[1], 7, py + 16, W - 14, '#f8eed0', PAL.ink);
-      FS.draw(ctx, `Ход ${D.round} · действия ${D.P.ap}/3`, 7, py + 29, { color: '#d8c8a0', maxW: Math.floor(W * 0.55) });
-      FS.draw(ctx, `Колода ${D.deck.length} · сброс ${D.discard.length}`, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: Math.floor(W * 0.45) });
+      // Две подписи в одной строке: на узком экране («крупно», 196 точек) полные не помещаются и наезжали друг на друга
+      let turnL = `Ход ${D.round} · действия ${D.P.ap}/${G.duel.TUNE.ap}`;
+      let deckL = `Колода ${D.deck.length} · сброс ${D.discard.length}`;
+      if (FS.measure(turnL) + FS.measure(deckL) > W - 22) { turnL = `Ход ${D.round} · дейст. ${D.P.ap}/${G.duel.TUNE.ap}`; deckL = `Кол. ${D.deck.length} · сбр. ${D.discard.length}`; }
+      const deckW = Math.min(FS.measure(deckL), Math.floor(W * 0.45));
+      FS.draw(ctx, turnL, 7, py + 29, { color: '#d8c8a0', maxW: W - 22 - deckW });
+      FS.draw(ctx, deckL, W - 7, py + 29, { align: 'right', color: '#d8c8a0', maxW: deckW });
       if (phase === 'end') {
         F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
         FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
-        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 99, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        if (result.grown && result.grown.length) FS.draw(ctx, 'Освоено: ' + result.grown.join(', '), W / 2, py + 89, { align: 'center', color: '#ffe28a', shadow: PAL.ink, maxW: W - 16 });
+        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 101, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
         return;
       }
       if (phase === 'play' && said) {
         FS.wrap(said.text, W - 18).slice(0, 3).forEach((ln, i) => FS.draw(ctx, ln, 9, py + 45 + i * 11, { color: '#f8eed0', shadow: PAL.ink }));
         return;
       }
-      if (tip) {
-        ['Три действия — до трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0' }));
+      if (quitT > 0) {
+        FS.draw(ctx, 'Сдаться? Нажми «Точно?»', 9, py + 45, { color: '#ff9a80', shadow: PAL.ink, maxW: W - 18 });
+      } else if (tip) {
+        ['До трёх карт за ход.', 'Намерение врага видно заранее.', 'Коснись карты, затем «Играть».', 'Порядок карт создаёт связки.'].forEach((ln, i) => FS.draw(ctx, ln, 9, py + 43 + i * 10, { color: i === 3 ? '#ffe28a' : '#f8eed0', maxW: W - 18 }));
       } else {
         const c = selectedCard();
         if (c) {
@@ -21410,9 +21813,11 @@ G.scenes.register('battle', (opts, onEnd) => {
           ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
           const price = G.duel.cost(D, c.id);
           FS.draw(ctx, price ? String(price) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
-          const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
-          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
+          // имя карты целиком: длинное слово переносим по слогу («Дыха-/ние»), а не режем многоточием
+          const nameLines = cardName(def.short || def.name, b.w - 5);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 3 }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
+          const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {
           const i = bs.indexOf(b);
           U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');
@@ -21818,7 +22223,8 @@ G.scenes.register('pick', (o, cb) => {
   const opts = o.options;
   // o.focus — строка, выбранная при открытии (титул: «Продолжить» ставит на новейший слот)
   let focus = Math.max(0, Math.min(opts.length - 1, o.focus || 0)), scroll = 0;
-  const ROW = 18;
+  // строка под палец: около 40 CSS-пикселей, но не меньше прежних 18 точек и не больше 28 (иначе список не влезает)
+  const ROW = Math.max(18, Math.min(28, Math.ceil(40 / (G.screen.scale || 1)))), PADY = Math.floor((ROW - 18) / 2);
   const hasDesc = opts.some((x) => x.desc || x.off);
   const S = {
     name: 'pick', transparent: true,
@@ -21857,8 +22263,8 @@ G.scenes.register('pick', (o, cb) => {
         const y = g.ly + i * ROW, sel = k === focus;
         U.row(ctx, g.x + 6, y - 1, g.w - 12, ROW - 2, sel);
         const col = op.off ? C.inkFaint : sel ? '#f8eed0' : C.ink;
-        F.draw(ctx, op.label, g.x + 14, y + 2, { color: col, shadow: sel && !op.off ? '#5a1408' : null, maxW: g.w - 30 - (op.sub ? F.small.measure(op.sub) + 8 : 0) });
-        if (op.sub) F.small.draw(ctx, op.sub, g.x + g.w - 14, y + 4, { align: 'right', color: op.off ? C.inkFaint : sel ? '#f4d46a' : C.inkDim });
+        F.draw(ctx, op.label, g.x + 14, y + 2 + PADY, { color: col, shadow: sel && !op.off ? '#5a1408' : null, maxW: g.w - 30 - (op.sub ? F.small.measure(op.sub) + 8 : 0) });
+        if (op.sub) F.small.draw(ctx, op.sub, g.x + g.w - 14, y + 4 + PADY, { align: 'right', color: op.off ? C.inkFaint : sel ? '#f4d46a' : C.inkDim });
       }
       if (scroll > 0) F.small.draw(ctx, '▲', g.x + g.w - 12, g.y + 4, { color: C.red });
       if (scroll + g.n < opts.length) F.small.draw(ctx, '▼', g.x + g.w - 12, g.y + g.h - 12, { color: C.red });
@@ -22088,6 +22494,15 @@ G.scenes.register('menu', () => {
       if (mins > 0) w.skipTime(mins);
     }));
   }
+  // «Записи»: то, что читают, а не чем пользуются каждый день, — история реплик и справочники
+  function records() {
+    const opts = [
+      { label: 'История', desc: 'Последние реплики: перечитать, что тебе сказали.', act: () => G.scenes.push(G.scenes.make('log')) },
+      { label: 'Персонажи', desc: 'Галерея всех, кого можно встретить.', act: () => G.scenes.push(G.scenes.make('gallery')) },
+      { label: 'Жители и дома', desc: 'Кто где живёт и где его найти.', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    ];
+    G.scenes.push(G.scenes.make('pick', { title: 'ЗАПИСИ', options: opts.concat([{ label: 'Назад' }]) }, (i) => { if (opts[i]) opts[i].act(); }));
+  }
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Подождать', act: waitMenu },
@@ -22095,10 +22510,9 @@ G.scenes.register('menu', () => {
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
-    { label: 'История', act: () => G.scenes.push(G.scenes.make('log')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
-    { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
-    { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    { label: 'Записи', act: records },
+    ...(G.state.flags.postgame ? [{ label: 'Итоги главы', act: () => G.scenes.push(G.scenes.make('ending')) }] : []),
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение', act: () => G.scenes.push(G.scenes.make('savemenu')) },
     { label: 'В главное меню', act: () => {
@@ -22172,6 +22586,7 @@ G.scenes.register('settings', () => {
     { label: 'Джойстик', value: ({0.75:'ПЛАВНО',1:'ОБЫЧНО',1.3:'ЧУТКО'})[S.stickSensitivity||1], act: () => { const a=[0.75,1,1.3];S.stickSensitivity=a[(a.indexOf(S.stickSensitivity||1)+1)%3];G.storage.saveSettings(); } },
     { label: 'Вибрация', value: onoff(S.vibration), act: () => { S.vibration=!S.vibration;G.storage.saveSettings(); } },
     { label: 'Пиксели', value: G.screen.densityOptions().length > 1 ? G.screen.density().name : 'АВТО', dis: G.screen.densityOptions().length < 2, act: () => G.screen.cycleDensity() },
+    { label: 'CRT-экран', value: G.crt.name(), act: () => G.crt.cycle() },
     { label: 'Отладка', value: onoff(G.debug.on), act: () => G.debug.toggle() },
     ...(G.debug.on ? [{ label: 'Читы', act: () => G.scenes.push(G.scenes.make('cheats')) }, { label: 'Шрифт', act: () => G.scenes.push(G.scenes.make('fonttest')) }] : []),
     { label: 'Назад', act: () => G.scenes.pop() },
@@ -22199,7 +22614,7 @@ G.scenes.register('mapsettings',()=>{
   const S=G.storage.settings,W=220;let idx=0;
   const items=()=>[
     {label:'Мини-карта',value:S.minimap===false?'ВЫКЛ':'ВКЛ',act:()=>S.minimap=S.minimap===false},
-    {label:'Детализация',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
+    {label:'Вид карты',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
     {label:'Маркеры',value:S.mapMarkerSize===1.3?'КРУПНЫЕ':'ОБЫЧНЫЕ',act:()=>S.mapMarkerSize=S.mapMarkerSize===1.3?1:1.3},
     {label:'Подписи мест',value:S.mapLabels===false?'ВЫКЛ':'ВКЛ',act:()=>S.mapLabels=S.mapLabels===false},
     {label:'Назад',act:()=>G.scenes.pop()}
@@ -22222,19 +22637,30 @@ G.scenes.register('gallery', () => {
 
   return {
     name: 'gallery',
+    touch() { return { back: true, roomyBack: true }; },   // крупная шапка, как в «Статусе»: кнопка ≥44 CSS и не касается заголовка
+    off() { return G.touch.header().height - 20; },         // на сколько содержимое сдвинуто вниз под шапку
+    grid() { const W = G.screen.W, perRow = Math.max(6, Math.floor((W - 16) / 18)), top = 194 + this.off(); return { perRow, top }; },
     update(dt) {
       t += dt;
       const I = G.input;
       if (I.repeat('left', dt)) { idx = (idx + ids.length - 1) % ids.length; G.audio.sfx.select(); }
       if (I.repeat('right', dt)) { idx = (idx + 1) % ids.length; G.audio.sfx.select(); }
-      if (I.tapNow) { idx = (idx + (I.tapNow.x < G.screen.W / 2 ? ids.length - 1 : 1)) % ids.length; G.audio.sfx.select(); }
+      if (I.tapNow) {
+        // касание человечка в нижней сетке выбирает его; выше сетки — листаем, как раньше (левая/правая половина)
+        const g = this.grid(), p = I.tapNow, col = Math.round((p.x - 17) / 18), rowI = Math.floor((p.y - g.top - 8) / 26), k = rowI * g.perRow + col;
+        if (p.y >= g.top + 8 && col >= 0 && col < g.perRow && rowI >= 0 && k < ids.length) idx = k;
+        else if (p.y < g.top) idx = (idx + (p.x < G.screen.W / 2 ? ids.length - 1 : 1)) % ids.length;
+        G.audio.sfx.select();
+      }
       if (I.pressed('b') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); }
     },
     draw(ctx) {
       const W = G.screen.W, H = G.screen.H, U = G.ui, C = U.C, F = G.font;
       U.backdrop(ctx);
-      U.title(ctx, 'ГАЛЕРЕЯ', W / 2, 3, 90);
+      const hd = G.touch.header();
+      U.title(ctx, 'ГАЛЕРЕЯ', hd.titleX, hd.titleY, 80);
       const id = ids[idx];
+      ctx.save(); ctx.translate(0, this.off());
       U.panel(ctx, 4, 21, W - 8, 24, 'frame');
       F.draw(ctx, '‹', 16, 28, { color: C.red }); F.draw(ctx, '›', W - 20, 28, { color: C.red });
       F.draw(ctx, G.chars.nameOf(id), W / 2, 28, { align: 'center', color: C.redDark });
@@ -22259,14 +22685,15 @@ G.scenes.register('gallery', () => {
         ctx.drawImage(s, f * 16, r * 20, 16, 20, 10 + (r * 3 + f) * ((W - 24) / 12), 160, 16, 20);
 
       // все персонажи в ряд: выбранный подсвечен красной карточкой
-      const perRow = Math.max(6, Math.floor((W - 16) / 18)), top = 194;
-      U.panel(ctx, 4, top, W - 8, H - top - 4, 'frame');
+      const perRow = this.grid().perRow, top = 194, HH = H - this.off();   // координаты — в сдвинутой системе
+      U.panel(ctx, 4, top, W - 8, HH - top - 4, 'frame');
       ids.forEach((cid, i) => {
         const x = 17 + (i % perRow) * 18, y = top + 30 + Math.floor(i / perRow) * 26;
-        if (y > H - 10) return;
+        if (y > HH - 10) return;
         if (cid === id) U.card(ctx, x - 9, y - 22, 18, 25, true);
         G.chars.draw(ctx, cid, 'down', G.chars.WALK[Math.floor(t * 4 + i) % 4], x, y);
       });
+      ctx.restore();
     },
   };
 });

@@ -206,7 +206,7 @@ my_room(info) {
 |---|---|
 | поменять цену / эффект еды | `data/items.js` |
 | сделать врага слабее/сильнее | `hp` и `dmg` в `G.ENEMIES` (`data/duel_data.js`), потом `tools/balance.py` |
-| поменять скорость времени | `RATE` в `systems/life.js` |
+| поменять цену дороги во времени | `RATE` в `systems/life.js` (минут за секунду ходьбы; на месте часы стоят) |
 | стартовые деньги, вместимость подсумка | `START_MONEY`, `POUCH` в `systems/game.js` |
 | текст в меню | `scenes/menu.js` |
 | подсказку в мини-игре | `INTRO` в `scenes/train.js` |

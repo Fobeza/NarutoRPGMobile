@@ -388,8 +388,13 @@ with sync_playwright() as p:
 
     # ── Этап 4: время и жизнь ─────────────────────────────────
     W(page, "s.setMap({ map: 'konoha', x: 66*16+8, y: 46*16+8, dir: 'down' });"); time.sleep(0.5)
-    m0 = page.evaluate("G.state.vars.min"); time.sleep(3.2); m1 = page.evaluate("G.state.vars.min")
-    check(1 <= m1 - m0 <= 3, "часы идут сами: за 3 сек прошло %s игровых мин" % (m1 - m0))
+    # время — за действия: стоим — часы стоят, идём — идут (см. systems/life.js)
+    m0 = page.evaluate("G.state.vars.min"); time.sleep(2.0); m1 = page.evaluate("G.state.vars.min")
+    check(m1 == m0, "стоим на месте — часы стоят (прошло %s мин)" % (m1 - m0))
+    for k_ in ("ArrowDown", "ArrowLeft", "ArrowUp", "ArrowRight"):
+        page.keyboard.down(k_); time.sleep(0.9); page.keyboard.up(k_)
+    m2 = page.evaluate("G.state.vars.min")
+    check(1 <= m2 - m1 <= 6, "идём — часы идут: за ~3,6 сек ходьбы прошло %s игровых мин" % (m2 - m1))
     key(page, "Escape"); time.sleep(0.3); m2 = page.evaluate("G.state.vars.min"); time.sleep(2.0); m3 = page.evaluate("G.state.vars.min")
     check(m3 == m2, "в меню часы стоят")
     key(page, "Escape"); time.sleep(0.3)
@@ -414,11 +419,11 @@ with sync_playwright() as p:
     check(tg == "ichiraku", "вечером Ирука ужинает в Ичираку (%s)" % tg)
     # нужды: усталость → предупреждение, перегрузка → обморок и больница
     page.evaluate("G.state.vars.min = 14*60; G.state.vars.fatigue = 85; G.state.daily = {}")
-    W(page, "s.softRefresh();"); time.sleep(1.6)
+    W(page, "s.softRefresh(); s.skipTime(2);"); time.sleep(0.4)
     check(W(page, "return !!(s.toast && /устал/.test(s.toast.text)) || G.state.daily.tired === 1;"), "усталость: предупреждение «Ты устал»")
     shot(page, "53_tired")
     page.evaluate("G.state.vars.fatigue = 99.95")
-    time.sleep(3.5)
+    W(page, "s.skipTime(3);"); time.sleep(3.5)
     p_ = pos(page)
     check(p_["name"] == "Больница" or "Больниц" in p_["name"], "обморок от усталости — очнулся в больнице (%s)" % p_["name"])
     shot(page, "54_hospital")
@@ -453,7 +458,7 @@ with sync_playwright() as p:
     key(page, "KeyX"); time.sleep(0.2); key(page, "KeyX"); time.sleep(0.3)
     # 2 часа ночи — уснул где стоял
     page.evaluate("G.state.vars.min = 26*60 - 2; G.state.vars.fatigue = 40")
-    time.sleep(4.0)
+    W(page, "s.skipTime(4);"); time.sleep(4.0)
     check(top(page) == "daysum", "в 2:00 ночи уснул без сил → «Итоги дня»")
     shot(page, "59_daysum_faint")
     key(page, "KeyZ"); time.sleep(1.6); close_dialogs(page)
@@ -469,7 +474,8 @@ with sync_playwright() as p:
     check(not page.evaluate("G.storage.importCode('WOF1:мусор')"), "неверный код отклонён")
     key(page, "Escape"); time.sleep(0.3)
     key(page, "ArrowUp", 2)        # «Сохранение…» — предпоследний пункт
-    key(page, "KeyZ"); time.sleep(0.4); key(page, "ArrowDown"); key(page, "KeyZ"); time.sleep(0.6)
+    # «Экспорт кода» — пятая строка: после «Сохранить сейчас» идут три слота (раньше слотов не было, и хватало одного шага)
+    key(page, "KeyZ"); time.sleep(0.4); key(page, "ArrowDown", 4); key(page, "KeyZ"); time.sleep(0.6)
     check(page.evaluate("G.scenes.top().name === 'savemenu' && G.scenes.top().boxOpen"), "окно экспорта кода открылось")
     shot(page, "60_export")
     page.dispatch_event("#cb-cancel", "pointerdown"); time.sleep(0.3)

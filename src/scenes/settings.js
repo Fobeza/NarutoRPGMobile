@@ -18,6 +18,7 @@ G.scenes.register('settings', () => {
     { label: 'Джойстик', value: ({0.75:'ПЛАВНО',1:'ОБЫЧНО',1.3:'ЧУТКО'})[S.stickSensitivity||1], act: () => { const a=[0.75,1,1.3];S.stickSensitivity=a[(a.indexOf(S.stickSensitivity||1)+1)%3];G.storage.saveSettings(); } },
     { label: 'Вибрация', value: onoff(S.vibration), act: () => { S.vibration=!S.vibration;G.storage.saveSettings(); } },
     { label: 'Пиксели', value: G.screen.densityOptions().length > 1 ? G.screen.density().name : 'АВТО', dis: G.screen.densityOptions().length < 2, act: () => G.screen.cycleDensity() },
+    { label: 'CRT-экран', value: G.crt.name(), act: () => G.crt.cycle() },
     { label: 'Отладка', value: onoff(G.debug.on), act: () => G.debug.toggle() },
     ...(G.debug.on ? [{ label: 'Читы', act: () => G.scenes.push(G.scenes.make('cheats')) }, { label: 'Шрифт', act: () => G.scenes.push(G.scenes.make('fonttest')) }] : []),
     { label: 'Назад', act: () => G.scenes.pop() },
@@ -45,7 +46,7 @@ G.scenes.register('mapsettings',()=>{
   const S=G.storage.settings,W=220;let idx=0;
   const items=()=>[
     {label:'Мини-карта',value:S.minimap===false?'ВЫКЛ':'ВКЛ',act:()=>S.minimap=S.minimap===false},
-    {label:'Детализация',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
+    {label:'Вид карты',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
     {label:'Маркеры',value:S.mapMarkerSize===1.3?'КРУПНЫЕ':'ОБЫЧНЫЕ',act:()=>S.mapMarkerSize=S.mapMarkerSize===1.3?1:1.3},
     {label:'Подписи мест',value:S.mapLabels===false?'ВЫКЛ':'ВКЛ',act:()=>S.mapLabels=S.mapLabels===false},
     {label:'Назад',act:()=>G.scenes.pop()}
