@@ -187,7 +187,7 @@ body.crt-full #crt-roll { display: block; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: '43fe187b', date: '2026-11-12 08:16', debug: false };
+const BUILD = { release: '3.0', version: '8b1ccfc6', date: '2026-11-14 05:05', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -7704,7 +7704,10 @@ G.nav = (() => {
 // «Жизнь» (этап 4): непрерывные часы, погода, расписание персонажей, предупреждения о нуждах.
 // Часы идут только в сцене мира, когда сверху нет диалога, меню, лавки или карты (§14.3 п.5).
 G.life = (() => {
-  const RATE = 0.6;             // игровых минут за реальную секунду: сутки (1440 мин) = 40 реальных минут
+  // Время — за действия, а не за ожидание. Часы идут, только пока герой идёт (дорога стоит времени),
+  // и от самих дел: урок, тренировка, еда, работа, бой двигают их сами (G.game.advance). Стоишь — время стоит.
+  // RATE — игровых минут за секунду ходьбы: путь через всю деревню — около сорока минут шагом, двадцать пять бегом.
+  const RATE = 1.0;
   const WEATHER = {
     sun:   { icon: '☀', name: 'Ясно',    col: '#ffd84a' },
     cloud: { icon: '☁', name: 'Облачно', col: '#c8c8d8' },
@@ -7752,8 +7755,9 @@ G.life = (() => {
     },
 
     // Шаг часов. Возвращает, сколько целых минут прошло (0, если ни одной)
-    tick(dt, running) {
-      this.acc += dt * RATE;
+    tick(dt, running, moving = true) {
+      if (!moving) return 0;                 // стоим на месте — часы стоят
+      this.acc += dt * this.RATE;            // this.RATE: тесты и съёмка кадров останавливают часы через G.life.RATE = 0
       if (this.acc < 1) return 0;
       const n = Math.floor(this.acc);
       this.acc -= n;
@@ -18301,7 +18305,7 @@ G.scenes.register('world', (pos) => {
       // Скорость часов задаётся G.life.RATE.
       if (G.state.started && !G.scenes.busy && G.scenes.top() === this) {
         const before = v.min;
-        if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
+        if (G.life.tick(dt, run && p.moving, p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
       }
 
       if (G.life2) G.life2.poll(this, dt);
@@ -18600,7 +18604,7 @@ G.scenes.register('world', (pos) => {
       if (every(10)) this.softRefresh();
       if (every(120) && G.state.started) G.storage.save(G.state);          // автосейв раз в 2 часа
       // подсказки онбординга
-      if (m.outdoor) this.tip('clock', '⏰ Время идёт', `Игровая минута — ${(1 / G.life.RATE).toFixed(1)} сек. В меню и диалогах часы стоят`);
+      if (m.outdoor) this.tip('clock', '⏰ Время — за дела', 'Часы идут, пока ты идёшь или чем-то занят. Стоишь — время стоит. Ждать: Меню → Подождать');
       if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам');
       if (crossed(19 * 60)) this.tip('evening', '🌙 Вечер', 'Лавки закрываются в 19–23 часа. Смотри часы на карте');
       // лавка закрывается
@@ -18614,7 +18618,7 @@ G.scenes.register('world', (pos) => {
       if (crossed(22 * 60)) this.tip('night', '🌙 Поздно', 'С 23:00 ученикам нельзя на улицу — патруль отправит домой');
       if (crossed(23 * 60) && m.outdoor) { this.notes.push({ title: '🌙 Комендантский час', text: 'Ученикам пора по домам!', col: '#9ab0ff', t: 3 }); G.audio.sfx.error(); }
       if (now >= 26 * 60) return this.faint('late');
-      if (m.outdoor && now >= 23 * 60 + 30 && every(10) && Math.random() < 0.3) this.talk('patrol_curfew');
+      if (m.outdoor && now >= 23 * 60 + 30 && every(10) && Math.random() < 0.6) this.talk('patrol_curfew');   // патруль надёжный: комендантский час — не пустая угроза
     },
 
     // Обморок: от усталости днём — больница, поздно ночью — сон где стоишь
@@ -19040,7 +19044,7 @@ G.scenes.register('world', (pos) => {
       const night = g.isNight();
       const running = G.scenes.top() === this && !G.scenes.busy;
       let clk = g.clock();
-      if (running && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');
+      if (running && this.player.moving && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');   // двоеточие мигает, только пока часы идут
       const cw = G.font.measure('00:00'), cx = Math.round(W / 2 - cw / 2);
       if (night && wt.icon === '☀') U.icon(ctx, 'moon', cx - 14, 4, '#c8d0ff');
       else F.draw(ctx, wt.icon, cx - 12, 5, { color: wt.col });

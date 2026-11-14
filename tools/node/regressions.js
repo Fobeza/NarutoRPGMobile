@@ -923,6 +923,21 @@ test('Фиолетовая аура проступает, когда чакры 
   v.chakra = 100;
 });
 
+test('Время — за действия: стоим — часы стоят, идём — идут, G.life.RATE = 0 их останавливает', () => {
+  clean();
+  const v = G.state.vars, keep = G.life.RATE; G.life.acc = 0;
+  const m0 = v.min, f0 = v.fatigue;
+  for (let i = 0; i < 600; i++) G.life.tick(0.1, false, false);            // минута реального времени на месте
+  assert.equal(v.min, m0, 'на месте время не идёт');
+  assert.equal(v.fatigue, f0, 'и усталость не копится');
+  for (let i = 0; i < 100; i++) G.life.tick(0.1, false, true);             // десять секунд ходьбы
+  assert.ok(v.min - m0 >= 9 && v.min - m0 <= 11, 'десять секунд ходьбы — около десяти минут: ' + (v.min - m0));
+  const m1 = v.min; G.life.RATE = 0;
+  for (let i = 0; i < 100; i++) G.life.tick(0.1, false, true);
+  assert.equal(v.min, m1, 'RATE = 0 останавливает часы (раньше настройка не действовала)');
+  G.life.RATE = keep; G.life.acc = 0;
+});
+
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
   clean();
   G.state.dlgLog = [];

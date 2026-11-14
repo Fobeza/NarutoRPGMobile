@@ -209,7 +209,7 @@ G.scenes.register('world', (pos) => {
       // Скорость часов задаётся G.life.RATE.
       if (G.state.started && !G.scenes.busy && G.scenes.top() === this) {
         const before = v.min;
-        if (G.life.tick(dt, run && p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
+        if (G.life.tick(dt, run && p.moving, p.moving)) { this.onTime(before, v.min); if (G.scenes.top() !== this || G.scenes.busy) return; }
       }
 
       if (G.life2) G.life2.poll(this, dt);
@@ -508,7 +508,7 @@ G.scenes.register('world', (pos) => {
       if (every(10)) this.softRefresh();
       if (every(120) && G.state.started) G.storage.save(G.state);          // автосейв раз в 2 часа
       // подсказки онбординга
-      if (m.outdoor) this.tip('clock', '⏰ Время идёт', `Игровая минута — ${(1 / G.life.RATE).toFixed(1)} сек. В меню и диалогах часы стоят`);
+      if (m.outdoor) this.tip('clock', '⏰ Время — за дела', 'Часы идут, пока ты идёшь или чем-то занят. Стоишь — время стоит. Ждать: Меню → Подождать');
       if (m.outdoor && G.life.raining()) this.tip('rain', '☂ Дождь', 'Многие сидят по домам');
       if (crossed(19 * 60)) this.tip('evening', '🌙 Вечер', 'Лавки закрываются в 19–23 часа. Смотри часы на карте');
       // лавка закрывается
@@ -522,7 +522,7 @@ G.scenes.register('world', (pos) => {
       if (crossed(22 * 60)) this.tip('night', '🌙 Поздно', 'С 23:00 ученикам нельзя на улицу — патруль отправит домой');
       if (crossed(23 * 60) && m.outdoor) { this.notes.push({ title: '🌙 Комендантский час', text: 'Ученикам пора по домам!', col: '#9ab0ff', t: 3 }); G.audio.sfx.error(); }
       if (now >= 26 * 60) return this.faint('late');
-      if (m.outdoor && now >= 23 * 60 + 30 && every(10) && Math.random() < 0.3) this.talk('patrol_curfew');
+      if (m.outdoor && now >= 23 * 60 + 30 && every(10) && Math.random() < 0.6) this.talk('patrol_curfew');   // патруль надёжный: комендантский час — не пустая угроза
     },
 
     // Обморок: от усталости днём — больница, поздно ночью — сон где стоишь
@@ -948,7 +948,7 @@ G.scenes.register('world', (pos) => {
       const night = g.isNight();
       const running = G.scenes.top() === this && !G.scenes.busy;
       let clk = g.clock();
-      if (running && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');
+      if (running && this.player.moving && Math.floor(G.life.acc * 2) % 2 === 1) clk = clk.replace(':', ' ');   // двоеточие мигает, только пока часы идут
       const cw = G.font.measure('00:00'), cx = Math.round(W / 2 - cw / 2);
       if (night && wt.icon === '☀') U.icon(ctx, 'moon', cx - 14, 4, '#c8d0ff');
       else F.draw(ctx, wt.icon, cx - 12, 5, { color: wt.col });
