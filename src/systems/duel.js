@@ -8,7 +8,10 @@ G.duel = (() => {
   // Урон врага задан долей здоровья героя (см. G.ENEMIES[*].share): с ростом HP 85 → 95 бой не «ломается».
   // share — обычный удар; series — каждая из двух атак серии; techShare — потолок коронного приёма,
   // чтобы даже заряженный приём (×1,25) не снимал всё здоровье разом.
-  const TUNE = { hp: 1.2, enemyDmg: 1.0, baseShare: 0.3, series: 0.7, techShare: 0.75, hand: 5, ap: 3 };
+  const TUNE = { hp: 1.2, enemyDmg: 1.0, baseShare: 0.3, series: 0.7, packSeries: 0.5, techShare: 0.75, hand: 5, ap: 3 };
+  // Особенности противников (G.ENEMY_TRAITS, data/duel_data.js): числа — здесь, чтобы правило и текст жили рядом.
+  const TRAIT = { gates: 1.3, gatesAt: 0.5, bulk: 2, sharingan: 0.6, planner: 0.5, seal: 10, stubborn: 0.25 };
+  const trait = (D, id) => D.E.trait === id;
   // Блок героя — доля его hpMax, а не абсолютное число: иначе тяжёлые враги пробивают защиту насквозь.
   const BLOCK = { guard: [0.10, 0.015], stance: [0.06, 0.010], stanceReply: [0.05, 0.008], kawarimiReply: [0.08, 0.010] };
   // blockOf(P, kind) = доля hpMax + доля характеристики (коэффициенты — в BLOCK).
@@ -134,7 +137,9 @@ G.duel = (() => {
     };
     const choice = weighted(D, STYLE_MIX[E.style] || [['strike', 50], ['multi', 22], ['tech', 18], ['evade', 6], ['block', 4]]);
     if (choice === 'tech') return techOk ? techIntent(D) : strikeIntent(D);
-    if (choice === 'multi') return { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * TUNE.series, hits: 2 };
+    if (choice === 'multi') return E.trait === 'pack'
+      ? { kind: 'multi', name: 'Серия с Акамару', dmg: (E.dmg || 8) * TUNE.packSeries, hits: 3 }
+      : { kind: 'multi', name: 'Серия атак', dmg: (E.dmg || 8) * TUNE.series, hits: 2 };
     if (choice === 'block') return { kind: 'block', name: 'Защита', block: 9 + E.end * 1.2 };
     if (choice === 'evade') return { kind: 'evade', name: 'Манёвр', dodge: 0.55 };
     return strikeIntent(D);
@@ -155,7 +160,8 @@ G.duel = (() => {
   const WEAK_MUL = 0.75;
   function enemyMul(D) {
     const s = D.E.status;
-    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.weak > 0 ? WEAK_MUL : 1);
+    const gates = trait(D, 'gates') && D.E.hp / Math.max(1, D.E.hpMax) < TRAIT.gatesAt ? TRAIT.gates : 1;   // Рок Ли: ниже половины здоровья бьёт сильнее
+    return (s.fear > 0 ? (D.P.fearMul || 0.65) : 1) * (s.weak > 0 ? WEAK_MUL : 1) * gates;
   }
   function intentDamage(D) {
     const i = D.intent;
@@ -170,7 +176,7 @@ G.duel = (() => {
     for (let n = 0; n < (i.hits || 1); n++) {
       const dodge = D.P.dodge >= 1 ? 1 : D.P.status.bind > 0 ? 0 : D.P.dodge;
       let d = (i.dmg || 0) * mul * (1 - dodge);
-      if (clones > 0 && d > 0) { clones--; d = 0; }
+      if (clones > 0 && d > 0 && !trait(D, 'byakugan')) { clones--; d = 0; }
       const absorbed = i.pierce ? 0 : Math.min(block, d); block -= absorbed; d -= absorbed;
       total += Math.max(0, d);
     }
@@ -269,7 +275,7 @@ G.duel = (() => {
   // Оглушение врага. «Стойкость»: пропустив ход, враг собирается, и на следующий ход оглушение не проходит —
   // иначе Хенге, Вспышка, Секси-дзюцу и Райтон по мокрой цели отменяют ходы подряд, и бой идёт без единого удара.
   // Срыв замаха серией тайдзюцу (force) проходит всегда: это задуманный ответ на тяжёлый приём.
-  const steady = (D) => D.E.steady > 0;
+  const steady = (D) => D.E.steady > 0 || trait(D, 'veteran');   // Ирука: оглушить нельзя вовсе
   function stunEnemy(D, ev, text, fx, force) {
     if (!force && steady(D)) { note(ev, 'e', 'info', `${D.E.name} устоял: дважды подряд не оглушить`, { to: 'p' }); return false; }
     D.E.status.stun = 1; note(ev, 'p', force ? 'counter' : 'status', text, { fx });
@@ -279,9 +285,14 @@ G.duel = (() => {
   function playerDamage(D, c, formula, ev) {
     const E = D.E;
     let total = 0;
+    const P = D.P, repeat = P.turnCards.filter((id) => id === c.id).length > 1;            // карта уже лежит в turnCards
+    const firstTech = formula.tech && P.turnCards.filter((id) => cardDef(id) && cardDef(id).tech).length === 1;
+    const dodge = trait(D, 'sharingan') && firstTech ? Math.max(E.dodge, TRAIT.sharingan) : E.dodge;   // Саске читает первую технику хода
     for (let n = 0; n < formula.hits; n++) {
       let d = formula.amount * (E.status.vuln > 0 ? 1.25 : 1);
-      if (!formula.ignoreDodge) d *= 1 - E.dodge;
+      if (trait(D, 'planner') && repeat) d *= TRAIT.planner;                                 // Шикамару: повтор карты в том же ходу предсказуем
+      if (!formula.ignoreDodge) d *= 1 - dodge;
+      if (trait(D, 'bulk')) d = Math.max(0, d - TRAIT.bulk);                                 // Чоджи: каждый удар слабее на 2
       const blocked = formula.pierce ? 0 : Math.min(E.block, d);
       E.block -= blocked; d = Math.max(0, d - blocked); d = Math.round(d);
       E.hp = clamp(E.hp - d, 0, E.hpMax); total += d;
@@ -349,6 +360,7 @@ G.duel = (() => {
     (def.exhaust || def.item ? D.exhaust : D.discard).push(c);
     D.last = { pAct: c.id, q: 1, surge, damage: dealt };
     lastStand(D, ev);
+    enemyStand(D, ev);
     checkEnd(D);
     D.events = ev;
     return ev;
@@ -362,11 +374,12 @@ G.duel = (() => {
     for (let n = 0; n < (D.intent.hits || 1); n++) {
       const dodge = P.dodge >= 1 ? 1 : P.status.bind > 0 ? 0 : P.dodge;
       let d = raw * mul * (1 - dodge);
-      if (P.clones > 0 && d > 0) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
+      if (P.clones > 0 && d > 0 && !trait(D, 'byakugan')) { P.clones--; d = 0; note(ev, 'p', 'info', 'Клон принял удар', { to: 'p', fx: 'bunshin' }); }
       const blocked = D.intent.pierce ? 0 : Math.min(P.block, d); P.block -= blocked; d = Math.max(0, Math.round(d - blocked));
       P.hp = clamp(P.hp - d, 0, P.hpMax); total += d; D.stats.taken += d;
       note(ev, 'e', d > 0 ? 'hit' : 'block', d > 0 ? name : `${name}: задержано`, { dmg: d, to: 'p', fx: D.intent.kind === 'tech' ? 'e:dmg' : null });
       if (d > 0) P.heat = clamp(P.heat + HEAT_HIT, 0, 100);
+      if (d > 0 && trait(D, 'seal') && P.ch > 0) { const n2 = Math.min(P.ch, TRAIT.seal); P.ch -= n2; note(ev, 'e', 'drain', `Печать жжёт чакру: −${n2}`, { to: 'p', fx: 'e:drain' }); }
     }
     return total;
   }
@@ -379,7 +392,7 @@ G.duel = (() => {
     E.block = 0; E.dodge = 0;
     if (E.status.stun > 0) { E.steady = 2; note(ev, 'e', 'info', `${E.name}: действие пропущено`, { to: 'p' }); }   // steady: следующий ход оглушить нельзя
     else if (intent.kind === 'charge') { E.charged = 1; E.chargeBroken = 0; note(ev, 'e', 'status', `${E.name} готовит тяжёлый приём`, { to: 'p' }); }
-    else if (intent.kind === 'block' || intent.kind === 'evade') { E.ch = Math.min(E.chMax, E.ch + 4); note(ev, 'e', 'info', intent.kind === 'block' ? 'Враг удерживает защиту' : 'Враг меняет позицию', { to: 'p' }); }
+    else if (intent.kind === 'block' || intent.kind === 'evade') { note(ev, 'e', 'info', intent.kind === 'block' ? 'Враг удерживает защиту' : 'Враг меняет позицию', { to: 'p' }); }
     else if (intent.kind === 'idle') note(ev, 'e', 'info', 'Враг ждёт', { to: 'p' });
     else if (isAttack(D)) {
       if (intent.cost != null) { E.ch = Math.max(0, E.ch - intent.cost); E.cd = 2; }   // приём (даже бесплатный) уходит на перезарядку
@@ -409,6 +422,7 @@ G.duel = (() => {
     for (const s of ['bind', 'fear']) if (P.status[s] > 0) P.status[s]--;
     if (E.cd > 0) E.cd--;
     D.turns++;
+    enemyStand(D, ev);
     checkEnd(D);
     if (!D.over && D.mode === 'survive' && D.round >= D.rounds) { D.over = { win: true }; D.phase = 'over'; }
     if (!D.over && D.round >= 40) { D.over = { win: E.hp / E.hpMax < P.hp / P.hpMax }; D.phase = 'over'; }
@@ -421,6 +435,14 @@ G.duel = (() => {
     if (D.P.hp > 0 || D.toughUsed || !D.has('tough')) return false;
     D.P.hp = 1; D.toughUsed = true;
     if (ev) note(ev, 'p', 'info', 'Крепкий орешек: ты устоял на 1 HP', { to: 'p', heal: 0 });
+    return true;
+  }
+  // Наруто: один раз за бой вместо поражения встаёт и возвращает четверть здоровья.
+  function enemyStand(D, ev) {
+    const E = D.E, floor = D.mode === 'spar' ? E.hpMax * SPAR_END : 0;
+    if (!trait(D, 'stubborn') || E.stood || E.hp > floor || D.P.hp <= 0) return false;
+    E.stood = true; E.hp = Math.round(Math.max(E.hp, floor) + E.hpMax * TRAIT.stubborn);
+    if (ev) note(ev, 'e', 'info', `${E.name}: «Я не сдамся!» — встаёт снова`, { to: 'p' });
     return true;
   }
   function checkEnd(D) {
@@ -495,6 +517,6 @@ G.duel = (() => {
 
   function options(D) { return D.hand.map((c) => ({ id: c.id, uid: c.uid, label: cardDef(c.id).name, cost: cardDef(c.id).cost, off: canPlay(D, c).ok ? null : canPlay(D, c).why })); }
   function stability(D) { return clamp(D.P.stab0 - (D.P.fat - D.P.fat0) * 0.3, 5, 100); }
-  return { TUNE, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview, enemyMul,
+  return { TUNE, TRAIT, create, play, endTurn, canPlay, cost, options, bot, simulate, draw, preview, intentDamage, expectedIncoming, chargePreview, enemyMul,
     stability, mulberry, SPAR_END, RELEASE_HEAT, RELEASE_COST, BOOST, FAT_ROUND };
 })();

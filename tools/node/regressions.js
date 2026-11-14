@@ -938,6 +938,38 @@ test('Время — за действия: стоим — часы стоят, 
   G.life.RATE = keep; G.life.acc = 0;
 });
 
+test('Особенности противников: у каждой — работающее правило и текст', () => {
+  const ST = { tai: 6, nin: 6, gen: 4, chakra: 6, ctrl: 5, spd: 6, end: 5, know: 4 };
+  const mk = (enemy, techs = []) => G.duel.create({ enemy, mode: 'ko', stats: ST, rng: G.duel.mulberry(11), stability: 100, techs, fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  const give = (D, id) => { const c = { id, uid: ++D._uid }; D.hand.push(c); return c; };
+  const idle = (D) => { D.intent = { kind: 'idle', name: 'Ждёт' }; D.E.block = 0; D.E.dodge = 0; };
+  for (const [id, e] of Object.entries(G.ENEMIES)) if (e.trait) assert.ok(G.ENEMY_TRAITS[e.trait] && G.ENEMY_TRAITS[e.trait].text, id + ': особенность описана');
+  // Стратег: вторая такая же карта за ход бьёт вполсилы
+  let D = mk('shikamaru'); idle(D); let hp = D.E.hp; G.duel.play(D, give(D, 'strike')); const first = hp - D.E.hp; D.P.chain = 0;
+  hp = D.E.hp; G.duel.play(D, give(D, 'strike')); assert.ok(hp - D.E.hp <= Math.ceil(first / 2), 'повтор «Удара» вполсилы');
+  // Широкая кость: каждый удар слабее на 2
+  D = mk('choji'); idle(D); const base = Math.round(G.duel.preview(D, 'strike')[0].split(' ')[0]); hp = D.E.hp; G.duel.play(D, give(D, 'strike'));
+  assert.ok(hp - D.E.hp <= base - 1, 'удар по Чоджи слабее предпросмотра');
+  // Шаринган: первая техника хода теряет больше половины урона
+  D = mk('sasuke', ['shunshin']); idle(D); hp = D.E.hp; const full = parseInt(G.duel.preview(D, 'shunshin')[0], 10); G.duel.play(D, give(D, 'shunshin'));
+  assert.ok(hp - D.E.hp < full * 0.5, 'первая техника встречает уклон');
+  // Бьякуган: клоны не спасают
+  D = mk('hinata'); D.P.clones = 2; D.intent = { kind: 'strike', name: 'Удар', dmg: 20, hits: 1 }; hp = D.P.hp; G.duel.endTurn(D);
+  assert.ok(D.P.hp < hp, 'удар прошёл сквозь клонов');
+  // Печать: удар сжигает чакру
+  D = mk('stranger'); D.intent = { kind: 'strike', name: 'Удар', dmg: 10, hits: 1 }; const ch = D.P.ch; G.duel.endTurn(D);
+  assert.ok(D.P.ch <= ch - G.duel.TRAIT.seal + 9, 'чакра сгорела (с учётом восстановления за ход)');
+  // Врата: ниже половины здоровья бьёт сильнее
+  D = mk('lee'); const m1 = G.duel.enemyMul(D); D.E.hp = D.E.hpMax * 0.4; assert.equal(G.duel.enemyMul(D), m1 * G.duel.TRAIT.gates);
+  // Не сдамся: один раз встаёт
+  D = mk('naruto'); idle(D); D.E.hp = 1; G.duel.play(D, give(D, 'strike'));
+  assert.ok(!D.over && D.E.hp > 1, 'Наруто встал'); idle(D); D.E.hp = 1; G.duel.play(D, give(D, 'strike')); assert.ok(D.over && D.over.win, 'второй раз — победа');
+  // Опыт: Ируку не оглушить; Акамару: три удара в серии
+  D = mk('iruka', ['henge']); assert.deepEqual(G.duel.preview(D, 'henge'), ['Враг устоит']);
+  D = mk('kiba'); let pack = false; for (let i = 0; i < 60 && !D.over; i++) { if (D.intent.kind === 'multi') { pack = D.intent.hits === 3; break; } D.P.hp = D.P.hpMax; G.duel.endTurn(D); }
+  assert.ok(pack, 'серия Кибы — три удара');
+});
+
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
   clean();
   G.state.dlgLog = [];

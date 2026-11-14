@@ -239,7 +239,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       for (const f of fx.fxs) f.t -= dt; fx.fxs = fx.fxs.filter((f) => f.t > 0);
       for (const p of fx.pops) { p.t -= dt; p.y -= dt * 14; } fx.pops = fx.pops.filter((p) => p.t > 0);
       if (said) { said.t -= dt; if (said.t <= 0 && phase !== 'end') said = null; }
-      if (phase === 'intro') { if (t > 1.1 || I.tapNow || I.pressed('a')) phase = 'choose'; return; }
+      // заставку с особенностью врага держим дольше и не даём проскочить случайным касанием
+      if (phase === 'intro') { const hold = G.ENEMY_TRAITS[ed.trait] ? 2.6 : 1.1; if (t > hold || (t > 0.5 && (I.tapNow || I.pressed('a')))) phase = 'choose'; return; }
       if (phase === 'play') { evT -= dt; if (evT <= 0 || ((I.tapNow || I.pressed('a')) && evT < 0.42)) nextEvent(); return; }
       if (phase === 'end') {
         if (endT > 0.8 && (I.pressed('a') || I.pressed('b') || I.tapNow)) {
@@ -278,7 +279,9 @@ G.scenes.register('battle', (opts, onEnd) => {
       if (phase === 'intro') {
         ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
         F.draw(ctx, ed.name, W / 2, AH / 2 - 15, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
-        FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0' });
+        // особенность противника — главное, что нужно знать до первого хода
+        const tr = G.ENEMY_TRAITS[ed.trait];
+        FS.draw(ctx, tr ? `${tr.name}: ${tr.text}` : (G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : ''), W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0', maxW: W - 8 });
       }
     },
     drawFx(ctx) {
@@ -355,6 +358,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
       // число здоровья врага — как у героя: добивание считают, а не прикидывают по шкале
       FS.draw(ctx, `${Math.round(D.E.hp)}/${D.E.hpMax}`, W - 4, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
+      if (G.ENEMY_TRAITS[ed.trait]) FS.draw(ctx, G.ENEMY_TRAITS[ed.trait].name, W - 6, 44, { align: 'right', color: '#ffe28a', outline: PAL.ink, maxW: bw });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
       else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
