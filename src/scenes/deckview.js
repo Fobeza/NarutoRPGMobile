@@ -77,7 +77,7 @@ G.scenes.register('deckview', () => {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
           const y = TOP + i * ROW, on = c === col && k === sel[c], def = G.CARDS[id];
           U.row(ctx, x + 5, y - 1, w - 10, ROW - 1, on);
-          F.small.draw(ctx, def.name, x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
+          F.small.draw(ctx, def.name + (G.combat.stars(id) ? ' ' + G.combat.stars(id) : ''), x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
           const cnt = c ? D().count(id) : D().own(id);
           F.small.draw(ctx, '×' + cnt, x + w - 9, y + 2, { align: 'right', color: on ? '#f4d46a' : C.inkDim });
         }
@@ -88,7 +88,8 @@ G.scenes.register('deckview', () => {
       const hint = msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — убрать' : 'Коснись ещё раз — в колоду') : 'Слева — свои, справа — колода';
       F.small.draw(ctx, hint, 12, iy + 9, { color: C.redDark, maxW: W - 24 });
       if (cur) {
-        F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}, всего ${D().own(cur)}`, 12, iy + 24, { color: C.ink, maxW: W - 24 });
+        const use = G.state.vars['use_' + cur] || 0, lvl = G.combat.mastery(cur), next = G.combat.MASTERY[lvl];
+        F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}/${D().own(cur)} · ` + (next ? `до ★ ещё ${next - use}` : 'освоена ★★★'), 12, iy + 24, { color: C.ink, maxW: W - 24 });
         F.small.wrap(G.CARDS[cur].text || '', W - 24).slice(0, 1).forEach((ln, i) => F.small.draw(ctx, ln, 12, iy + 36 + i * 10, { color: C.inkDim }));
       }
     },

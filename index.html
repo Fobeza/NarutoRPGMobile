@@ -187,7 +187,7 @@ body.crt-full #crt-roll { display: block; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: '9bc748cb', date: '2026-11-14 05:19', debug: false };
+const BUILD = { release: '3.0', version: 'cd062683', date: '2026-11-14 05:20', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -7132,8 +7132,10 @@ G.ARENAS = {
 };
 
 G.combat = {
-  // мастерство техники 0..3 (от количества применений)
-  mastery(t) { const u = G.state.vars['use_' + t] || 0; return u >= 18 ? 3 : u >= 10 ? 2 : u >= 4 ? 1 : 0; },
+  // мастерство карты 0..3 (от количества применений в боях): техники и обычные карты растут одинаково
+  MASTERY: [4, 10, 18],
+  mastery(t) { const u = (G.state.vars && G.state.vars['use_' + t]) || 0; return u >= 18 ? 3 : u >= 10 ? 2 : u >= 4 ? 1 : 0; },
+  stars(t) { return '★'.repeat(this.mastery(t)); },
   knows(t) { return !!G.state.flags['tech_' + t]; },
   knowsCombo(c) { return c === 'academy' || !!G.state.flags['combo_' + c]; },
 };
@@ -8005,7 +8007,9 @@ G.duel = (() => {
   // blockOf(P, kind) = доля hpMax + доля характеристики (коэффициенты — в BLOCK).
   const blockOf = (P, kind) => {
     const [base, per] = BLOCK[kind], stat = kind === 'guard' || kind === 'stance' ? P.st('end') : P.st('tai');
-    return Math.round(P.hpMax * (base + per * stat));
+    const card = kind === 'guard' ? 'guard' : kind === 'kawarimiReply' ? 'kawarimi' : 'stance';
+    const m = G.combat && G.state && G.state.vars ? G.combat.mastery(card) : 0;      // освоенная защита держит на 5% больше за ступень
+    return Math.round(P.hpMax * (base + per * stat) * (1 + m * 0.05));
   };
 
   function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -8186,7 +8190,8 @@ G.duel = (() => {
     const P = D.P, tai = P.st('tai'), nin = P.st('nin'), spd = P.st('spd'), mul = fatMul(D) * lowHp(D);
     const taiMul = (1 + Math.min(P.chain, 4) * (0.08 + comboBonus())) * mul;
     const techMul = (1 + mastery(id) * 0.06) * (P.focus ? 1.25 : 1) * (D.E.status.mark ? 1.5 : 1) * mul;
-    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount, hits, tech: false }, extra);
+    // Мастерство обычных карт: +5% урона за ступень (у техник — +6%, techMul). Растёт от применений в боях.
+    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount: amount * (1 + mastery(id) * 0.05), hits, tech: false }, extra);
     const t = (amount, extra = {}) => Object.assign({ amount: amount * techMul, hits: 1, tech: true }, extra);
     if (id === 'strike') return f((5 + tai) * taiMul);
     // «Меткий глаз»: метание (кунай) точнее и сильнее
@@ -19923,7 +19928,7 @@ G.scenes.register('deckview', () => {
           const k = scroll[c] + i, id = L[c][k]; if (!id) break;
           const y = TOP + i * ROW, on = c === col && k === sel[c], def = G.CARDS[id];
           U.row(ctx, x + 5, y - 1, w - 10, ROW - 1, on);
-          F.small.draw(ctx, def.name, x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
+          F.small.draw(ctx, def.name + (G.combat.stars(id) ? ' ' + G.combat.stars(id) : ''), x + 9, y + 2, { color: on ? '#f8eed0' : C.ink, shadow: on ? '#5a1408' : null, maxW: w - 34 });
           const cnt = c ? D().count(id) : D().own(id);
           F.small.draw(ctx, '×' + cnt, x + w - 9, y + 2, { align: 'right', color: on ? '#f4d46a' : C.inkDim });
         }
@@ -19934,7 +19939,8 @@ G.scenes.register('deckview', () => {
       const hint = msgT > 0 ? msg : cur ? (col ? 'Коснись ещё раз — убрать' : 'Коснись ещё раз — в колоду') : 'Слева — свои, справа — колода';
       F.small.draw(ctx, hint, 12, iy + 9, { color: C.redDark, maxW: W - 24 });
       if (cur) {
-        F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}, всего ${D().own(cur)}`, 12, iy + 24, { color: C.ink, maxW: W - 24 });
+        const use = G.state.vars['use_' + cur] || 0, lvl = G.combat.mastery(cur), next = G.combat.MASTERY[lvl];
+        F.small.draw(ctx, `${G.CARDS[cur].name} · в колоде ${D().count(cur)}/${D().own(cur)} · ` + (next ? `до ★ ещё ${next - use}` : 'освоена ★★★'), 12, iy + 24, { color: C.ink, maxW: W - 24 });
         F.small.wrap(G.CARDS[cur].text || '', W - 24).slice(0, 1).forEach((ln, i) => F.small.draw(ctx, ln, 12, iy + 36 + i * 10, { color: C.inkDim }));
       }
     },
@@ -21360,7 +21366,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     V.battles = (V.battles || 0) + 1; if (win) V.wins = (V.wins || 0) + 1;
     G.train.addXp('tai', 0.6 * stats.hits + 1); G.train.addXp('spd', 0.7 * stats.evades);
     if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); V.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
-    for (const [id, n] of Object.entries(D.stats.used)) if (G.TECHS[id]) V['use_' + id] = (V['use_' + id] || 0) + n;
+    // мастерство растёт у всех своих карт (кроме предметов); новые ступени показываем на экране итога
+    const grown = [];
+    for (const [id, n] of Object.entries(D.stats.used)) {
+      if (!G.CARDS[id] || G.CARDS[id].item) continue;
+      const was = G.combat.mastery(id); V['use_' + id] = (V['use_' + id] || 0) + n;
+      if (G.combat.mastery(id) > was) { grown.push(`${G.CARDS[id].name} ${G.combat.stars(id)}`); G.game.note(`Карта освоена: ${G.CARDS[id].name} ${G.combat.stars(id)}`); }
+    }
+    result.grown = grown;
     G.game.advance(5 + 3 * D.round);
     const line = ed.lines && (win ? ed.lines.lose : ed.lines.win);
     say(line ? G.util.fmt(line, { name: G.state.hero.name }) : win ? 'Победа!' : 'Поражение...');
@@ -21592,7 +21605,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       if (phase === 'end') {
         F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
         FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
-        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 99, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        if (result.grown && result.grown.length) FS.draw(ctx, 'Освоено: ' + result.grown.join(', '), W / 2, py + 89, { align: 'center', color: '#ffe28a', shadow: PAL.ink, maxW: W - 16 });
+        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 101, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
         return;
       }
       if (phase === 'play' && said) {
@@ -21625,6 +21639,7 @@ G.scenes.register('battle', (opts, onEnd) => {
           const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
           nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
+          const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {
           const i = bs.indexOf(b);
           U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');

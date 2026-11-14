@@ -970,6 +970,19 @@ test('Особенности противников: у каждой — раб�
   assert.ok(pack, 'серия Кибы — три удара');
 });
 
+test('Мастерство карт: применения в боях дают ступени, ступень усиливает карту', () => {
+  clean();
+  const v = G.state.vars, mk = () => G.duel.create({ enemy: 'dummy', mode: 'ko', stats: G.state.hero.stats, rng: G.duel.mulberry(2), stability: 100, fatigue: 0, surge: false, deck: G.CARD_BASE_DECK });
+  delete v.use_strike; delete v.use_guard;
+  const d0 = parseInt(G.duel.preview(mk(), 'strike')[0], 10), b0 = parseInt(G.duel.preview(mk(), 'guard')[0], 10);
+  assert.equal(G.combat.mastery('strike'), 0); assert.equal(G.combat.stars('strike'), '');
+  v.use_strike = 18; v.use_guard = 18;
+  assert.equal(G.combat.mastery('strike'), 3); assert.equal(G.combat.stars('strike'), '★★★');
+  assert.ok(parseInt(G.duel.preview(mk(), 'strike')[0], 10) > d0, 'освоенный «Удар» сильнее');
+  assert.ok(parseInt(G.duel.preview(mk(), 'guard')[0], 10) > b0, 'освоенный «Блок» держит больше');
+  delete v.use_strike; delete v.use_guard;
+});
+
 test('История реплик: последние 60 строк, повтор страницы не дублируется', () => {
   clean();
   G.state.dlgLog = [];

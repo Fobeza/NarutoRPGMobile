@@ -146,7 +146,14 @@ G.scenes.register('battle', (opts, onEnd) => {
     V.battles = (V.battles || 0) + 1; if (win) V.wins = (V.wins || 0) + 1;
     G.train.addXp('tai', 0.6 * stats.hits + 1); G.train.addXp('spd', 0.7 * stats.evades);
     if (stats.techs) { G.train.addXp('nin', 1.2 * stats.techs); V.purple_ctl = Math.min(40, (V.purple_ctl || 0) + 0.4 * stats.techs); }
-    for (const [id, n] of Object.entries(D.stats.used)) if (G.TECHS[id]) V['use_' + id] = (V['use_' + id] || 0) + n;
+    // мастерство растёт у всех своих карт (кроме предметов); новые ступени показываем на экране итога
+    const grown = [];
+    for (const [id, n] of Object.entries(D.stats.used)) {
+      if (!G.CARDS[id] || G.CARDS[id].item) continue;
+      const was = G.combat.mastery(id); V['use_' + id] = (V['use_' + id] || 0) + n;
+      if (G.combat.mastery(id) > was) { grown.push(`${G.CARDS[id].name} ${G.combat.stars(id)}`); G.game.note(`Карта освоена: ${G.CARDS[id].name} ${G.combat.stars(id)}`); }
+    }
+    result.grown = grown;
     G.game.advance(5 + 3 * D.round);
     const line = ed.lines && (win ? ed.lines.lose : ed.lines.win);
     say(line ? G.util.fmt(line, { name: G.state.hero.name }) : win ? 'Победа!' : 'Поражение...');
@@ -378,7 +385,8 @@ G.scenes.register('battle', (opts, onEnd) => {
       if (phase === 'end') {
         F.draw(ctx, result.win ? 'ПОБЕДА' : 'ПОРАЖЕНИЕ', W / 2, py + 58, { align: 'center', color: result.win ? '#8ae070' : '#ff6a4a', shadow: PAL.ink });
         FS.draw(ctx, `Ходов ${result.turns} · карт ${D.stats.cards} · урона ${Math.round(D.stats.damage)}`, W / 2, py + 79, { align: 'center', color: '#e8c890', maxW: W - 16 });
-        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 99, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
+        if (result.grown && result.grown.length) FS.draw(ctx, 'Освоено: ' + result.grown.join(', '), W / 2, py + 89, { align: 'center', color: '#ffe28a', shadow: PAL.ink, maxW: W - 16 });
+        if (endT > 0.8) FS.draw(ctx, 'Коснись, чтобы продолжить', W / 2, py + 101, { align: 'center', color: Math.sin(endT * 6) > 0 ? '#ffe28a' : '#d8c8a0' });
         return;
       }
       if (phase === 'play' && said) {
@@ -411,6 +419,7 @@ G.scenes.register('battle', (opts, onEnd) => {
           const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
           nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
+          const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {
           const i = bs.indexOf(b);
           U.button(ctx, b.x, b.y, b.w, b.h, '', b.off ? 'dis' : i === focus ? 'sel' : 'normal');

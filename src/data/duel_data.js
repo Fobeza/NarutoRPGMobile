@@ -82,8 +82,10 @@ G.ARENAS = {
 };
 
 G.combat = {
-  // мастерство техники 0..3 (от количества применений)
-  mastery(t) { const u = G.state.vars['use_' + t] || 0; return u >= 18 ? 3 : u >= 10 ? 2 : u >= 4 ? 1 : 0; },
+  // мастерство карты 0..3 (от количества применений в боях): техники и обычные карты растут одинаково
+  MASTERY: [4, 10, 18],
+  mastery(t) { const u = (G.state.vars && G.state.vars['use_' + t]) || 0; return u >= 18 ? 3 : u >= 10 ? 2 : u >= 4 ? 1 : 0; },
+  stars(t) { return '★'.repeat(this.mastery(t)); },
   knows(t) { return !!G.state.flags['tech_' + t]; },
   knowsCombo(c) { return c === 'academy' || !!G.state.flags['combo_' + c]; },
 };

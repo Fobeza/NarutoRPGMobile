@@ -17,7 +17,9 @@ G.duel = (() => {
   // blockOf(P, kind) = доля hpMax + доля характеристики (коэффициенты — в BLOCK).
   const blockOf = (P, kind) => {
     const [base, per] = BLOCK[kind], stat = kind === 'guard' || kind === 'stance' ? P.st('end') : P.st('tai');
-    return Math.round(P.hpMax * (base + per * stat));
+    const card = kind === 'guard' ? 'guard' : kind === 'kawarimiReply' ? 'kawarimi' : 'stance';
+    const m = G.combat && G.state && G.state.vars ? G.combat.mastery(card) : 0;      // освоенная защита держит на 5% больше за ступень
+    return Math.round(P.hpMax * (base + per * stat) * (1 + m * 0.05));
   };
 
   function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -198,7 +200,8 @@ G.duel = (() => {
     const P = D.P, tai = P.st('tai'), nin = P.st('nin'), spd = P.st('spd'), mul = fatMul(D) * lowHp(D);
     const taiMul = (1 + Math.min(P.chain, 4) * (0.08 + comboBonus())) * mul;
     const techMul = (1 + mastery(id) * 0.06) * (P.focus ? 1.25 : 1) * (D.E.status.mark ? 1.5 : 1) * mul;
-    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount, hits, tech: false }, extra);
+    // Мастерство обычных карт: +5% урона за ступень (у техник — +6%, techMul). Растёт от применений в боях.
+    const f = (amount, hits = 1, extra = {}) => Object.assign({ amount: amount * (1 + mastery(id) * 0.05), hits, tech: false }, extra);
     const t = (amount, extra = {}) => Object.assign({ amount: amount * techMul, hits: 1, tech: true }, extra);
     if (id === 'strike') return f((5 + tai) * taiMul);
     // «Меткий глаз»: метание (кунай) точнее и сильнее
