@@ -150,5 +150,6 @@ G.audio = {
     bell()    { G.audio.bellTone(196, 4.5, 0.06); },
     puff()    { G.audio.noise(0.25, 0.2); G.audio.tone(300, 0.2, 'triangle', 0.1, 80); },
     error()   { G.audio.tone(160, 0.15, 'sawtooth', 0.1); },
+    warn()    { G.audio.tone(520, 0.09, 'square', 0.09); G.audio.tone(390, 0.16, 'square', 0.09, null, 0.1); },   // «точно?» перед необратимым: сдача, стирание, загрузка
   },
 };

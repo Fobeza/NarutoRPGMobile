@@ -46,7 +46,7 @@ G.scenes.register('mapsettings',()=>{
   const S=G.storage.settings,W=220;let idx=0;
   const items=()=>[
     {label:'Мини-карта',value:S.minimap===false?'ВЫКЛ':'ВКЛ',act:()=>S.minimap=S.minimap===false},
-    {label:'Детализация',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
+    {label:'Вид карты',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
     {label:'Маркеры',value:S.mapMarkerSize===1.3?'КРУПНЫЕ':'ОБЫЧНЫЕ',act:()=>S.mapMarkerSize=S.mapMarkerSize===1.3?1:1.3},
     {label:'Подписи мест',value:S.mapLabels===false?'ВЫКЛ':'ВКЛ',act:()=>S.mapLabels=S.mapLabels===false},
     {label:'Назад',act:()=>G.scenes.pop()}

@@ -61,6 +61,18 @@ G.scenes.register('battle', (opts, onEnd) => {
     return out;
   }
 
+  // Имя карты в узкой клетке руки: до двух строк. Слово, которое не влезает, делится после гласной ближе к середине.
+  function cardName(name, maxW) {
+    const out = [];
+    for (const word of FS.wrap(name, maxW)) {
+      if (FS.measure(word) <= maxW || out.length) { out.push(word); continue; }
+      const ch = [...word]; let cut = -1;
+      for (let i = 2; i < ch.length - 2; i++) if (/[аеёиоуыэюя]/i.test(ch[i]) && FS.measure(ch.slice(0, i + 1).join('') + '-') <= maxW) cut = i + 1;
+      if (cut < 0) { out.push(word); continue; }
+      out.push(ch.slice(0, cut).join('') + '-', ch.slice(cut).join(''));
+    }
+    return out.slice(0, 2);
+  }
   function say(text) { said = { text, t: 2.4 }; }
   function playCard(ref) {
     if (phase !== 'choose') return false;
@@ -95,7 +107,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (b.id === 'end') { endPlayerTurn(); return; }
     if (b.id === 'quit') {
       if (quitT > 0) { finish(false, true); return; }
-      quitT = 2.5; AU.sfx.blip();
+      quitT = 2.5; AU.sfx.warn();
       return;
     }
     if (b.id === 'prev' || b.id === 'next') {
@@ -367,7 +379,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, `${Math.round(D.E.hp)}/${D.E.hpMax}`, W - 4, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
       if (G.ENEMY_TRAITS[ed.trait]) FS.draw(ctx, G.ENEMY_TRAITS[ed.trait].name, W - 6, 44, { align: 'right', color: '#ffe28a', outline: PAL.ink, maxW: bw });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
+      else if (mode === 'spar') FS.draw(ctx, 'бой до 30%', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
@@ -416,8 +428,9 @@ G.scenes.register('battle', (opts, onEnd) => {
           ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
           const price = G.duel.cost(D, c.id);
           FS.draw(ctx, price ? String(price) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
-          const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
-          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
+          // имя карты целиком: длинное слово переносим по слогу («Дыха-/ние»), а не режем многоточием
+          const nameLines = cardName(def.name, b.w - 5);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66' }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
           const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {

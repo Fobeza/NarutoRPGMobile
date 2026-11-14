@@ -22,6 +22,7 @@ G.scenes.register('savemenu', () => {
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
       } else if (info && k === 1) {
         // загрузка выбрасывает всё, что сделано после последнего автосейва, — переспрашиваем
+        G.audio.sfx.warn();
         G.scenes.push(G.scenes.make('pick', { title: `ЗАГРУЗИТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Несохранённое в текущей игре пропадёт.`,
           options: [{ label: 'Нет, остаться' }, { label: 'Да, загрузить' }] }, (a) => {
           if (a === 1) { G.storage.active = i; G.game.loadSaved(i); }
@@ -29,6 +30,7 @@ G.scenes.register('savemenu', () => {
       }
       else if (info && k === 2) {
         // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
+        G.audio.sfx.warn();
         G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
           options: [{ label: 'Нет, оставить' }, { label: 'Да, стереть' }] }, (a) => {
           if (a === 1) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
@@ -40,7 +42,7 @@ G.scenes.register('savemenu', () => {
   const slotLabel = (i) => {
     const inf = G.storage.slotInfo(i);
     // ▸ — активный слот: в него идут автосейвы и «Сохранить сейчас»
-    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
+    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `д.${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
   };
 
   const items = () => {
@@ -67,7 +69,7 @@ G.scenes.register('savemenu', () => {
             close(); G.audio.sfx.confirm(); G.game.loadSaved();
           } });
       } },
-      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
+      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `д.${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
         if (!bi) { G.audio.sfx.error(); return; }
         if (G.storage.restoreBackup()) { G.audio.sfx.confirm(); G.game.loadSaved(); }
       } },

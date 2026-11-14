@@ -187,7 +187,7 @@ body.crt-full #crt-roll { display: block; }
 <script src="art/runtime/environment_art_data.js"></script>
 <script>
 'use strict';
-const BUILD = { release: '3.0', version: '0bf58022', date: '2026-11-14 05:21', debug: false };
+const BUILD = { release: '3.0', version: '708885d9', date: '2026-11-14 05:25', debug: false };
 
 // ===== engine/core.js =====
 // Глобальное пространство имён игры. Все модули добавляют себя в G.
@@ -885,6 +885,7 @@ G.audio = {
     bell()    { G.audio.bellTone(196, 4.5, 0.06); },
     puff()    { G.audio.noise(0.25, 0.2); G.audio.tone(300, 0.2, 'triangle', 0.1, 80); },
     error()   { G.audio.tone(160, 0.15, 'sawtooth', 0.1); },
+    warn()    { G.audio.tone(520, 0.09, 'square', 0.09); G.audio.tone(390, 0.16, 'square', 0.09, null, 0.1); },   // «точно?» перед необратимым: сдача, стирание, загрузка
   },
 };
 
@@ -1296,6 +1297,8 @@ G.storage = {
     if(![1,1.3].includes(this.settings.mapMarkerSize))this.settings.mapMarkerSize=1;
     this.settings.mapLabels=this.settings.mapLabels!==false;
     if(!['off','soft','full'].includes(this.settings.crt))this.settings.crt='off';
+    // «Эффекты» игрок не трогал — берём системное «Уменьшение движения»: без тряски, вспышек и частиц
+    try{if(this.settings.fx===undefined&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)this.settings.fx=false;}catch(_){}
     return this.settings;
   },
   saveSettings() { this._set(this.KEY_SETTINGS, this.settings); },
@@ -18336,6 +18339,12 @@ G.scenes.register('world', (pos) => {
           if (p.stepT <= 0) { G.audio.sfx.step(G.ambience.ground(this.map, p.x, p.y)); p.stepT = run ? 0.18 : 0.28; }
         } else { p.anim = 0; p.stepT = 0.06; }
       } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
+      // Бег — «джойстик до упора», и на маленьком экране палец упирается в край раньше. Десять секунд шагом
+      // на джойстике без единого рывка — подсказываем один раз, где это лечится.
+      if (I.stick.on && p.moving && !run && !tired && !G.state.flags.tip_run) {
+        this._walkT = (this._walkT || 0) + dt;
+        if (this._walkT > 10) this.tip('run', '▸ Бег', 'Отведи джойстик до упора. Не хватает экрана? Настройки → Джойстик: ЧУТКО');
+      } else if (run) G.state.flags.tip_run = 1;
 
       // NPC: обновляем только тех, кто рядом
       for (const n of this.npcs) {
@@ -19858,7 +19867,7 @@ G.scenes.register('deckview', () => {
   const F = G.font, AU = G.audio, In = G.input, D = () => G.deck;
   const ROW = 17;
   // Раскладка от шапки с кнопкой «Назад» (G.touch.header): панели колонок, их заголовок и первая строка списка.
-  const top = () => { const hh = G.touch.header().height; return { info: hh - 1, panel: hh + 27, rows: hh + 46 }; };
+  const top = () => { const hh = G.touch.header().height; return { info: hh - 2, panel: hh + 34, rows: hh + 53 }; };
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
 
   // Колонка 0 — «Есть» (можно положить), колонка 1 — «В колоде» (можно убрать)
@@ -19916,7 +19925,7 @@ G.scenes.register('deckview', () => {
       F.small.draw(ctx, `${D().size()}/${D().MAX} карт · минимум ${D().MIN}`, W / 2, g.info, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
       const techs = D().techs();
       // строка на тёмном дереве: чернильный цвет здесь не читался
-      F.small.draw(ctx, techs.length ? 'Техники: ' + techs.join(', ') : 'Техник пока нет', W / 2, g.info + 13, { align: 'center', color: '#d8c8a0', shadow: C.woodEdge, maxW: W - 10 });
+      F.small.wrap(techs.length ? 'Техники: ' + techs.join(', ') : 'Техник пока нет', W - 10).slice(0, 2).forEach((ln, i) => F.small.draw(ctx, ln, W / 2, g.info + 12 + i * 10, { align: 'center', color: '#d8c8a0', shadow: C.woodEdge, maxW: W - 10 }));
       for (const c of [0, 1]) {
         const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - g.panel;
         U.panel(ctx, x, g.panel, w, h, 'frame');
@@ -20237,7 +20246,7 @@ G.scenes.register('cheats', () => {
 // Журнал заданий (§2.6): вкладки «Активные / Выполненные», подробности, выбор отслеживаемого.
 G.scenes.register('journal', () => {
   let tab = 0, idx = 0, top = 0, detail = null, toast = null, toastT = 0;
-  const TABS = ['Активные', 'Завершённые'];
+  const TABS = ['Активные', 'Готовые'];   // «Завершённые» не помещались во вкладку на экране 196 точек
 
   const items = () => {
     const Qs = G.quests;
@@ -20394,6 +20403,15 @@ G.scenes.register('calendar', () => {
     const Q = G.state.quests || {};
     for (const id of Object.keys(Q)) if (Q[id].st === 'active' && Q[id].due === d && G.QUESTS[id]) out.push({ c: '#b8321c', t: 'Срок: ' + G.QUESTS[id].title });
     out.push({ c: '#6a5238', t: 'Погода: ' + WEATHER[G.life.weather(d)] });
+    // сегодня — ещё и «чем заняться»: возможности, о которых игра иначе не говорит
+    if (d === G.state.vars.day && G.state.started) {
+      const min = G.state.vars.min, f = G.state.flags, tips = [];
+      if (min < 18 * 60) tips.push('доска поручений у Резиденции (до 18:00)');
+      tips.push(G.life.raining() ? 'в дождь клюёт лучше — удочка и река' : 'рыбалка у реки и на пирсе');
+      if (f.roofs || f.st_roofs) tips.push('по крышам быстрее: A у стены дома');
+      tips.push(min < 21 * 60 ? 'тренировка на полигоне' : 'ночная лавка открыта с 21:00');
+      out.push({ c: '#4a8a3a', t: 'Чем заняться: ' + tips.slice(0, 3).join('; ') + '.' });
+    }
     return out;
   }
   function marks(d) {
@@ -20713,9 +20731,10 @@ G.scenes.register('status', () => {
     update(dt) {
       const I = G.input;
       if (I.pressed('b') || I.pressed('a') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
-      if (I.repeat('up', dt)) scroll -= 48;
-      if (I.repeat('down', dt)) scroll += 48;
-      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -80 : 80;G.audio.sfx.select(); }
+      const page = Math.max(48, G.screen.H - header().height - footer() - 28);   // почти страница: строка, на которой остановились, остаётся на экране
+      if (I.repeat('up', dt)) scroll -= page;
+      if (I.repeat('down', dt)) scroll += page;
+      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -page : page;G.audio.sfx.select(); }
       scroll = G.util.clamp(scroll, 0, maxScroll());
     },
     draw(ctx) {
@@ -20845,6 +20864,7 @@ G.scenes.register('savemenu', () => {
         say(ok ? `Сохранено в слот ${i + 1} ✔` : 'Не удалось сохранить! Память браузера полна?');
       } else if (info && k === 1) {
         // загрузка выбрасывает всё, что сделано после последнего автосейва, — переспрашиваем
+        G.audio.sfx.warn();
         G.scenes.push(G.scenes.make('pick', { title: `ЗАГРУЗИТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Несохранённое в текущей игре пропадёт.`,
           options: [{ label: 'Нет, остаться' }, { label: 'Да, загрузить' }] }, (a) => {
           if (a === 1) { G.storage.active = i; G.game.loadSaved(i); }
@@ -20852,6 +20872,7 @@ G.scenes.register('savemenu', () => {
       }
       else if (info && k === 2) {
         // стирание необратимо, а строка стоит вплотную к «Загрузить» — переспрашиваем; «Нет» выбрано по умолчанию
+        G.audio.sfx.warn();
         G.scenes.push(G.scenes.make('pick', { title: `СТЕРЕТЬ СЛОТ ${i + 1}?`, text: `День ${info.day}, ${G.game.clock(info.min)}. Вернуть запись будет нельзя.`,
           options: [{ label: 'Нет, оставить' }, { label: 'Да, стереть' }] }, (a) => {
           if (a === 1) { G.storage.wipe(i); say(`Слот ${i + 1} стёрт`); }
@@ -20863,7 +20884,7 @@ G.scenes.register('savemenu', () => {
   const slotLabel = (i) => {
     const inf = G.storage.slotInfo(i);
     // ▸ — активный слот: в него идут автосейвы и «Сохранить сейчас»
-    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `день ${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
+    return { label: (i === G.storage.active ? '▸' : '') + `Слот ${i + 1}`, value: inf ? `д.${inf.day}, ${G.game.clock(inf.min)}` : 'пусто', dis: false, act: () => slotMenu(i) };
   };
 
   const items = () => {
@@ -20890,7 +20911,7 @@ G.scenes.register('savemenu', () => {
             close(); G.audio.sfx.confirm(); G.game.loadSaved();
           } });
       } },
-      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `день ${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
+      { label: bi ? 'Резерв' : 'Резервной копии нет', value: bi ? `д.${bi.day}, ${G.game.clock(bi.min)}` : null, dis: !bi, act: () => {
         if (!bi) { G.audio.sfx.error(); return; }
         if (G.storage.restoreBackup()) { G.audio.sfx.confirm(); G.game.loadSaved(); }
       } },
@@ -21381,6 +21402,18 @@ G.scenes.register('battle', (opts, onEnd) => {
     return out;
   }
 
+  // Имя карты в узкой клетке руки: до двух строк. Слово, которое не влезает, делится после гласной ближе к середине.
+  function cardName(name, maxW) {
+    const out = [];
+    for (const word of FS.wrap(name, maxW)) {
+      if (FS.measure(word) <= maxW || out.length) { out.push(word); continue; }
+      const ch = [...word]; let cut = -1;
+      for (let i = 2; i < ch.length - 2; i++) if (/[аеёиоуыэюя]/i.test(ch[i]) && FS.measure(ch.slice(0, i + 1).join('') + '-') <= maxW) cut = i + 1;
+      if (cut < 0) { out.push(word); continue; }
+      out.push(ch.slice(0, cut).join('') + '-', ch.slice(cut).join(''));
+    }
+    return out.slice(0, 2);
+  }
   function say(text) { said = { text, t: 2.4 }; }
   function playCard(ref) {
     if (phase !== 'choose') return false;
@@ -21415,7 +21448,7 @@ G.scenes.register('battle', (opts, onEnd) => {
     if (b.id === 'end') { endPlayerTurn(); return; }
     if (b.id === 'quit') {
       if (quitT > 0) { finish(false, true); return; }
-      quitT = 2.5; AU.sfx.blip();
+      quitT = 2.5; AU.sfx.warn();
       return;
     }
     if (b.id === 'prev' || b.id === 'next') {
@@ -21687,7 +21720,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       FS.draw(ctx, `${Math.round(D.E.hp)}/${D.E.hpMax}`, W - 4, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
       if (G.ENEMY_TRAITS[ed.trait]) FS.draw(ctx, G.ENEMY_TRAITS[ed.trait].name, W - 6, 44, { align: 'right', color: '#ffe28a', outline: PAL.ink, maxW: bw });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
-      else if (mode === 'spar') FS.draw(ctx, 'до 30% здоровья', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
+      else if (mode === 'spar') FS.draw(ctx, 'бой до 30%', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
     },
     drawPanel(ctx, g) {
       const W = g.W, py = g.py;
@@ -21736,8 +21769,9 @@ G.scenes.register('battle', (opts, onEnd) => {
           ctx.fillStyle = cardColor(def.kind); ctx.fillRect(b.x + 2, b.y + 2, 3, b.h - 4);
           const price = G.duel.cost(D, c.id);
           FS.draw(ctx, price ? String(price) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
-          const nameLines = FS.wrap(def.name, b.w - 8).slice(0, 2);
-          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 7 }));
+          // имя карты целиком: длинное слово переносим по слогу («Дыха-/ние»), а не режем многоточием
+          const nameLines = cardName(def.name, b.w - 5);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66' }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
           const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {
@@ -22416,6 +22450,15 @@ G.scenes.register('menu', () => {
       if (mins > 0) w.skipTime(mins);
     }));
   }
+  // «Записи»: то, что читают, а не чем пользуются каждый день, — история реплик и справочники
+  function records() {
+    const opts = [
+      { label: 'История', desc: 'Последние реплики: перечитать, что тебе сказали.', act: () => G.scenes.push(G.scenes.make('log')) },
+      { label: 'Персонажи', desc: 'Галерея всех, кого можно встретить.', act: () => G.scenes.push(G.scenes.make('gallery')) },
+      { label: 'Жители и дома', desc: 'Кто где живёт и где его найти.', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    ];
+    G.scenes.push(G.scenes.make('pick', { title: 'ЗАПИСИ', options: opts.concat([{ label: 'Назад' }]) }, (i) => { if (opts[i]) opts[i].act(); }));
+  }
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Подождать', act: waitMenu },
@@ -22423,10 +22466,8 @@ G.scenes.register('menu', () => {
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
-    { label: 'История', act: () => G.scenes.push(G.scenes.make('log')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
-    { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
-    { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    { label: 'Записи', act: records },
     ...(G.state.flags.postgame ? [{ label: 'Итоги главы', act: () => G.scenes.push(G.scenes.make('ending')) }] : []),
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение', act: () => G.scenes.push(G.scenes.make('savemenu')) },
@@ -22529,7 +22570,7 @@ G.scenes.register('mapsettings',()=>{
   const S=G.storage.settings,W=220;let idx=0;
   const items=()=>[
     {label:'Мини-карта',value:S.minimap===false?'ВЫКЛ':'ВКЛ',act:()=>S.minimap=S.minimap===false},
-    {label:'Детализация',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
+    {label:'Вид карты',value:S.mapDetail==='simple'?'СХЕМА':'ПОДРОБНО',act:()=>S.mapDetail=S.mapDetail==='simple'?'detailed':'simple'},
     {label:'Маркеры',value:S.mapMarkerSize===1.3?'КРУПНЫЕ':'ОБЫЧНЫЕ',act:()=>S.mapMarkerSize=S.mapMarkerSize===1.3?1:1.3},
     {label:'Подписи мест',value:S.mapLabels===false?'ВЫКЛ':'ВКЛ',act:()=>S.mapLabels=S.mapLabels===false},
     {label:'Назад',act:()=>G.scenes.pop()}

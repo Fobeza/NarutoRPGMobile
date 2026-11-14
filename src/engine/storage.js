@@ -197,6 +197,8 @@ G.storage = {
     if(![1,1.3].includes(this.settings.mapMarkerSize))this.settings.mapMarkerSize=1;
     this.settings.mapLabels=this.settings.mapLabels!==false;
     if(!['off','soft','full'].includes(this.settings.crt))this.settings.crt='off';
+    // «Эффекты» игрок не трогал — берём системное «Уменьшение движения»: без тряски, вспышек и частиц
+    try{if(this.settings.fx===undefined&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)this.settings.fx=false;}catch(_){}
     return this.settings;
   },
   saveSettings() { this._set(this.KEY_SETTINGS, this.settings); },

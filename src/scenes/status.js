@@ -25,9 +25,10 @@ G.scenes.register('status', () => {
     update(dt) {
       const I = G.input;
       if (I.pressed('b') || I.pressed('a') || I.pressed('menu')) { G.audio.sfx.cancel(); G.scenes.pop(); return; }
-      if (I.repeat('up', dt)) scroll -= 48;
-      if (I.repeat('down', dt)) scroll += 48;
-      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -80 : 80;G.audio.sfx.select(); }
+      const page = Math.max(48, G.screen.H - header().height - footer() - 28);   // почти страница: строка, на которой остановились, остаётся на экране
+      if (I.repeat('up', dt)) scroll -= page;
+      if (I.repeat('down', dt)) scroll += page;
+      if (I.tapNow && I.tapNow.y >= G.screen.H-footer() && maxScroll()>0) { scroll += I.tapNow.x < G.screen.W/2 ? -page : page;G.audio.sfx.select(); }
       scroll = G.util.clamp(scroll, 0, maxScroll());
     },
     draw(ctx) {

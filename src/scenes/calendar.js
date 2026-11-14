@@ -29,6 +29,15 @@ G.scenes.register('calendar', () => {
     const Q = G.state.quests || {};
     for (const id of Object.keys(Q)) if (Q[id].st === 'active' && Q[id].due === d && G.QUESTS[id]) out.push({ c: '#b8321c', t: 'Срок: ' + G.QUESTS[id].title });
     out.push({ c: '#6a5238', t: 'Погода: ' + WEATHER[G.life.weather(d)] });
+    // сегодня — ещё и «чем заняться»: возможности, о которых игра иначе не говорит
+    if (d === G.state.vars.day && G.state.started) {
+      const min = G.state.vars.min, f = G.state.flags, tips = [];
+      if (min < 18 * 60) tips.push('доска поручений у Резиденции (до 18:00)');
+      tips.push(G.life.raining() ? 'в дождь клюёт лучше — удочка и река' : 'рыбалка у реки и на пирсе');
+      if (f.roofs || f.st_roofs) tips.push('по крышам быстрее: A у стены дома');
+      tips.push(min < 21 * 60 ? 'тренировка на полигоне' : 'ночная лавка открыта с 21:00');
+      out.push({ c: '#4a8a3a', t: 'Чем заняться: ' + tips.slice(0, 3).join('; ') + '.' });
+    }
     return out;
   }
   function marks(d) {

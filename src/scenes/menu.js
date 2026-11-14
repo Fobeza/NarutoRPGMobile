@@ -32,6 +32,15 @@ G.scenes.register('menu', () => {
       if (mins > 0) w.skipTime(mins);
     }));
   }
+  // «Записи»: то, что читают, а не чем пользуются каждый день, — история реплик и справочники
+  function records() {
+    const opts = [
+      { label: 'История', desc: 'Последние реплики: перечитать, что тебе сказали.', act: () => G.scenes.push(G.scenes.make('log')) },
+      { label: 'Персонажи', desc: 'Галерея всех, кого можно встретить.', act: () => G.scenes.push(G.scenes.make('gallery')) },
+      { label: 'Жители и дома', desc: 'Кто где живёт и где его найти.', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    ];
+    G.scenes.push(G.scenes.make('pick', { title: 'ЗАПИСИ', options: opts.concat([{ label: 'Назад' }]) }, (i) => { if (opts[i]) opts[i].act(); }));
+  }
   const items = () => [
     { label: 'Продолжить', act: () => G.scenes.pop() },
     { label: 'Подождать', act: waitMenu },
@@ -39,10 +48,8 @@ G.scenes.register('menu', () => {
     { label: 'Календарь', act: () => G.scenes.push(G.scenes.make('calendar')) },
     { label: 'Статус', act: () => G.scenes.push(G.scenes.make('status')) },
     { label: 'Колода', act: () => G.scenes.push(G.scenes.make('deckview')) },
-    { label: 'История', act: () => G.scenes.push(G.scenes.make('log')) },
     { label: 'Сумка', act: () => G.scenes.push(G.scenes.make('bag')) },
-    { label: 'Персонажи', act: () => G.scenes.push(G.scenes.make('gallery')) },
-    { label: 'Жители и дома', act: () => { G.scenes.pop(); const w = G.scenes.top(); G.residents.menu(w); } },
+    { label: 'Записи', act: records },
     ...(G.state.flags.postgame ? [{ label: 'Итоги главы', act: () => G.scenes.push(G.scenes.make('ending')) }] : []),
     { label: 'Настройки', act: () => G.scenes.push(G.scenes.make('settings')) },
     { label: 'Сохранение', act: () => G.scenes.push(G.scenes.make('savemenu')) },

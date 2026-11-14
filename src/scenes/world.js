@@ -198,6 +198,12 @@ G.scenes.register('world', (pos) => {
           if (p.stepT <= 0) { G.audio.sfx.step(G.ambience.ground(this.map, p.x, p.y)); p.stepT = run ? 0.18 : 0.28; }
         } else { p.anim = 0; p.stepT = 0.06; }
       } else { p.anim = 0; p.vx = p.vy = 0; p.stepT = 0.06; }
+      // Бег — «джойстик до упора», и на маленьком экране палец упирается в край раньше. Десять секунд шагом
+      // на джойстике без единого рывка — подсказываем один раз, где это лечится.
+      if (I.stick.on && p.moving && !run && !tired && !G.state.flags.tip_run) {
+        this._walkT = (this._walkT || 0) + dt;
+        if (this._walkT > 10) this.tip('run', '▸ Бег', 'Отведи джойстик до упора. Не хватает экрана? Настройки → Джойстик: ЧУТКО');
+      } else if (run) G.state.flags.tip_run = 1;
 
       // NPC: обновляем только тех, кто рядом
       for (const n of this.npcs) {

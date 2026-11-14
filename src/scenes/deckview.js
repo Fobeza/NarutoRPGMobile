@@ -6,7 +6,7 @@ G.scenes.register('deckview', () => {
   const F = G.font, AU = G.audio, In = G.input, D = () => G.deck;
   const ROW = 17;
   // Раскладка от шапки с кнопкой «Назад» (G.touch.header): панели колонок, их заголовок и первая строка списка.
-  const top = () => { const hh = G.touch.header().height; return { info: hh - 1, panel: hh + 27, rows: hh + 46 }; };
+  const top = () => { const hh = G.touch.header().height; return { info: hh - 2, panel: hh + 34, rows: hh + 53 }; };
   let col = 0, sel = [0, 0], scroll = [0, 0], msg = '', msgT = 0;
 
   // Колонка 0 — «Есть» (можно положить), колонка 1 — «В колоде» (можно убрать)
@@ -64,7 +64,7 @@ G.scenes.register('deckview', () => {
       F.small.draw(ctx, `${D().size()}/${D().MAX} карт · минимум ${D().MIN}`, W / 2, g.info, { align: 'center', color: '#f4e4bc', shadow: C.woodEdge });
       const techs = D().techs();
       // строка на тёмном дереве: чернильный цвет здесь не читался
-      F.small.draw(ctx, techs.length ? 'Техники: ' + techs.join(', ') : 'Техник пока нет', W / 2, g.info + 13, { align: 'center', color: '#d8c8a0', shadow: C.woodEdge, maxW: W - 10 });
+      F.small.wrap(techs.length ? 'Техники: ' + techs.join(', ') : 'Техник пока нет', W - 10).slice(0, 2).forEach((ln, i) => F.small.draw(ctx, ln, W / 2, g.info + 12 + i * 10, { align: 'center', color: '#d8c8a0', shadow: C.woodEdge, maxW: W - 10 }));
       for (const c of [0, 1]) {
         const x = c * (W / 2) + 4, w = W / 2 - 7, h = TOP + rows * ROW + 8 - g.panel;
         U.panel(ctx, x, g.panel, w, h, 'frame');
