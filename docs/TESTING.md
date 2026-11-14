@@ -8,6 +8,9 @@
    и снимают скриншоты (в `tools/shots/`, в git не попадают). Установка: `pip install playwright` (браузер Chromium).
    Если Playwright не установлен, `check_all.py` помечает эти наборы как пропущенные, а не как упавшие.
 
+Браузерные наборы гоняет и CI: `.github/workflows/browser.yml` — ночью и вручную, PR не блокирует.
+Вёрстку без браузера проверяет `node tools/node/layout.js` (входит в `check_node.py`).
+
 ## Одной командой
 
 ```bash

@@ -66,10 +66,13 @@ G.scenes.register('battle', (opts, onEnd) => {
     const out = [];
     for (const word of FS.wrap(name, maxW)) {
       if (FS.measure(word) <= maxW || out.length) { out.push(word); continue; }
-      const ch = [...word]; let cut = -1;
-      for (let i = 2; i < ch.length - 2; i++) if (/[аеёиоуыэюя]/i.test(ch[i]) && FS.measure(ch.slice(0, i + 1).join('') + '-') <= maxW) cut = i + 1;
+      const ch = [...word], fits = (n) => FS.measure(ch.slice(0, n).join('') + (ch[n - 1] === '-' ? '' : '-')) <= maxW;
+      let cut = -1;
+      const hy = word.indexOf('-'); if (hy > 0 && fits(hy + 1)) cut = hy + 1;                                  // «Секси-/дзюцу»
+      if (cut < 0) for (let i = 1; i < ch.length - 2; i++) if (/[аеёиоуыэюя]/i.test(ch[i]) && fits(i + 1)) cut = i + 1;   // по слогу
+      if (cut < 0) for (let n = ch.length - 1; n > 1; n--) if (fits(n)) { cut = n; break; }                       // как влезет
       if (cut < 0) { out.push(word); continue; }
-      out.push(ch.slice(0, cut).join('') + '-', ch.slice(cut).join(''));
+      out.push(ch.slice(0, cut).join('') + (ch[cut - 1] === '-' ? '' : '-'), ch.slice(cut).join(''));
     }
     return out.slice(0, 2);
   }
@@ -217,7 +220,7 @@ G.scenes.register('battle', (opts, onEnd) => {
       // с «Аналитиком» видно, сколько снимет заряженный приём: это главный удар врага
       const heavy = D.has('analyst') ? G.duel.chargePreview(D) : 0;
       if (heavy > 0) return ['Замах: готовит тяжёлый приём', `Сорвать 3 звена · пройдёт ${heavy}`];
-      return ['Замах: готовит тяжёлый приём', 'Сорвать серией тайдзюцу (3 звена)'];
+      return ['Замах: готовит тяжёлый приём', 'Сорви: 3 удара тайдзюцу'];
     }
     if (intent.kind === 'block') return [intent.name, `Блок ${Math.round(D.E.block)} · помогут Финт и Футон`];
     if (intent.kind === 'evade') return [intent.name, `Уклон ${Math.round(D.E.dodge * 100)}% · помогут Финт и Чакра`];
@@ -296,11 +299,12 @@ G.scenes.register('battle', (opts, onEnd) => {
       if (fx.flash > 0 && fxOn()) { ctx.save(); ctx.globalAlpha = Math.min(0.5, fx.flash * 1.4); ctx.fillStyle = fx.flashCol; ctx.fillRect(0, 0, W, AH); ctx.restore(); }
       this.drawHud(ctx, g); this.drawPanel(ctx, g);
       if (phase === 'intro') {
-        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, AH / 2 - 24, W, 48);
+        const trI = G.ENEMY_TRAITS[ed.trait], trLines = trI ? FS.wrap(`${trI.name}: ${trI.text}`, W - 12).slice(0, 3) : [];
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, AH / 2 - 24, W, 48 + Math.max(0, trLines.length - 1) * 11);
         F.draw(ctx, ed.name, W / 2, AH / 2 - 15, { align: 'center', color: PAL.yellow || '#ffd23a', outline: PAL.ink });
         // особенность противника — главное, что нужно знать до первого хода
-        const tr = G.ENEMY_TRAITS[ed.trait];
-        FS.draw(ctx, tr ? `${tr.name}: ${tr.text}` : (G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : ''), W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0', maxW: W - 8 });
+        if (trLines.length) trLines.forEach((ln, i) => FS.draw(ctx, ln, W / 2, AH / 2 + 6 + i * 11, { align: 'center', color: '#f8eed0' }));
+        else FS.draw(ctx, G.ARENAS[TERRAIN] ? G.ARENAS[TERRAIN].name : '', W / 2, AH / 2 + 6, { align: 'center', color: '#f8eed0', maxW: W - 8 });
       }
     },
     drawFx(ctx) {
@@ -373,10 +377,11 @@ G.scenes.register('battle', (opts, onEnd) => {
       // подписи двух нижних шкал — цветом своей шкалы, иначе не понять, какая из них какая
       FS.draw(ctx, 'усталость', 6, 47, { color: '#f0b84a', outline: PAL.ink });
       FS.draw(ctx, 'накал', 6 + bw, 47, { align: 'right', color: '#e0a8ff', outline: PAL.ink });
-      FS.draw(ctx, ed.name, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink, maxW: bw });
+      const ehp = `${Math.round(D.E.hp)}/${D.E.hpMax}`;
+      FS.draw(ctx, ed.name, W - 6 - bw, 5, { color: '#f8eed0', outline: PAL.ink, maxW: bw - FS.measure(ehp) - 4 });
       bar(W - 6 - bw, 16, bw, D.E.hp, D.E.hpMax, C.hp); if (D.E.chMax) bar(W - 6 - bw, 24, bw, D.E.ch, D.E.chMax, C.chakra);
       // число здоровья врага — как у героя: добивание считают, а не прикидывают по шкале
-      FS.draw(ctx, `${Math.round(D.E.hp)}/${D.E.hpMax}`, W - 4, 14, { align: 'right', color: '#f8eed0', outline: PAL.ink });
+      FS.draw(ctx, ehp, W - 6, 5, { align: 'right', color: '#f8eed0', outline: PAL.ink });
       if (G.ENEMY_TRAITS[ed.trait]) FS.draw(ctx, G.ENEMY_TRAITS[ed.trait].name, W - 6, 44, { align: 'right', color: '#ffe28a', outline: PAL.ink, maxW: bw });
       if (mode === 'survive') FS.draw(ctx, `Ход ${D.round}/${D.rounds}`, W - 6, 34, { align: 'right', color: '#ffe28a', outline: PAL.ink });
       else if (mode === 'spar') FS.draw(ctx, 'бой до 30%', W - 6, 34, { align: 'right', color: '#d8c8a0', outline: PAL.ink, maxW: bw });   // мелким: крупная строка лезла на шкалы героя
@@ -429,8 +434,8 @@ G.scenes.register('battle', (opts, onEnd) => {
           const price = G.duel.cost(D, c.id);
           FS.draw(ctx, price ? String(price) : '0', b.x + b.w - 3, b.y + 3, { align: 'right', color: check.ok ? '#ffe28a' : '#8a7a66' });
           // имя карты целиком: длинное слово переносим по слогу («Дыха-/ние»), а не режем многоточием
-          const nameLines = cardName(def.name, b.w - 5);
-          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66' }));
+          const nameLines = cardName(def.short || def.name, b.w - 5);
+          nameLines.forEach((ln, i) => FS.draw(ctx, ln, b.x + b.w / 2 + 1, b.y + 13 + i * 9, { align: 'center', color: check.ok ? '#f8eed0' : '#8a7a66', maxW: b.w - 3 }));
           if (def.exhaust) FS.draw(ctx, '×', b.x + 5, b.y + b.h - 9, { color: '#d8c8a0' });
           const st = G.combat.stars(c.id); if (st) FS.draw(ctx, st, b.x + b.w - 3, b.y + b.h - 9, { align: 'right', color: '#ffe28a' });
         } else {

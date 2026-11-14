@@ -17,7 +17,7 @@ G.ending = {
       ['Учёба', G.academy.avg() ? `${G.academy.avg()} · посещ. ${G.academy.attendance()}%` : '—'],
       ['Задания', String(quests)],
       ['Друзья', friends.length ? friends.slice(0, 3).map((id) => G.chars.nameOf(id) + ' ' + '♥'.repeat(G.friends.level(id))).join(', ') : '—'],
-      ['Освоено карт', cards ? `${cards} (${'★'.repeat(Math.min(3, stars))}${stars > 3 ? ' ×' + stars : ''})` : '—'],
+      ['Освоено карт', cards ? `${cards} · ★ ×${stars}` : '—'],
       ['Стабильность', String(G.purple.stability())],
     ];
   },

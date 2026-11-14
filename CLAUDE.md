@@ -8,7 +8,8 @@
 ```bash
 python3 build.py                     # src/ → index.html + sw.js + art/runtime/*.js + map-editor.html (корень = сайт GitHub Pages)
 python3 -m http.server 8765          # локальный сервер из корня → http://localhost:8765/?debug=1
-python3 tools/check_node.py          # быстрые проверки без браузера (~12 с, нужен Node.js) — после любой правки
+python3 tools/check_node.py          # быстрые проверки без браузера (~15 с, нужен Node.js) — после любой правки
+node tools/node/layout.js -v         # вёрстка: наложения, выход за экран и обрезка надписей на трёх размерах экрана
 python3 tools/check_all.py --quick   # сборка + Node-проверки + быстрые браузерные тесты
 python3 tools/check_all.py           # всё: Node + браузерные тесты + аудит карты и комнат (перед публикацией)
 python3 tools/balance.py 120         # баланс боёв → docs/BALANCE.md и docs/balance.csv (нужен Node, без браузера)
@@ -48,7 +49,7 @@ python3 tools/audit_rooms.py --shots # посмотреть и проверит�
 - `src/systems/` — время, задания, навигация, жизнь (часы/погода), Академия и сюжет (`story.js`), уроки, дружба,
   тренировки, катсцены, расписания (`schedule.js`), симулятор баланса (`sim.js`)
 - `src/world/` — генератор Конохи, интерьеры (`interiors.js`), жители (`village_*.js`, `cast.js`), крыши, эффекты
-- `src/scenes/` — экраны: `world.js` (карта, NPC, камера), `battle.js` (экран боя «Дуэль»; фоны — `battle_bg.js`),
+- `src/scenes/` — экраны: `world.js` + части `world_npc/actions/time/draw.js` (карта, NPC, камера), `battle.js` (экран боя «Дуэль»; фоны — `battle_bg.js`),
   `train.js` (мини-игры), меню, календарь и др.
 - Подробно — `docs/ARCHITECTURE.md`.
 

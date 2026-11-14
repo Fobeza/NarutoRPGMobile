@@ -92,6 +92,13 @@ const SCENES = {
   shop: () => G.scenes.make('shop', 'ichiraku', { title: 'Ичираку', onClose() {} }),
   pick: () => { const w = world(); return G.scenes.make('pick', w.waitSpec(), () => {}); },
   battle: () => { h.rng(5); const b = G.scenes.make('battle', { enemy: 'sasuke', mode: 'spar' }, () => {}); for (let i = 0; i < 60 && b.state !== 'menu'; i++) b.update(0.1); return b; },
+  battle_names: () => {   // рука из карт с самыми длинными именами: перенос по слогам и соседние клетки
+    for (const id of Object.keys(G.TECHS)) G.state.flags['tech_' + id] = 1;
+    h.rng(7); const b = G.scenes.make('battle', { enemy: 'choji', mode: 'ko' }, () => {}); for (let i = 0; i < 60 && b.state !== 'menu'; i++) b.update(0.1);
+    const ids = Object.keys(G.CARDS).sort((x, y) => G.CARDS[y].name.length - G.CARDS[x].name.length).slice(0, 5);
+    b.D.hand = ids.map((id, i) => ({ id, uid: 900 + i })); b.update(0.016);
+    return b;
+  },
   battle_first: () => { delete G.state.flags.card_duel_tip; h.rng(6); const b = G.scenes.make('battle', { enemy: 'kiba', mode: 'ko' }, () => {}); for (let i = 0; i < 60 && b.state !== 'menu'; i++) b.update(0.1); return b; },
 };
 const SIZES = [['крупно 196', 393, 759, 2, 'big'], ['мелко 294', 393, 759, 3, 'fine'], ['SE 320', 320, 568, 2, null]];

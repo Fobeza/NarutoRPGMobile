@@ -38,6 +38,9 @@ G.CARDS.raiton.text = 'Электрический урон. По мокрой ц
 G.CARDS.fuuton.text = 'Урон, слабость на один ход и дополнительная карта. Снимает защиту врага.';
 G.CARDS.release = { name: 'Выброс', kind: 'nin', cost: 25, tech: true, exhaust: true, release: true, text: 'Требует накал 60. Мощный урон сквозь защиту; нестабильная чакра может усилить выброс или дать отдачу.' };
 
+// Короткие имена для узкой клетки руки (полное имя — в строке описания выбранной карты).
+for (const [id, short] of Object.entries({ fear: 'Страх', sexy: 'Секси', chakra_shot: 'Выстрел', katon: 'Катон', suiton: 'Суйтон', smoke_bomb: 'Дым' })) G.CARDS[id].short = short;
+
 // Двенадцать базовых карт: у нового героя уже есть атака, защита, добор и несколько связок.
 G.CARD_BASE_DECK = ['strike', 'strike', 'guard', 'guard', 'evade', 'kunai', 'focus', 'combo', 'feint', 'analyze', 'stance', 'breath'];
 G.CARD_ITEM_ORDER = ['bandage', 'chakra_pill', 'smoke_bomb', 'flash_bomb'];

@@ -45,7 +45,7 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
 
 ## Время и сохранения
 
-- Время: `G.state.vars.day` (1–56) и `vars.min` (минуты от полуночи). 1 реальная секунда ≈ 1 игровая минута (`systems/life.js`, `RATE`).
+- Время: `G.state.vars.day` и `vars.min` (минуты от полуночи). Время идёт за действия: минута за секунду ходьбы (`systems/life.js`: `tick`, `RATE`), на месте часы стоят; уроки, тренировки, еда, работа и бой двигают их сами (`G.game.advance`). Подождать — меню паузы.
 - День недели: `(day - 1) % 7`, 0 = Пн. Будни — `G.life.weekday(day)`. Учебные дни — `G.academy.isSchoolDay(day)`.
 - Сохранение — `engine/storage.js` → `localStorage` (+ резервная копия, экспорт кода).
   Слотов три (`KEY_SLOTS`): слот 0 — автосейвы, 1 и 2 — ручные; `slotInfo(i)`, `filled()`, `newestSlot()`,
@@ -89,7 +89,8 @@ engine  → gfx (+ data/characters.js) → systems/script, dialog, game → data
   `G.life.visible(n)`: окна `sched` `[от, до, 'wd'|'we'|день]`, `cond()`, `keep()`, `dryOnly` (прячется в дождь).
 - **Расписание**: если у персонажа в `G.SCHED` есть строки с местом (шаблон здания), `systems/schedule.js`
   превращает их в маршрут — NPC появляется у нужного здания в своё окно (переход — вне экрана героя).
-- **Движение NPC**: поиск пути по клеткам (`scenes/world.js`: `npcWalk`, `planPath`).
+- **Движение NPC**: поиск пути по клеткам (`scenes/world_npc.js`: `npcWalk`, `planPath`).
+- **Сцена мира разрезана на части**: `scenes/world.js` (смена карт, камера, цикл), `world_npc.js`, `world_actions.js` (кнопка A, лавки), `world_time.js` (часы, сон, обмороки), `world_draw.js` (отрисовка). Части подмешиваются в объект сцены через `G.worldParts`.
 
 ## Графика
 

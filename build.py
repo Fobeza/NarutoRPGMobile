@@ -41,7 +41,7 @@ JS_FILES = [
     "systems/residents.js", "world/roofs.js", "world/roof_patrol.js", "world/guards.js", "world/fx.js", "world/village_stories.js",
     "world/village_daily.js", "world/motion.js", "world/village_details.js", "world/street_events.js", "world/cartography.js", "engine/debug.js",
     # ── экраны (сцены) ──
-    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/mapview.js", "scenes/shop.js",
+    "scenes/codebox.js", "scenes/title.js", "scenes/nameinput.js", "scenes/prologue.js", "scenes/world.js", "scenes/world_npc.js", "scenes/world_actions.js", "scenes/world_time.js", "scenes/world_draw.js", "scenes/mapview.js", "scenes/shop.js",
     "scenes/bag.js", "scenes/deckview.js", "scenes/log.js", "scenes/daysum.js", "scenes/ending.js", "scenes/cheats.js", "scenes/journal.js", "scenes/calendar.js",
     "scenes/charcreate.js", "scenes/status.js", "scenes/savemenu.js",
     "scenes/battle_bg.js", "scenes/battle.js", "scenes/train.js",
